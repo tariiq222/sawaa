@@ -45,15 +45,16 @@ interface BookingActionsProps {
 }
 
 /* ── Transition map: status → available actions ──
- * Aligned with DB BookingStatus. `pending_group_fill` and
- * `awaiting_payment` reuse the `pending` action set since the dashboard
- * collapses them to `pending` for display via mapStatusForUi.
+ * Mirrors the backend booking-state-machine. Never advertise an action it
+ * rejects: holds (awaiting_payment / pending_group_fill) are cancellable and
+ * confirmed by recording the payment, but CONFIRM is PENDING-only and they are
+ * not reschedulable. Deposit bookings support attendance with a balance due.
  */
 const statusActions = {
   pending: ["confirm", "cancel"] as const,
-  pending_group_fill: ["confirm", "cancel"] as const,
-  awaiting_payment: ["confirm", "cancel"] as const,
-  deposit_paid: ["confirm", "cancel"] as const,
+  pending_group_fill: ["cancel"] as const,
+  awaiting_payment: ["cancel"] as const,
+  deposit_paid: ["checkin", "complete", "noshow", "cancel"] as const,
   confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,
   completed: [] as const,
@@ -78,6 +79,7 @@ const getStatusLabels = (t: (k: string) => string): Record<string, string> => ({
   pending_group_fill:   t("bookings.actions.status.pending_group_fill"),
   awaiting_payment:     t("bookings.actions.status.awaiting_payment"),
   confirmed:            t("bookings.actions.status.confirmed"),
+  deposit_paid:         t("bookings.actions.status.deposit_paid"),
   completed:            t("bookings.actions.status.completed"),
   cancelled:            t("bookings.actions.status.cancelled"),
   cancel_requested:     t("bookings.actions.status.cancel_requested"),

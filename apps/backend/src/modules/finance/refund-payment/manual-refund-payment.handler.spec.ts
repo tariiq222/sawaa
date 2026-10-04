@@ -21,6 +21,7 @@ const baseInvoice = {
   total: dec(20000),
   vatAmt: dec(0),
   refundedAmount: dec(0),
+  refundedVatAmt: dec(0),
 };
 
 function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOverrides: Partial<typeof baseInvoice> = {}) {
@@ -28,6 +29,9 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
     $queryRaw: jest.fn().mockResolvedValue([{ ...basePaymentRow, ...paymentOverrides }]),
     refundRequest: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       create: jest.fn().mockResolvedValue({ id: 'rr-1' }),
     },
     invoice: {
@@ -35,6 +39,7 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
       update: jest.fn().mockResolvedValue({}),
     },
     payment: {
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ ...basePaymentRow, ...paymentOverrides }),
       update: jest.fn().mockImplementation(({ data }) => ({ id: 'pay-1', status: data.status })),
     },
     outboxEvent: {
@@ -49,6 +54,33 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
 }
 
 describe('ManualRefundPaymentHandler', () => {
+  it('settles the exact reviewed request without creating a duplicate reservation or ledger record', async () => {
+    const { handler, tx } = build();
+    tx.refundRequest.findUnique.mockResolvedValue({ id: 'review-1', paymentId: 'pay-1', invoiceId: 'inv-1', amount: dec(5000), status: 'PENDING_REVIEW', sourceEventId: 'source-event', idempotencyKey: 'refund:review-1' });
+    await handler.execute({ paymentId: 'pay-1', reason: 'Cash returned', refundRequestId: 'review-1' } as any);
+    expect(tx.refundRequest.create).not.toHaveBeenCalled();
+    expect(tx.refundRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'review-1', paymentId: 'pay-1', status: 'PENDING_REVIEW' }, data: expect.objectContaining({ status: 'COMPLETED' }) }));
+    expect(tx.payment.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ refundedAmount: { increment: 5000 } }) }));
+    expect(tx.outboxEvent.create.mock.calls[0][0].data.payload.payload.refundRequestId).toBe('review-1');
+  });
+
+  it('replays a completed manual request without another money mutation or notification event', async () => {
+    const { handler, tx } = build({ status: 'REFUNDED', refundedAmount: dec(20000) });
+    tx.refundRequest.findUnique.mockResolvedValue({ id: 'review-1', paymentId: 'pay-1', invoiceId: 'inv-1', amount: dec(20000), status: 'COMPLETED' });
+    await expect(handler.execute({ paymentId: 'pay-1', reason: 'retry', refundRequestId: 'review-1' } as any)).resolves.toMatchObject({ status: 'REFUNDED' });
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects mismatched amounts and request ownership', async () => {
+    const { handler, tx } = build();
+    tx.refundRequest.findUnique.mockResolvedValue({ id: 'review-1', paymentId: 'pay-1', invoiceId: 'inv-1', amount: dec(5000), status: 'PENDING_REVIEW' });
+    await expect(handler.execute({ paymentId: 'pay-1', reason: 'r', amount: 6000, refundRequestId: 'review-1' } as any)).rejects.toThrow();
+    tx.refundRequest.findUnique.mockResolvedValue({ id: 'review-1', paymentId: 'other', invoiceId: 'inv-1', amount: dec(5000), status: 'PENDING_REVIEW' });
+    await expect(handler.execute({ paymentId: 'pay-1', reason: 'r', refundRequestId: 'review-1' } as any)).rejects.toThrow();
+    expect(tx.payment.update).not.toHaveBeenCalled();
+  });
+
   it('throws when the payment is not found', async () => {
     const { handler, tx } = build();
     tx.$queryRaw.mockResolvedValueOnce([]);
@@ -107,6 +139,30 @@ describe('ManualRefundPaymentHandler', () => {
     expect(tx.refundRequest.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ amount: 15000 }) }),
     );
+  });
+
+  it('accumulates refunded VAT across partial refunds instead of overwriting it', async () => {
+    // Invoice 23000 = 20000 + 3000 VAT. A first partial of 11500 already
+    // refunded 1500 VAT; refunding the remaining 11500 must total 3000 VAT.
+    const { handler, tx } = build(
+      { amount: dec(23000), refundedAmount: dec(11500) },
+      { total: dec(23000), vatAmt: dec(3000), refundedAmount: dec(11500), refundedVatAmt: dec(1500) },
+    );
+    await handler.execute({ paymentId: 'pay-1', reason: 'second half' });
+    expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'REFUNDED', refundedAmount: 23000, refundedVatAmt: 3000 }),
+    }));
+  });
+
+  it('records only this partial refund\'s VAT share on a first partial', async () => {
+    const { handler, tx } = build(
+      { amount: dec(23000) },
+      { total: dec(23000), vatAmt: dec(3000) },
+    );
+    await handler.execute({ paymentId: 'pay-1', reason: 'first half', amount: 11500 });
+    expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'PARTIALLY_REFUNDED', refundedVatAmt: 1500 }),
+    }));
   });
 
   it('rejects a second in-flight refund', async () => {

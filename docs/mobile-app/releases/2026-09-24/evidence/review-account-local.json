@@ -1,0 +1,18 @@
+{
+  "environment": "local",
+  "database": "sawaa_dev",
+  "clientId": "97e32394-5ec7-441c-a090-af4ffb187fb8",
+  "created": true,
+  "httpLogin": 200,
+  "unknownField": 400,
+  "wrongPassword": 401,
+  "namespace": "client",
+  "ownSyntheticProfile": true,
+  "refreshRotation": true,
+  "refreshReplayRejected": true,
+  "logoutRevokes": true,
+  "loginAfterLogout": true,
+  "productionEnabled": false,
+  "testFlightAvailable": false,
+  "verifiedAt": "2026-09-24T13:39:53.489Z"
+}

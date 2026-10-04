@@ -16,9 +16,10 @@ import {
   setMeBaseUrl,
   getMyBookings,
   cancelMyBooking,
+  getMyCancellationPreview,
   rescheduleMyBooking,
 } from '@sawaa/api-client'
-import type { ClientLoginRequest } from '@sawaa/api-client'
+import type { CancellationQuoteInput, ClientCancellationResult, PersistedCancellationRefund, ClientLoginRequest } from '@sawaa/api-client'
 import type {
   ClientAuthResponse,
   ClientRegisterPayload,
@@ -72,25 +73,32 @@ export async function getMeApi(callerSignal?: AbortSignal): Promise<ClientProfil
 export async function getMyBookingsApi(
   page = 1,
   pageSize = 10,
+  tab?: 'upcoming' | 'past' | 'cancelled',
 ): Promise<ClientBookingListResponse> {
   ensureInitialised()
-  return getMyBookings(page, pageSize)
+  return tab ? getMyBookings(page, pageSize, tab) : getMyBookings(page, pageSize)
 }
 
-export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem> {
+export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem & { cancellationRefund?: PersistedCancellationRefund }> {
   ensureInitialised()
-  return apiRequest<ClientBookingItem>(`/public/me/bookings/${encodeURIComponent(bookingId)}`, {
+  return apiRequest<ClientBookingItem & { cancellationRefund?: PersistedCancellationRefund }>(`/public/me/bookings/${encodeURIComponent(bookingId)}`, {
     credentials: 'include',
   })
+}
+
+export async function getMyCancellationPreviewApi(bookingId: string) {
+  ensureInitialised()
+  return getMyCancellationPreview(bookingId)
 }
 
 export async function cancelMyBookingApi(
   bookingId: string,
   reason?: string,
-): Promise<{ status: string; requiresApproval: boolean }> {
+  quote?: CancellationQuoteInput,
+): Promise<Omit<ClientCancellationResult, 'booking'>> {
   ensureInitialised()
-  const result = await cancelMyBooking(bookingId, { reason })
-  return { status: result.status, requiresApproval: result.requiresApproval }
+  const result = await cancelMyBooking(bookingId, { reason, ...quote })
+  return { status: result.status, requiresApproval: result.requiresApproval, ...(result.refund ? { refund: result.refund } : {}) }
 }
 
 export async function rescheduleMyBookingApi(

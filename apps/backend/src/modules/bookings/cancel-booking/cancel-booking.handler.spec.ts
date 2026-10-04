@@ -132,6 +132,23 @@ describe('CancelBookingHandler', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    // A rejected cancel is a status the UI never offers (terminal, or changed
+    // concurrently) — the operator gets Arabic, not the developer assertion.
+    it('explains in Arabic when the booking status is not cancellable', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.EXPIRED,
+      });
+
+      await expect(
+        handler.execute({
+          bookingId: 'book-1',
+          reason: CancellationReason.OTHER,
+          changedBy: 'user-1',
+        }),
+      ).rejects.toThrow('لا يمكن إلغاء هذا الحجز في حالته الحالية');
+    });
+
     it('throws BadRequestException when client source and requireCancelApproval is true', async () => {
       prisma.booking.findFirst.mockResolvedValue(baseBooking);
       settingsHandler.execute.mockResolvedValue({
@@ -407,6 +424,102 @@ describe('CancelBookingHandler', () => {
 
       expect(result.refundType).toBe(RefundType.NONE);
       expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+    });
+  });
+
+  // Reception releases a slot held for an online payment that never arrived.
+  // DIRECT_CANCEL accepts the holds (booking-state-machine.ts) and the money
+  // rule is penalty-free: a hold was never a confirmed appointment, so any
+  // captured amount is refunded in FULL — mirroring expire-booking.
+  describe('payment holds (AWAITING_PAYMENT / PENDING_GROUP_FILL)', () => {
+    it('cancels an unpaid AWAITING_PAYMENT hold and logs the transition', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.AWAITING_PAYMENT,
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CANCELLED,
+      });
+
+      const result = await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect(result.status).toBe(BookingStatus.CANCELLED);
+      expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            fromStatus: BookingStatus.AWAITING_PAYMENT,
+            toStatus: BookingStatus.CANCELLED,
+          }),
+        }),
+      );
+      expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+    });
+
+    it('cancels a PENDING_GROUP_FILL hold', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.PENDING_GROUP_FILL,
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CANCELLED,
+      });
+
+      const result = await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect(result.status).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('refunds a captured amount in FULL even when the policy would forfeit it', async () => {
+      const in10h = new Date(Date.now() + 10 * 3_600_000);
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.AWAITING_PAYMENT,
+        scheduledAt: in10h,
+      });
+      // Late window + zero-refund policy: would forfeit the money for a
+      // confirmed booking (see the test above). A hold must never forfeit.
+      settingsHandler.execute.mockResolvedValue({
+        ...baseSettings,
+        freeCancelBeforeHours: 24,
+        freeCancelRefundType: RefundType.FULL,
+        lateCancelRefundPercent: 0,
+      });
+      prisma.payment.findFirst.mockResolvedValue({
+        id: 'pay-1',
+        amount: 10_000,
+        refundedAmount: 0,
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...baseBooking,
+        scheduledAt: in10h,
+        status: BookingStatus.CANCELLED,
+      });
+      refundHandler.createRefundRequestInTx.mockResolvedValue({
+        refundRequestId: 'rr-1',
+        idempotencyKey: 'ik-1',
+      });
+
+      const result = await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect(result.refundType).toBe(RefundType.FULL);
+      expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ paymentId: 'pay-1', amount: undefined }),
+      );
     });
   });
 

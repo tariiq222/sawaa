@@ -9,9 +9,8 @@ export interface PaymentCompletedPayload {
   packagePurchaseId?: string | null;
   amount: number;
   currency: string;
-  // SaaS-02e — optional during rollout; made required in 02f once all
-  // producers (moyasar webhook, bank-transfer, process-payment) set it.
-  organizationId?: string;
+  // Required: comms staff handlers drop the notification without it.
+  organizationId: string;
 }
 
 /**

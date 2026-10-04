@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
+import { paymentFailureMessage } from '@/features/payment/payment-error';
 import { paymentStatusKey, PAYMENT_STATUS_TOKEN, isInvoicePayable } from '@/features/account/status-labels';
 import { AccountLoadError } from '@/features/account/load-error';
 import { halalasToSar } from '@/lib/money';
@@ -18,8 +20,6 @@ import { Calendar, Clock, MapPin, ChevronRight, CalendarPlus, CreditCard } from 
 
 interface ClientBookingsListProps {
   locale: Locale;
-  initialBookings?: ClientBookingItem[];
-  initialTotal?: number;
 }
 
 type Tab = 'upcoming' | 'past' | 'cancelled';
@@ -34,29 +34,29 @@ function isCancelled(b: ClientBookingItem): boolean {
   return b.status === 'CANCELLED' || b.status === 'CANCEL_REQUESTED';
 }
 
-export function ClientBookingsList({ locale, initialBookings, initialTotal }: ClientBookingsListProps) {
+export function ClientBookingsList({ locale }: ClientBookingsListProps) {
   const router = useRouter();
   const tt = useT();
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
 
-  const hasInitial = !!initialBookings && initialBookings.length > 0;
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['client', 'bookings'],
-    queryFn: () => getMyBookingsApi(1, 50),
-    initialData: hasInitial
-      ? { items: initialBookings!, total: initialTotal ?? initialBookings!.length, page: 1, pageSize: 50 }
-      : undefined,
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
+    queryKey: ['client', 'bookings', 'infinite', activeTab],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => getMyBookingsApi(pageParam, 50, activeTab),
+    getNextPageParam: (last) => last.page * last.pageSize < last.total ? last.page + 1 : undefined,
+    // The server page may use a different offset/size. Fetch the canonical
+    // first page rather than mislabelling those rows as page 1 of this list.
   });
 
-  const bookings = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const bookings = data?.pages.flatMap((page) => page.items) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
 
-  const now = new Date();
-  const upcoming = bookings.filter((b) => !isCancelled(b) && new Date(b.scheduledAt) > now);
-  const past = bookings.filter((b) => !isCancelled(b) && new Date(b.scheduledAt) <= now);
-  const cancelled = bookings.filter(isCancelled);
-  const byTab: Record<Tab, ClientBookingItem[]> = { upcoming, past, cancelled };
-  const displayed = byTab[activeTab];
+  const displayed = bookings;
+  const { data: allBookingsCount } = useQuery({
+    queryKey: ['client', 'bookings', 'count'],
+    queryFn: () => getMyBookingsApi(1, 1),
+    enabled: !!data && total === 0,
+  });
 
   if (isLoading && bookings.length === 0) {
     return (
@@ -78,7 +78,7 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
     return <AccountLoadError onRetry={() => void refetch()} />;
   }
 
-  if (total === 0 && bookings.length === 0) {
+  if (total === 0 && allBookingsCount?.total === 0) {
     return <BookingsEmpty locale={locale} />;
   }
 
@@ -91,7 +91,7 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
       >
         {(['upcoming', 'past', 'cancelled'] as const).map((tab) => {
           const active = activeTab === tab;
-          const count = byTab[tab].length;
+
           return (
             <button
               key={tab}
@@ -105,15 +105,15 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
               }`}
             >
               {tt(TAB_KEYS[tab])}
-              <span
+              {active && <span
                 className={`text-xs font-bold px-1.5 rounded-full min-w-[1.25rem] text-center ${
                   active
                     ? 'bg-[color-mix(in_srgb,var(--sw-primary-500)_15%,transparent)] text-[var(--sw-primary-600)]'
                     : 'bg-[var(--sw-neutral-200)] text-[var(--sw-neutral-500)]'
                 }`}
               >
-                {count}
-              </span>
+                {total}
+              </span>}
             </button>
           );
         })}
@@ -134,6 +134,13 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
             />
           ))}
         </div>
+      )}
+      {isFetchNextPageError && <AccountLoadError onRetry={() => void fetchNextPage()} />}
+      {hasNextPage && (
+        <button type="button" disabled={isFetchingNextPage} onClick={() => void fetchNextPage()}
+          className="self-center rounded-full border border-[var(--sw-neutral-200)] px-5 py-2 text-sm font-semibold disabled:opacity-60">
+          {tt(isFetchingNextPage ? 'common.loading' : 'common.loadMore')}
+        </button>
       )}
     </div>
   );
@@ -167,7 +174,7 @@ function BookingsEmpty({ locale }: { locale: Locale }) {
       </p>
       <Link
         href="/booking"
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
       >
         {t(locale, 'account.empty.cta')}
         <ChevronRight size={14} className="rtl:rotate-180" aria-hidden="true" />
@@ -221,6 +228,11 @@ function BookingCard({
   const payKey = paymentStatusKey(booking.paymentStatus);
   const payColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
   const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus) && !isCancelled(booking);
+  // Never offer a checkout the backend will reject (online payment disabled in
+  // the dashboard, or Moyasar unconfigured): the client gets a note instead.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
+  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
 
   async function handlePayNow(e: React.MouseEvent) {
     e.stopPropagation();
@@ -229,8 +241,8 @@ function BookingCard({
     try {
       const { redirectUrl } = await initPayment(booking.invoiceId!);
       window.location.assign(redirectUrl);
-    } catch {
-      setPayError(tt('account.payError'));
+    } catch (err) {
+      setPayError(paymentFailureMessage(err, tt('account.payError')));
       setPaying(false);
     }
   }
@@ -286,17 +298,22 @@ function BookingCard({
             </span>
           )}
         </div>
-        {payable && (
+        {(canPayOnline || showPayUnavailable) && (
           <div className="mt-3 flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={handlePayNow}
-              disabled={paying}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
-            >
-              <CreditCard size={12} aria-hidden="true" />
-              {paying ? tt('account.paying') : tt('account.payNow')}
-            </button>
+            {canPayOnline && (
+              <button
+                type="button"
+                onClick={handlePayNow}
+                disabled={paying}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+              >
+                <CreditCard size={12} aria-hidden="true" />
+                {paying ? tt('account.paying') : tt('account.payNow')}
+              </button>
+            )}
+            {showPayUnavailable && (
+              <span className="text-xs text-[var(--sw-body)]">{tt('account.payUnavailable')}</span>
+            )}
             {payError && <span className="text-xs text-[var(--error)]">{payError}</span>}
           </div>
         )}

@@ -1,3 +1,5 @@
+import { retrySerializableTransaction } from '../../../common/database/person-reference-lock.helper';
+import { RESCHEDULE_TX_ATTEMPTS } from '../reschedule-booking/reschedule-booking.handler';
 import {
   BadRequestException,
   ConflictException,
@@ -57,7 +59,8 @@ export class ClientRescheduleBookingHandler {
       : randomUUID();
 
     const mutate = async (tx: Prisma.TransactionClient): Promise<RescheduleResult> => {
-      // Global booking lock order: client, then employee/slot, then booking mutation.
+      // Global booking lock order: client, then booking row, then employee/slot
+      // (shared with the staff reschedule so the two cannot deadlock).
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(cmd.clientId)}::int)`;
 
       const booking = await tx.booking.findUnique({ where: { id: cmd.bookingId } });
@@ -93,6 +96,9 @@ export class ClientRescheduleBookingHandler {
         );
       }
 
+      // Lock the booking row before counting so two concurrent reschedules
+      // of the same booking cannot both pass the limit.
+      await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`;
       const rescheduleCount = await tx.bookingStatusLog.count({
         where: { bookingId: cmd.bookingId, reason: 'rescheduled' },
       });
@@ -248,7 +254,10 @@ export class ClientRescheduleBookingHandler {
 
     const result = cmd.transaction
       ? await mutate(cmd.transaction)
-      : await this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' });
+      : await retrySerializableTransaction(
+        () => this.rlsTransaction.withTransaction(mutate, { isolationLevel: 'Serializable' }),
+        RESCHEDULE_TX_ATTEMPTS,
+      );
     return cmd.transaction ? result : { booking: result.booking };
   }
 

@@ -64,7 +64,17 @@ export class RequestCancelBookingHandler {
       reason: cmd.reason,
       cancelNotes: cmd.cancelNotes,
     });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
+    // P1: nothing subscribes to bookings.booking.cancel_requested today, while
+    // strict publish() throws NoEventConsumersRegisteredError for an unhandled
+    // event name. That throw happens AFTER the CANCEL_REQUESTED commit, so an
+    // employee request that succeeded was reported as an HTTP 500, and the
+    // retry failed against the new status (CLIENT_REQUEST_CANCEL does not
+    // accept CANCEL_REQUESTED as a source state).
+    //
+    // The event stays observational until a consumer is registered — mirrors
+    // reject-cancel-booking. Restore strict publish() when a real consumer
+    // exists, and stage it in the transactional outbox if it becomes required.
+    await this.eventBus.publishOptional(event.eventName, event.toEnvelope());
 
     return updated;
   }

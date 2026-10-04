@@ -109,7 +109,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
               </p>
 
               <div
-                className="rounded-2xl bg-white p-5 flex flex-col gap-1"
+                className="rounded-2xl bg-[var(--surface)] p-5 flex flex-col gap-1"
                 style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
               >
                 <FactRow
@@ -145,7 +145,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
             </h2>
 
             <article
-              className="bg-white rounded-2xl p-6 sm:p-8"
+              className="bg-[var(--surface)] rounded-2xl p-6 sm:p-8"
               style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
             >
               <div className="flex flex-col gap-3">

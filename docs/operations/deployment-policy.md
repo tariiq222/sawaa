@@ -25,8 +25,18 @@ This is the shared deployment policy for every AI tool and contributor working o
 - A code rollback does not authorize restoring an old production database or losing newer customer data. Assess compatibility and obtain explicit authorization for destructive recovery.
 - Keep credentials out of Git, logs and reports.
 
+## Merge checks for `develop` — owner direction, 2026-10-01
+
+Local Woodpecker CI was removed on 2026-10-01 by owner decision. Do not run, reintroduce or require it. GitHub Actions was re-enabled for the repository on 2026-10-01 by the owner. The `merge-gate` workflow runs on pull requests into `develop` and `main` and on pushes to `main`, with two jobs: `gate` and `critical-real-e2e` (the `test:e2e:critical` real-database suite on a disposable Postgres service). CI supplements the local checks below; it does not replace them.
+
+Before a PR merges into `develop`, run the local checks that match the changed surface, using the test matrix in the root `CLAUDE.md` (for example backend Jest specs and `pnpm openapi:sync` for endpoint changes, dashboard Vitest and smoke for dashboard flows, `pnpm --dir apps/mobile test`/`typecheck`/`lint` for mobile). Documentation-only changes need only `git diff --check`. Record the commands, the candidate SHA and the results in the PR. A failed or skipped required check blocks the merge; if the candidate changes after verification, verify the new content before merging.
+
+Checks use local disposable test infrastructure. Never use development, staging or production credentials or databases. Passing checks do not replace live verification of the changed flow or the owner's manual staging test.
+
+The production promotion rules above remain in force.
+
 ## Enforcement status
 
 This file records the approved policy. It does not itself configure GitHub protections or OpenShip automation. Verify those settings live before claiming automated enforcement.
 
-The existing `.github/workflows/release.yml` creates tags and a deploy-state commit after a push to `main`; that record is not evidence of successful OpenShip deployment. Updating that workflow to record verified deployment success and reconciling branch protections remain implementation work, not completed by this documentation change.
+The repository release workflow creates code-release tags and GitHub Releases only; it must never write a “latest deployed” commit directly to `main`. The former `.github/DEPLOY_STATE.json` has been retired. A tag is not a deployment record. Record observed deployment evidence separately using [the deployment-record contract](deployments/README.md), and keep [the dated operations summary](current-state.md) current. This local workflow change does not enable GitHub protection, apply itself to remote branches, or authorize deployment. Live enforcement must still be verified independently.

@@ -11,22 +11,37 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/theme/components/ThemedText';
-import { ThemedButton } from '@/theme/components/ThemedButton';
-import { useTheme } from '@/theme/useTheme';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useDir } from '@/hooks/useDir';
+import { getFontName } from '@/theme/fonts';
 import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
-import { useVerifyOtp, useRequestLoginOtp } from '@/hooks/queries';
+import { useVerifyOtp, useRequestLoginOtp, useRegister } from '@/hooks/queries';
 import { authService, SessionSupersededError } from '@/services/auth';
 import { isSessionCurrent } from '@/services/native-session-state';
+import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
+import { decodeRedirect } from '@/lib/navigation';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
+
+function redirectMatchesSession(
+  value: string | string[] | undefined,
+  sessionKind: 'client' | 'staff',
+): boolean {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  const pathname = candidate?.split(/[?#]/, 1)[0] ?? '';
+  const routeGroup = pathname.split('/')[1];
+  return sessionKind === 'staff'
+    ? routeGroup === '(employee)'
+    : routeGroup !== '(employee)';
+}
 
 export default function OtpVerifyScreen() {
   const { t } = useTranslation();
@@ -35,21 +50,37 @@ export default function OtpVerifyScreen() {
     identifier: string;
     purpose: 'register' | 'login';
     maskedIdentifier: string;
+    booking?: string;
+    redirect?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
   }>();
-  const { identifier = '', purpose = 'register', maskedIdentifier = '' } = params;
+  const {
+    identifier = '',
+    purpose = 'register',
+    maskedIdentifier = '',
+    firstName = '',
+    lastName = '',
+    email = '',
+  } = params;
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { theme, isRTL } = useTheme();
+  const colors = useSawaaColors();
+  const dir = useDir();
+  const f400 = getFontName(dir.locale, '400');
+  const f700 = getFontName(dir.locale, '700');
 
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [otp, setOtp] = useState('');
   const [loading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const [resendLoading, setResendLoading] = useState(false);
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const inputRef = useRef<TextInput>(null);
   const submissionStarted = useRef(false);
 
   const verifyOtp = useVerifyOtp();
   const requestLoginOtp = useRequestLoginOtp();
+  const register = useRegister();
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -59,50 +90,14 @@ export default function OtpVerifyScreen() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const handleChange = useCallback(
-    (text: string, index: number) => {
-      if (text.length > 1) {
-        const pasted = text.slice(0, OTP_LENGTH).split('');
-        const newOtp = [...otp];
-        pasted.forEach((char, i) => {
-          if (index + i < OTP_LENGTH) {
-            newOtp[index + i] = char;
-          }
-        });
-        setOtp(newOtp);
-        const nextIndex = Math.min(index + pasted.length, OTP_LENGTH - 1);
-        inputRefs.current[nextIndex]?.focus();
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        return;
-      }
-
-      const newOtp = [...otp];
-      newOtp[index] = text;
-      setOtp(newOtp);
-
-      if (text && index < OTP_LENGTH - 1) {
-        inputRefs.current[index + 1]?.focus();
-      }
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    },
-    [otp],
-  );
-
-  const handleKeyPress = useCallback(
-    (key: string, index: number) => {
-      if (key === 'Backspace' && !otp[index] && index > 0) {
-        inputRefs.current[index - 1]?.focus();
-        const newOtp = [...otp];
-        newOtp[index - 1] = '';
-        setOtp(newOtp);
-      }
-    },
-    [otp],
-  );
+  const handleChange = useCallback((text: string) => {
+    // A single native input receives the complete iOS/Android SMS suggestion or paste.
+    // Four maxLength=1 inputs truncate autofill to one digit on some keyboards.
+    setOtp(text.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH));
+  }, []);
 
   const handleVerify = useCallback(async () => {
-    const code = otp.join('');
+    const code = otp;
     if (code.length !== OTP_LENGTH || submissionStarted.current) return;
 
     submissionStarted.current = true;
@@ -113,6 +108,9 @@ export default function OtpVerifyScreen() {
       const result = await verifyOtp.mutateAsync({ identifier, code, purpose });
       verificationEpoch = result.sessionEpoch;
       if (!isSessionCurrent(verificationEpoch)) return;
+      // Older clients may omit sessionKind; those sessions have always used
+      // the client landing path, so keep that fallback explicit for routing.
+      const sessionKind = result.sessionKind ?? 'client';
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Fetch the profile directly after verifyMobileOtp persisted the new
@@ -129,7 +127,20 @@ export default function OtpVerifyScreen() {
         user: profile,
       }));
 
-      const destination = result.sessionKind === 'staff'
+      const bookingReturn = sessionKind === 'client' ? decodeBookingReturn(params.booking) : null;
+      if (bookingReturn) {
+        const { amount, ...selection } = bookingReturn;
+        router.replace({ pathname: '/(client)/booking/confirm', params: { ...selection, chargedPrice: amount } });
+        return;
+      }
+      if (redirectMatchesSession(params.redirect, sessionKind)) {
+        const redirect = decodeRedirect(params.redirect);
+        if (redirect) {
+          router.replace(redirect);
+          return;
+        }
+      }
+      const destination = sessionKind === 'staff'
         ? '/(employee)/(tabs)/today'
         : '/(client)/(tabs)/home';
       router.replace(destination);
@@ -141,40 +152,44 @@ export default function OtpVerifyScreen() {
       submissionStarted.current = false;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.otpError'));
-      setOtp(Array(OTP_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
+      setOtp('');
+      inputRef.current?.focus();
     } finally {
       setIsLoading(false);
     }
-  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t]);
+  }, [otp, identifier, purpose, verifyOtp, dispatch, router, t, params.booking, params.redirect]);
 
   const handleResend = useCallback(async () => {
-    if (purpose !== 'login') return;
     setResendLoading(true);
     try {
-      await requestLoginOtp.mutateAsync({ identifier });
+      if (purpose === 'login') {
+        await requestLoginOtp.mutateAsync({ identifier });
+      } else {
+        // Re-submitting the same registration re-sends the register OTP for a
+        // signup that has not been verified yet.
+        await register.mutateAsync({ firstName, lastName, phone: identifier, email });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCountdown(RESEND_COOLDOWN);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     } finally {
       setResendLoading(false);
     }
-  }, [purpose, identifier, requestLoginOtp, t]);
+  }, [purpose, identifier, firstName, lastName, email, requestLoginOtp, register, t]);
 
   // Auto-submit when all digits are filled
   useEffect(() => {
-    if (otp.every((digit) => digit !== '') && !loading) {
+    if (otp.length === OTP_LENGTH && !loading) {
       handleVerify();
     }
   }, [otp, handleVerify, loading]);
 
-  const isComplete = otp.every((d) => d !== '');
-  const BackIcon = isRTL ? ChevronRight : ChevronLeft;
+  const isComplete = otp.length === OTP_LENGTH;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <AquaBackground>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -185,173 +200,126 @@ export default function OtpVerifyScreen() {
             { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 },
           ]}
         >
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.buttonBack')}
-          >
-            <BackIcon
-              size={24}
-              strokeWidth={1.5}
-              color={theme.colors.textPrimary}
-            />
-          </Pressable>
+          <ScreenHeader title={t('auth.otp.title')} onBack={() => router.back()} />
 
           <View style={styles.header}>
-            <LinearGradient
-              colors={['#0037B0', '#1D4ED8']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.iconBadge}
+            <View style={[styles.lockCircle, { backgroundColor: colors.glass.opaqueBg }]}>
+              <Lock size={32} color={colors.teal[700]} strokeWidth={1.75} />
+            </View>
+            <Text
+              style={[
+                styles.sub,
+                { color: colors.ink[700], fontFamily: f400, writingDirection: dir.writingDirection },
+              ]}
             >
-              <ThemedText
-                variant="displaySm"
-                color="#FFF"
-                align="center"
-                style={{ fontSize: 28 }}
-              >
-                {'#'}
-              </ThemedText>
-            </LinearGradient>
-
-            <ThemedText variant="displaySm" align="center">
-              {t('otp.title')}
-            </ThemedText>
-            <ThemedText
-              variant="bodySm"
-              align="center"
-              color={theme.colors.textSecondary}
-              style={styles.sub}
-            >
-              {t('otp.sentTo')} {maskedIdentifier}
-            </ThemedText>
+              {t('auth.otp.sentTo')} {maskedIdentifier}
+            </Text>
           </View>
 
           <View style={styles.otpRow}>
-            {otp.map((digit, index) => (
-              <TextInput
+            {Array.from({ length: OTP_LENGTH }, (_, index) => (
+              <View
                 key={`otp-${index}`}
-                ref={(ref) => {
-                  inputRefs.current[index] = ref;
-                }}
-                value={digit}
-                onChangeText={(text) => handleChange(text, index)}
-                onKeyPress={({ nativeEvent: { key } }) =>
-                  handleKeyPress(key, index)
-                }
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-                textContentType="oneTimeCode"
-                autoComplete="sms-otp"
-                accessibilityLabel={t('auth.otpBoxLabel', {
-                  index: index + 1,
-                  total: OTP_LENGTH,
-                })}
+                pointerEvents="none"
                 style={[
                   styles.otpBox,
                   {
-                    backgroundColor: theme.colors.surfaceHigh,
-                    borderColor: digit ? '#1D4ED866' : 'transparent',
-                    color: theme.colors.textPrimary,
+                    backgroundColor: colors.glass.opaqueBg,
+                    borderColor: otp[index] ? colors.teal[600] : colors.teal[200],
                   },
                 ]}
-              />
+              >
+                <Text style={[styles.digit, { color: colors.ink[900], fontFamily: f700 }]}>
+                  {otp[index] ?? ''}
+                </Text>
+              </View>
             ))}
+            <TextInput
+              ref={inputRef}
+              value={otp}
+              onChangeText={handleChange}
+              keyboardType="number-pad"
+              maxLength={OTP_LENGTH}
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
+              accessibilityLabel={t('auth.otp.code')}
+              caretHidden
+              selectionColor={colors.glass.opaqueBg}
+              style={styles.codeInput}
+            />
           </View>
 
           <View style={styles.actions}>
-            <ThemedButton
+            <PrimaryButton
+              label={loading ? t('auth.otp.submitting') : t('auth.otp.submit')}
               onPress={handleVerify}
-              variant="primary"
-              size="lg"
-              full
-              loading={loading}
+              fontFamily={f700}
               disabled={!isComplete || loading}
-            >
-              {loading ? t('otp.submitting') : t('otp.submit')}
-            </ThemedButton>
+            />
 
             <View style={styles.resendRow}>
-              {purpose === 'login' ? (
-                countdown > 0 ? (
-                  <ThemedText
-                    variant="bodySm"
-                    color={theme.colors.textMuted}
-                    align="center"
-                  >
-                    {t('otp.resendIn', { seconds: countdown })}
-                  </ThemedText>
-                ) : (
-                  <Pressable onPress={handleResend} disabled={resendLoading}>
-                    <ThemedText
-                      variant="bodySm"
-                      color="#1D4ED8"
-                      align="center"
-                      style={styles.link}
-                    >
-                      {resendLoading ? t('common.loading') : t('otp.resend')}
-                    </ThemedText>
-                  </Pressable>
-                )
+              {countdown > 0 ? (
+                <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
+                  {t('auth.otp.resendIn', { seconds: countdown })}
+                </Text>
               ) : (
-                <ThemedText
-                  variant="bodySm"
-                  color={theme.colors.textMuted}
-                  align="center"
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleResend}
+                  disabled={resendLoading}
+                  style={styles.linkTarget}
                 >
-                  {t('otp.registerNoResend') ?? 'Tap back and re-submit if you didn\'t receive the code.'}
-                </ThemedText>
+                  <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
+                    {resendLoading ? t('common.loading') : t('auth.otp.resend')}
+                  </Text>
+                </Pressable>
               )}
+              <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.linkTarget}>
+                <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
+                  {t('auth.otp.changeNumber')}
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   flex: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 24 },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  header: { alignItems: 'center', marginBottom: 40 },
-  iconBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  sub: { marginTop: 8 },
+  content: { flex: 1, paddingHorizontal: 16 },
+  header: { alignItems: 'center', marginTop: 24, marginBottom: 28, gap: 14 },
+  lockCircle: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+  sub: { fontSize: 15, lineHeight: 24, textAlign: 'center' },
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 10,
-    marginBottom: 32,
+    marginBottom: 24,
+    position: 'relative',
   },
   otpBox: {
-    width: 48,
-    height: 56,
-    borderRadius: 12,
-    borderWidth: 2,
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '700',
+    flex: 1,
+    maxWidth: 64,
+    height: 60,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actions: { gap: 20 },
+  digit: { fontSize: 24, lineHeight: 32 },
+  codeInput: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+    color: 'transparent',
+    backgroundColor: 'transparent',
+    textAlign: 'center',
+  },
+  actions: { gap: 12 },
   resendRow: { alignItems: 'center' },
-  link: { fontWeight: '600' },
+  meta: { fontSize: 14, lineHeight: 20, textAlign: 'center', minHeight: 44, textAlignVertical: 'center' },
+  linkTarget: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  link: { fontSize: 15, textAlign: 'center' },
 });

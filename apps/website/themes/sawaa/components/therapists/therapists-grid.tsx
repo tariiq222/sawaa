@@ -57,7 +57,7 @@ export function TherapistsGrid({ therapists, locale, labels, initialSpecialty = 
     return (
       <div className="flex items-center justify-center py-20">
         <div
-          className="text-center max-w-md mx-auto py-12 px-8 rounded-[24px] bg-white"
+          className="text-center max-w-md mx-auto py-12 px-8 rounded-[24px] bg-[var(--surface)]"
           style={{
             border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
             boxShadow: 'var(--sw-shadow-xs)',
@@ -133,11 +133,11 @@ function FilterChip({ label, count, active, onClick }: ChipProps) {
         active
           ? {
               background: 'var(--sw-secondary-700)',
-              color: '#fff',
+              color: 'var(--sw-secondary-700-foreground)',
               boxShadow: '0 1px 2px rgba(10, 46, 63, 0.08)',
             }
           : {
-              background: '#fff',
+              background: 'var(--surface)',
               color: 'var(--sw-secondary-700)',
               border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)',
             }
@@ -147,7 +147,9 @@ function FilterChip({ label, count, active, onClick }: ChipProps) {
       <span
         className="tabular-nums text-[0.6875rem] font-semibold opacity-70"
         style={{
-          color: active ? 'rgba(255,255,255,0.85)' : 'var(--sw-neutral-500)',
+          color: active
+            ? 'color-mix(in srgb, var(--sw-secondary-700-foreground) 85%, transparent)'
+            : 'var(--sw-neutral-500)',
         }}
       >
         {count}

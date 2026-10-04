@@ -1,28 +1,26 @@
 import React, { useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react-native';
+import { Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Thumb } from '@/components/ui/Thumb';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useRateBooking } from '@/hooks/queries';
-
-const QUICK_TAGS = [
-  { ar: 'مهنية', en: 'Professional' },
-  { ar: 'استماع جيد', en: 'Great listener' },
-  { ar: 'مفيدة', en: 'Helpful' },
-  { ar: 'هادئة', en: 'Calm' },
-  { ar: 'متفهّمة', en: 'Understanding' },
-];
+import { useBooking, useRateBooking } from '@/hooks/queries';
+import { formatWeekdayDateTime } from '@/lib/session-format';
 
 export default function RateScreen() {
+  const colors = useSawaaColors();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const { t } = useTranslation();
   const router = useRouter();
@@ -31,27 +29,31 @@ export default function RateScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const [rating, setRating] = useState(0);
-  const [tags, setTags] = useState<Set<number>>(new Set());
   const [note, setNote] = useState('');
   const rateMutation = useRateBooking();
   const submitting = rateMutation.isPending;
+  const { data: booking, isLoading, isError, refetch } = useBooking(bookingId);
 
-  const toggleTag = (i: number) => {
-    Haptics.selectionAsync();
-    const next = new Set(tags);
-    if (next.has(i)) next.delete(i);
-    else next.add(i);
-    setTags(next);
-  };
+  // The therapist identity comes from the rated booking — never a placeholder.
+  const therapistName = booking
+    ? (dir.isRTL
+        ? booking.employee?.nameAr ?? booking.employee?.nameEn ?? booking.employeeNameAr ?? booking.employeeName
+        : booking.employee?.nameEn ?? booking.employee?.nameAr ?? booking.employeeName ?? booking.employeeNameAr)
+    : undefined;
+  const displayName = therapistName ?? t('therapists.unknownName');
+  const sessionWhen = formatWeekdayDateTime(booking?.scheduledAt, dir.isRTL);
+
+  // Rating is only allowed against a booking we actually loaded: while the
+  // request is in flight, or after it failed, there is no verified subject to
+  // rate — the user gets the retry action instead of a blind submission.
+  const bookingReady = Boolean(booking) && !isLoading && !isError;
+  const alreadyRatedThisSession = booking?.ratingSubmittedLocally === true;
+  const submitDisabled = rating === 0 || submitting || !bookingReady || alreadyRatedThisSession;
 
   const submit = () => {
-    if (rating === 0 || !bookingId || submitting) return;
-    const tagLabels = [...tags]
-      .map((i) => (dir.isRTL ? QUICK_TAGS[i].ar : QUICK_TAGS[i].en))
-      .join(', ');
-    const comment = [tagLabels, note.trim()].filter(Boolean).join(' — ');
+    if (rating === 0 || !bookingId || submitting || !bookingReady) return;
+    const comment = note.trim();
     rateMutation.mutate(
       {
         id: bookingId,
@@ -66,186 +68,139 @@ export default function RateScreen() {
         },
         onError: (error) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          const responseMessage = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+          const duplicateRating = typeof responseMessage === 'string'
+            && responseMessage.toLowerCase().includes('rating already submitted');
           Alert.alert(
-            dir.isRTL ? 'تعذّر إرسال التقييم' : 'Could not submit rating',
-            error instanceof Error ? error.message : String(error),
+            duplicateRating ? t('appointments.ratingAlreadySubmitted') : t('appointments.rateFailed'),
+            duplicateRating
+              ? t('appointments.ratingAlreadySubmitted')
+              : error instanceof Error ? error.message : String(error),
           );
         },
       },
     );
   };
 
+  const submitLabel = alreadyRatedThisSession
+    ? t('appointments.ratingAlreadySubmitted')
+    : submitting ? t('appointments.rateSubmitting') : t('appointments.rateSubmit');
+
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 160 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-          </Glass>
-        </Animated.View>
+        <ScreenHeader title={t('appointments.rateScreenTitle')} onBack={() => router.back()} />
 
-        <Animated.View entering={FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'كيف كانت الجلسة؟' : 'How was your session?'}
-          </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'تقييمك يساعد المعالج والآخرين' : 'Your rating helps your therapist and others'}
-          </Text>
-        </Animated.View>
-
-        {/* Therapist */}
-        <Animated.View entering={FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
+        {/* Therapist — real booking data, or a retryable load error */}
+        {isLoading ? (
+          <Skeleton height={76} radius={sawaaRadius.lg} />
+        ) : isError ? (
+          <EmptyState
+            icon="alert-circle-outline"
+            title={t('common.error')}
+            actionLabel={t('common.retry')}
+            onAction={() => { void refetch(); }}
+            tone="danger"
+          />
+        ) : (
+          <Glass variant="base" radius={sawaaRadius.lg} style={styles.therapistCard}>
             <View style={[styles.therapistRow, { flexDirection: dir.row }]}>
-              <LinearGradient
-                colors={['#f7cbb7', '#e88f6c']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>ف</Text>
-              </LinearGradient>
+              <Thumb uri={booking?.employee?.avatarUrl} width={56} height={56} accessibilityLabel={displayName} />
               <View style={styles.therapistMid}>
-                <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'د. فاطمة العمران' : 'Dr. Fatima Al-Omran'}
+                <Text numberOfLines={1} style={[styles.therapistName, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                  {displayName}
                 </Text>
-                <Text style={[styles.therapistMeta, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'جلسة اليوم · ٤:٠٠ م' : "Today's session · 4:00 PM"}
-                </Text>
+                {sessionWhen ? (
+                  <Text numberOfLines={1} style={[styles.therapistMeta, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                    {sessionWhen}
+                  </Text>
+                ) : null}
               </View>
             </View>
           </Glass>
-        </Animated.View>
+        )}
 
-        {/* Stars */}
-        <Animated.View entering={FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))} style={styles.starsWrap}>
-          {[1, 2, 3, 4, 5].map((n) => {
-            const filled = n <= rating;
-            return (
-              <Pressable
-                key={n}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setRating(n);
-                }}
-                style={styles.starBtn}
-                hitSlop={8}
-              >
-                <Star
-                  size={40}
-                  color={filled ? sawaaColors.accent.amber : sawaaColors.ink[400]}
-                  fill={filled ? sawaaColors.accent.amber : 'transparent'}
-                  strokeWidth={1.75}
-                />
-              </Pressable>
-            );
-          })}
-        </Animated.View>
-
-        {/* Tags */}
-        <Animated.View entering={FadeInDown.delay(320).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'ما الذي أعجبكِ؟' : 'What did you like?'}
+        <View style={styles.ratingBlock}>
+          <Text accessibilityRole="header" style={[styles.question, { color: colors.ink[900], fontFamily: f700 }]}>
+            {t('appointments.rateQuestion')}
           </Text>
-          <View style={[styles.tagRow, { flexDirection: dir.row }]}>
-            {QUICK_TAGS.map((t, i) => {
-              const isActive = tags.has(i);
+          <View style={[styles.stars, { flexDirection: dir.row }]}>
+            {[1, 2, 3, 4, 5].map((n) => {
+              const filled = n <= rating;
               return (
-                <Pressable key={`tag-${i}`} onPress={() => toggleTag(i)}>
-                  <Glass
-                    variant={isActive ? 'strong' : 'regular'}
-                    radius={14}
-                    style={[
-                      styles.tag,
-                      isActive && { borderWidth: 1.5, borderColor: sawaaColors.teal[500] },
-                    ]}
-                  >
-                    <Text style={[
-                      styles.tagText,
-                      { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
-                    ]}>
-                      {dir.isRTL ? t.ar : t.en}
-                    </Text>
-                  </Glass>
+                <Pressable
+                  key={n}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setRating(n);
+                  }}
+                  style={styles.starBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y.rateStars', { count: n })}
+                  accessibilityState={{ selected: filled }}
+                >
+                  <Star
+                    size={40}
+                    color={filled ? colors.accent.amber : colors.ink[400]}
+                    fill={filled ? colors.accent.amber : 'transparent'}
+                    strokeWidth={1.75}
+                  />
                 </Pressable>
               );
             })}
           </View>
-        </Animated.View>
-
-        {/* Comment */}
-        <Animated.View entering={FadeInDown.delay(400).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'ملاحظة (اختياري)' : 'Comment (optional)'}
+          <Text style={[styles.ratingLabel, { color: colors.teal[700], fontFamily: f600 }]}>
+            {rating > 0 ? t(`appointments.rateLabel${rating}`) : ' '}
           </Text>
-          <Glass variant="regular" radius={sawaaRadius.xl} style={styles.noteCard}>
+        </View>
+
+        <View style={styles.notes}>
+          <Text style={[styles.notesLabel, { color: colors.ink[900], fontFamily: f600, textAlign: dir.textAlign }]}>
+            {t('appointments.rateNotesLabel')}
+          </Text>
+          <Glass variant="base" radius={sawaaRadius.lg} style={styles.noteCard}>
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder={dir.isRTL ? 'شاركي تجربتكِ باختصار…' : 'Share briefly…'}
-              placeholderTextColor={sawaaColors.ink[400]}
+              placeholder={t('appointments.rateNotesPlaceholder')}
+              placeholderTextColor={colors.ink[500]}
               multiline
               numberOfLines={4}
+              accessibilityLabel={t('appointments.rateNotesLabel')}
               style={[
                 styles.noteInput,
-                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
+                { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: colors.ink[900] },
               ]}
             />
           </Glass>
-        </Animated.View>
+        </View>
       </ScrollView>
 
-      <Animated.View
-        entering={FadeInDown.delay(500).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}
-      >
-        <Pressable disabled={rating === 0 || submitting} onPress={submit}>
-          <LinearGradient
-            colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, (rating === 0 || submitting) && { opacity: 0.55 }]}
-          >
-            <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-              {submitting
-                ? (dir.isRTL ? 'جاري الإرسال…' : 'Submitting…')
-                : (dir.isRTL ? 'إرسال التقييم' : 'Submit rating')}
-            </Text>
-          </LinearGradient>
-        </Pressable>
-      </Animated.View>
+      <FloatingCta>
+        <PrimaryButton label={submitLabel} onPress={submit} disabled={submitDisabled} fontFamily={f700} />
+      </FloatingCta>
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, gap: 14 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  title: { fontSize: 24, color: sawaaColors.ink[900], marginTop: 8, paddingHorizontal: 4 },
-  subtitle: { fontSize: 12.5, color: sawaaColors.ink[500], marginTop: 4, paddingHorizontal: 4 },
-  therapistCard: { padding: 14 },
-  therapistRow: { alignItems: 'center', gap: 12 },
-  avatar: { width: 48, height: 48, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 20, color: '#fff' },
-  therapistMid: { flex: 1 },
-  therapistName: { fontSize: 14, color: sawaaColors.ink[900] },
-  therapistMeta: { fontSize: 11.5, color: sawaaColors.ink[500], marginTop: 2 },
-  starsWrap: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: 14 },
-  starBtn: { padding: 4 },
-  sectionTitle: { fontSize: 14, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
-  tagRow: { flexWrap: 'wrap', gap: 6 },
-  tag: { paddingHorizontal: 12, paddingVertical: 8 },
-  tagText: { fontSize: 12 },
-  noteCard: { padding: 14 },
-  noteInput: { fontSize: 13, minHeight: 80 },
-  ctaWrap: { position: 'absolute', left: 16, right: 16 },
-  ctaBtn: {
-    borderRadius: 999, height: 52,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: { color: '#fff', fontSize: 14 },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
+  therapistCard: { padding: sawaaSpacing.lg },
+  therapistRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  therapistMid: { flex: 1, minWidth: 0, gap: 2 },
+  therapistName: { fontSize: 16, lineHeight: 22 },
+  therapistMeta: { fontSize: 14, lineHeight: 20 },
+  ratingBlock: { alignItems: 'center', gap: sawaaSpacing.sm },
+  question: { fontSize: 20, lineHeight: 28, textAlign: 'center' },
+  stars: { justifyContent: 'center', gap: sawaaSpacing.xs },
+  starBtn: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  ratingLabel: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  notes: { gap: sawaaSpacing.sm },
+  notesLabel: { fontSize: 14, lineHeight: 20 },
+  noteCard: { padding: sawaaSpacing.lg },
+  noteInput: { fontSize: 15, minHeight: 80, textAlignVertical: 'top' },
 });

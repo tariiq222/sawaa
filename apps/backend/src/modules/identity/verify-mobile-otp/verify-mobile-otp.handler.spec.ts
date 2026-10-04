@@ -8,16 +8,19 @@ import { PrismaService } from '../../../infrastructure/database';
 import { TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { RlsTransactionService } from '../../../infrastructure/database';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 
 const prismaMock = {
   user: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   client: { findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
   otpCode: { findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+  employee: { findFirst: jest.fn() },
   $queryRaw: jest.fn(),
 };
 const tokensMock = { issueTokenPair: jest.fn() };
 const clientTokensMock = { issueTokenPair: jest.fn() };
 const rlsMock = { withTransaction: jest.fn((fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock)) };
+const settingsMock = { get: jest.fn() };
 const clsMock = {
   run: jest.fn().mockImplementation((fn: () => unknown) => fn()),
   set: jest.fn(),
@@ -36,6 +39,8 @@ describe('VerifyMobileOtpHandler', () => {
     jest.clearAllMocks();
     prismaMock.client.findMany.mockReset();
     clsMock.run.mockImplementation((fn: () => unknown) => fn());
+    settingsMock.get.mockResolvedValue(false);
+    prismaMock.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     rlsMock.withTransaction.mockImplementation((fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock));
     prismaMock.user.findUnique.mockImplementation(() => prismaMock.user.findFirst());
     prismaMock.client.findUnique.mockImplementation(async () => {
@@ -51,6 +56,7 @@ describe('VerifyMobileOtpHandler', () => {
         { provide: ClientTokenService, useValue: clientTokensMock },
         { provide: RlsTransactionService, useValue: rlsMock },
         { provide: ClsService, useValue: clsMock },
+        { provide: PlatformSettingsService, useValue: settingsMock },
       ],
     }).compile();
     handler = moduleRef.get(VerifyMobileOtpHandler);
@@ -256,6 +262,72 @@ describe('VerifyMobileOtpHandler', () => {
     expect(out.tokens.accessToken).toBe('a');
     // Result shape is tokens-only — guards against re-introducing SaaS fork fields.
     expect(Object.keys(out)).toEqual(['tokens', 'sessionKind']);
+  });
+
+  describe('staff mobile sign-in', () => {
+    const staffUser = (isSuperAdmin: boolean) => ({
+      id: 'u-staff', role: 'ADMIN', isSuperAdmin, email: 'admin@b.com', phone: '+966500000000',
+      isActive: true, phoneVerifiedAt: new Date(), customRoleId: null, customRole: null,
+    });
+    const validOtp = () => ({
+      id: 'o1', codeHash: goodCodeHash, expiresAt: new Date(Date.now() + 60000),
+      attempts: 0, maxAttempts: 5, lockedUntil: null, consumedAt: null,
+    });
+
+    beforeEach(() => {
+      prismaMock.otpCode.findFirst.mockResolvedValue(validOtp());
+      prismaMock.otpCode.updateMany.mockResolvedValue({ count: 1 });
+      tokensMock.issueTokenPair.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
+    });
+
+    it('refuses a super-admin OTP-only login when two-factor is required, without touching the code', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(staffUser(true));
+      settingsMock.get.mockResolvedValue(true);
+
+      await expect(handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN }))
+        .rejects.toBeInstanceOf(UnauthorizedException);
+      expect(settingsMock.get).toHaveBeenCalledWith('security.twoFactor.required');
+      expect(tokensMock.issueTokenPair).not.toHaveBeenCalled();
+      expect(prismaMock.otpCode.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('does not reveal staff eligibility for a wrong code', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(staffUser(false));
+      prismaMock.employee.findFirst.mockResolvedValue(null);
+
+      await expect(handler.execute({ identifier: '+966500000000', code: '9999', purpose: MobileOtpPurposeDto.LOGIN }))
+        .rejects.toThrow('Invalid OTP code');
+      expect(prismaMock.employee.findFirst).not.toHaveBeenCalled();
+      expect(settingsMock.get).not.toHaveBeenCalled();
+    });
+
+    it('allows a super-admin when two-factor is not required', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(staffUser(true));
+      settingsMock.get.mockResolvedValue(false);
+
+      const out = await handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN });
+      expect(out).toEqual({ tokens: { accessToken: 'a', refreshToken: 'r' }, sessionKind: 'staff' });
+      expect(tokensMock.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'u-staff' }), { isSuperAdmin: true }, prismaMock, 'MOBILE');
+    });
+
+    it('refuses staff without an active practitioner record, without touching the code', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(staffUser(false));
+      prismaMock.employee.findFirst.mockResolvedValue(null);
+
+      await expect(handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN }))
+        .rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prismaMock.employee.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'u-staff', isActive: true } }));
+      expect(tokensMock.issueTokenPair).not.toHaveBeenCalled();
+      expect(prismaMock.otpCode.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('allows a non-super-admin practitioner even when two-factor is required', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(staffUser(false));
+      settingsMock.get.mockResolvedValue(true);
+
+      const out = await handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN });
+      expect(out).toEqual({ tokens: { accessToken: 'a', refreshToken: 'r' }, sessionKind: 'staff' });
+    });
   });
 
   it('login: throws UnauthorizedException when account inactive', async () => {

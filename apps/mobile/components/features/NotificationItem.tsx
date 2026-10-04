@@ -12,7 +12,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import { colors as sharedColors } from '@sawaa/shared/tokens';
+import { withAlpha } from '@/theme/sawaa/tokens';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
@@ -29,16 +29,19 @@ interface TypeConfig {
   color: string;
 }
 
-const TYPE_MAP: Partial<Record<Notification['type'], TypeConfig>> = {
+const typeMap = (sharedColors: ReturnType<typeof useTheme>['theme']['colors']): Partial<Record<Notification['type'], TypeConfig>> => ({
+  booking_created: { icon: Calendar, color: sharedColors.info },
   booking_confirmed: { icon: Calendar, color: sharedColors.success },
   booking_cancelled: { icon: CalendarX, color: sharedColors.error },
   reminder: { icon: Bell, color: sharedColors.warning },
-  payment_received: { icon: CreditCard, color: sharedColors.primary[600] },
+  booking_reminder: { icon: Bell, color: sharedColors.warning },
+  payment_received: { icon: CreditCard, color: sharedColors.info },
+  payment_completed: { icon: CreditCard, color: sharedColors.success },
+  payment_reminder: { icon: CreditCard, color: sharedColors.warning },
+  payment_failed: { icon: CreditCard, color: sharedColors.error },
   new_rating: { icon: Star, color: sharedColors.purple },
   problem_report: { icon: AlertTriangle, color: sharedColors.error },
-};
-
-const DEFAULT_TYPE_CONFIG: TypeConfig = { icon: Bell, color: sharedColors.textSecondary };
+});
 
 function getRelativeTime(
   dateStr: string,
@@ -61,7 +64,7 @@ export function NotificationItem({
 }: NotificationItemProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const config = TYPE_MAP[notification.type] ?? DEFAULT_TYPE_CONFIG;
+  const config = typeMap(theme.colors)[notification.type] ?? { icon: Bell, color: theme.colors.textSecondary };
   const Icon = config.icon;
 
   const title =
@@ -82,6 +85,7 @@ export function NotificationItem({
       style={({ pressed }) => [
         styles.row,
         {
+          flexDirection: language === 'ar' ? 'row-reverse' : 'row',
           backgroundColor: notification.isRead
             ? theme.colors.surface
             : theme.colors.white,
@@ -90,16 +94,16 @@ export function NotificationItem({
       ]}
     >
       <View
-        style={[styles.iconCircle, { backgroundColor: `${config.color}14` }]}
+        style={[styles.iconCircle, { backgroundColor: withAlpha(config.color, 0.08) }]}
       >
         <Icon size={20} strokeWidth={1.5} color={config.color} />
       </View>
 
       <View style={styles.content}>
-        <ThemedText variant="subheading" numberOfLines={1}>
+        <ThemedText variant="subheading">
           {title}
         </ThemedText>
-        <ThemedText variant="bodySm" numberOfLines={2}>
+        <ThemedText variant="bodySm">
           {body}
         </ThemedText>
         <ThemedText
@@ -112,7 +116,7 @@ export function NotificationItem({
       </View>
 
       {!notification.isRead && (
-        <View style={styles.unreadDot} />
+        <View style={[styles.unreadDot, { backgroundColor: theme.colors.info }]} />
       )}
     </Pressable>
   );
@@ -136,6 +140,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   time: {
@@ -145,7 +150,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: sharedColors.primary[600],
     marginTop: 8,
   },
 });

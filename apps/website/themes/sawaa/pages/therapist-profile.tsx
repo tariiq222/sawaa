@@ -1,10 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import type { PublicEmployee } from '@sawaa/api-client';
 import type { Locale } from '@/features/locale/locale';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { listPublicEmployees, getPublicEmployee } from '@/features/therapists/public';
+import { getPublicCatalog, selectBookableClinicServices } from '@/features/public-catalog/public';
 import { TherapistCardSawaa } from '../components/therapists/therapist-card';
 import { safeImageSrc } from '@/lib/image-url';
 
@@ -20,9 +21,18 @@ function initials(name: string | null): string {
   return parts.map((p) => p.charAt(0)).join('') || '·';
 }
 
+/** First two name words with any leading title stripped (audit T6). */
+function shortName(name: string): string {
+  const cleaned = name.replace(/^(د\.|أ\.|Dr\.)\s*/i, '').trim();
+  return cleaned.split(/\s+/).slice(0, 2).join(' ');
+}
+
 export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
-  const therapist = await getPublicEmployee(slug);
-  const all = await listPublicEmployees().catch(() => [] as PublicEmployee[]);
+  const [therapist, all, catalog] = await Promise.all([
+    getPublicEmployee(slug),
+    listPublicEmployees(true).catch(() => [] as PublicEmployee[]),
+    getPublicCatalog().catch(() => ({ departments: [], categories: [], services: [] })),
+  ]);
 
   const t = (key: MessageKey) => translate(locale, key);
 
@@ -31,6 +41,12 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
   const bio = (locale === 'ar' ? therapist.publicBioAr : therapist.publicBioEn) ?? '';
 
   const others = all.filter((e) => e.id !== therapist.id).slice(0, 4);
+
+  // What this practitioner offers: visible services they are assigned to
+  // (contract: booking options & pricing stay in the wizard — audit T1).
+  const offeredServices = selectBookableClinicServices(catalog, [therapist])
+    .slice(0, 6)
+    .map(({ service }) => service);
 
   return (
     <>
@@ -41,7 +57,7 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
           background:
             'radial-gradient(ellipse 720px 420px at 92% 8%, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 60%),' +
             'radial-gradient(ellipse 640px 380px at 5% 95%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 60%),' +
-            'linear-gradient(180deg, #FBF7F2 0%, #FDFAF6 100%)',
+            'var(--sw-warm-gradient)',
         }}
       >
         <div className="max-w-[1180px] mx-auto px-5 sm:px-6 md:px-8">
@@ -126,6 +142,38 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                   <p className="whitespace-pre-line">{bio}</p>
                 </div>
               ) : null}
+
+              {offeredServices.length > 0 ? (
+                <div className="mt-10" style={{ maxWidth: '60ch' }}>
+                  <h2
+                    className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] mb-4"
+                    style={{ color: 'var(--sw-neutral-500)' }}
+                  >
+                    {t('therapists.profile.offers')}
+                  </h2>
+                  <ul className="flex flex-wrap gap-2" role="list">
+                    {offeredServices.map((service) => (
+                      <li
+                        key={service.id}
+                        className="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium rounded-full px-3.5 py-1.5"
+                        style={{
+                          background: 'var(--sw-primary-50)',
+                          color: 'var(--sw-primary-700)',
+                          border: '1px solid color-mix(in srgb, var(--sw-primary-600) 18%, transparent)',
+                        }}
+                      >
+                        <Clock className="w-3.5 h-3.5" aria-hidden />
+                        {(locale === 'en' ? service.nameEn ?? service.nameAr : service.nameAr) ?? service.nameAr}
+                        {service.showDuration !== false ? (
+                          <span style={{ color: 'color-mix(in srgb, var(--sw-primary-700) 65%, transparent)' }}>
+                            · {service.durationMins} {t('booking.minutesShort')}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
 
             {/* Sidebar: booking CTA only */}
@@ -136,7 +184,7 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                   className="group inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                   style={{
                     background: 'var(--sw-secondary-700)',
-                    color: '#fff',
+                    color: 'var(--sw-secondary-700-foreground)',
                     boxShadow:
                       '0 8px 20px -8px color-mix(in srgb, var(--sw-secondary-900) 35%, transparent)',
                   }}
@@ -144,10 +192,20 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                   <Calendar className="w-4 h-4" />
                   <span>
                     {t('therapists.profile.bookCta')}{' '}
-                    <span className="font-bold">{name.split(/\s+/).slice(0, 2).join(' ')}</span>
+                    <span className="font-bold">{shortName(name)}</span>
                   </span>
                 </Link>
-              ) : null}
+              ) : (
+                <p
+                  className="text-center text-[0.8125rem] rounded-full px-5 py-3.5"
+                  style={{
+                    background: 'var(--sw-primary-50)',
+                    color: 'var(--sw-neutral-500)',
+                  }}
+                >
+                  {t('therapists.profile.notBookable')}
+                </p>
+              )}
             </aside>
           </div>
         </div>

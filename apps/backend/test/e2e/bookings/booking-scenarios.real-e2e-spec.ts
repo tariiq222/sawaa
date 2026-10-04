@@ -729,6 +729,57 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			expect(fourth.status).toBe(400);
 			expect(fourth.body.message).toMatch(/Maximum reschedules/);
 		});
+
+		it("Scenario 7b — Two concurrent reschedules cannot both pass the limit", async () => {
+			const createRes = await createBooking({
+				scheduledAt: daysFromNow(3, 17, 0).toISOString(),
+			});
+			expect(createRes.status).toBe(201);
+			const bookingId = createRes.body.id;
+			// Use 2 of 3 reschedules, then race two requests for the last one.
+			for (const hour of [18, 19]) {
+				expect((await rescheduleBooking(bookingId, daysFromNow(3, hour, 0))).status).toBe(200);
+			}
+			const [a, b] = await Promise.all([
+				rescheduleBooking(bookingId, daysFromNow(3, 20, 0)),
+				rescheduleBooking(bookingId, daysFromNow(3, 21, 0)),
+			]);
+			const statuses = [a.status, b.status].sort();
+			if (statuses[0] !== 200 || statuses[1] !== 400) console.log("7b", a.status, JSON.stringify(a.body), b.status, JSON.stringify(b.body));
+			expect(statuses).toEqual([200, 400]);
+			expect(
+				await prisma.bookingStatusLog.count({ where: { bookingId, reason: "rescheduled" } }),
+			).toBe(3);
+		});
+
+		it("Scenario 7d — A burst of three concurrent reschedules within the limit all succeed", async () => {
+			const createRes = await createBooking({
+				scheduledAt: daysFromNow(3, 9, 0).toISOString(),
+			});
+			expect(createRes.status).toBe(201);
+			const bookingId = createRes.body.id;
+			// All three queue on the same client lock; each loser must be retried,
+			// not surfaced as a database error.
+			const results = await Promise.all(
+				[11, 13, 15].map((hour) => rescheduleBooking(bookingId, daysFromNow(3, hour, 0))),
+			);
+			expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+			expect(
+				await prisma.bookingStatusLog.count({ where: { bookingId, reason: "rescheduled" } }),
+			).toBe(3);
+		});
+
+		it("Scenario 7c — Staff reschedule cannot overlap another appointment of the same client", async () => {
+			// Same client, different practitioners, so only the client overlaps.
+			const first = await createBooking({ employeeId: ctx.employee2Id, scheduledAt: tomorrow(19, 0).toISOString() });
+			const second = await createBooking({ scheduledAt: tomorrow(21, 0).toISOString() });
+			expect(first.status).toBe(201);
+			expect(second.status).toBe(201);
+
+			const res = await rescheduleBooking(second.body.id, tomorrow(19, 0));
+			expect(res.status).toBe(409);
+			expect(res.body.message).toMatch(/Client already has an overlapping appointment/);
+		});
 	});
 
 	// ═══════════════════════════════════════════════════════════════════════════
@@ -1054,7 +1105,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			expect(booking?.zoomMeetingStatus).toBe("CANCELLED");
 		});
 
-		it("Scenario 25 — Deposit paid, balance unpaid, booking expires, deposit refunded", async () => {
+		it("Scenario 25 — Deposit confirms the booking while unpaid balance cannot expire or refund it", async () => {
 			const scheduledAt = await getFirstAvailableSlot(
 				ctx.employeeId,
 				ctx.serviceId,
@@ -1065,10 +1116,10 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			});
 			const bookingId = createRes.body.id;
 
-			// Transition to DEPOSIT_PAID and update the existing invoice
+			// A stale hold deadline must not expire an already confirmed deposit.
 			await prisma.booking.update({
 				where: { id: bookingId },
-				data: { status: BookingStatus.DEPOSIT_PAID },
+				data: { status: BookingStatus.DEPOSIT_PAID, expiresAt: new Date(Date.now() - 60_000) },
 			});
 			const existingInvoice = await prisma.invoice.findFirst({
 				where: { bookingId },
@@ -1092,20 +1143,26 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			const { ExpireBookingHandler } = await import(
 				"../../../src/modules/bookings/expire-booking/expire-booking.handler"
 			);
-			await app
+			const before = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+			const invoiceBefore = await prisma.invoice.findUniqueOrThrow({
+				where: { id: invoice.id }, include: { payments: true },
+			});
+			expect(Number(invoiceBefore.total)).toBeGreaterThan(15000);
+			const statusLogsBefore = await prisma.bookingStatusLog.findMany({ where: { bookingId } });
+			const eventsBefore = await prisma.outboxEvent.findMany({ where: { aggregateId: bookingId } });
+
+			await expect(app
 				.get(ExpireBookingHandler)
-				.execute({ bookingId, changedBy: "system" });
+				.execute({ bookingId, changedBy: "system" }))
+				.rejects.toThrow("Booking cannot be expired (status: DEPOSIT_PAID)");
 
-			const booking = await prisma.booking.findUnique({
-				where: { id: bookingId },
-			});
-			expect(booking?.status).toBe(BookingStatus.EXPIRED);
-
-			// Refund request should exist
-			const refundReq = await prisma.refundRequest.findFirst({
-				where: { payment: { invoice: { bookingId } } },
-			});
-			expect(refundReq).toBeTruthy();
+			expect(await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } })).toEqual(before);
+			expect(await prisma.invoice.findUniqueOrThrow({
+				where: { id: invoice.id }, include: { payments: true },
+			})).toEqual(invoiceBefore);
+			expect(await prisma.bookingStatusLog.findMany({ where: { bookingId } })).toEqual(statusLogsBefore);
+			expect(await prisma.outboxEvent.findMany({ where: { aggregateId: bookingId } })).toEqual(eventsBefore);
+			expect(await prisma.refundRequest.count({ where: { invoiceId: invoice.id } })).toBe(0);
 		});
 
 		it("Scenario 26 — Staff cancels sessions, full refund + event published", async () => {

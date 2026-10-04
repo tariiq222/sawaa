@@ -1,8 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { sawaaColors } from './tokens';
-import { colors as sharedColors } from '@sawaa/shared/tokens';
+import { getSawaaRoles } from './tokens';
+import { useTheme } from '../useTheme';
+import { getFontName } from '../fonts';
 
 interface Props {
   label: string;
@@ -19,7 +20,10 @@ interface Props {
  * Matches the "ابدأ الآن / تسجيل جديد" CTA style from the welcome screen.
  * Use everywhere a primary action is surfaced so the app stays visually uniform.
  */
-export function PrimaryButton({ label, onPress, fontFamily, style, height = 52, disabled, icon }: Props) {
+export function PrimaryButton({ label, onPress, fontFamily = getFontName('ar', '600'), style, height = 56, disabled, icon }: Props) {
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = createStyles(action);
   const isDisabled = Boolean(disabled || !onPress);
   return (
     <Pressable
@@ -30,14 +34,14 @@ export function PrimaryButton({ label, onPress, fontFamily, style, height = 52, 
       style={[{ opacity: isDisabled ? 0.55 : 1 }, style]}
     >
       <LinearGradient
-        colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+        colors={action.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.gradient, { height, borderRadius: 999 }]}
       >
         {/* Specular sheen on top half */}
         <LinearGradient
-          colors={[sawaaColors.glass.border, 'transparent']}
+          colors={[action.sheen, 'transparent']}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={styles.sheen}
@@ -51,17 +55,18 @@ export function PrimaryButton({ label, onPress, fontFamily, style, height = 52, 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   gradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     overflow: 'hidden',
-    shadowColor: sawaaColors.teal[600],
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
+    shadowColor: action.fill,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    elevation: 6,
   },
   sheen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: '55%' },
   topEdge: {
@@ -70,7 +75,7 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     height: 1,
-    backgroundColor: sawaaColors.glass.border,
+    backgroundColor: action.sheen,
   },
-  label: { color: sharedColors.white, fontSize: 15, letterSpacing: 0.2 },
+  label: { color: action.foreground, fontSize: 17, letterSpacing: 0.2 },
 });

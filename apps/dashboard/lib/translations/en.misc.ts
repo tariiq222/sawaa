@@ -220,6 +220,8 @@ export const enMisc: Record<string, string> = {
 
   // — Notifications —
   "notifications.title": "Notifications",
+  "notifications.loadError": "Unable to load notifications. Try again.",
+  "notifications.retry": "Retry",
   "notifications.description": "Stay updated with clinic activity",
   "notifications.markAllRead": "Mark All Read",
   "notifications.unread": "Unread",

@@ -74,7 +74,7 @@ export function classifyAdministrativeText(message: string): AdministrativeScope
 
   const normalized = normalizeAdministrativeText(message);
   const normalizedCodepoints = Array.from(normalized);
-  const compactNormalized = normalized.replace(/ /g, '');
+  const compactNormalized = normalized.replaceAll(' ', '');
   const compactPolicyView = normalized.replace(/[^\p{L}\p{N}]/gu, '');
   const normalizedLength = splitGraphemes(normalized).length;
   if (!normalized || normalizedLength > MAX_NORMALIZED_GRAPHEMES) return 'BLOCKED_POLICY';
@@ -167,12 +167,12 @@ export function normalizeAdministrativeText(value: string): string {
   return value
     .normalize('NFKD')
     .replace(/[\u064B-\u065F\u0670]/g, '')
-    .replace(/\u0640/g, '')
+    .replaceAll('\u0640', '')
     .replace(/[\u0622\u0623\u0625]/g, 'ا')
-    .replace(/ؤ/g, 'و')
-    .replace(/ئ/g, 'ي')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
+    .replaceAll('ؤ', 'و')
+    .replaceAll('ئ', 'ي')
+    .replaceAll('ة', 'ه')
+    .replaceAll('ى', 'ي')
     .toLowerCase()
     .replace(/in[ -]person/g, 'inperson')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')

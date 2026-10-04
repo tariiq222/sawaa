@@ -29,8 +29,24 @@ export class UpdateServiceHandler {
   async execute(dto: UpdateServiceCommand) {
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId, archivedAt: null },
+      include: { category: { select: { bookingMode: true } } },
     });
     if (!service) throw new NotFoundException('Service not found');
+
+    if (service.isHidden && service.category?.bookingMode === 'DIRECT' && (
+      (dto.categoryId !== undefined && dto.categoryId !== service.categoryId) ||
+      (dto.isHidden !== undefined && dto.isHidden !== service.isHidden) ||
+      (dto.nameAr !== undefined && dto.nameAr !== service.nameAr) ||
+      (dto.nameEn !== undefined && dto.nameEn !== service.nameEn)
+    )) {
+      throw new BadRequestException('Internal clinic service identity is managed by the clinic');
+    }
+    if (dto.categoryId && dto.categoryId !== service.categoryId) {
+      const destination = await this.prisma.serviceCategory.findFirst({ where: { id: dto.categoryId }, select: { bookingMode: true } });
+      if (destination?.bookingMode === 'DIRECT') {
+        throw new BadRequestException('DIRECT clinic services are managed by the clinic');
+      }
+    }
 
     if (dto.expectedUpdatedAt !== undefined) {
       const expected = new Date(dto.expectedUpdatedAt).getTime();
@@ -58,8 +74,8 @@ export class UpdateServiceHandler {
     }
 
     const duplicateChecks = [
-      ...(dto.nameAr !== undefined ? [{ nameAr: dto.nameAr }] : []),
-      ...(dto.nameEn !== undefined ? [{ nameEn: dto.nameEn }] : []),
+      ...(dto.nameAr !== undefined && dto.nameAr !== service.nameAr ? [{ nameAr: dto.nameAr }] : []),
+      ...(dto.nameEn !== undefined && dto.nameEn !== service.nameEn ? [{ nameEn: dto.nameEn }] : []),
     ];
     if (duplicateChecks.length > 0) {
       const duplicate = await this.prisma.service.findFirst({

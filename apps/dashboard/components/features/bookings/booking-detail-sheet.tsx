@@ -59,7 +59,11 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
   const bookedParts = isoToClinicParts(booking.createdAt)
   const bookedAt = bookedParts.date ? `${formatDate(bookedParts.date)} - ${bookedParts.time}` : "—"
 
-  const canReschedule = !booking.isHistoricalImport && !["completed", "cancelled", "no_show", "cancel_requested", "expired"].includes(booking.status)
+  // Mirrors RESCHEDULE.from: pending and operationally confirmed appointments.
+  // Payment holds remain ineligible until confirmed.
+  const canReschedule =
+    !booking.isHistoricalImport &&
+    ["pending", "confirmed", "deposit_paid"].includes(booking.status)
   // Show the invoice tab whenever a booking still owes money (an invoice OR a
   // payable booking with no invoice yet). Mirrors PaymentStatusCell so the
   // collect action surfaces everywhere staff look at the booking.

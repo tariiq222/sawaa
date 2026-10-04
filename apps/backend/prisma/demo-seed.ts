@@ -8,11 +8,60 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { enrichExistingCatalog } from './seeds/enrich-existing-catalog';
 
 const BRANCH_ID = 'c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5';
 const BRANCH_ID_2 = '00000000-0000-4000-8000-0000000b0002';
 
+/** Drop cached catalog/service reads so the enriched copy is served immediately. */
+async function invalidateCatalogCache(): Promise<void> {
+  const host = process.env.REDIS_HOST;
+  const port = Number(process.env.REDIS_PORT);
+  if (!host || !Number.isInteger(port)) {
+    console.warn('! Skipped catalog cache invalidation: REDIS_HOST/REDIS_PORT not set');
+    return;
+  }
+  const { default: Redis } = await import('ioredis');
+  const redis = new Redis({
+    host,
+    port,
+    db: Number(process.env.REDIS_DB ?? 0),
+    password: process.env.REDIS_PASSWORD || undefined,
+    lazyConnect: false,
+    enableReadyCheck: true,
+  });
+  try {
+    let deleted = 0;
+    for (const prefix of ['ref:public-catalog', 'ref:services']) {
+      let cursor = '0';
+      do {
+        const [next, keys] = await redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 200);
+        cursor = next;
+        if (keys.length > 0) deleted += await redis.del(...keys);
+      } while (cursor !== '0');
+    }
+    console.log(`✓ Invalidated ${deleted} catalog cache key(s)`);
+  } catch (err) {
+    console.warn(`! Catalog cache invalidation failed: ${err instanceof Error ? err.message : err}`);
+  } finally {
+    await redis.quit();
+  }
+}
+
 async function main() {
+  if (process.env.DEMO_CATALOG_ENRICH === '1') {
+    if (process.env.NODE_ENV === 'production') throw new Error('Demo catalog enrichment is disabled in production');
+    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for demo catalog enrichment');
+    const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+    try {
+      await prisma.$connect();
+      await enrichExistingCatalog(prisma);
+      await invalidateCatalogCache();
+    } finally {
+      await prisma.$disconnect();
+    }
+    return;
+  }
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
   });
@@ -390,10 +439,25 @@ async function main() {
     });
   }
 
+  // ── Holds must carry an expiry window ──────────────────────────────────────
+  // Production stamps one at creation (15 min — see
+  // src/modules/bookings/booking-hold-window.ts). The expiry cron can only
+  // release a hold it can see, and `expiresAt: { lt: now }` never matches NULL:
+  // a seeded PENDING / AWAITING_PAYMENT booking with no window would sit in the
+  // dashboard forever and keep blocking its slot. Demo data uses a long
+  // presentation window so the hold states survive a demo; set this to 15
+  // minutes if you want them to behave exactly like production.
+  const DEMO_HOLD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  const stampedHolds = await prisma.booking.updateMany({
+    where: { status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'AWAITING_PAYMENT'] } },
+    data: { expiresAt: new Date(Date.now() + DEMO_HOLD_WINDOW_MS) },
+  });
+
   await prisma.$disconnect();
 
   console.log('─────────────────────────────────────────────');
   console.log(`✔  ${employees.length} employees, ${services.length} services, ${clients.length} clients, ${bookings.length} bookings, ${ratings.length} ratings seeded`);
+  console.log(`✔  ${stampedHolds.count} hold booking(s) stamped with a payment window`);
   console.log('─────────────────────────────────────────────');
 }
 

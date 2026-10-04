@@ -6,15 +6,35 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
 
 const prismaMock = {
-  user: { findFirst: jest.fn(), create: jest.fn() },
+  user: { findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
 };
 const requestOtpMock = { execute: jest.fn() };
+
+const PHONE = '+966500000000';
+const pendingSelfSignup = {
+  phone: PHONE,
+  role: 'CLIENT',
+  isActive: false,
+  isSuperAdmin: false,
+  phoneVerifiedAt: null,
+  passwordHash: null,
+};
+const verifiedActive = {
+  phone: PHONE,
+  role: 'CLIENT',
+  isActive: true,
+  isSuperAdmin: false,
+  phoneVerifiedAt: new Date('2026-09-01T00:00:00Z'),
+  passwordHash: null,
+};
+const baseCmd = { firstName: 'Sara', lastName: 'Ahmad', phone: PHONE, email: 'sara@example.com' };
 
 describe('RegisterMobileUserHandler', () => {
   let handler: RegisterMobileUserHandler;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prismaMock.user.updateMany.mockResolvedValue({ count: 1 });
     const moduleRef = await Test.createTestingModule({
       providers: [
         RegisterMobileUserHandler,
@@ -26,14 +46,14 @@ describe('RegisterMobileUserHandler', () => {
   });
 
   it('rejects when an existing user shares phone or email (generic message, no leak)', async () => {
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'u1' });
+    prismaMock.user.findMany.mockResolvedValue([{ id: 'u1', ...verifiedActive }]);
     await expect(
       handler.execute({ firstName: 'A', lastName: 'B', phone: '+966500000000', email: 'a@b.com' }),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('creates user with passwordHash null + phoneVerifiedAt null + isActive false, then triggers SMS OTP', async () => {
-    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.findMany.mockResolvedValue([]);
     prismaMock.user.create.mockResolvedValue({ id: 'u2', phone: '+966500000000' });
     requestOtpMock.execute.mockResolvedValue({ success: true });
 
@@ -59,7 +79,7 @@ describe('RegisterMobileUserHandler', () => {
   });
 
   it('normalizes input (lowercases email, strips whitespace from phone)', async () => {
-    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.findMany.mockResolvedValue([]);
     prismaMock.user.create.mockResolvedValue({ id: 'u3', phone: '+966501234567' });
     requestOtpMock.execute.mockResolvedValue({ success: true });
 
@@ -67,8 +87,91 @@ describe('RegisterMobileUserHandler', () => {
       firstName: 'A', lastName: 'B', phone: '+966 50 123 4567', email: 'A@B.com',
     });
 
-    expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { OR: [{ phone: '+966501234567' }, { email: 'a@b.com' }] },
     }));
+  });
+
+  describe('retry of an unfinished self-signup', () => {
+    it('re-sends the register OTP and updates names/email for a pending same-phone user (no conflict)', async () => {
+      prismaMock.user.findMany.mockResolvedValue([{ id: 'pending-1', ...pendingSelfSignup }]);
+      prismaMock.user.update.mockResolvedValue({ id: 'pending-1' });
+      requestOtpMock.execute.mockResolvedValue({ success: true });
+
+      const result = await handler.execute(baseCmd);
+
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'pending-1', ...pendingSelfSignup },
+        data: { firstName: 'Sara', lastName: 'Ahmad', name: 'Sara Ahmad', email: 'sara@example.com' },
+      });
+      expect(requestOtpMock.execute).toHaveBeenCalledWith({
+        channel: OtpChannel.SMS,
+        identifier: PHONE,
+        purpose: OtpPurpose.MOBILE_REGISTER,
+      });
+      expect(result).toEqual({ userId: 'pending-1', maskedPhone: '+966***00' });
+    });
+
+    it('conflicts without requesting OTP when a pending snapshot becomes ineligible before the write', async () => {
+      prismaMock.user.findMany.mockResolvedValue([{ id: 'pending-1', ...pendingSelfSignup }]);
+      // Keep the old unconditional path functional: the regression must fail
+      // because it accepts the stale snapshot, not because a mock is missing.
+      prismaMock.user.update.mockResolvedValue({ id: 'pending-1', ...verifiedActive });
+      prismaMock.user.updateMany.mockResolvedValue({ count: 0 });
+      requestOtpMock.execute.mockResolvedValue({ success: true });
+
+      await expect(handler.execute(baseCmd)).rejects.toEqual(new ConflictException('Account already exists'));
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(requestOtpMock.execute).not.toHaveBeenCalled();
+    });
+
+    it('conflicts when the user is pending but the email belongs to another user', async () => {
+      prismaMock.user.findMany.mockResolvedValue([
+        { id: 'pending-1', ...pendingSelfSignup },
+        { id: 'other', ...verifiedActive, phone: '+966511111111' },
+      ]);
+
+      await expect(handler.execute(baseCmd)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
+      expect(requestOtpMock.execute).not.toHaveBeenCalled();
+    });
+
+    it('conflicts for a verified/active user with the same phone', async () => {
+      prismaMock.user.findMany.mockResolvedValue([{ id: 'u1', ...verifiedActive }]);
+
+      await expect(handler.execute(baseCmd)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
+      expect(requestOtpMock.execute).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['active but unverified', { isActive: true }],
+      ['phone verified', { phoneVerifiedAt: new Date() }],
+      ['has a password', { passwordHash: 'hash' }],
+      ['staff role', { role: 'RECEPTIONIST' }],
+      ['super admin', { isSuperAdmin: true }],
+    ])('conflicts when the matched user is not a pending self-signup (%s)', async (_label, override) => {
+      prismaMock.user.findMany.mockResolvedValue([{ id: 'u1', ...pendingSelfSignup, ...override }]);
+
+      await expect(handler.execute(baseCmd)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
+      expect(requestOtpMock.execute).not.toHaveBeenCalled();
+    });
+
+    it('conflicts when a pending user matches by email only with a different phone', async () => {
+      prismaMock.user.findMany.mockResolvedValue([
+        { id: 'pending-2', ...pendingSelfSignup, phone: '+966522222222' },
+      ]);
+
+      await expect(handler.execute(baseCmd)).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
+      expect(requestOtpMock.execute).not.toHaveBeenCalled();
+    });
   });
 });

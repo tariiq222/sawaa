@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from 'react';
-import { I18nManager, useColorScheme } from 'react-native';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef, ReactNode } from 'react';
+import { Appearance, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildTheme, type AppTheme } from './tokens';
 import { useBranding } from '@/hooks/queries/useBranding';
@@ -39,10 +39,13 @@ export function ThemeProvider({ children, language = 'ar' }: ThemeProviderProps)
   const systemScheme = useColorScheme();
   const [mode, setMode] = useState<ThemeMode>('system');
 
+  const userSelectedMode = useRef(false);
   useEffect(() => {
-    AsyncStorage.getItem(THEME_MODE_KEY).then((v) => {
-      if (v === 'light' || v === 'dark' || v === 'system') setMode(v);
-    });
+    let active = true;
+    void AsyncStorage.getItem(THEME_MODE_KEY).then((v) => {
+      if (active && !userSelectedMode.current && (v === 'light' || v === 'dark' || v === 'system')) setMode(v);
+    }).catch(() => { /* Keep system appearance if local storage is unavailable. */ });
+    return () => { active = false; };
   }, []);
 
   const scheme: 'light' | 'dark' =
@@ -53,17 +56,17 @@ export function ThemeProvider({ children, language = 'ar' }: ThemeProviderProps)
       : mode;
 
   const setThemeMode = useCallback((next: ThemeMode) => {
+    userSelectedMode.current = true;
     setMode(next);
-    void AsyncStorage.setItem(THEME_MODE_KEY, next);
+    void AsyncStorage.setItem(THEME_MODE_KEY, next).catch(() => { /* The in-session selection still applies. */ });
   }, []);
 
   const theme = useMemo(() => buildTheme(branding ?? null, scheme), [branding, scheme]);
 
   useEffect(() => {
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.forceRTL(isRTL);
-    }
-  }, [isRTL]);
+    Appearance.setColorScheme(mode === 'system' ? 'unspecified' : scheme);
+    return () => Appearance.setColorScheme('unspecified');
+  }, [mode, scheme]);
 
   return (
     <ThemeContext.Provider value={{ theme, isRTL, language, scheme, mode, setThemeMode }}>

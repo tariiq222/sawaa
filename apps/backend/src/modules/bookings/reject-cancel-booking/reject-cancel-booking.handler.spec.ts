@@ -1,7 +1,13 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { RejectCancelBookingHandler } from './reject-cancel-booking.handler';
-import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma as buildBasePrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+
+const buildPrisma = () => {
+  const p = buildBasePrisma();
+  p.$queryRaw.mockResolvedValue([]);
+  return p;
+};
 
 const cancelRequestedBooking = { ...mockBooking, status: 'CANCEL_REQUESTED' as BookingStatus };
 
@@ -79,5 +85,54 @@ describe('RejectCancelBookingHandler', () => {
         }),
       }),
     );
+  });
+
+  // A cancel request can outlive the 15-minute payment hold it was created
+  // with, and CANCEL_REQUESTED is exempt from the expiry cron. Restoring an
+  // unconfirmed booking with the stale window would let the cron expire it
+  // minutes after staff rejected the cancellation.
+  it('re-arms the payment window when restoring an unconfirmed hold', async () => {
+    const before = Date.now();
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, expiresAt: new Date(0) });
+    prisma.bookingStatusLog.findFirst = jest
+      .fn()
+      .mockResolvedValue({ fromStatus: BookingStatus.AWAITING_PAYMENT });
+    prisma.booking.update = jest
+      .fn()
+      .mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.AWAITING_PAYMENT });
+    const handler = new RejectCancelBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildEventBus() as never,
+    );
+
+    await handler.execute({ bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'No reason' });
+
+    const data = (prisma.booking.updateMany as jest.Mock).mock.calls[0][0].data;
+    expect(data.status).toBe(BookingStatus.AWAITING_PAYMENT);
+    expect(data.expiresAt).toBeInstanceOf(Date);
+    expect((data.expiresAt as Date).getTime()).toBeGreaterThan(before);
+  });
+
+  it('does not stamp a window when restoring a confirmed booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
+    prisma.bookingStatusLog.findFirst = jest
+      .fn()
+      .mockResolvedValue({ fromStatus: BookingStatus.CONFIRMED });
+    prisma.booking.update = jest
+      .fn()
+      .mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CONFIRMED });
+    const handler = new RejectCancelBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildEventBus() as never,
+    );
+
+    await handler.execute({ bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'No reason' });
+
+    const data = (prisma.booking.updateMany as jest.Mock).mock.calls[0][0].data;
+    expect(data.expiresAt).toBeNull();
   });
 });

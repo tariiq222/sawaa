@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { Thumb } from '@/components/ui/Thumb';
+import { sawaaRadius, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { DirState } from '@/hooks/useDir';
 import type { PublicEmployeeItem } from '@/services/client/employees';
 
@@ -16,79 +17,64 @@ interface TherapistsRowProps {
   f700: string;
 }
 
+const PHOTO = 148;
+
+/** Horizontal row of specialist photos with name and specialty. */
 export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsRowProps) {
+  const colors = useSawaaColors();
   const router = useRouter();
+  const [failedImages, setFailedImages] = React.useState<Record<string, string>>({});
 
   if (therapists.length === 0) {
     return (
-      <Glass variant="regular" radius={sawaaRadius.xl} style={styles.empty}>
-        <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
+      <View style={[styles.empty, { backgroundColor: colors.glass.opaqueBg }]}>
+        <Text style={[styles.emptyText, { fontFamily: f600, color: colors.ink[700], textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'لا يوجد معالجون متاحون حالياً' : 'No therapists available right now'}
         </Text>
-      </Glass>
+      </View>
     );
   }
 
   return (
-    <ScrollView
-      horizontal
+    <LocalizedHorizontalScroll
+      dir={dir}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.hScrollContent, { flexDirection: dir.row }]}
     >
       {therapists.map((t) => {
         const name = (dir.isRTL ? t.nameAr : t.nameEn) ?? t.nameAr ?? t.nameEn ?? '';
         const specialty = (dir.isRTL ? t.specialtyAr : t.specialty) ?? t.specialty ?? t.specialtyAr ?? '';
-        const initial = name.trim().charAt(0) || '·';
+        const photo = t.publicImageUrl && failedImages[t.id] !== t.publicImageUrl ? t.publicImageUrl : null;
         return (
-          <Glass key={t.id} variant="strong" radius={sawaaRadius.xl} style={styles.card}>
-            <Pressable
-              onPress={() => router.push(`/(client)/employee/${t.slug ?? t.id}`)}
-              style={styles.inner}
-            >
-              <LinearGradient
-                colors={[sawaaColors.teal[400], sawaaColors.teal[600]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
-              </LinearGradient>
-              <Text
-                style={[styles.name, { fontFamily: f700, textAlign: dir.textAlign }]}
-                numberOfLines={1}
-              >
-                {name}
-              </Text>
-              <Text
-                style={[styles.spec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}
-                numberOfLines={1}
-              >
-                {specialty || (t.title ?? '')}
-              </Text>
-            </Pressable>
-          </Glass>
+          <Pressable
+            key={t.id}
+            onPress={() => router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: 'therapist', id: t.slug ?? t.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={name}
+            style={styles.item}
+          >
+            <Thumb
+              uri={photo}
+              width={PHOTO}
+              height={PHOTO}
+              radius={sawaaRadius.lg}
+              accessibilityLabel={name}
+              onError={() => setFailedImages((previous) => ({ ...previous, [t.id]: t.publicImageUrl! }))}
+            />
+            <Text numberOfLines={1} style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
+            <Text numberOfLines={2} style={[styles.spec, { fontFamily: f400, color: colors.ink[500], textAlign: dir.textAlign }]}>{t.title || specialty}</Text>
+          </Pressable>
         );
       })}
-    </ScrollView>
+    </LocalizedHorizontalScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  hScrollContent: { gap: 10, paddingHorizontal: 2 },
-  empty: { padding: 24, alignItems: 'center' },
-  emptyText: { fontSize: 13, color: sawaaColors.ink[700] },
-  card: { width: 150 },
-  inner: { padding: 12, gap: 6, alignItems: 'center' },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    position: 'relative',
-  },
-  avatarText: { fontSize: 26, color: 'rgba(255,255,255,0.95)' },
-  name: { fontSize: 12.5, color: sawaaColors.ink[900], width: '100%' },
-  spec: { fontSize: 10.5, color: sawaaColors.ink[500], width: '100%' },
+  hScrollContent: { gap: 12, paddingHorizontal: 2 },
+  empty: { padding: 24, alignItems: 'center', borderRadius: sawaaRadius.xl },
+  emptyText: { fontSize: 14 },
+  item: { width: PHOTO, gap: 4 },
+  name: { fontSize: 15, lineHeight: 22, marginTop: 4 },
+  spec: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: 18 },
 });

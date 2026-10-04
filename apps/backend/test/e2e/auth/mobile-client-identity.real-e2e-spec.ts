@@ -10,6 +10,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import cookieParser from 'cookie-parser';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { AppModule } from '../../../src/app.module';
@@ -18,6 +19,8 @@ import { configureHttpContract } from '../../../src/common/bootstrap/configure-h
 import { SmsChannelAdapter } from '../../../src/modules/comms/notification-channel/sms-channel.adapter';
 import { EmailChannelAdapter } from '../../../src/modules/comms/notification-channel/email-channel.adapter';
 import { ClientTokenService } from '../../../src/modules/identity/shared/client-token.service';
+import { PlatformSettingsService } from '../../../src/modules/platform/settings/platform-settings.service';
+import { TokenService } from '../../../src/modules/identity/shared/token.service';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 
@@ -54,8 +57,11 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
       .overrideProvider(EmailChannelAdapter).useValue(mail)
       .compile();
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     configureHttpContract(app, 'production');
-    await app.init();
+    // The suite owns the listener until afterAll; Supertest must not close it
+    // while another identity request is still in flight.
+    await app.listen(0, '127.0.0.1');
     prisma = app.get(PrismaService);
     clientTokens = app.get(ClientTokenService);
     await prisma.$queryRaw`SELECT 1`;
@@ -86,6 +92,7 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
         },
       }).catch(() => undefined);
       await prisma.client.deleteMany({ where: { id: { in: [...createdClientIds] } } }).catch(() => undefined);
+      await prisma.employee.deleteMany({ where: { userId: { in: [...createdUserIds] } } }).catch(() => undefined);
       await prisma.user.deleteMany({ where: { id: { in: [...createdUserIds] } } }).catch(() => undefined);
     }
     if (app) await app.close();
@@ -93,7 +100,8 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
 
   async function seedUser(opts: {
     label: string;
-    role?: 'CLIENT' | 'RECEPTIONIST';
+    role?: 'CLIENT' | 'RECEPTIONIST' | 'ADMIN' | 'EMPLOYEE';
+    isSuperAdmin?: boolean;
     active?: boolean;
     phone?: string;
     email?: string;
@@ -102,6 +110,7 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     const row = await prisma.user.create({
       data: {
         email: opts.email ?? email(opts.label), name: `Synthetic ${opts.label}`, role: opts.role ?? 'CLIENT',
+        isSuperAdmin: opts.isSuperAdmin ?? false,
         isActive: opts.active ?? true, phone: opts.phone ?? phone(opts.label),
         phoneVerifiedAt: new Date(),
         emailVerifiedAt: opts.emailVerifiedAt ?? null,
@@ -109,6 +118,10 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     });
     createdUserIds.add(row.id);
     return row;
+  }
+
+  async function linkPractitioner(userId: string, label: string) {
+    return prisma.employee.create({ data: { userId, name: `Synthetic practitioner ${label}` } });
   }
 
   async function seedClient(opts: {
@@ -185,6 +198,85 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     await api().get('/api/v1/auth/me').set('Authorization', `Bearer ${access}`).expect(401);
   });
 
+  it('rejects a stale registration retry after HTTP OTP activation without changing identity or sending another OTP', async () => {
+    const p = phone('registration-activation-race');
+    createdIdentifiers.add(p);
+    const originalIdentity = {
+      firstName: 'Synthetic', lastName: 'Original', phone: p,
+      email: email('reg-race'),
+    };
+    const registration = await api().post('/api/v1/mobile/auth/register').send(originalIdentity).expect(200);
+    const userId = registration.body.userId as string;
+    createdUserIds.add(userId);
+    const code = sentCodes.get(codeKey(p, OtpPurpose.MOBILE_LOGIN));
+    expect(code).toMatch(/^\d{4}$/);
+
+    let snapshotRead!: () => void;
+    let releaseRetry!: () => void;
+    const readReached = new Promise<void>((resolve) => { snapshotRead = resolve; });
+    const released = new Promise<void>((resolve) => { releaseRetry = resolve; });
+    const originalFindMany = prisma.user.findMany.bind(prisma.user);
+    let heldSnapshot = false;
+    const interceptFindMany = async (args: Parameters<typeof originalFindMany>[0]) => {
+      // Run the actual DB read, then delay only this registration request's
+      // returned snapshot. OTP activation and all writes remain real.
+      const rows = await originalFindMany(args);
+      if (!heldSnapshot && args?.where?.OR?.some((condition) => condition.phone === p)) {
+        heldSnapshot = true;
+        snapshotRead();
+        await released;
+      }
+      return rows;
+    };
+    // This test interceptor awaits the real PrismaPromise before holding its
+    // result, so its ordinary Promise intentionally lacks Prisma's promise tag.
+    const readSpy = jest.spyOn(prisma.user, 'findMany')
+      .mockImplementation(interceptFindMany as unknown as typeof prisma.user.findMany);
+    const retryPromise = api().post('/api/v1/mobile/auth/register').send({
+      firstName: 'Replacement', lastName: 'Attempt', phone: p,
+      email: email('reg-race-retry'),
+    }).timeout({ deadline: 15_000 }).then((response) => response);
+    // Attach a rejection handler immediately while waiting for the barrier.
+    void retryPromise.catch(() => undefined);
+    let barrierTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      await Promise.race([
+        readReached,
+        new Promise<never>((_resolve, reject) => {
+          barrierTimeout = setTimeout(() => reject(new Error('Registration retry did not reach its pending read')), 10_000);
+        }),
+      ]);
+      clearTimeout(barrierTimeout);
+      const activated = await api().post('/api/v1/mobile/auth/verify-otp')
+        .send({ identifier: p, code, purpose: 'register' }).timeout({ deadline: 10_000 }).expect(200);
+      expect(activated.body.sessionKind).toBe('client');
+      const activeUser = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(activeUser).toMatchObject({ ...originalIdentity, name: 'Synthetic Original', isActive: true });
+      expect(activeUser.phoneVerifiedAt).toBeInstanceOf(Date);
+      const activeClient = await prisma.client.findFirstOrThrow({ where: { userId } });
+      createdClientIds.add(activeClient.id);
+      const otpRows = await prisma.otpCode.findMany({ where: { identifier: p }, orderBy: { id: 'asc' } });
+      const smsSend = jest.mocked(app.get(SmsChannelAdapter).send);
+      const dispatchCount = smsSend.mock.calls.filter(([identifier]) => identifier === p).length;
+
+      releaseRetry();
+      const retried = await retryPromise;
+
+      expect(retried.status).toBe(409);
+      expect(retried.body.message).toBe('Account already exists');
+      expect(await prisma.user.findUniqueOrThrow({ where: { id: userId } })).toEqual(activeUser);
+      expect(await prisma.client.findMany({ where: { userId } })).toEqual([activeClient]);
+      expect(await prisma.otpCode.findMany({ where: { identifier: p }, orderBy: { id: 'asc' } })).toEqual(otpRows);
+      expect(smsSend.mock.calls.filter(([identifier]) => identifier === p)).toHaveLength(dispatchCount);
+    } finally {
+      clearTimeout(barrierTimeout);
+      releaseRetry();
+      await retryPromise.catch(() => undefined);
+      readSpy.mockRestore();
+    }
+  });
+
   it('lazily links a legacy User.CLIENT with no Client only after a phone OTP', async () => {
     const u = await seedUser({ label: 'legacy-unlinked' });
     const code = await requestLoginOtp(u.phone!);
@@ -237,6 +329,17 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     const code = await requestLoginOtp(userEmail);
     const verified = await verify(userEmail, code);
 
+    // Expose transport/shape failures without logging session or OTP secrets.
+    if (verified.status !== 200 || verified.body.sessionKind !== 'client') {
+      throw new Error(`Unexpected email OTP response: ${JSON.stringify({
+        status: verified.status,
+        contentType: verified.headers['content-type'],
+        bodyKeys: Object.keys(verified.body ?? {}),
+        sessionKind: verified.body.sessionKind,
+        error: verified.body.error,
+        message: verified.body.message,
+      })}`);
+    }
     expect(verified.status).toBe(200);
     expect(verified.body.sessionKind).toBe('client');
     expect(verified.body.tokens).toEqual({ accessToken: expect.any(String), refreshToken: expect.any(String) });
@@ -256,18 +359,106 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
     expect(after.userId).toBeNull();
   });
 
+  it('verifies the replacement OTP after a second login-code request', async () => {
+    const c = await seedClient({ label: 'replacement-otp' });
+    await requestLoginOtp(c.phone!);
+    const firstOtp = await prisma.otpCode.findFirstOrThrow({
+      where: { identifier: c.phone!, purpose: OtpPurpose.MOBILE_LOGIN },
+      orderBy: { createdAt: 'desc' },
+    });
+    createdOtpIds.add(firstOtp.id);
+
+    const secondCode = await requestLoginOtp(c.phone!);
+    const secondOtp = await prisma.otpCode.findFirstOrThrow({
+      where: { identifier: c.phone!, purpose: OtpPurpose.MOBILE_LOGIN },
+      orderBy: { createdAt: 'desc' },
+    });
+    createdOtpIds.add(secondOtp.id);
+
+    expect(secondOtp.id).not.toBe(firstOtp.id);
+    expect(secondOtp.consumedAt).toBeNull();
+    expect((await prisma.otpCode.findUniqueOrThrow({ where: { id: firstOtp.id } })).consumedAt).toBeInstanceOf(Date);
+    const verified = await verify(c.phone!, secondCode);
+    expect(verified.status).toBe(200);
+    expect(verified.body.sessionKind).toBe('client');
+  });
+
   it('keeps staff OTP in the User namespace and rejects each namespace at the opposite guard', async () => {
-    const u = await seedUser({ label: 'staff', role: 'RECEPTIONIST' });
+    const u = await seedUser({ label: 'staff', role: 'EMPLOYEE' });
+    await linkPractitioner(u.id, 'staff');
     const code = await requestLoginOtp(u.phone!);
     const verified = await verify(u.phone!, code);
     expect(verified.status).toBe(200);
     expect(verified.body.sessionKind).toBe('staff');
     await api().get('/api/v1/auth/me').set('Authorization', `Bearer ${verified.body.tokens.accessToken}`).expect(200);
     await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${verified.body.tokens.accessToken}`).expect(401);
+    // A mobile-issued staff refresh token cannot be rotated through the dashboard cookie route.
+    const staffRefresh = verified.body.tokens.refreshToken as string;
+    const dashboardRefresh = await api().post('/api/v1/auth/refresh').set('Cookie', `ck_refresh=${staffRefresh}`).send({});
+    expect(dashboardRefresh.status).toBe(401);
+    expect(dashboardRefresh.body.message).toBe('Invalid or expired refresh token');
+    await api().post('/api/v1/mobile/auth/refresh').send({ refreshToken: staffRefresh }).expect(200);
+    const sources = await prisma.refreshToken.findMany({ where: { userId: u.id }, select: { source: true } });
+    expect(sources.length).toBeGreaterThan(0);
+    expect(sources.every((row) => row.source === 'MOBILE')).toBe(true);
     const client = await seedClient({ label: 'opposite-guard' });
     const pair = await issueClientPair(client.id);
     await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${pair.accessToken}`).expect(200);
     await api().get('/api/v1/auth/me').set('Authorization', `Bearer ${pair.accessToken}`).expect(401);
+  });
+
+  it('refuses OTP-only mobile login for a super-admin while two-factor is required', async () => {
+    const admin = await seedUser({ label: 'super-admin-2fa', role: 'ADMIN', isSuperAdmin: true });
+    await linkPractitioner(admin.id, 'super-admin-2fa');
+    const settings = app.get(PlatformSettingsService);
+    const twoFactorKey = 'security.twoFactor.required';
+    const previous = await prisma.platformSetting.findUnique({ where: { key: twoFactorKey } });
+    try {
+      await settings.set(twoFactorKey, true);
+      const requested = await api().post('/api/v1/mobile/auth/request-login-otp').send({ identifier: admin.phone });
+      expect(requested.status).toBe(200);
+      expect(sentCodes.has(codeKey(admin.phone!, OtpPurpose.MOBILE_LOGIN))).toBe(false);
+
+      // Even with a valid code planted directly, verify must not issue staff tokens.
+      const planted = await seedOtp(admin.phone!, '4242');
+      const verified = await verify(admin.phone!, '4242');
+      expect(verified.status).toBe(401);
+      expect(verified.body.tokens).toBeUndefined();
+      expect((await prisma.otpCode.findUniqueOrThrow({ where: { id: planted.id } })).consumedAt).toBeNull();
+
+      // Control: the same account signs in once two-factor is not required.
+      await settings.set(twoFactorKey, false);
+      const verifiedWithout2fa = await verify(admin.phone!, '4242');
+      expect(verifiedWithout2fa.status).toBe(200);
+      expect(verifiedWithout2fa.body.sessionKind).toBe('staff');
+    } finally {
+      if (previous) {
+        await prisma.platformSetting.update({ where: { key: twoFactorKey }, data: { value: previous.value, isSecret: previous.isSecret } });
+      } else {
+        await prisma.platformSetting.deleteMany({ where: { key: twoFactorKey } });
+      }
+    }
+  });
+
+  it('refuses mobile refresh for staff without a practitioner record and revokes the token', async () => {
+    const reception = await seedUser({ label: 'reception-refresh', role: 'RECEPTIONIST' });
+    const pair = await app.get(TokenService).issueTokenPair({ ...reception, customRole: null }, { isSuperAdmin: false });
+    const refreshed = await api().post('/api/v1/mobile/auth/refresh').send({ refreshToken: pair.refreshToken });
+    expect(refreshed.status).toBe(401);
+    expect(await prisma.refreshToken.count({ where: { userId: reception.id, revokedAt: null } })).toBe(0);
+  });
+
+  it('refuses mobile OTP login for staff without a practitioner record', async () => {
+    const reception = await seedUser({ label: 'reception-no-practitioner', role: 'RECEPTIONIST' });
+    const requested = await api().post('/api/v1/mobile/auth/request-login-otp').send({ identifier: reception.phone });
+    expect(requested.status).toBe(200);
+    expect(sentCodes.has(codeKey(reception.phone!, OtpPurpose.MOBILE_LOGIN))).toBe(false);
+
+    const planted = await seedOtp(reception.phone!, '5151');
+    const verified = await verify(reception.phone!, '5151');
+    expect(verified.status).toBe(401);
+    expect(verified.body.tokens).toBeUndefined();
+    expect((await prisma.otpCode.findUniqueOrThrow({ where: { id: planted.id } })).consumedAt).toBeNull();
   });
 
   it('rotates a client refresh token once, then logout revokes access, refresh, and FCM state', async () => {

@@ -14,6 +14,8 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 export type SendNotificationCommand = SendNotificationDto & {
   /** Explicit override for background-bus event handlers where CLS isn't set. */
   organizationId?: string;
+  /** Stable event-derived identity for legacy replay deduplication. */
+  notificationId?: string;
 };
 
 @Injectable()
@@ -35,6 +37,7 @@ export class SendNotificationHandler {
     try {
       await this.prisma.notification.create({
         data: {
+          ...(dto.notificationId ? { id: dto.notificationId } : {}),
           recipientId: dto.recipientId,
           recipientType: dto.recipientType,
           type: dto.type,
@@ -44,6 +47,8 @@ export class SendNotificationHandler {
         },
       });
     } catch (err) {
+      if (dto.notificationId && err && typeof err === 'object' && 'code' in err && err.code === 'P2002') return;
+      if (dto.notificationId) throw err;
       this.logger.error('Failed to persist in-app notification', err);
       // Don't return — still attempt channel dispatches
     }
@@ -87,7 +92,7 @@ export class SendNotificationHandler {
     }
 
     // ── 2b. STANDARD — best-effort (existing behavior) ────────────────────
-    const tasks: Promise<void>[] = [];
+    const tasks: Promise<unknown>[] = [];
 
     if (dto.channels.includes('push')) {
       const tokens = dto.fcmTokens ?? (dto.fcmToken ? [dto.fcmToken] : []);

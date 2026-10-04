@@ -59,7 +59,7 @@ function GroupsHero({ t, total, totalSeats }: HeroProps) {
         background:
           'radial-gradient(ellipse 800px 480px at 88% 12%, color-mix(in srgb, var(--primary) 9%, transparent) 0%, transparent 60%),' +
           'radial-gradient(ellipse 720px 420px at 8% 90%, color-mix(in srgb, var(--sw-secondary-700) 5%, transparent) 0%, transparent 60%),' +
-          'linear-gradient(180deg, #F1FBF9 0%, #F7FDFB 100%)',
+          'var(--sw-mint-gradient)',
       }}
     >
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
@@ -165,7 +165,7 @@ function GroupsGrid({ programs, locale, t, loadFailed }: GridProps) {
     return (
       <div className="flex justify-center mt-8">
         <div
-          className="text-center py-14 px-10 bg-white rounded-2xl max-w-md w-full"
+          className="text-center py-14 px-10 bg-[var(--surface)] rounded-2xl max-w-md w-full"
           style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
         >
           <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'var(--sw-primary-50)' }}>
@@ -209,7 +209,7 @@ function GroupsGrid({ programs, locale, t, loadFailed }: GridProps) {
             key={p.id}
             href={href}
             aria-label={`${t('supportGroups.viewCta')} — ${name}`}
-            className="group relative block bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="group relative block bg-[var(--surface)] rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
           >
             <span
@@ -311,7 +311,7 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
             <div className="md:col-span-4 md:flex md:justify-end">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                 style={{ color: 'var(--sw-secondary-700)', boxShadow: 'var(--sw-shadow-md)' }}
               >
                 {t('supportGroups.notSure.cta')}

@@ -24,7 +24,7 @@ export class CompleteBookingHandler {
   ) {}
 
   async execute(cmd: CompleteBookingCommand) {
-    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'completed');
+    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID], 'completed');
     const nextStatus = assertTransition(booking.status, 'COMPLETE');
 
     return this.rlsTransaction.withTransaction(async (tx) => {
@@ -70,6 +70,8 @@ export class CompleteBookingHandler {
         if (!existing) {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
+            // Same row the settings screen edits and invoices read (latest).
+            orderBy: { createdAt: 'desc' },
             select: { vatRate: true },
           });
           const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');

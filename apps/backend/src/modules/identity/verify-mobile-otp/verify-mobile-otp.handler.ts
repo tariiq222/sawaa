@@ -1,13 +1,15 @@
 import { Injectable, BadRequestException, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
-import { OtpChannel, OtpPurpose, Prisma } from '@prisma/client';
+import { OtpChannel, OtpPurpose, Prisma, RefreshTokenSource } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { TokenService, TokenPair } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { MobileOtpPurposeDto, VerifyMobileOtpDto } from './verify-mobile-otp.dto';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 const LOCKOUT_WINDOW_MINUTES = 10;
 export type VerifyMobileOtpCommand = VerifyMobileOtpDto;
@@ -30,6 +32,7 @@ export class VerifyMobileOtpHandler {
     private readonly clientTokens: ClientTokenService,
     private readonly cls: ClsService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly settings: PlatformSettingsService,
   ) {}
 
   async execute(cmd: VerifyMobileOtpCommand): Promise<VerifyMobileOtpResult> {
@@ -106,6 +109,13 @@ export class VerifyMobileOtpHandler {
           return { kind: 'wrong-code' as const };
         }
 
+        // Checked only after the code matches, so the response cannot reveal a
+        // staff account's role or practitioner link, and before consumption.
+        if (cmd.purpose === MobileOtpPurposeDto.LOGIN && user && user.role !== 'CLIENT' &&
+            !await isMobileStaffEligible(tx, this.settings, user)) {
+          throw new UnauthorizedException('Invalid credentials');
+        }
+
         const consumed = await tx.otpCode.updateMany({
           where: { id: otpRecord.id, consumedAt: null, expiresAt: { gt: now } },
           data: { consumedAt: new Date() },
@@ -130,7 +140,7 @@ export class VerifyMobileOtpHandler {
           client = await this.ensureRegisteredClient(tx, updated, identifier, client);
         } else if (user && user.role !== 'CLIENT') {
           if (!user.isActive) throw new UnauthorizedException('Account is inactive');
-          return { tokens: await this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin ?? false }, tx), sessionKind: 'staff' as const };
+          return { tokens: await this.tokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin ?? false }, tx, RefreshTokenSource.MOBILE), sessionKind: 'staff' as const };
         }
         if (cmd.purpose === MobileOtpPurposeDto.LOGIN && user?.role === 'CLIENT' && channel === 'SMS') {
           client = await this.ensureRegisteredClient(tx, user, identifier, client);

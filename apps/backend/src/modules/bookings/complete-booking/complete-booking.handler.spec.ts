@@ -4,6 +4,20 @@ import { CompleteBookingHandler } from './complete-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
 
 describe('CompleteBookingHandler', () => {
+  it('accepts DEPOSIT_PAID without settling its outstanding balance', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, status: BookingStatus.DEPOSIT_PAID, checkedInAt: null });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    const { where, data } = prisma.booking.updateMany.mock.calls[0][0];
+    expect(where.status).toBe(BookingStatus.DEPOSIT_PAID);
+    expect(data.status).toBe(BookingStatus.COMPLETED);
+    expect(data).not.toHaveProperty('paidAmount');
+    expect(data).not.toHaveProperty('remainingAmount');
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ fromStatus: BookingStatus.DEPOSIT_PAID, toStatus: BookingStatus.COMPLETED }),
+    });
+  });
+
   it('completes CONFIRMED booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });

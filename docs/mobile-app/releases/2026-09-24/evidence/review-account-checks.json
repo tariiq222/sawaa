@@ -1,0 +1,32 @@
+{
+  "policy": "astra-effort-v1",
+  "taskClass": "release",
+  "complexity": "high",
+  "scope": "review-account-local-and-mobile-documentation",
+  "localAccountVerified": true,
+  "backendTests": {
+    "suitesPassed": 846,
+    "suitesSkipped": 1,
+    "testsPassed": 7838,
+    "testsSkipped": 1
+  },
+  "mobileTests": {
+    "suitesPassed": 54,
+    "testsPassed": 294
+  },
+  "typecheck": [
+    "backend",
+    "mobile",
+    "dashboard"
+  ],
+  "dashboardSmoke": {
+    "failed": 2,
+    "notRun": 38,
+    "passedSetupOnly": 2,
+    "reason": "backend localhost5200 unavailable"
+  },
+  "productionChanged": false,
+  "testFlightUploaded": false,
+  "measurement": "partial; all new worker/reviewer baselines late",
+  "independentReview": "no actionable security blocker; route-only disable and mutable profile limitations documented"
+}

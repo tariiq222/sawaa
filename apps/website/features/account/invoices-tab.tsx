@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ClientInvoiceItem } from '@sawaa/shared';
 import { getMyInvoicesApi, requestRefundApi } from './account.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
+import { paymentFailureMessage } from '@/features/payment/payment-error';
 import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
 import { halalasToSar } from '@/lib/money';
@@ -18,9 +20,12 @@ interface InvoicesTabProps {
 }
 
 export function InvoicesTab({ locale }: InvoicesTabProps) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['client', 'invoices'],
-    queryFn: () => getMyInvoicesApi(),
+  const tt = useT();
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
+    queryKey: ['client', 'invoices', 'infinite'],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => getMyInvoicesApi(pageParam, 50),
+    getNextPageParam: (last) => last.page * last.pageSize < last.total ? last.page + 1 : undefined,
   });
 
   if (isLoading) {
@@ -35,11 +40,11 @@ export function InvoicesTab({ locale }: InvoicesTabProps) {
 
   // A failed/expired fetch must surface a distinct error + retry state instead
   // of collapsing into the "you have nothing" empty state.
-  if (isError) {
+  if (isError && !data) {
     return <AccountLoadError onRetry={() => void refetch()} />;
   }
 
-  const invoices = data?.items ?? [];
+  const invoices = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (invoices.length === 0) {
     return <InvoicesEmpty />;
@@ -50,6 +55,13 @@ export function InvoicesTab({ locale }: InvoicesTabProps) {
       {invoices.map((inv) => (
         <InvoiceCard key={inv.id} invoice={inv} locale={locale} />
       ))}
+      {isFetchNextPageError && <AccountLoadError onRetry={() => void fetchNextPage()} />}
+      {hasNextPage && (
+        <button type="button" disabled={isFetchingNextPage} onClick={() => void fetchNextPage()}
+          className="self-center rounded-full border border-[var(--sw-neutral-200)] px-5 py-2 text-sm font-semibold disabled:opacity-60">
+          {tt(isFetchingNextPage ? 'common.loading' : 'common.loadMore')}
+        </button>
+      )}
     </div>
   );
 }
@@ -97,6 +109,15 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
   const statusColor = INVOICE_STATUS_TOKEN[invoice.status] ?? 'var(--sw-neutral-400)';
   const payable = isInvoicePayable(invoice.status);
   const refundable = invoice.status === 'PAID';
+  // Never offer a checkout the backend will reject: when online payment is off
+  // (or Moyasar is unconfigured) the client gets a note instead of a button that
+  // fails after the click.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
+  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  // While the lookup is in flight show nothing (a flash of "unavailable" would
+  // be wrong); once it settles without an enabled gateway the client gets a note
+  // instead of a button that fails after the click.
+  const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
 
   const dateStr = invoice.scheduledAt
     ? new Date(invoice.scheduledAt).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
@@ -112,8 +133,8 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
     try {
       const { redirectUrl } = await initPayment(invoice.id);
       window.location.assign(redirectUrl);
-    } catch {
-      setPayError(tt('account.payError'));
+    } catch (err) {
+      setPayError(paymentFailureMessage(err, tt('account.payError')));
       setPaying(false);
     }
   }
@@ -181,12 +202,12 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
             <ArrowRight size={12} className="rtl:rotate-180" aria-hidden="true" />
           </Link>
         )}
-        {payable && (
+        {payable && canPayOnline && (
           <button
             type="button"
             onClick={handlePayNow}
             disabled={paying}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
           >
             <CreditCard size={12} aria-hidden="true" />
             {paying ? tt('account.paying') : tt('account.payNow')}
@@ -203,6 +224,12 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
           </button>
         )}
       </div>
+
+      {showPayUnavailable && (
+        <p className="px-3 py-2 rounded-lg text-xs bg-[var(--sw-neutral-50)] border border-[var(--sw-neutral-100)] text-[var(--sw-body)]">
+          {tt('account.payUnavailable')}
+        </p>
+      )}
 
       {payError && (
         <div className="px-3 py-2 rounded-lg text-sm bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]">
@@ -229,7 +256,7 @@ function InvoiceCard({ invoice, locale }: { invoice: ClientInvoiceItem; locale: 
             type="button"
             onClick={handleRefundSubmit}
             disabled={refundSending}
-            className="self-start px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] hover:opacity-90 transition-opacity disabled:opacity-60"
+            className="self-start px-4 py-2 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             {refundSending ? tt('account.invoices.refundSending') : tt('account.invoices.refundSubmit')}
           </button>

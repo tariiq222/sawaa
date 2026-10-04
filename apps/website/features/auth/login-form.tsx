@@ -74,9 +74,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           typeof redirectTo === 'string' &&
           /^\/(?![/\\])[A-Za-z0-9_\-./?&=%:]*$/.test(redirectTo);
         const groupId = searchParams.get('groupId');
-        const target = isSafeRelativePath
-          ? `${redirectTo}${groupId ? `?groupId=${encodeURIComponent(groupId)}` : ''}`
-          : '/account';
+        let target = isSafeRelativePath ? redirectTo! : '/account';
+        if (isSafeRelativePath && groupId) {
+          const queryStart = target.indexOf('?');
+          const pathname = queryStart === -1 ? target : target.slice(0, queryStart);
+          const query = new URLSearchParams(queryStart === -1 ? '' : target.slice(queryStart + 1));
+          query.set('groupId', groupId);
+          target = `${pathname}?${query.toString()}`;
+        }
         router.push(target);
       }
     } catch {
@@ -164,7 +169,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
+        className="mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--on-primary)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
       >
         {isLoading ? t('auth.signingIn') : t('auth.signIn')}
       </button>

@@ -41,6 +41,11 @@ export interface PackageFamilyOption extends SessionPackage {
 export interface PackageFamily extends PackageFamilyMetadata {
   id: string
   isStandalone: boolean
+  /**
+   * VAT the purchase invoice adds on top of the (net) option prices, as a
+   * fraction (0 unless enabled). Optional for older responses.
+   */
+  vatRate?: number
   options: PackageFamilyOption[]
   archivedAt?: string | null
   createdAt?: string

@@ -1,3 +1,7 @@
+import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
+import { ClientCancellationPreviewDto, PersistedCancellationRefundDto, CancellationRefundSummaryDto } from '../../../modules/bookings/client/client-cancellation-preview.dto';
+import { ClientCancelBookingHandler } from '../../../modules/bookings/client/client-cancel-booking.handler';
+import { ClientCancellationOutcomeHandler } from '../../../modules/bookings/client/client-cancellation-outcome.handler';
 import {
   Controller,
   Get,
@@ -11,10 +15,10 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation,
-  ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse,
+  ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
-import { BookingStatus, CancellationReason } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
+import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
@@ -24,7 +28,8 @@ import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
-import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { CancelApprovalRequiredException, CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { ClientRescheduleBookingDto } from '../../../modules/bookings/client/client-reschedule-booking.dto';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
@@ -58,8 +63,23 @@ export class MobileCreateBookingDto {
   @ApiPropertyOptional({ description: 'Specific duration option to resolve price and duration', example: '00000000-0000-0000-0000-000000000000' })
   @IsOptional() @IsUUID() durationOptionId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Session delivery channel. Omitted defaults to IN_PERSON.',
+    enum: DeliveryType,
+    enumName: 'DeliveryType',
+    example: DeliveryType.IN_PERSON,
+  })
+  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+
   @ApiPropertyOptional({ description: 'Free-text notes for the booking', example: 'Please prepare the room in advance' })
   @IsOptional() @IsString() notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Client chose to pay at the center. When true the booking is confirmed without an online invoice; the amount is collected at reception. Rejected when the deployment has pay-at-center disabled.',
+    example: false,
+  })
+  @IsOptional() @IsBoolean() payAtClinic?: boolean;
 }
 
 export class MobileCancelBookingDto {
@@ -68,9 +88,18 @@ export class MobileCancelBookingDto {
 
   @ApiPropertyOptional({ description: 'Free-text notes about the cancellation', example: 'Change of plans' })
   @IsOptional() @IsString() cancelNotes?: string;
+
+  @ApiPropertyOptional({ description: 'Cancellation preview fingerprint' })
+  @IsOptional() @IsString() @MaxLength(128) quoteToken?: string;
+
+  @ApiPropertyOptional({ description: 'Stable UUID for this cancellation attempt', format: 'uuid' })
+  @IsOptional() @IsUUID() sourceActionId?: string;
 }
 
 export class MobileListBookingsDto {
+  @ApiPropertyOptional({ description: 'Filter by appointment tab before pagination', enum: ['upcoming', 'past', 'cancelled'] })
+  @IsOptional() @IsIn(['upcoming', 'past', 'cancelled']) tab?: 'upcoming' | 'past' | 'cancelled';
+
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
 
@@ -81,6 +110,7 @@ export class MobileListBookingsDto {
   @IsOptional() @IsEnum(BookingStatus) status?: BookingStatus;
 }
 
+@ApiExtraModels(PersistedCancellationRefundDto, CancellationRefundSummaryDto)
 @ApiTags('Mobile Client / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -93,10 +123,14 @@ export class MobileClientBookingsController {
     private readonly get: GetBookingHandler,
     private readonly create: CreateBookingHandler,
     private readonly cancel: CancelBookingHandler,
+    private readonly requestCancel: RequestCancelBookingHandler,
     private readonly reschedule: ClientRescheduleBookingHandler,
     private readonly rate: SubmitRatingHandler,
     private readonly bookingAction: GetClientBookingForActionHandler,
     private readonly zoom: CreateZoomMeetingHandler,
+    private readonly cancellationPreview: ClientCancellationPreviewHandler,
+    private readonly clientCancel: ClientCancelBookingHandler,
+    private readonly cancellationOutcome: ClientCancellationOutcomeHandler,
   ) {}
 
   @Post()
@@ -122,7 +156,11 @@ export class MobileClientBookingsController {
       serviceId: body.serviceId,
       scheduledAt: new Date(body.scheduledAt),
       durationOptionId: body.durationOptionId,
+      // Without this the ONLINE choice made in the mobile booking flow was
+      // dropped and normalizeBookingTypes defaulted the session to IN_PERSON.
+      deliveryType: body.deliveryType,
       notes: body.notes,
+      payAtClinic: body.payAtClinic,
       source: 'ONLINE',
     });
   }
@@ -139,39 +177,68 @@ export class MobileClientBookingsController {
       page: q.page ?? 1,
       limit: q.limit ?? 20,
       status: q.status,
+      clientTab: q.tab,
     });
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a booking by ID' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking detail', schema: { type: 'object' } })
+  @ApiOkResponse({ description: 'Booking detail', schema: { type: 'object', additionalProperties: true, properties: { cancellationRefund: { $ref: getSchemaPath(PersistedCancellationRefundDto) } } } })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  getBooking(
+  async getBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.get.execute({ bookingId: id, clientId: user.id });
+    const booking = await this.get.execute({ bookingId: id, clientId: user.id });
+    return { ...booking, ...(booking.status.toUpperCase() === 'CANCELLED' ? { cancellationRefund: await this.cancellationOutcome.execute(id, user.id) } : {}) };
+  }
+
+  @Get(':id/cancellation-preview')
+  @ApiOperation({ summary: 'Preview client cancellation eligibility and refund terms' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: ClientCancellationPreviewDto })
+  cancellationPreviewEndpoint(@ClientSession() user: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
+    return this.cancellationPreview.execute(id, user.id);
   }
 
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking cancelled', schema: { type: 'object' } })
+  @ApiOkResponse({ description: 'Booking cancelled; enabled policy includes refund and requiresApproval', schema: { type: 'object', additionalProperties: true, properties: { refund: { $ref: getSchemaPath(CancellationRefundSummaryDto) }, requiresApproval: { type: 'boolean' }, booking: { type: 'object' } } } })
+  @ApiResponse({ status: 409, description: 'Cancellation terms changed; refresh the preview' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  cancelBooking(
+  async cancelBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MobileCancelBookingDto,
   ) {
-    return this.cancel.execute({
-      bookingId: id,
-      reason: body.reason,
-      cancelNotes: body.cancelNotes,
-      changedBy: user.id,
-      source: 'client',
-      clientId: user.id,
-    });
+    const preview = await this.cancellationPreview.execute(id, user.id);
+    if (preview.policyEnabled || body.quoteToken) {
+      const result = await this.clientCancel.execute({ bookingId: id, clientId: user.id, reason: body.cancelNotes, quoteToken: body.quoteToken, sourceActionId: body.sourceActionId });
+      return { ...result.booking, ...result };
+    }
+    try {
+      return await this.cancel.execute({
+        bookingId: id,
+        reason: body.reason,
+        cancelNotes: body.cancelNotes,
+        changedBy: user.id,
+        source: 'client',
+        clientId: user.id,
+      });
+    } catch (error) {
+      if (!(error instanceof CancelApprovalRequiredException)) throw error;
+      // The branch requires the centre to approve cancellations: turn the
+      // client's cancel into a cancellation request instead of a dead end.
+      await this.bookingAction.executeForRate(id, user.id);
+      return this.requestCancel.execute({
+        bookingId: id,
+        reason: body.reason,
+        cancelNotes: body.cancelNotes,
+        requestedBy: user.id,
+      });
+    }
   }
 
   @Get(':id/join')

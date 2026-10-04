@@ -31,7 +31,8 @@ const publicPackage = {
 };
 
 function buildPrisma() {
-  return { sessionPackage: { findFirst: jest.fn() } };
+  return { organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
+    sessionPackage: { findFirst: jest.fn() } };
 }
 
 function buildPricing() {

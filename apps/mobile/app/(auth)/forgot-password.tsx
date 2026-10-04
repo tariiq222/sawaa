@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,24 +8,28 @@ import {
   Pressable,
   Alert,
   StyleSheet,
-  ImageBackground,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { Glass } from '@/theme';
-import { sawaaTokens, sawaaColors } from '@/theme/sawaa/tokens';
-import { PrimaryButton } from '@/theme/sawaa';
+import { BackButton } from '@/components/ui/BackButton';
+import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { authService } from '@/services/auth';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function ForgotPasswordScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const insets = useSafeAreaInsets();
   const dir = useDir();
 
@@ -54,23 +58,18 @@ export default function ForgotPasswordScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/reset-password',
-        params: { email: email.trim() },
+        params: { email: email.trim(), ...authContinuationParams(booking, redirect) },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     } finally {
       setLoading(false);
     }
-  }, [email, validate, router, t]);
+  }, [email, validate, router, t, booking, redirect]);
 
   return (
-    <View style={styles.container}>
-      <ImageBackground
-        source={require('@/assets/bg.jpg')}
-        style={StyleSheet.absoluteFillObject}
-        resizeMode="cover"
-      />
+    <AquaBackground>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -84,23 +83,7 @@ export default function ForgotPasswordScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Glass
-            variant="strong"
-            radius={22}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            interactive
-            accessibilityLabel={t('a11y.buttonBack')}
-            style={styles.backBtn}
-          >
-            {dir.isRTL ? (
-              <ChevronRight size={22} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            ) : (
-              <ChevronLeft size={22} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            )}
-          </Glass>
+          <BackButton onPress={() => router.back()} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
 
           <Text
             style={[
@@ -157,11 +140,11 @@ export default function ForgotPasswordScreen() {
           </Glass>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </AquaBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 24 },
@@ -173,11 +156,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     alignSelf: 'flex-start',
   },
-  title: { fontSize: 32, fontWeight: '800', color: sawaaColors.teal[700], lineHeight: 42, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: sawaaColors.ink[500], lineHeight: 20 },
+  title: { fontSize: 32, fontWeight: '800', color: colors.teal[700], lineHeight: 42, marginBottom: 8 },
+  subtitle: { fontSize: 14, color: colors.ink[500], lineHeight: 20 },
   form: { padding: 24 },
   formInner: { gap: 16 },
   loginRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  loginText: { fontSize: 14, color: sawaaColors.ink[500] },
-  loginLink: { fontSize: 14, fontWeight: '700', color: sawaaColors.teal[700] },
+  loginText: { fontSize: 14, color: colors.ink[500] },
+  loginLink: { fontSize: 14, fontWeight: '700', color: colors.teal[700] },
 });

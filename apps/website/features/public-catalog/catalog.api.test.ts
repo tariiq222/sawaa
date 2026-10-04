@@ -96,7 +96,7 @@ describe('catalog.api — getPublicCatalog', () => {
     await promise;
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('http://api.local/api/v1/public/services');
+    expect(url).toBe('http://api.local/api/v1/public/services?includeDirectClinics=true');
     expect(init.next).toEqual({ revalidate: 60 });
   });
 

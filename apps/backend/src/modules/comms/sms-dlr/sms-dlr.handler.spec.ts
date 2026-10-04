@@ -80,7 +80,7 @@ describe('SmsDlrHandler', () => {
 
     expect(res).toEqual({});
     expect(prisma.smsDelivery.updateMany).toHaveBeenCalledWith({
-      where: { providerMessageId: 'm-org-a' },
+      where: { providerMessageId: 'm-org-a', status: { in: ['QUEUED', 'SENT', 'UNKNOWN', 'FAILED'] } },
       data: expect.objectContaining({
         status: 'DELIVERED',
         deliveredAt: expect.any(Date),
@@ -155,6 +155,7 @@ describe('SmsDlrHandler', () => {
           .fn()
           .mockResolvedValueOnce({ count: 0 })
           .mockResolvedValueOnce({ count: 1 }),
+        findFirst: jest.fn().mockResolvedValueOnce(null),
       },
     };
     const prisma = {
@@ -187,6 +188,64 @@ describe('SmsDlrHandler', () => {
 
     expect(transaction.withTransaction).toHaveBeenCalledTimes(2);
     expect(tx.webhookEvent.create).toHaveBeenCalledTimes(2);
+    expect(tx.smsDelivery.updateMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a receipt that would move a delivery backwards (late FAILED after DELIVERED)', async () => {
+    const creds = buildCreds();
+    const ciphertext = creds.encrypt({ appSid: 'a', apiKey: 'b' }, DEFAULT_ORG_ID);
+    const failedBody = rawBody.replace('"delivered"', '"failed"');
+    const failedSig = createHmac('sha256', webhookSecret).update(failedBody).digest('hex');
+    const tx = {
+      webhookEvent: { create: jest.fn().mockResolvedValue({ id: 'evt-1' }) },
+      smsDelivery: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findFirst: jest.fn().mockResolvedValue({ status: 'DELIVERED' }),
+      },
+    };
+    const prisma = {
+      organizationSmsConfig: {
+        findFirst: jest.fn().mockResolvedValue({ provider: 'UNIFONIC', credentialsCiphertext: ciphertext, webhookSecret }),
+      },
+    };
+    const handler = new SmsDlrHandler(
+      prisma as never,
+      new SmsProviderFactory(prisma as never, creds),
+      buildCls() as never,
+      buildTransaction(tx) as never,
+    );
+
+    await expect(handler.execute({ provider: 'UNIFONIC', organizationId: DEFAULT_ORG_ID, rawBody: failedBody, signature: failedSig }))
+      .resolves.toEqual({ skipped: true });
+    expect(tx.smsDelivery.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { providerMessageId: 'm-org-a', status: { in: ['QUEUED', 'SENT', 'UNKNOWN'] } },
+    }));
+  });
+
+  it('applies the receipt when the delivery row appears right after the first update', async () => {
+    const creds = buildCreds();
+    const ciphertext = creds.encrypt({ appSid: 'a', apiKey: 'b' }, DEFAULT_ORG_ID);
+    const tx = {
+      webhookEvent: { create: jest.fn().mockResolvedValue({ id: 'evt-1' }) },
+      smsDelivery: {
+        updateMany: jest.fn().mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 }),
+        findFirst: jest.fn().mockResolvedValue({ status: 'SENT' }),
+      },
+    };
+    const prisma = {
+      organizationSmsConfig: {
+        findFirst: jest.fn().mockResolvedValue({ provider: 'UNIFONIC', credentialsCiphertext: ciphertext, webhookSecret }),
+      },
+    };
+    const handler = new SmsDlrHandler(
+      prisma as never,
+      new SmsProviderFactory(prisma as never, creds),
+      buildCls() as never,
+      buildTransaction(tx) as never,
+    );
+
+    await expect(handler.execute({ provider: 'UNIFONIC', organizationId: DEFAULT_ORG_ID, rawBody, signature: sig }))
+      .resolves.toEqual({});
     expect(tx.smsDelivery.updateMany).toHaveBeenCalledTimes(2);
   });
 

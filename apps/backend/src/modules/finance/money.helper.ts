@@ -38,7 +38,7 @@ export function decimalToHalalas(d: Prisma.Decimal | string | number): number {
  * Invariant guaranteed: subtotal + vatAmtHalalas === totalHalalas (always, no drift).
  *
  * Both inputs must already be whole-halala Decimals (or convertible to them).
- * vatRate is a fractional rate such as 0 (e.g. 0.15 = 15%), not a percentage.
+ * vatRate is a fraction of 1 (0 when VAT is off), not a percentage.
  */
 export function computeVat(
   subtotalHalalas: Prisma.Decimal,

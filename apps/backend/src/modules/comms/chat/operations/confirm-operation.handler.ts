@@ -20,6 +20,8 @@ import { CreateBookingHandler } from '../../../bookings/create-booking/create-bo
 import { ClientRescheduleBookingHandler } from '../../../bookings/client/client-reschedule-booking.handler';
 import { ClientCancelBookingHandler } from '../../../bookings/client/client-cancel-booking.handler';
 import { hashToInt32 } from '../../../bookings/booking-lifecycle.helper';
+import { RESCHEDULE_TX_ATTEMPTS } from '../../../bookings/reschedule-booking/reschedule-booking.handler';
+import { retrySerializableTransaction } from '../../../../common/database/person-reference-lock.helper';
 import { ACTIVE_BOOKING_STATUSES } from '../../../bookings/active-booking-statuses';
 import { bookingCreationRequestHash } from '../../../bookings/create-booking/creation-request-hash';
 import { lockChatConversation } from '../conversation-lock.helper';
@@ -72,87 +74,94 @@ export class ConfirmOperationHandler {
     let executionStarted = false;
 
     try {
-      const completed = await this.rlsTransaction.withTransaction(async (tx) => {
-        await lockChatOperation(tx, command.operationId);
-        const operation = await tx.chatOperation.findUnique({ where: { id: command.operationId } });
-        if (!operation) throw new NotFoundException('Chat operation not found');
-        assertOperationOwnership(operation, command.clientId);
-        await this.assertConversationOwnership(tx, operation, command.clientId);
+      // The mutation runs inside this caller-owned Serializable transaction,
+      // so a conflict with a concurrent staff/client change aborts all of it
+      // (the operation stays AWAITING_CONFIRMATION). Retry the whole
+      // transaction rather than recording a transient conflict as FAILED.
+      const completed = await retrySerializableTransaction(() => {
+        executionStarted = false;
+        return this.rlsTransaction.withTransaction(async (tx) => {
+          await lockChatOperation(tx, command.operationId);
+          const operation = await tx.chatOperation.findUnique({ where: { id: command.operationId } });
+          if (!operation) throw new NotFoundException('Chat operation not found');
+          assertOperationOwnership(operation, command.clientId);
+          await this.assertConversationOwnership(tx, operation, command.clientId);
 
-        if (TERMINAL_STATUSES.has(operation.status)) {
-          if (operation.status === ChatOperationStatus.SUCCEEDED && !operation.resultMessageId) {
-            const messageId = await this.writeResultMessage(tx, operation, {
-              status: ChatOperationStatus.SUCCEEDED,
-              bookingId: operation.bookingId,
-              outcome: this.defaultOutcome(operation.type),
-            });
-            return tx.chatOperation.update({
-              where: { id: operation.id },
-              data: { resultMessageId: messageId },
-            });
+          if (TERMINAL_STATUSES.has(operation.status)) {
+            if (operation.status === ChatOperationStatus.SUCCEEDED && !operation.resultMessageId) {
+              const messageId = await this.writeResultMessage(tx, operation, {
+                status: ChatOperationStatus.SUCCEEDED,
+                bookingId: operation.bookingId,
+                outcome: this.defaultOutcome(operation.type),
+              });
+              return tx.chatOperation.update({
+                where: { id: operation.id },
+                data: { resultMessageId: messageId },
+              });
+            }
+            return operation;
           }
-          return operation;
-        }
-        if (operation.expiresAt <= new Date()) {
-          await tx.chatOperation.updateMany({
-            where: { id: operation.id, version: operation.version, status: operation.status },
-            data: { status: ChatOperationStatus.EXPIRED, version: { increment: 1 } },
+          if (operation.expiresAt <= new Date()) {
+            await tx.chatOperation.updateMany({
+              where: { id: operation.id, version: operation.version, status: operation.status },
+              data: { status: ChatOperationStatus.EXPIRED, version: { increment: 1 } },
+            });
+            return (await tx.chatOperation.findUnique({ where: { id: operation.id } }))!;
+          }
+          if (operation.status !== ChatOperationStatus.AWAITING_CONFIRMATION) {
+            throw new BadRequestException('Operation is not awaiting confirmation');
+          }
+          if (operation.version !== command.expectedVersion) {
+            throw new ConflictException('Operation version is stale');
+          }
+          if (operation.confirmationCount !== operation.requiredConfirmations - 1) {
+            throw new BadRequestException('Required confirmation steps are incomplete');
+          }
+
+          // Operation row is already locked. Client lock is always next, before any booking resource.
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(command.clientId)}::int)`;
+          const executing = await tx.chatOperation.updateMany({
+            where: {
+              id: operation.id,
+              version: operation.version,
+              status: ChatOperationStatus.AWAITING_CONFIRMATION,
+            },
+            data: {
+              status: ChatOperationStatus.EXECUTING,
+              confirmationCount: { increment: 1 },
+              version: { increment: 1 },
+              confirmedAt: new Date(),
+            },
           });
-          return (await tx.chatOperation.findUnique({ where: { id: operation.id } }))!;
-        }
-        if (operation.status !== ChatOperationStatus.AWAITING_CONFIRMATION) {
-          throw new BadRequestException('Operation is not awaiting confirmation');
-        }
-        if (operation.version !== command.expectedVersion) {
-          throw new ConflictException('Operation version is stale');
-        }
-        if (operation.confirmationCount !== operation.requiredConfirmations - 1) {
-          throw new BadRequestException('Required confirmation steps are incomplete');
-        }
+          if (executing.count !== 1) throw new ConflictException('Operation changed concurrently');
+          executionStarted = true;
 
-        // Operation row is already locked. Client lock is always next, before any booking resource.
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(command.clientId)}::int)`;
-        const executing = await tx.chatOperation.updateMany({
-          where: {
-            id: operation.id,
-            version: operation.version,
-            status: ChatOperationStatus.AWAITING_CONFIRMATION,
-          },
-          data: {
-            status: ChatOperationStatus.EXECUTING,
-            confirmationCount: { increment: 1 },
-            version: { increment: 1 },
-            confirmedAt: new Date(),
-          },
-        });
-        if (executing.count !== 1) throw new ConflictException('Operation changed concurrently');
-        executionStarted = true;
-
-        const mutation = await this.executeMutation(tx, operation);
-        await this.audit.record({
-          action: 'OPERATION_CONFIRMED', conversationId: operation.conversationId, operationId: operation.id,
-        }, tx);
-        const messageId = await this.writeResultMessage(tx, operation, {
-          status: ChatOperationStatus.SUCCEEDED,
-          bookingId: mutation.bookingId,
-          outcome: mutation.outcome,
-          syncPending: mutation.syncPending,
-        });
-        const succeeded = await tx.chatOperation.update({
-          where: { id: operation.id },
-          data: {
+          const mutation = await this.executeMutation(tx, operation);
+          await this.audit.record({
+            action: 'OPERATION_CONFIRMED', conversationId: operation.conversationId, operationId: operation.id,
+          }, tx);
+          const messageId = await this.writeResultMessage(tx, operation, {
             status: ChatOperationStatus.SUCCEEDED,
             bookingId: mutation.bookingId,
-            executedAt: new Date(),
-            resultMessageId: messageId,
-            errorCode: null,
-          },
-        });
-        await this.audit.record({
-          action: 'OPERATION_SUCCEEDED', conversationId: operation.conversationId, operationId: operation.id,
-        }, tx);
-        return succeeded;
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+            outcome: mutation.outcome,
+            syncPending: mutation.syncPending,
+          });
+          const succeeded = await tx.chatOperation.update({
+            where: { id: operation.id },
+            data: {
+              status: ChatOperationStatus.SUCCEEDED,
+              bookingId: mutation.bookingId,
+              executedAt: new Date(),
+              resultMessageId: messageId,
+              errorCode: null,
+            },
+          });
+          await this.audit.record({
+            action: 'OPERATION_SUCCEEDED', conversationId: operation.conversationId, operationId: operation.id,
+          }, tx);
+          return succeeded;
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      }, RESCHEDULE_TX_ATTEMPTS);
 
       return completed;
     } catch (error) {

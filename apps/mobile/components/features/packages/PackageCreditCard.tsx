@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { ClientPackageCredit } from '@sawaa/shared/types';
 
 import type { DirState } from '@/hooks/useDir';
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { creditLockReason, isCreditBookable } from '@/lib/package-utils';
 
 interface Props {
@@ -17,6 +19,10 @@ interface Props {
 }
 
 export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Props) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
+  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
   const { t } = useTranslation();
   const bookable = isCreditBookable(credit);
   const reason = creditLockReason(credit);
@@ -42,13 +48,13 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   credit: { borderTopWidth: 1, borderTopColor: sawaaColors.glass.borderSoft, paddingTop: sawaaSpacing.md, gap: sawaaSpacing.xs },
   creditHeader: { justifyContent: 'space-between', alignItems: 'center' },
   creditName: { flex: 1, color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize },
   remaining: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize },
   duration: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
-  bookButton: { alignSelf: 'flex-start', backgroundColor: sawaaColors.teal[600], borderRadius: sawaaRadius.sm, paddingHorizontal: sawaaSpacing.lg, paddingVertical: sawaaSpacing.sm, marginTop: sawaaSpacing.xs },
-  bookText: { color: sawaaColors.glass.bgStrong, fontSize: sawaaType.caption.fontSize },
+  bookButton: { alignSelf: 'flex-start', backgroundColor: action.fill, borderRadius: sawaaRadius.sm, paddingHorizontal: sawaaSpacing.lg, paddingVertical: sawaaSpacing.sm, marginTop: sawaaSpacing.xs },
+  bookText: { color: action.foreground, fontSize: sawaaType.caption.fontSize },
   locked: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
 });

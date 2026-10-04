@@ -2,17 +2,19 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Calendar, Menu, X, User } from 'lucide-react';
+import { Calendar, Menu, X, User, Sun, Moon } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
 import { isAuthenticated } from '@/features/auth/public';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { LanguageSwitcher } from '@/features/locale/language-switcher';
+import { useTheme } from '@/features/theme/theme-provider';
 import { useDialogFocus } from '@/hooks/use-dialog-focus';
 import { SITE } from '../../lib/constants';
 
 const navLinks = [
   { key: 'nav.home', href: '/' },
   { key: 'nav.therapists', href: '/therapists' },
+  { key: 'nav.clinics', href: '/clinics' },
   { key: 'nav.services', href: '/services' },
   { key: 'nav.packages', href: '/packages' },
   { key: 'nav.supportGroups', href: '/support-groups' },
@@ -22,6 +24,7 @@ const navLinks = [
 export function Navbar() {
   const t = useT();
   const locale = useLocale();
+  const { theme, toggleTheme } = useTheme();
   const branding = useBranding();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,6 +73,23 @@ export function Navbar() {
 
   const brandName = SITE.nameShort;
   const logo = branding.logoUrl ?? SITE.logo;
+  const themeToggleLabel = theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark');
+
+  const themeToggle = (className: string) => (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={themeToggleLabel}
+      className={className}
+      style={{ color: 'var(--foreground)', background: 'var(--surface)' }}
+    >
+      {theme === 'dark' ? (
+        <Sun className="w-4 h-4" aria-hidden="true" />
+      ) : (
+        <Moon className="w-4 h-4" aria-hidden="true" />
+      )}
+    </button>
+  );
 
   return (
     <>
@@ -131,6 +151,7 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-2">
           <LanguageSwitcher current={locale} />
+          {themeToggle('inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2')}
           <Link
             href={authed ? '/account' : '/login'}
             suppressHydrationWarning
@@ -140,7 +161,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/booking"
-            className="sw-home-nav-cta inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all text-white hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="sw-home-nav-cta inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all text-[var(--on-primary)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
               boxShadow: 'var(--sw-shadow-primary)',
@@ -171,7 +192,7 @@ export function Navbar() {
           aria-modal="true"
           aria-label={t('nav.menuLabel')}
           className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-2 backdrop-blur-xl"
-          style={{ background: 'rgba(255,255,255,0.98)' }}
+          style={{ background: 'var(--background)', color: 'var(--foreground)' }}
         >
           <button
             onClick={() => setMobileOpen(false)}
@@ -204,7 +225,7 @@ export function Navbar() {
           <Link
             href="/booking"
             onClick={() => setMobileOpen(false)}
-            className="sw-home-nav-cta mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="sw-home-nav-cta mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full text-[var(--on-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
               boxShadow: 'var(--sw-shadow-primary)',
@@ -213,7 +234,8 @@ export function Navbar() {
             {t('nav.booking')}
             <Calendar className="w-4 h-4" aria-hidden="true" />
           </Link>
-          <div className="mt-6">
+          <div className="mt-6 flex items-center gap-3">
+            {themeToggle('inline-flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2')}
             <LanguageSwitcher current={locale} />
           </div>
         </div>

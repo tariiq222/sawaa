@@ -36,6 +36,25 @@ const buildZoomService = () => ({
 });
 
 describe('ClientRescheduleBookingHandler', () => {
+  it('reschedules DEPOSIT_PAID and preserves its balance-due status', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, status: BookingStatus.DEPOSIT_PAID });
+    const handler = new ClientRescheduleBookingHandler(
+      prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never,
+      buildZoomService() as never, buildAvailabilityHandler() as never,
+    );
+    const scheduledAt = new Date(Date.now() + 72 * 3_600_000).toISOString();
+    await handler.execute({ bookingId: 'book-1', clientId: 'client-1', newScheduledAt: scheduledAt });
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: BookingStatus.DEPOSIT_PAID }),
+      data: expect.objectContaining({ scheduledAt: new Date(scheduledAt) }),
+    }));
+    expect(prisma.booking.updateMany.mock.calls[0][0].data).not.toHaveProperty('status');
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      fromStatus: BookingStatus.DEPOSIT_PAID, toStatus: BookingStatus.DEPOSIT_PAID,
+    }) });
+  });
+
   it('reschedules a PENDING booking to a new time slot', async () => {
     const prisma = buildPrisma();
     const updatedBooking = {

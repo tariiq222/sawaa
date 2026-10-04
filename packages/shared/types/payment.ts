@@ -29,6 +29,19 @@ export interface BankTransferReceipt {
   createdAt: string;
 }
 
+export interface BankTransferAccount {
+  id: string;
+  label: string;
+  bankName: string;
+  beneficiaryName: string;
+  iban: string;
+}
+
+export interface ClientBankTransferSettings {
+  enabled: boolean;
+  accounts: BankTransferAccount[];
+}
+
 export interface Invoice {
   id: string;
   paymentId: string;

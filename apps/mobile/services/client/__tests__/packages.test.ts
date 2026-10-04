@@ -15,8 +15,11 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
+jest.mock('expo-modules-core', () => ({ uuid: { v4: jest.fn() } }), { virtual: true });
+
 import api from '../../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { uuid } from 'expo-modules-core';
 import {
   clientPackagesService,
   clearPendingPackagePurchase,
@@ -30,6 +33,7 @@ const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (uuid.v4 as jest.Mock).mockReset().mockReturnValue('00000000-0000-4000-a000-000000000099');
 });
 
 describe('clientPackagesService catalog and purchase calls', () => {
@@ -64,7 +68,7 @@ describe('clientPackagesService catalog and purchase calls', () => {
       idempotencyKey: 'attempt-1',
     });
 
-    expect(mockedApi.post).toHaveBeenCalledWith('/public/payments/package-purchases/init', {
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/payments/package-purchases/init', {
       packageId: 'offer-9',
       packageFamilyId: 'family-1',
       branchId: 'branch-1',
@@ -123,6 +127,42 @@ describe('clientPackagesService authenticated balance and booking calls', () => 
       packagePurchaseAttemptStorageKey('client-1', 'offer-9', 'family-1', 'branch-1'),
       first,
     );
+  });
+
+  it('uses the native UUID generator when browser crypto is unavailable', async () => {
+    const originalCrypto = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    const storage = AsyncStorage as unknown as { getItem: jest.Mock; setItem: jest.Mock };
+    storage.getItem.mockResolvedValue(null);
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined });
+    try {
+      const attempt = await getPackagePurchaseAttemptKey('client-1', 'offer-9', 'family-1', 'branch-1');
+      expect(attempt).toBe('00000000-0000-4000-a000-000000000099');
+      expect(storage.setItem).toHaveBeenCalledWith(
+        packagePurchaseAttemptStorageKey('client-1', 'offer-9', 'family-1', 'branch-1'),
+        '00000000-0000-4000-a000-000000000099',
+      );
+    } finally {
+      if (originalCrypto) Object.defineProperty(globalThis, 'crypto', originalCrypto);
+      else Reflect.deleteProperty(globalThis, 'crypto');
+    }
+  });
+
+  it('fails before storing a purchase attempt when secure native randomness is unavailable', async () => {
+    const originalCrypto = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    const storage = AsyncStorage as unknown as { getItem: jest.Mock; setItem: jest.Mock };
+    storage.getItem.mockResolvedValue(null);
+    (uuid.v4 as jest.Mock).mockImplementation(() => {
+      throw new Error('Native UUID version 4 generator implementation was not found');
+    });
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined });
+    try {
+      await expect(getPackagePurchaseAttemptKey('client-1', 'offer-9', 'family-1', 'branch-1'))
+        .rejects.toThrow('Secure random generation');
+      expect(storage.setItem).not.toHaveBeenCalled();
+    } finally {
+      if (originalCrypto) Object.defineProperty(globalThis, 'crypto', originalCrypto);
+      else Reflect.deleteProperty(globalThis, 'crypto');
+    }
   });
 
   it('persists the purchase before opening hosted payment so a killed app can recover status', async () => {

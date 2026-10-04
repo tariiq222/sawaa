@@ -1,20 +1,27 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ScrollView, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Calendar, User as UserIcon, Briefcase } from 'lucide-react-native';
+import { Calendar, Clock, Briefcase, Video } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { ThemedCard } from '@/theme/components/ThemedCard';
 import { useTheme } from '@/theme/useTheme';
 import { useDir } from '@/hooks/useDir';
+import { useBooking, useEmployeeBooking } from '@/hooks/queries';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
-import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
-import { employeeBookingsService } from '@/services/employee/bookings';
+import type { ClientBookingRow } from '@/services/client/bookings';
 import type { Booking } from '@/types/models';
 import { hasZoomMeetingAccess } from '@/types/booking-enums';
-import { withAlpha } from '@/theme/sawaa/tokens';
+import { AquaBackground } from '@/theme/sawaa';
+import { getSawaaRoles } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { getFontName } from '@/theme/fonts';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { InfoRows } from '@/components/ui/InfoRows';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { formatWeekdayDateTime } from '@/lib/session-format';
+import { getVideoJoinState } from '@/components/features/video-join-state';
 
 interface VideoCallScreenProps {
   role: 'client' | 'employee';
@@ -48,11 +55,12 @@ function adaptClient(row: ClientBookingRow, isRTL: boolean): BookingView {
 }
 
 function adaptEmployee(b: Booking, isRTL: boolean): BookingView {
-  // The employee mapper doesn't always emit `scheduledAt`; reconstruct from
-  // the `date` + `startTime` pair which is always present.
+  // The employee mapper doesn't emit `scheduledAt`; reconstruct it from the
+  // `date` + `startTime` pair, which the backend formats in the business time
+  // zone (Asia/Riyadh, +03:00, no DST) - not UTC.
   const scheduledAt =
     b.scheduledAt ??
-    new Date(`${b.date}T${b.startTime}:00.000Z`).toISOString();
+    new Date(`${b.date}T${b.startTime}:00+03:00`).toISOString();
   // duration: prefer durationMins, fall back to service.duration if present.
   const durationMins = b.durationMins ?? b.service?.duration ?? 0;
   const clientName = b.client
@@ -70,90 +78,52 @@ function adaptEmployee(b: Booking, isRTL: boolean): BookingView {
   };
 }
 
-/**
- * The employee `getById` returns `ApiResponse<Booking>` (`{ data: Booking, ... }`)
- * but some legacy stubs return the bare `Booking`. Narrows safely without an
- * `as unknown as` escape hatch.
- */
-function unwrapEmployeeBooking(
-  res: { data?: Booking } & Partial<Booking>,
-): Booking | null {
-  if (res.data && typeof res.data === 'object') return res.data;
-  if (typeof res.id === 'string') return res as Booking;
-  return null;
-}
-
 export function VideoCallScreen({ role }: VideoCallScreenProps) {
   const { bookingId } = useLocalSearchParams<{ bookingId?: string }>();
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme, scheme } = useTheme();
+  const colors = useSawaaColors();
   const dir = useDir();
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
-  const [view, setView] = useState<BookingView | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const clientBookingQuery = useBooking(role === 'client' ? bookingId : undefined);
+  const employeeBookingQuery = useEmployeeBooking(role === 'employee' ? bookingId : undefined);
+  const loading = role === 'client' ? clientBookingQuery.isLoading : employeeBookingQuery.isLoading;
+  const view = role === 'client'
+    ? clientBookingQuery.data ? adaptClient(clientBookingQuery.data, dir.isRTL) : null
+    : employeeBookingQuery.data ? adaptEmployee(employeeBookingQuery.data, dir.isRTL) : null;
+  const queryError = role === 'client' ? clientBookingQuery.isError : employeeBookingQuery.isError;
+  const notFound = !bookingId || (!loading && (queryError || !view));
 
-  const load = useCallback(async () => {
-    if (!bookingId) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setNotFound(false);
-    try {
-      if (role === 'client') {
-        const row = await clientBookingsService.getById(bookingId);
-        setView(adaptClient(row, dir.isRTL));
-      } else {
-        const res = await employeeBookingsService.getById(bookingId);
-        const b = unwrapEmployeeBooking(res);
-        if (!b) {
-          setNotFound(true);
-        } else {
-          setView(adaptEmployee(b, dir.isRTL));
-        }
-      }
-    } catch {
-      setNotFound(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [bookingId, dir.isRTL, role]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const formattedTime = view
-    ? new Date(view.scheduledAt).toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
+  const formattedTime = view ? formatWeekdayDateTime(view.scheduledAt, dir.isRTL) ?? '' : '';
+  const joinState = view
+    ? getVideoJoinState({
+        scheduledAt: view.scheduledAt,
+        durationMins: view.durationMins,
+        linkReady: view.meetingStatus === 'CREATED' && Boolean(view.url),
       })
-    : '';
+    : 'waiting';
+  const isOpen = joinState === 'open';
+  const title = joinState === 'open'
+    ? t('videoCall.readyTitle')
+    : joinState === 'ended' ? t('videoCall.sessionEnded') : t('videoCall.soonTitle');
+  const hint = joinState === 'before'
+    ? t('videoCall.opensBefore')
+    : joinState === 'open' ? t('videoCall.openNow') : null;
+  const showJoin = Boolean(view?.canShowZoom);
+  const action = getSawaaRoles(scheme).action;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <AquaBackground style={styles.container}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 },
+          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 160 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <BackIcon size={24} strokeWidth={1.5} color={theme.colors.textPrimary} />
-          </Pressable>
-          <ThemedText variant="subheading">{t('videoCall.title')}</ThemedText>
-          <View style={styles.backBtn} />
-        </View>
+        <ScreenHeader title={t('videoCall.title')} onBack={() => router.back()} />
 
         {loading ? (
           <View style={styles.loaderWrap}>
@@ -167,92 +137,58 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
           </ThemedCard>
         ) : (
           <>
-            <ThemedCard padding={20} style={styles.summaryCard}>
-              <InfoRow
-                icon={Briefcase}
-                color={theme.colors.primary}
-                label={t('videoCall.serviceLabel')}
-                value={view.serviceName || '—'}
-              />
-              <InfoRow
-                icon={UserIcon}
-                color={theme.colors.accent}
-                label={t('videoCall.withLabel')}
-                value={view.counterpartyName || '—'}
-              />
-              <InfoRow
-                icon={Calendar}
-                color={theme.colors.success}
-                label={t('videoCall.timeLabel')}
-                value={formattedTime}
-              />
-            </ThemedCard>
-
-            {view.canShowZoom ? (
-              <View style={styles.buttonWrap}>
-                <JoinVideoCallButton
-                  url={view.url}
-                  scheduledAt={view.scheduledAt}
-                  durationMins={view.durationMins}
-                  status={view.meetingStatus}
-                  isRTL={dir.isRTL}
-                  variant={role === 'employee' ? 'start' : 'join'}
-                />
+            <View style={styles.hero}>
+              <View style={[styles.iconCircle, { backgroundColor: isOpen ? action.fill : colors.teal[50] }]}>
+                <Video size={40} color={isOpen ? action.foreground : colors.teal[700]} strokeWidth={1.75} />
               </View>
-            ) : null}
+              <Text accessibilityRole="header" style={[styles.heroTitle, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}>
+                {title}
+              </Text>
+              {view.counterpartyName ? (
+                <Text style={[styles.heroSub, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400') }]}>
+                  {t('appointments.with', { name: view.counterpartyName })}
+                </Text>
+              ) : null}
+            </View>
+
+            <InfoRows
+              rows={[
+                { icon: Calendar, label: t('videoCall.timeLabel'), value: formattedTime || '—' },
+                { icon: Briefcase, label: t('videoCall.serviceLabel'), value: view.serviceName || '—' },
+                { icon: Clock, label: t('videoCall.durationLabel'), value: t('appointments.durationMins', { count: view.durationMins }) },
+              ]}
+            />
           </>
         )}
       </ScrollView>
-    </View>
-  );
-}
 
-function InfoRow({
-  icon: Icon,
-  color,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  color: string;
-  label: string;
-  value: string;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View style={styles.infoRow}>
-      <View style={[styles.iconCircle, { backgroundColor: withAlpha(color, 0.1) }]}>
-        <Icon size={20} strokeWidth={1.5} color={color} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <ThemedText variant="caption" color={theme.colors.textSecondary}>
-          {label}
-        </ThemedText>
-        <ThemedText variant="body">{value}</ThemedText>
-      </View>
-    </View>
+      {view && showJoin ? (
+        <FloatingCta>
+          {hint ? (
+            <Text style={[styles.hint, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400') }]}>{hint}</Text>
+          ) : null}
+          <JoinVideoCallButton
+            url={view.url}
+            scheduledAt={view.scheduledAt}
+            durationMins={view.durationMins}
+            status={view.meetingStatus}
+            isRTL={dir.isRTL}
+            variant={role === 'employee' ? 'start' : 'join'}
+            fullWidth
+          />
+        </FloatingCta>
+      ) : null}
+    </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, direction: 'ltr' },
+  scroll: { flexGrow: 1, paddingHorizontal: 16, gap: 20 },
   loaderWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  summaryCard: { marginBottom: 16, gap: 12 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonWrap: { marginTop: 8 },
+  hero: { alignItems: 'center', gap: 8, paddingTop: 12 },
+  iconCircle: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  heroTitle: { fontSize: 22, lineHeight: 30, textAlign: 'center' },
+  heroSub: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  hint: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

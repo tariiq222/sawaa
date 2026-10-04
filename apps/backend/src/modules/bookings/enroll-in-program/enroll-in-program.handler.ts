@@ -286,6 +286,8 @@ export class EnrollInProgramHandler {
         if (price > 0) {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
+            // Same row the settings screen edits and invoices read (latest).
+            orderBy: { createdAt: 'desc' },
             select: { vatRate: true },
           });
           const vatRate = new Prisma.Decimal(

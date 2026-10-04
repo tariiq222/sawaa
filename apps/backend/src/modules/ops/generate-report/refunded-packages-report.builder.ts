@@ -86,8 +86,23 @@ interface PurchaseDisplayRow {
 
 type ReportReadClient = Pick<
   Prisma.TransactionClient,
-  'packagePurchase' | 'packageRefundEvent' | 'refundRequest'
+  'packagePurchase' | 'packageRefundEvent' | 'refundRequest' | 'invoice'
 >;
+
+/**
+ * PackagePurchase.amountPaid is the NET package price, while refunds are
+ * measured against what the client was charged (the invoice total, which
+ * includes VAT when enabled). Report the charged amount so "paid" and
+ * "refunded" share one basis; fall back to amountPaid when no invoice exists.
+ */
+async function loadChargedTotals(client: ReportReadClient, purchaseIds: string[]): Promise<Map<string, Prisma.Decimal>> {
+  if (purchaseIds.length === 0) return new Map();
+  const invoices = (await client.invoice.findMany({
+    where: { packagePurchaseId: { in: purchaseIds } },
+    select: { packagePurchaseId: true, total: true },
+  })) as Array<{ packagePurchaseId: string | null; total: Prisma.Decimal }>;
+  return new Map(invoices.flatMap((invoice) => (invoice.packagePurchaseId ? [[invoice.packagePurchaseId, invoice.total]] : [])));
+}
 
 const toHalalas = (value: Prisma.Decimal): number => Math.round(Number(value.toString()));
 
@@ -199,7 +214,11 @@ async function buildEventsReport(
         select: { id: true, packageId: true, clientId: true, amountPaid: true },
       })) as PurchaseDisplayRow[])
     : [];
-  const purchasesById = new Map(purchases.map((purchase) => [purchase.id, purchase]));
+  const charged = await loadChargedTotals(client, purchases.map((purchase) => purchase.id));
+  const purchasesById = new Map(purchases.map((purchase) => [
+    purchase.id,
+    { ...purchase, amountPaid: charged.get(purchase.id) ?? purchase.amountPaid },
+  ]));
   const datedEvents = eventRows.filter((event) => event.occurredAt !== null);
   const undatedEvents = eventRows.filter((event) => event.occurredAt === null);
   const items = datedEvents.map((event) => toEventItem(event, purchasesById));
@@ -242,11 +261,12 @@ async function buildLegacyReport(
     refundedAt: Date | null;
     notes: string | null;
   }>;
+  const charged = await loadChargedTotals(client, purchases.map((purchase) => purchase.id));
   const items = purchases.map((purchase) => ({
     purchaseId: purchase.id,
     packageId: purchase.packageId,
     clientId: purchase.clientId,
-    amountPaid: toHalalas(purchase.amountPaid),
+    amountPaid: toHalalas(charged.get(purchase.id) ?? purchase.amountPaid),
     refundAmount: toHalalas(purchase.refundAmount),
     refundedAt: purchase.refundedAt?.toISOString() ?? null,
     notes: purchase.notes ?? null,

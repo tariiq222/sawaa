@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   clientBookingsService,
-  type ClientBookingRow,
 } from '@/services/client';
 
 import { clientBookingsKeys } from './useClientBookings';
@@ -10,12 +9,17 @@ import { clientBookingsKeys } from './useClientBookings';
 interface CancelVars {
   id: string;
   reason: string;
+  quoteToken?: string;
+  sourceActionId?: string;
 }
 
 export function useCancelBooking() {
   const qc = useQueryClient();
-  return useMutation<ClientBookingRow, Error, CancelVars>({
-    mutationFn: ({ id, reason }) => clientBookingsService.cancel(id, reason),
+  return useMutation<Awaited<ReturnType<typeof clientBookingsService.cancel>>, Error, CancelVars>({
+    mutationFn: ({ id, reason, quoteToken, sourceActionId }) => clientBookingsService.cancel(id, reason, { quoteToken, sourceActionId }),
+    retry: false,
+    // The cancellation screen localizes failures and refreshes stale quotes.
+    onError: () => undefined,
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: clientBookingsKeys.all });
       qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
@@ -36,6 +40,9 @@ export function useRateBooking() {
     mutationFn: ({ id, score, comment, isPublic }) =>
       clientBookingsService.rate(id, { score, comment, isPublic }),
     onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
+    },
+    onError: (_error, vars) => {
       qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
     },
   });

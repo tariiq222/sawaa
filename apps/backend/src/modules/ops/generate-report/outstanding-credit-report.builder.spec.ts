@@ -3,6 +3,7 @@ import { buildOutstandingCreditReport } from './outstanding-credit-report.builde
 function makePrisma() {
   return {
     packagePurchase: { findMany: jest.fn().mockResolvedValue([]) },
+    invoice: { findMany: jest.fn().mockResolvedValue([]) },
   } as any;
 }
 
@@ -149,5 +150,20 @@ describe('buildOutstandingCreditReport', () => {
     expect(result.outstandingSessions).toBe(3);
     expect(result.creditCount).toBe(1);
     expect(result.outstandingLiability).toBe(7_500); // 10,000 − 2,500
+  });
+
+  it('caps by paid minus the NET part of refunds when the invoice carried VAT', async () => {
+    // Net 36000 (gross 41400 at 15%). A 36000 partial refund returned
+    // 4696 VAT (36000 × 5400/41400), so 31304 net was refunded and 4696 net
+    // remains paid for the untouched sessions.
+    prisma.packagePurchase.findMany.mockResolvedValue([{
+      id: 'p-1', amountPaid: 36_000, refundAmount: 36_000,
+      credits: [credit({ netValue: 36_000, totalQuantity: 6, usedQuantity: 0 })],
+    }]);
+    prisma.invoice.findMany.mockResolvedValue([{ packagePurchaseId: 'p-1', refundedVatAmt: 4_696 }]);
+
+    const result = await buildOutstandingCreditReport(prisma, {});
+
+    expect(result.outstandingLiability).toBe(4_696);
   });
 });

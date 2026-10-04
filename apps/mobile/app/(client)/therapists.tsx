@@ -1,34 +1,24 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Search, Star } from 'lucide-react-native';
 
-import { AppIcon } from '@/components/ui/AppIcon';
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { Chip } from '@/components/ui/Chip';
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
+import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
+import { TherapistCard } from '@/components/features/directory/TherapistCard';
 import { useDir } from '@/hooks/useDir';
+import { useClinics, useServicePriceFloors, useTherapists } from '@/hooks/queries';
+import { bookingStep, stepsAfterSkip } from '@/features/booking/booking-entry';
+import { applyTherapistFilters, type TherapistChip } from '@/features/therapists/therapistsFilter';
+import type { PublicEmployeeItem } from '@/services/client/employees';
 import { getFontName } from '@/theme/fonts';
-import { useClinics, useTherapists } from '@/hooks/queries';
-import { useReduceMotion } from '@/hooks/useA11y';
-import { applyTherapistFilters, type TherapistChip } from './therapistsFilter';
-
-const GRADIENTS: Array<readonly [string, string]> = [
-  [sawaaColors.teal[100], sawaaColors.teal[300]],
-  [sawaaColors.teal[200], sawaaColors.accent.sky],
-  [sawaaColors.teal[100], sawaaColors.accent.violet],
-  [sawaaColors.teal[200], sawaaColors.teal[500]],
-  [sawaaColors.teal[50], sawaaColors.accent.amber],
-];
-
-function gradientFor(id: string) {
-  let h = 0;
-  for (const ch of id) h = (h + ch.charCodeAt(0)) % GRADIENTS.length;
-  return GRADIENTS[h];
-}
+import { AquaBackground } from '@/theme/sawaa';
+import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 const CHIPS: Array<{ key: Exclude<TherapistChip, null>; labelKey: string }> = [
   { key: 'available', labelKey: 'therapists.filters.available' },
@@ -38,21 +28,22 @@ const CHIPS: Array<{ key: Exclude<TherapistChip, null>; labelKey: string }> = [
 ];
 
 export default function TherapistsListScreen() {
+  const colors = useSawaaColors();
   const router = useRouter();
-  const { clinicId } = useLocalSearchParams<{ clinicId?: string }>();
+  const { clinicId, serviceId, steps } = useLocalSearchParams<{ clinicId?: string; serviceId?: string; steps?: string }>();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
-  const reduceMotion = useReduceMotion();
   const f400 = getFontName(dir.locale, '400');
-  const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
-  const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const [activeChip, setActiveChip] = useState<TherapistChip>('available');
+  // A specialist with future openings is still a valid result for the clinic
+  // or service the client selected. Today's availability is an opt-in filter.
+  const [activeChip, setActiveChip] = useState<TherapistChip>(null);
   const [query, setQuery] = useState('');
-  const { data, isLoading } = useTherapists();
+  const therapistsQuery = useTherapists();
+  const { data, isLoading: therapistsLoading, isError: therapistDirectoryFailed, refetch: refetchTherapists } = therapistsQuery;
   const clinicsQuery = useClinics();
+  const { isLoading: clinicsLoading, isError: clinicsFailed, refetch: refetchClinics } = clinicsQuery;
   const rawList = useMemo(() => data ?? [], [data]);
   const selectedClinic = useMemo(
     () => (clinicId ? (clinicsQuery.data ?? []).find((clinic) => clinic.id === clinicId) : undefined),
@@ -63,158 +54,124 @@ export default function TherapistsListScreen() {
     [selectedClinic],
   );
   const list = useMemo(() => {
-    if (!clinicServiceIds) return rawList;
-    return rawList.filter((therapist) => therapist.serviceIds.some((serviceId) => clinicServiceIds.has(serviceId)));
-  }, [clinicServiceIds, rawList]);
-  const loading = isLoading;
+    if (!clinicId) return serviceId ? rawList.filter((therapist) => therapist.serviceIds.includes(serviceId)) : rawList;
+    if (!clinicServiceIds) return [];
+    if (serviceId && !clinicServiceIds.has(serviceId)) return [];
+    return rawList.filter((therapist) => therapist.serviceIds.some((id) => clinicServiceIds.has(id) && (!serviceId || id === serviceId)));
+  }, [clinicId, clinicServiceIds, rawList, serviceId]);
+  const clinicDirectoryRequired = Boolean(clinicId);
+  const loading = therapistsLoading || (clinicDirectoryRequired && clinicsLoading);
+  const clinicDirectoryFailed = clinicDirectoryRequired && clinicsFailed;
+  const directoryFailed = therapistDirectoryFailed || clinicDirectoryFailed;
 
   const filtered = useMemo(
     () => applyTherapistFilters(list, query, activeChip),
     [list, query, activeChip],
   );
 
-  const renderItem = useCallback(({ item, index }: { item: typeof list[0]; index: number }) => {
-    const name = (dir.isRTL ? item.nameAr : item.nameEn) ?? item.nameEn ?? item.nameAr ?? t('therapists.unknownName');
-    const spec = (dir.isRTL ? item.specialtyAr : item.specialty) ?? item.specialty ?? item.specialtyAr ?? '';
-    const gradient = gradientFor(item.id);
-    const initial = name.charAt(0);
-    const navKey = item.slug ?? item.id;
+  const listIds = useMemo(() => (serviceId ? list.map((therapist) => therapist.id) : []), [list, serviceId]);
+  const priceFloors = useServicePriceFloors(serviceId, listIds);
 
+  const timeStepParams = useCallback((employeeId: string, nextSteps: string | undefined) => ({
+    serviceId: serviceId as string,
+    employeeId,
+    ...(clinicId ? { clinicId } : {}),
+    ...(nextSteps ? { steps: nextSteps } : {}),
+  }), [clinicId, serviceId]);
+
+  // One matching therapist: nothing to choose, go straight to the time step.
+  const focused = useIsFocused();
+  const skipped = useRef(false);
+  useEffect(() => {
+    if (!serviceId || !focused || skipped.current || loading || directoryFailed || list.length !== 1) return;
+    skipped.current = true;
+    router.replace({
+      pathname: '/(client)/booking/[serviceId]',
+      params: timeStepParams(list[0].id, stepsAfterSkip(steps)),
+    });
+  }, [serviceId, focused, loading, directoryFailed, list, router, steps, timeStepParams]);
+
+  const renderItem = useCallback(({ item }: { item: PublicEmployeeItem }) => {
+    const openProfile = () => router.push({
+      pathname: '/(client)/employee/[id]',
+      params: {
+        id: item.slug ?? item.id,
+        ...(clinicId ? { clinicId } : {}),
+        ...(serviceId ? { serviceId } : {}),
+        ...(serviceId && steps ? { steps } : {}),
+      },
+    });
+    if (!serviceId) return <TherapistCard item={item} onPress={openProfile} />;
     return (
-      <Animated.View
-        entering={reduceMotion ? undefined : FadeInDown.delay(280 + index * 80).duration(700).easing(Easing.out(Easing.cubic))}
-      >
-        <Glass variant="strong" radius={sawaaRadius.xl} style={styles.therapistCard}>
-          <Pressable
-            onPress={() => router.push(`/(client)/employee/${navKey}`)}
-            style={[styles.therapistRow, { flexDirection: dir.row }]}
-            accessibilityRole="button"
-            accessibilityLabel={`${name}, ${spec}`}
-            testID={`therapist-${item.id}`}
-          >
-            <LinearGradient
-              colors={gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
-            </LinearGradient>
-            <View style={styles.therapistBody}>
-              <View style={[styles.therapistTop, { flexDirection: dir.row }]}>
-                <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign, flex: 1 }]}>
-                  {name}
-                </Text>
-              </View>
-              <Text style={[styles.therapistSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                {spec}
-              </Text>
-              {item.title ? (
-                <View style={[styles.therapistMeta, { flexDirection: dir.row }]}>
-                  <AppIcon sf="star.fill" fallback={Star} size={11} color={sawaaColors.accent.amber} strokeWidth={2} />
-                  <Text style={[styles.therapistExp, { fontFamily: f500, fontWeight: '500' }]}> 
-                    {item.title}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </Pressable>
-        </Glass>
-      </Animated.View>
+      <TherapistCard
+        item={item}
+        onPress={() => router.push({ pathname: '/(client)/booking/[serviceId]', params: timeStepParams(item.id, steps) })}
+        onViewProfile={openProfile}
+        servicePrice={priceFloors[item.id] ?? null}
+      />
     );
-  }, [dir, f400, f500, f700, reduceMotion, router, t]);
+  }, [router, clinicId, serviceId, steps, priceFloors, timeStepParams]);
 
   const screenTitle = selectedClinic
     ? (dir.isRTL ? selectedClinic.nameAr : (selectedClinic.nameEn ?? selectedClinic.nameAr))
-    : t('therapists.title');
+    : t('therapists.listTitle');
 
-  const ListHeader = useMemo(() => (
-    <View style={styles.header}>
-      <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500)}>
-        <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-          <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-        </Glass>
-      </Animated.View>
-
-      <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-        <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}> 
-          {screenTitle}
-        </Text>
-        <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}> 
-          {t('therapists.availableCount', { count: list.length })}
-        </Text>
-      </Animated.View>
-
-      <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-        <Glass variant="strong" radius={sawaaRadius.xl} style={styles.searchCard}>
-          <View style={[styles.searchRow, { flexDirection: dir.row }]}>
-            <AppIcon sf="magnifyingglass" fallback={Search} size={17} color={sawaaColors.ink[500]} strokeWidth={1.75} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder={t('therapists.searchPlaceholder')}
-              placeholderTextColor={sawaaColors.ink[400]}
-              accessibilityLabel={t('a11y.searchTherapists')}
-              testID="therapist-search"
-              style={[
-                styles.searchInput,
-                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
-              ]}
-            />
-          </View>
-        </Glass>
-      </Animated.View>
-
-      <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(220).duration(600).easing(Easing.out(Easing.cubic))}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.chipsRow, { flexDirection: dir.row }]}
-        >
-          {CHIPS.map((chip) => {
-            const isActive = chip.key === activeChip;
-            return (
-              <Pressable
-                key={chip.key}
-                onPress={() => setActiveChip((prev) => (prev === chip.key ? null : chip.key))}
-              >
-                <Glass
-                  variant={isActive ? 'strong' : 'regular'}
-                  radius={14}
-                  style={[
-                    styles.chip,
-                    isActive && { backgroundColor: sawaaColors.teal[700] },
-                  ]}
-                >
-                  <Text style={[
-                    styles.chipText,
-                    { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[50] : sawaaColors.ink[700] },
-                  ]}>
-                    {t(chip.labelKey)}
-                  </Text>
-                </Glass>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </Animated.View>
+  const errorBlock = (testID: string, retry: () => unknown) => (
+    <View style={styles.errorBlock}>
+      <Text style={[styles.message, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>{t('guest.loadError')}</Text>
+      <Pressable onPress={() => { void retry(); }} accessibilityRole="button" testID={testID} style={styles.retry}>
+        <Text style={[styles.retryText, { color: colors.teal[700], fontFamily: f600 }]}>{t('common.retry')}</Text>
+      </Pressable>
     </View>
-  ), [BackIcon, activeChip, dir, f400, f600, f700, list.length, query, reduceMotion, router, screenTitle, t]);
+  );
 
-  const ListEmpty = useMemo(() => {
-    if (loading) {
-      return (
-        <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', paddingHorizontal: 4 }]}> 
-          {t('therapists.loading')}
-        </Text>
-      );
-    }
-    return (
-      <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', paddingHorizontal: 4 }]}> 
-        {t('therapists.empty')}
-      </Text>
-    );
-  }, [f400, loading, t]);
+  const ListHeader = (
+    <View style={styles.header}>
+      {serviceId && steps ? (
+        <BookingStepHeader
+          {...bookingStep('therapist', steps)}
+          title={t('booking.chooseTherapist')}
+          onBack={() => router.back()}
+        />
+      ) : (
+        <ScreenHeader title={screenTitle} onBack={() => router.back()} />
+      )}
+      <DirectorySearch
+        value={query}
+        onChangeText={setQuery}
+        placeholder={t('therapists.searchPlaceholder')}
+        accessibilityLabel={t('a11y.searchTherapists')}
+        testID="therapist-search"
+      />
+      <LocalizedHorizontalScroll
+        dir={dir}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[styles.chipsRow, { flexDirection: dir.row }]}
+      >
+        <Chip label={t('therapists.filters.all')} selected={activeChip === null} onPress={() => setActiveChip(null)} />
+        {CHIPS.map((chip) => (
+          <Chip
+            key={chip.key}
+            label={t(chip.labelKey)}
+            selected={chip.key === activeChip}
+            onPress={() => setActiveChip((prev) => (prev === chip.key ? null : chip.key))}
+          />
+        ))}
+      </LocalizedHorizontalScroll>
+      {directoryFailed ? (
+        <View style={styles.errorList}>
+          {therapistDirectoryFailed ? errorBlock('therapist-directory-retry', refetchTherapists) : null}
+          {clinicDirectoryFailed ? errorBlock('clinic-directory-retry', refetchClinics) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const ListEmpty = loading ? (
+    <Text style={[styles.message, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>{t('therapists.loading')}</Text>
+  ) : directoryFailed ? null : (
+    <Text style={[styles.message, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>{t('therapists.empty')}</Text>
+  );
 
   return (
     <AquaBackground>
@@ -224,37 +181,27 @@ export default function TherapistsListScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={Separator}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
-        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
       />
     </AquaBackground>
   );
 }
 
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16 },
-  header: { gap: 14, marginBottom: 14 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  title: { fontSize: 22, color: sawaaColors.ink[900], paddingHorizontal: 4 },
-  subtitle: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 2, paddingHorizontal: 4 },
-  searchCard: { padding: 0 },
-  searchRow: { alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  searchInput: { flex: 1, fontSize: 13, height: 22 },
-  chipsRow: { gap: 6, paddingHorizontal: 2, paddingVertical: 2 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7 },
-  chipText: { fontSize: 11.5 },
-  therapistCard: { padding: 0, overflow: 'hidden', marginBottom: 14 },
-  therapistRow: { alignItems: 'stretch' },
-  avatar: {
-    width: 84, alignItems: 'center', justifyContent: 'flex-end',
-    paddingBottom: 8, position: 'relative',
-  },
-  avatarText: { fontSize: 36, color: sawaaColors.teal[50] },
-  therapistBody: { flex: 1, padding: 12 },
-  therapistTop: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  therapistName: { fontSize: 14, color: sawaaColors.ink[900] },
-  therapistSpec: { fontSize: 11.5, color: sawaaColors.ink[500], marginTop: 3 },
-  therapistMeta: { alignItems: 'center', gap: 6, marginTop: 8 },
-  therapistExp: { fontSize: 11, color: sawaaColors.ink[500] },
+  scroll: { paddingHorizontal: sawaaSpacing.lg },
+  header: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
+  chipsRow: { gap: sawaaSpacing.sm },
+  separator: { height: sawaaSpacing.md },
+  message: { fontSize: sawaaType.body.fontSize + 1, lineHeight: 22 },
+  errorList: { gap: sawaaSpacing.sm },
+  errorBlock: { gap: 4 },
+  retry: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  retryText: { fontSize: 14, textDecorationLine: 'underline' },
 });

@@ -71,7 +71,7 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
                 aria-checked={false}
                 tabIndex={i === focusIndex ? 0 : -1}
                 onClick={() => onSelect(branch)}
-                className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-white transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+                className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-[var(--surface)] transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                 style={{
                   border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                   boxShadow: 'var(--sw-shadow-xs)',
@@ -95,7 +95,7 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
                     className="grid place-items-center h-12 w-12 shrink-0 rounded-2xl"
                     style={{
                       background:
-                        'linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, #FFFFFF), color-mix(in srgb, var(--primary) 7%, #FFFFFF))',
+                        'linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, var(--surface)), color-mix(in srgb, var(--primary) 7%, var(--surface)))',
                       color: 'var(--primary-dark)',
                     }}
                   >
@@ -117,7 +117,7 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
                         <span
                           className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.625rem] font-bold"
                           style={{
-                            background: 'color-mix(in srgb, var(--accent) 45%, #FFFFFF)',
+                            background: 'color-mix(in srgb, var(--accent) 45%, var(--surface))',
                             color: 'color-mix(in srgb, var(--accent-dark) 60%, var(--sw-secondary-700))',
                             border: '1px solid color-mix(in srgb, var(--accent-dark) 35%, transparent)',
                           }}
@@ -155,7 +155,7 @@ export function BranchStep({ branches, onSelect }: BranchStepProps) {
 
                   <span
                     aria-hidden="true"
-                    className="shrink-0 grid place-items-center h-8 w-8 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-white"
+                    className="shrink-0 grid place-items-center h-8 w-8 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)]"
                     style={{
                       background: 'color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
                       color: 'var(--sw-secondary-700)',

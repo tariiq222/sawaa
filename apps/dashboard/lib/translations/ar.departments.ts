@@ -26,7 +26,7 @@ export const arDepartments: Record<string, string> = {
 
   // Columns
   "departments.col.name": "الاسم",
-  "departments.col.categories": "العيادات",
+  "departments.col.categories": "الفئات",
   "departments.col.status": "الحالة",
 
   // Actions

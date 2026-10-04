@@ -59,15 +59,9 @@ export function normalizeBookingTypes(input: {
   }
 
   if (!deliveryType) {
-    if (bookingType === BookingType.WALK_IN) {
-      deliveryType = DeliveryType.IN_PERSON;
-    } else if (bookingType === BookingType.GROUP) {
-      // GROUP defaults to IN_PERSON when not specified
-      deliveryType = DeliveryType.IN_PERSON;
-    } else {
-      // INDIVIDUAL defaults to IN_PERSON when not specified
-      deliveryType = DeliveryType.IN_PERSON;
-    }
+    // Every booking type (WALK_IN, GROUP, INDIVIDUAL) defaults to IN_PERSON
+    // when no delivery type was supplied or derived from legacy fields.
+    deliveryType = DeliveryType.IN_PERSON;
   }
 
   return { bookingType, deliveryType };

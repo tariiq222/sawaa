@@ -28,7 +28,7 @@
   "devDependencies": {
     "lefthook": "^2.1.9",
     "react-test-renderer": "19.2.4",
-    "turbo": "^2"
+    "turbo": "2.9.14"
   },
   "pnpm": {
     "overrides": {
@@ -40,29 +40,45 @@
       "fast-xml-builder@<1.1.7": ">=1.1.7",
       "fast-uri@<3.1.2": ">=3.1.2",
       "tmp@<0.2.6": ">=0.2.6",
-      "@grpc/grpc-js@<1.14.4": ">=1.14.4",
+      "@grpc/grpc-js@<1.14.5": ">=1.14.5",
       "ws@<8.21.0": ">=8.21.0",
       "form-data@<4.0.6": ">=4.0.6",
       "vite": ">=8.0.16",
-      "protobufjs@<7.6.1": ">=7.6.1",
-      "hono@<4.12.25": ">=4.12.25",
+      "protobufjs@<7.6.1": "7.6.6",
       "websocket-driver@<0.7.5": ">=0.7.5",
-      "brace-expansion": ">=5.0.8",
+      "brace-expansion": ">=5.0.11",
       "minimatch": "^10",
       "test-exclude@6.0.0": "8.0.0",
-      "js-yaml@<4.3.0": ">=4.3.0",
+      "js-yaml@<4.3.0": "4.3.2",
       "fast-uri@<3.1.4": ">=3.1.4",
-      "fast-uri": "4.1.3",
-      "ip-address": "10.7.0",
+      "fast-uri": "4.1.5",
+      "ip-address": "10.7.1",
       "nanoid": "3.3.18",
       "deepmerge-ts": "8.0.2",
       "postcss@<8.5.18": ">=8.5.18",
-      "multer@<2.3.0": "2.3.0",
       "nodemailer@<9.1.0": "9.1.0",
+      "nodemailer": ">=10.0.6",
       "sharp@<0.35.4": "0.35.4",
       "next@<15.5.24": "15.5.24",
       "browserslist@<4.28.7": "4.28.7",
-      "mysql2@<3.22.0": "3.22.0"
+      "@hono/node-server@<1.19.15": "1.19.15",
+      "@tootallnate/once@2.0.0": "2.0.1",
+      "uuid@<11.1.1": "11.1.1",
+      "qs@<6.16.0": "6.16.0",
+      "esbuild@>=0.27.0 <0.28.1": "0.28.1",
+      "@babel/core@<7.29.6": "^7.29.6",
+      "protobufjs@>=8.0.0 <8.6.6": "8.6.6",
+      "body-parser@>=2.0.0 <2.3.0": "2.3.0",
+      "valibot@>=1.0.0 <1.4.2": "1.4.2",
+      "postcss-selector-parser@>=7.0.0 <7.1.3": "7.1.3",
+      "vitest@>=4.0.0 <4.1.11": "4.1.11",
+      "@vitest/mocker@>=4.0.0 <4.1.11": "4.1.11",
+      "@vitest/coverage-v8@>=4.0.0 <4.1.11": "4.1.11",
+      "js-yaml@>=5.0.0 <5.4.1": "5.4.1",
+      "multer@<2.4.0": "2.4.0",
+      "mysql2@<3.23.1": "3.23.1",
+      "hono@<4.13.7": "4.13.7",
+      "@fastify/busboy@<3.2.1": "3.2.1"
     },
     "onlyBuiltDependencies": [
       "@prisma/client",
@@ -73,6 +89,11 @@
       "bcrypt",
       "@swc/core",
       "@biomejs/biome"
-    ]
+    ],
+    "patchedDependencies": {
+      "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch",
+      "stream-json@1.9.1": "patches/stream-json@1.9.1.patch",
+      "braces@3.0.3": "patches/braces@3.0.3.patch"
+    }
   }
 }

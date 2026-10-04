@@ -10,10 +10,25 @@ interface AvatarUploadProps {
   onChange: (file: File, previewUrl: string) => void
   onClear: () => void
   className?: string
+  /** Accessible name for the avatar picker button (icon-only control). */
+  uploadAriaLabel?: string
+  /** Accessible name for the "+" badge that opens the picker. */
+  addAriaLabel?: string
+  /** Accessible name for the "×" badge that clears the avatar. */
+  clearAriaLabel?: string
   children?: React.ReactNode  // slot for extra controls (e.g. switch)
 }
 
-export function AvatarUpload({ value, onChange, onClear, className, children }: AvatarUploadProps) {
+export function AvatarUpload({
+  value,
+  onChange,
+  onClear,
+  className,
+  uploadAriaLabel = "Change avatar",
+  addAriaLabel = "Add avatar",
+  clearAriaLabel = "Remove avatar",
+  children,
+}: AvatarUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | undefined>(value)
 
@@ -37,8 +52,11 @@ export function AvatarUpload({ value, onChange, onClear, className, children }: 
       {/* Avatar + badge button */}
       <div className="flex items-center gap-3">
         <div className="relative h-20 w-20 shrink-0">
-          {/* Circle */}
-          <div
+          {/* Circle — a real <button> so keyboard users can reach the picker.
+              type="button" is required: this control lives inside forms. */}
+          <button
+            type="button"
+            aria-label={uploadAriaLabel}
             className="group h-20 w-20 cursor-pointer rounded-full border-2 border-dashed border-border bg-surface-muted overflow-hidden flex items-center justify-center"
             onClick={() => inputRef.current?.click()}
           >
@@ -53,12 +71,13 @@ export function AvatarUpload({ value, onChange, onClear, className, children }: 
             ) : (
               <HugeiconsIcon icon={UserIcon} className="h-8 w-8 text-muted-foreground" />
             )}
-          </div>
+          </button>
 
           {/* Badge button — + when empty, × when has image */}
           {preview ? (
             <button
               type="button"
+              aria-label={clearAriaLabel}
               onClick={handleClear}
               className="absolute bottom-0 end-0 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-md ring-2 ring-background hover:bg-destructive/80 transition-colors"
             >
@@ -67,6 +86,7 @@ export function AvatarUpload({ value, onChange, onClear, className, children }: 
           ) : (
             <button
               type="button"
+              aria-label={addAriaLabel}
               onClick={() => inputRef.current?.click()}
               className="absolute bottom-0 end-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-background hover:bg-primary/80 transition-colors"
             >

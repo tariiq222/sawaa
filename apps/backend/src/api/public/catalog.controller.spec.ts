@@ -138,6 +138,7 @@ describe('PublicCatalogController (e2e)', () => {
 
       expect(mockPrisma.organizationSettings.findFirst).toHaveBeenCalledWith({
         where: {},
+        orderBy: { createdAt: 'desc' },
         select: { vatRate: true },
       });
       expect(res.body.vatRate).toBe(0.15);
@@ -170,7 +171,7 @@ describe('PublicCatalogController (e2e)', () => {
       );
       expect(mockPrisma.service.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { isActive: true, isHidden: false, archivedAt: null },
+          where: { isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
         }),
       );
     });

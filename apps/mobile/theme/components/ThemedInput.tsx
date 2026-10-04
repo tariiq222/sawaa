@@ -79,7 +79,7 @@ export function ThemedInput({
             borderColor: error
               ? theme.colors.error
               : focused
-                ? '#1D4ED866'
+                ? theme.colors.focus
                 : 'transparent',
             borderRadius: 10,
             paddingVertical: 13,

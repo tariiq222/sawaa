@@ -24,8 +24,8 @@ describe('ResilientNotificationDispatcher', () => {
       },
     };
     bullmq = { getQueue: jest.fn().mockReturnValue(queue) };
-    email = { execute: jest.fn().mockResolvedValue(undefined) };
-    sms = { execute: jest.fn().mockResolvedValue(undefined) };
+    email = { execute: jest.fn().mockResolvedValue({ sent: true }) };
+    sms = { execute: jest.fn().mockResolvedValue({ sent: true }) };
     push = { execute: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
@@ -61,6 +61,32 @@ describe('ResilientNotificationDispatcher', () => {
   });
 
   // ── attemptSend success paths ──────────────────────────────────────────
+
+  it('records SKIPPED (not SENT) and schedules no retry when no SMS provider is configured', async () => {
+    sms.execute.mockResolvedValue({ sent: false, reason: 'NO_PROVIDER' });
+    await service.attemptSend('log-1', 'SMS', {
+      recipientId: 'u1', organizationId: 'org-1', type: 'BOOKING_CONFIRMED',
+      recipientPhone: '+966500000000', smsBody: 'hi',
+    } as never, 1);
+    expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'SKIPPED', errorMessage: 'No SMS provider configured' }) }),
+    );
+    expect(prisma.notificationDeliveryLog.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'SENT' }) }),
+    );
+    expect(bullmq.getQueue).not.toHaveBeenCalled();
+  });
+
+  it('records SKIPPED when the email template is missing or inactive', async () => {
+    email.execute.mockResolvedValue({ sent: false, reason: 'TEMPLATE_UNAVAILABLE' });
+    await service.attemptSend('log-1', 'EMAIL', {
+      recipientId: 'u1', organizationId: 'org-1', type: 'BOOKING_CONFIRMED',
+      recipientEmail: 'a@b.com', emailTemplateSlug: 'missing',
+    } as never, 1);
+    expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'SKIPPED' }) }),
+    );
+  });
 
   it('sends email successfully', async () => {
     await service.attemptSend('log-1', 'EMAIL', {

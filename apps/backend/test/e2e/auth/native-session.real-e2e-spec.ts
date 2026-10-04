@@ -2,15 +2,18 @@
  * Native mobile refresh/logout persistence and concurrency regressions.
  *
  * This suite is skipped unless REAL_E2E_DATABASE_URL points at a migrated,
- * disposable Postgres database. It calls the real Prisma-backed handlers;
+ * disposable Postgres database. It calls real HTTP routes and Prisma-backed handlers;
  * only the token service is spied on for the rollback failure injection.
  */
 
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
+import request from 'supertest';
+import cookieParser from 'cookie-parser';
 import { AppModule } from '../../../src/app.module';
 import { PrismaService } from '../../../src/infrastructure/database';
+import { configureHttpContract } from '../../../src/common/bootstrap/configure-http-contract';
 import { NativeLogoutHandler } from '../../../src/modules/identity/native-session/native-logout.handler';
 import { NativeRefreshHandler } from '../../../src/modules/identity/native-session/native-refresh.handler';
 import { TokenService, type TokenPair } from '../../../src/modules/identity/shared/token.service';
@@ -37,6 +40,8 @@ describeRealE2e('Native session refresh/logout — real Postgres e2e', () => {
       imports: [AppModule],
     }).compile();
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
+    configureHttpContract(app, 'production');
     await app.init();
 
     prisma = app.get(PrismaService);
@@ -49,17 +54,20 @@ describeRealE2e('Native session refresh/logout — real Postgres e2e', () => {
       data: {
         email,
         name: 'Native Session E2E',
-        role: 'RECEPTIONIST',
+        role: 'EMPLOYEE',
         isActive: true,
       },
       select: { id: true },
     });
     userId = user.id;
+    // Staff mobile sessions are for practitioners linked to an active Employee.
+    await prisma.employee.create({ data: { userId, name: 'Native Session E2E' } });
   });
 
   afterAll(async () => {
     if (prisma && userId) {
       await prisma.refreshToken.deleteMany({ where: { userId } }).catch(() => undefined);
+      await prisma.employee.deleteMany({ where: { userId } }).catch(() => undefined);
       await prisma.user.deleteMany({ where: { id: userId } }).catch(() => undefined);
     }
     if (app) await app.close();
@@ -147,5 +155,69 @@ describeRealE2e('Native session refresh/logout — real Postgres e2e', () => {
       accessToken: expect.any(String),
       refreshToken: expect.any(String),
     });
+  });
+
+  it('rejects a legacy NULL-source token at dashboard HTTP refresh while retaining eligible native rotation', async () => {
+    const legacy = await issuePair();
+    const legacyRow = await prisma.refreshToken.findFirstOrThrow({
+      where: { userId, tokenSelector: legacy.refreshToken.slice(0, 8) },
+    });
+    await prisma.refreshToken.update({ where: { id: legacyRow.id }, data: { source: null } });
+    const before = await prisma.refreshToken.findMany({ where: { userId }, orderBy: { id: 'asc' } });
+
+    const rejected = await request(app.getHttpServer()).post('/api/v1/auth/refresh')
+      .set('Cookie', `ck_refresh=${legacy.refreshToken}`).send({});
+
+    expect(rejected.status).toBe(401);
+    expect(rejected.body.message).toBe('Invalid or expired refresh token');
+    expect(rejected.body).not.toHaveProperty('accessToken');
+    expect(rejected.headers['set-cookie']).toBeUndefined();
+    // Row equality proves no consumption, replacement, or change to other
+    // synthetic sessions belonging to this user on rejection.
+    expect(await prisma.refreshToken.findMany({ where: { userId }, orderBy: { id: 'asc' } })).toEqual(before);
+
+    const native = await request(app.getHttpServer()).post('/api/v1/mobile/auth/refresh')
+      .send({ refreshToken: legacy.refreshToken }).expect(200);
+    expect(native.body).toEqual({ accessToken: expect.any(String), refreshToken: expect.any(String) });
+    expect((await prisma.refreshToken.findUniqueOrThrow({ where: { id: legacyRow.id } })).revokedAt).toBeInstanceOf(Date);
+    const replacement = await prisma.refreshToken.findFirstOrThrow({
+      where: { userId, tokenSelector: native.body.refreshToken.slice(0, 8) },
+    });
+    expect(replacement.source).toBe('MOBILE');
+    expect(replacement.revokedAt).toBeNull();
+    const afterNative = await prisma.refreshToken.findMany({ where: { userId }, orderBy: { id: 'asc' } });
+    expect(afterNative).toHaveLength(before.length + 1);
+
+    const rejectedReplacement = await request(app.getHttpServer()).post('/api/v1/auth/refresh')
+      .set('Cookie', `ck_refresh=${native.body.refreshToken}`).send({});
+    expect(rejectedReplacement.status).toBe(401);
+    expect(rejectedReplacement.headers['set-cookie']).toBeUndefined();
+    expect(rejectedReplacement.body).not.toHaveProperty('accessToken');
+    expect(await prisma.refreshToken.findMany({ where: { userId }, orderBy: { id: 'asc' } })).toEqual(afterNative);
+  });
+
+  it('rotates a known DASHBOARD token through the dashboard HTTP cookie route', async () => {
+    const pair = await issuePair();
+    const original = await prisma.refreshToken.findFirstOrThrow({
+      where: { userId, tokenSelector: pair.refreshToken.slice(0, 8) },
+    });
+    expect(original.source).toBe('DASHBOARD');
+    const rotated = await request(app.getHttpServer()).post('/api/v1/auth/refresh')
+      .set('Cookie', `ck_refresh=${pair.refreshToken}`).send({}).expect(200);
+
+    expect(rotated.body.accessToken).toEqual(expect.any(String));
+    expect(rotated.body).not.toHaveProperty('refreshToken');
+    const cookieHeader = rotated.headers['set-cookie'];
+    const cookies = Array.isArray(cookieHeader) ? cookieHeader : cookieHeader ? [cookieHeader] : [];
+    const cookie = cookies.find((value: string) => value.startsWith('ck_refresh='));
+    expect(cookie).toContain('HttpOnly');
+    const rawReplacement = cookie!.slice('ck_refresh='.length).split(';')[0];
+    expect(rawReplacement).not.toBe(pair.refreshToken);
+    expect((await prisma.refreshToken.findUniqueOrThrow({ where: { id: original.id } })).revokedAt).toBeInstanceOf(Date);
+    const replacement = await prisma.refreshToken.findFirstOrThrow({
+      where: { userId, tokenSelector: rawReplacement.slice(0, 8) },
+    });
+    expect(replacement.source).toBe('DASHBOARD');
+    expect(replacement.revokedAt).toBeNull();
   });
 });

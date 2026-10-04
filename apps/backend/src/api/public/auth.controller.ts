@@ -5,7 +5,7 @@ import {
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
+import { Prisma, RefreshTokenSource } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse
@@ -168,6 +168,11 @@ export class AuthController {
     if (!rawToken) throw new UnauthorizedException('No refresh token');
 
     const record = await this.findActiveToken(rawToken);
+    // Only proven dashboard sessions may rotate here. Legacy unknown-source
+    // sessions require fresh sign-in; mobile sessions retain their own route.
+    if (record.source !== RefreshTokenSource.DASHBOARD) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
 
     const tokens = await this.rlsTransaction.withTransaction(async (tx) => {
       // Logout takes this same lock before revoking all refresh credentials.
@@ -394,7 +399,7 @@ export class AuthController {
   private parseTtlSeconds(ttl: string): number {
     const match = /^(\d+)([smhd])$/.exec(ttl);
     if (!match) return 900;
-    const n = parseInt(match[1], 10);
+    const n = Number.parseInt(match[1], 10);
     const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
     return n * multipliers[match[2]];
   }

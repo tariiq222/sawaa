@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,24 +8,27 @@ import {
   Pressable,
   Alert,
   StyleSheet,
-  ImageBackground,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
-import { Glass } from '@/theme';
-import { sawaaTokens, sawaaColors } from '@/theme/sawaa/tokens';
-import { PrimaryButton } from '@/theme/sawaa';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRegister } from '@/hooks/queries';
+import { getFontName } from '@/theme/fonts';
 import { LabeledInput } from '@/components/ui/LabeledInput';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function RegisterScreen() {
-  const { t } = useTranslation();
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const router = useRouter();
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
 
@@ -67,22 +70,22 @@ export default function RegisterScreen() {
           purpose: 'register',
           identifier: phone,
           maskedIdentifier: result.maskedPhone,
+          ...authContinuationParams(booking, redirect),
+          // Needed by the OTP screen to re-send the code: the backend re-sends
+          // the register OTP when the same details are submitted again.
+          firstName,
+          lastName,
+          email,
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.registerError'));
     }
-  }, [firstName, lastName, phone, email, validate, register, router, t]);
+  }, [firstName, lastName, phone, email, validate, register, router, t, booking, redirect]);
 
   return (
-    <View style={styles.container}>
-      <ImageBackground
-        source={require('@/assets/bg.jpg')}
-        style={StyleSheet.absoluteFillObject}
-        resizeMode="cover"
-      />
-
+    <AquaBackground>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -90,149 +93,117 @@ export default function RegisterScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 },
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Glass
-            variant="strong"
-            radius={22}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            interactive
-            accessibilityLabel={t('a11y.buttonBack')}
-            style={styles.backBtn}
-          >
-            {dir.isRTL ? (
-              <ChevronRight size={22} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            ) : (
-              <ChevronLeft size={22} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            )}
-          </Glass>
+          <ScreenHeader title={t('auth.register.title')} onBack={() => router.back()} />
 
           <Text
             style={[
-              styles.title,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            {t('auth.register.title')}
-          </Text>
-          <Text
-            style={[
               styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: getFontName(dir.locale, '400') },
             ]}
           >
             {t('auth.createAccountSub')}
           </Text>
 
-          <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
-            <View style={styles.formInner}>
-              <View style={[styles.row, { flexDirection: dir.row }]}>
-                <View style={styles.half}>
-                  <LabeledInput
-                    label={t('auth.register.firstName')}
-                    value={firstName}
-                    onChangeText={(v) => {
-                      setFirstName(v);
-                      clearError('firstName');
-                    }}
-                    placeholder={t('auth.firstNamePlaceholder')}
-                    error={errors.firstName}
-                    dir={dir}
-                  />
-                </View>
-                <View style={styles.half}>
-                  <LabeledInput
-                    label={t('auth.register.lastName')}
-                    value={lastName}
-                    onChangeText={(v) => {
-                      setLastName(v);
-                      clearError('lastName');
-                    }}
-                    placeholder={t('auth.lastNamePlaceholder')}
-                    error={errors.lastName}
-                    dir={dir}
-                  />
-                </View>
-              </View>
-
-              <LabeledInput
-                label={t('auth.register.phone')}
-                value={phone}
-                onChangeText={(v) => {
-                  setPhone(v);
-                  clearError('phone');
-                }}
-                placeholder={t('auth.phonePlaceholder')}
-                error={errors.phone}
-                keyboardType="phone-pad"
-                dir={dir}
-              />
-
-              <LabeledInput
-                label={t('auth.register.email')}
-                value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  clearError('email');
-                }}
-                placeholder={t('auth.emailPlaceholder')}
-                error={errors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                dir={dir}
-              />
-
-              <PrimaryButton
-                label={register.isPending ? t('auth.register.submitting') : t('auth.register.submit')}
-                onPress={handleRegister}
-                disabled={register.isPending}
-                style={{ marginTop: 8 }}
-              />
-
-              <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
-                <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.back();
+          <View style={styles.form}>
+            <View style={[styles.row, { flexDirection: dir.row }]}>
+              <View style={styles.half}>
+                <LabeledInput
+                  label={t('auth.register.firstName')}
+                  value={firstName}
+                  onChangeText={(v) => {
+                    setFirstName(v);
+                    clearError('firstName');
                   }}
-                >
-                  <Text style={styles.loginLink}>{t('auth.login')}</Text>
-                </Pressable>
+                  placeholder={t('auth.firstNamePlaceholder')}
+                  error={errors.firstName}
+                  dir={dir}
+                />
+              </View>
+              <View style={styles.half}>
+                <LabeledInput
+                  label={t('auth.register.lastName')}
+                  value={lastName}
+                  onChangeText={(v) => {
+                    setLastName(v);
+                    clearError('lastName');
+                  }}
+                  placeholder={t('auth.lastNamePlaceholder')}
+                  error={errors.lastName}
+                  dir={dir}
+                />
               </View>
             </View>
-          </Glass>
+
+            <LabeledInput
+              label={t('auth.register.phone')}
+              value={phone}
+              onChangeText={(v) => {
+                setPhone(v);
+                clearError('phone');
+              }}
+              placeholder={t('auth.phonePlaceholder')}
+              error={errors.phone}
+              keyboardType="phone-pad"
+              dir={dir}
+            />
+
+            <LabeledInput
+              label={t('auth.register.email')}
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                clearError('email');
+              }}
+              placeholder={t('auth.emailPlaceholder')}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              dir={dir}
+            />
+
+            <PrimaryButton
+              label={register.isPending ? t('auth.register.submitting') : t('auth.register.submit')}
+              onPress={handleRegister}
+              fontFamily={getFontName(dir.locale, '700')}
+              disabled={register.isPending}
+              style={styles.primary}
+            />
+
+            <View style={[styles.loginRow, { flexDirection: dir.row }]}>
+              <Text style={[styles.loginText, { fontFamily: getFontName(dir.locale, '400') }]}>{t('auth.hasAccount')} </Text>
+              <Pressable
+                accessibilityRole="link"
+                style={styles.linkTarget}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.back();
+                }}
+              >
+                <Text style={[styles.loginLink, { fontFamily: getFontName(dir.locale, '700') }]}>{t('auth.login')}</Text>
+              </Pressable>
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </AquaBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { paddingHorizontal: 24 },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    alignSelf: 'flex-start',
-  },
-  title: { fontSize: 32, fontWeight: '800', color: sawaaColors.teal[700], lineHeight: 42, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: sawaaColors.ink[500], lineHeight: 20 },
-  form: { padding: 24 },
-  formInner: { gap: 16 },
+  scroll: { paddingHorizontal: 16 },
+  subtitle: { fontSize: 15, lineHeight: 24, color: colors.ink[700], marginTop: 16 },
+  form: { marginTop: 20, gap: 16 },
   row: { gap: 12 },
   half: { flex: 1 },
-  loginRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  loginText: { fontSize: 14, color: sawaaColors.ink[500] },
-  loginLink: { fontSize: 14, fontWeight: '700', color: sawaaColors.teal[700] },
+  primary: { marginTop: 8 },
+  loginRow: { alignItems: 'center', justifyContent: 'center' },
+  linkTarget: { minHeight: 44, justifyContent: 'center' },
+  loginText: { fontSize: 14, color: colors.ink[700] },
+  loginLink: { fontSize: 14, color: colors.teal[700] },
 });

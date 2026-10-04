@@ -1,6 +1,7 @@
 import { apiRequest } from '../client'
 import type {
   BookingListItem,
+  BookingWriteResult,
   BookingListQuery,
   BookingListResponse,
   CreateBookingPayload,
@@ -45,8 +46,8 @@ export async function getBooking(id: string): Promise<BookingListItem> {
 
 export async function createBooking(
   payload: CreateBookingPayload,
-): Promise<BookingListItem> {
-  return apiRequest<BookingListItem>('/dashboard/bookings', {
+): Promise<BookingWriteResult> {
+  return apiRequest<BookingWriteResult>('/dashboard/bookings', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -55,21 +56,21 @@ export async function createBooking(
 export async function cancelBooking(
   id: string,
   payload: { reason?: string } = {},
-): Promise<BookingListItem> {
-  return apiRequest<BookingListItem>(`/dashboard/bookings/${id}/cancel`, {
+): Promise<BookingWriteResult> {
+  return apiRequest<BookingWriteResult>(`/dashboard/bookings/${id}/cancel`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
 }
 
-export async function confirmBooking(id: string): Promise<BookingListItem> {
-  return apiRequest<BookingListItem>(`/dashboard/bookings/${id}/confirm`, {
+export async function confirmBooking(id: string): Promise<BookingWriteResult> {
+  return apiRequest<BookingWriteResult>(`/dashboard/bookings/${id}/confirm`, {
     method: 'PATCH',
   })
 }
 
-export async function completeBooking(id: string): Promise<BookingListItem> {
-  return apiRequest<BookingListItem>(`/dashboard/bookings/${id}/complete`, {
+export async function completeBooking(id: string): Promise<BookingWriteResult> {
+  return apiRequest<BookingWriteResult>(`/dashboard/bookings/${id}/complete`, {
     method: 'PATCH',
   })
 }

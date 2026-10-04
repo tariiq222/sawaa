@@ -14,6 +14,7 @@ import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
 import { computeRefundAccounting } from './refund-vat.helper';
 import { decimalToHalalas } from '../money.helper';
+import { captureCancellationRefundOutcome } from '../cancellation-refund/capture-cancellation-refund-outcome';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const REFUND_PROVIDER_LEASE_MS = 60_000;
@@ -134,13 +135,14 @@ export class RefundPaymentHandler {
       });
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
         where: { id: refundReq.invoiceId },
-        select: { total: true, vatAmt: true, refundedAmount: true },
+        select: { total: true, vatAmt: true, refundedAmount: true, refundedVatAmt: true },
       });
       const refundAmount = decimalToHalalas(refundReq.amount);
       const accounting = computeRefundAccounting({
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
+        alreadyRefundedVatAmt: currentInvoice.refundedVatAmt,
         thisRefundAmount: refundAmount,
       });
       // Mirror the invoice's REFUNDED / PARTIALLY_REFUNDED outcome onto the
@@ -208,12 +210,13 @@ export class RefundPaymentHandler {
       Array<{
         id: string;
         status: string;
+        method: string;
         gatewayRef: string | null;
         amount: Prisma.Decimal;
         refundedAmount: Prisma.Decimal | null;
         invoiceId: string;
       }>
-    >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
+    >`SELECT id, status, method, "gatewayRef", amount, "refundedAmount", "invoiceId"
         FROM "Payment"
         WHERE id = ${cmd.paymentId}
         FOR UPDATE`;
@@ -225,6 +228,16 @@ export class RefundPaymentHandler {
       row.status !== PaymentStatus.PARTIALLY_REFUNDED
     ) {
       throw new BadRequestException('Only completed or partially-refunded payments can be refunded');
+    }
+    // Moyasar rejects a second refund even when its first refund was partial.
+    // Fail before persisting another request; off-gateway accounting stays separate.
+    if (row.method === 'ONLINE_CARD' && row.gatewayRef && (
+      row.status === PaymentStatus.PARTIALLY_REFUNDED
+      || decimalToHalalas(row.refundedAmount ?? 0) > 0
+    )) {
+      throw new BadRequestException(
+        'Moyasar does not support a second gateway refund; reconcile the remaining balance separately',
+      );
     }
     // The outstanding-balance clamp below is the real guard against over-refund;
     // here we only assert the status is in a refundable state.
@@ -247,11 +260,13 @@ export class RefundPaymentHandler {
         bookingId: true,
         clientId: true,
         currency: true,
-        // total/vatAmt/refundedAmount only needed for the off-gateway path,
-        // where the refund is settled fully inside this transaction.
+        // total/vatAmt/refundedAmount/refundedVatAmt only needed for the
+        // off-gateway path, where the refund is settled fully inside this
+        // transaction.
         total: true,
         vatAmt: true,
         refundedAmount: true,
+        refundedVatAmt: true,
       },
     });
 
@@ -290,6 +305,7 @@ export class RefundPaymentHandler {
         invoiceTotal: invoice.total,
         invoiceVatAmt: invoice.vatAmt,
         alreadyRefundedAmount: invoice.refundedAmount,
+        alreadyRefundedVatAmt: invoice.refundedVatAmt,
         thisRefundAmount: refundAmount,
       });
       await tx.refundRequest.create({
@@ -514,10 +530,26 @@ export class RefundPaymentHandler {
       let providerPaymentId = refundReq.gatewayRef ?? payment.gatewayRef;
 
       if (phase === 'BEFORE_CALL') {
-        const providerPayment = await this.moyasar.getPaymentStatus(
-          DEFAULT_ORG_ID,
-          payment.gatewayRef,
-        );
+        let providerPayment: Awaited<ReturnType<MoyasarApiClient['getPaymentStatus']>>;
+        try {
+          providerPayment = await this.moyasar.getPaymentStatus(
+            DEFAULT_ORG_ID,
+            payment.gatewayRef,
+          );
+        } catch (error) {
+          // Only a provider 404 before any POST proves this refund cannot run.
+          // Transient failures and unknown-call reconciliation remain retryable.
+          if (error instanceof NotFoundException) {
+            await this.requireOwnedRefundUpdate(cmd.refundRequestId, leaseOwner, {
+              status: RefundStatus.FAILED,
+              providerState: 'FAILED',
+              providerLeaseOwner: null,
+              providerLeaseExpiresAt: null,
+              lastProviderError: 'Provider confirmed payment is unavailable before refund',
+            });
+          }
+          throw error;
+        }
         const localAmount = decimalToHalalas(payment.amount);
         const localRefunded = decimalToHalalas(payment.refundedAmount ?? 0);
         const providerBaseline = Math.round(providerPayment.refunded);
@@ -717,16 +749,20 @@ export class RefundPaymentHandler {
     leaseOwner: string,
     data: Prisma.RefundRequestUpdateManyMutationInput,
   ): Promise<void> {
-    const result = await this.prisma.refundRequest.updateMany({
-      where: {
-        id: refundRequestId,
-        status: RefundStatus.PROCESSING,
-        providerLeaseOwner: leaseOwner,
-      },
-      data,
-    });
-    if (result.count !== 1) {
-      throw new ConflictException('Refund provider lease was lost');
+    const update = async (tx: Pick<Prisma.TransactionClient, 'refundRequest'>) => {
+      const result = await tx.refundRequest.updateMany({
+        where: { id: refundRequestId, status: RefundStatus.PROCESSING, providerLeaseOwner: leaseOwner },
+        data,
+      });
+      if (result.count !== 1) throw new ConflictException('Refund provider lease was lost');
+    };
+    if (data.status === RefundStatus.FAILED || data.status === RefundStatus.MANUAL_REVIEW) {
+      await this.rlsTransaction.withTransaction(async tx => {
+        await update(tx);
+        await captureCancellationRefundOutcome(tx, refundRequestId);
+      });
+    } else {
+      await update(this.prisma);
     }
   }
 
@@ -786,6 +822,7 @@ export class RefundPaymentHandler {
           total: true,
           vatAmt: true,
           refundedAmount: true,
+          refundedVatAmt: true,
           id: true,
           bookingId: true,
           currency: true,
@@ -795,6 +832,7 @@ export class RefundPaymentHandler {
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
+        alreadyRefundedVatAmt: currentInvoice.refundedVatAmt,
         thisRefundAmount: input.refundAmount,
       });
       const paymentStatus = accounting.newInvoiceStatus === 'REFUNDED'
@@ -876,12 +914,13 @@ export class RefundPaymentHandler {
           Array<{
             id: string;
             status: string;
+            method: string;
             gatewayRef: string | null;
             amount: Prisma.Decimal;
             refundedAmount: Prisma.Decimal | null;
             invoiceId: string;
           }>
-        >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
+        >`SELECT id, status, method, "gatewayRef", amount, "refundedAmount", "invoiceId"
             FROM "Payment"
             WHERE id = ${cmd.paymentId}
             FOR UPDATE`;
@@ -893,6 +932,16 @@ export class RefundPaymentHandler {
           row.status !== PaymentStatus.PARTIALLY_REFUNDED
         ) {
           throw new BadRequestException('Only completed or partially-refunded payments can be refunded');
+        }
+        // Do not create an unsupported second Moyasar request or reroute it
+        // through the manual cash/bank-transfer refund policy.
+        if (row.method === 'ONLINE_CARD' && row.gatewayRef && (
+          row.status === PaymentStatus.PARTIALLY_REFUNDED
+          || decimalToHalalas(row.refundedAmount ?? 0) > 0
+        )) {
+          throw new BadRequestException(
+            'Moyasar does not support a second gateway refund; reconcile the remaining balance separately',
+          );
         }
         // Outstanding-balance clamp below is the real over-refund guard.
         assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);

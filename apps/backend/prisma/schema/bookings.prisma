@@ -299,9 +299,19 @@ enum RefundType {
   NONE
 }
 
+enum ClientCancelCutoffMode {
+  BEFORE_START
+  BEFORE_CHECK_IN
+}
+
 model BookingSettings {
   id       String  @id @default(uuid())
   branchId String? // null = global default; one settings row per branch
+
+  clientCancellationPolicyEnabled Boolean @default(false)
+  clientCancelCutoffMode ClientCancelCutoffMode?
+  clientCancelBeforeHours Int?
+  earlyCancelRefundPercent Int?
 
   bufferMinutes           Int        @default(0)
   freeCancelBeforeHours   Int        @default(24)

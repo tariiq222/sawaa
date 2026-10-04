@@ -25,7 +25,7 @@ export function BookingSkeleton({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-4 p-4 sm:p-5 rounded-[1.25rem] bg-white"
+          className="flex items-center gap-4 p-4 sm:p-5 rounded-[1.25rem] bg-[var(--surface)]"
           style={{
             border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)',
             boxShadow: 'var(--sw-shadow-xs)',

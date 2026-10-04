@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -27,6 +28,8 @@ import {
   hashToInt32,
   updateBookingAtomically,
 } from '../booking-lifecycle.helper';
+import { calculateClientCancellation, RESERVED_REFUND_STATUSES, type CancellationRefundSummary, type ClientCancellationSettings } from './client-cancellation-policy';
+import { readCancellationPayments } from './client-cancellation-preview.handler';
 import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
@@ -40,6 +43,7 @@ type CancelResult = {
   status: 'CANCELLED' | 'CANCEL_REQUESTED';
   booking: Awaited<ReturnType<typeof updateBookingAtomically>>;
   requiresApproval: boolean;
+  refund?: CancellationRefundSummary;
 };
 
 @Injectable()
@@ -83,6 +87,7 @@ export class ClientCancelBookingHandler {
             status,
             booking,
             requiresApproval: stored?.requiresApproval === true,
+            ...(stored?.refund ? { refund: stored.refund as unknown as CancellationRefundSummary } : {}),
           };
         }
       }
@@ -94,6 +99,10 @@ export class ClientCancelBookingHandler {
         branchId: booking.branchId,
         transaction: tx,
       });
+      if ((settings as ClientCancellationSettings).clientCancellationPolicyEnabled) {
+        return this.cancelWithPolicy(tx, cmd, booking, settings as ClientCancellationSettings, cancellationEventId, actionHash);
+      }
+      if (cmd.quoteToken) throw new ConflictException('Cancellation policy changed. Reload the cancellation preview.');
       const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
 
       if (settings.requireCancelApproval || hoursUntilBooking < settings.freeCancelBeforeHours) {
@@ -262,7 +271,73 @@ export class ClientCancelBookingHandler {
       status: result.status,
       booking: result.booking,
       requiresApproval: result.requiresApproval,
+      ...(result.refund ? { refund: result.refund } : {}),
     };
+  }
+
+  private async cancelWithPolicy(
+    tx: Prisma.TransactionClient,
+    cmd: ClientCancelCommand,
+    booking: NonNullable<Awaited<ReturnType<Prisma.TransactionClient['booking']['findUnique']>>>,
+    settings: ClientCancellationSettings,
+    eventId: string,
+    actionHash: string,
+  ): Promise<CancelResult> {
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${booking.id} FOR UPDATE`);
+    const payments = await readCancellationPayments(tx, booking.id, true);
+    const quote = calculateClientCancellation(booking, settings, payments);
+    if (cmd.quoteToken && cmd.quoteToken !== quote.quoteToken) {
+      throw new ConflictException('Cancellation terms changed. Reload the cancellation preview.');
+    }
+    if (!quote.canCancel) throw new BadRequestException({ message: 'Client cancellation is unavailable', reasonCode: quote.reasonCode });
+    const nextStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
+    const now = new Date();
+    // Recheck the deadline after all money/booking locks have been obtained.
+    if (calculateClientCancellation(booking, settings, payments, now).quoteToken !== quote.quoteToken) {
+      throw new ConflictException('Cancellation cutoff passed. Reload the cancellation preview.');
+    }
+    const cancelled = await updateBookingAtomically(tx, {
+      bookingId: booking.id, currentStatus: booking.status, actionLabel: 'cancelled',
+      data: { status: nextStatus, cancelReason: 'CLIENT_REQUESTED', cancelNotes: cmd.reason ?? null, cancelledAt: now, ...(booking.zoomMeetingId ? { zoomMeetingStatus: 'CANCELLED' } : {}) },
+      extraWhere: {
+        clientId: cmd.clientId, checkedInAt: null, isHistoricalImport: false,
+        scheduledAt: booking.scheduledAt, endsAt: booking.endsAt,
+        AND: [
+          settings.clientCancelCutoffMode === 'BEFORE_START'
+            ? { scheduledAt: { gte: new Date(now.getTime() + settings.clientCancelBeforeHours! * 3600000) } }
+            : { endsAt: { gt: now } },
+          ...(booking.deliveryType === 'ONLINE' ? [
+          { OR: [{ zoomCreateLeaseOwner: null }, { zoomCreateLeaseExpiresAt: null }, { zoomCreateLeaseExpiresAt: { lt: now } }] },
+          { OR: [{ zoomSyncLeaseOwner: null }, { zoomSyncLeaseExpiresAt: null }, { zoomSyncLeaseExpiresAt: { lt: now } }] },
+          ] : []),
+        ],
+      },
+    });
+    if (booking.packageCreditId) {
+      const returned = await returnPackageCreditForBooking(tx, booking.id);
+      if (!returned) {
+        const priorReturn = await tx.packageCreditUsage.findFirst({ where: { bookingId: booking.id, status: 'RETURNED' }, select: { id: true } });
+        if (!priorReturn) throw new ConflictException('Package credit return needs staff review');
+      }
+    }
+    const refund = quote.refund;
+    await tx.bookingStatusLog.create({ data: {
+      bookingId: booking.id, fromStatus: booking.status, toStatus: nextStatus, changedBy: cmd.clientId,
+      reason: cmd.reason ?? 'CLIENT_CANCEL', sourceActionId: cmd.sourceActionId,
+      sourceActionHash: cmd.sourceActionId ? actionHash : undefined,
+      sourceActionResult: { kind: 'CANCELLATION', bookingId: booking.id, status: 'CANCELLED', requiresApproval: false, refund, cancellationEventId: eventId } as unknown as Prisma.InputJsonValue,
+    } });
+    const event = new BookingCancelledEvent({
+      organizationId: DEFAULT_ORG_ID, scheduledAt: booking.scheduledAt, bookingId: booking.id,
+      bookingNumber: booking.bookingNumber, clientId: booking.clientId, employeeId: booking.employeeId,
+      reason: CancellationReason.CLIENT_REQUESTED, cancelNotes: cmd.reason,
+      zoomMeetingId: booking.zoomMeetingId,
+      refundType: refund.refundPercent === 100 ? 'FULL' : refund.refundPercent > 0 ? 'PARTIAL' : 'NONE',
+      paymentId: null,
+      clientCancellation: { version: 1, initiatedBy: 'CLIENT', refund, allocations: quote.allocations, pendingRequestIds: payments.flatMap(p => p.refundRequests).filter(r => RESERVED_REFUND_STATUSES.includes(r.status)).map(r => r.id) },
+    }, eventId);
+    await tx.outboxEvent.create({ data: { id: eventId, aggregateId: booking.id, eventType: event.eventName, payload: event.toEnvelope() as unknown as Prisma.InputJsonValue } });
+    return { status: 'CANCELLED', booking: cancelled, requiresApproval: false, refund };
   }
 
   private actionHash(cmd: ClientCancelCommand): string {

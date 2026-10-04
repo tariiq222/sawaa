@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { CreatePackageFamilyHandler } from './create-package-family/create-package-family.handler';
 import { UpdatePackageFamilyHandler } from './update-package-family/update-package-family.handler';
 import { ListPublicPackageFamiliesHandler } from './list-public-package-families/list-public-package-families.handler';
+import { ListPackageFamiliesHandler } from './list-package-families/list-package-families.handler';
 import { GetPublicPackageFamilyHandler } from './get-public-package-family/get-public-package-family.handler';
 import { ArchivePackageFamilyHandler } from './archive-package-family/archive-package-family.handler';
 
@@ -179,6 +180,7 @@ describe('package family management', () => {
 describe('public package family catalog', () => {
   it('returns only active, public, unarchived families with at least one sellable option', async () => {
     const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
       packageFamily: {
         findMany: jest.fn().mockResolvedValue([
           {
@@ -205,13 +207,14 @@ describe('public package family catalog', () => {
       sessionPackage: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const handler = construct(ListPublicPackageFamiliesHandler, [prisma, {}, {}, {}]) as {
-      execute(): Promise<Array<{ id: string; options: Array<{ id: string }> }>>;
+      execute(): Promise<Array<{ id: string; vatRate: number; options: Array<{ id: string }> }>>;
     };
 
     const result = await handler.execute();
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe(FAMILY_ID);
+    expect(result[0].vatRate).toBe(0);
     expect(result[0].options.map((option) => option.id)).toEqual([OPTION_5_ID]);
   });
 });
@@ -240,6 +243,7 @@ describe('public package family detail projection', () => {
       }] }],
     };
     const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
       packageFamily: { findFirst: jest.fn().mockResolvedValue({ id: FAMILY_ID, nameAr: 'Family', isActive: true, isPublic: true, archivedAt: null, options: [option] }) },
       sessionPackage: { findFirst: jest.fn() },
       service: { findMany: jest.fn().mockResolvedValue([{ id: SERVICE_ID, nameAr: 'العيادة', nameEn: 'Clinic', isHidden: false, category: null }]) },
@@ -263,6 +267,7 @@ describe('public package family detail projection', () => {
 
   it('projects a standalone package detail with the same family-shaped response', async () => {
     const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
       packageFamily: { findFirst: jest.fn().mockResolvedValue(null) },
       sessionPackage: {
         findFirst: jest.fn().mockResolvedValue({
@@ -291,5 +296,23 @@ describe('public package family detail projection', () => {
 
     expect(result).toEqual(expect.objectContaining({ id: OPTION_5_ID, isStandalone: true }));
     expect(result.options).toEqual([expect.objectContaining({ id: OPTION_5_ID, familyId: null, groups: [], globalDiscount: { type: 'NONE', value: 0 } })]);
+  });
+
+  it('dashboard family list carries the VAT rate the sale invoice will add', async () => {
+    const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15' }) },
+      packageFamily: {
+        findMany: jest.fn().mockResolvedValue([{
+          id: FAMILY_ID, nameAr: 'Family', isActive: true, isPublic: false, archivedAt: null,
+          options: [{ id: OPTION_5_ID, isActive: true, isPublic: false, archivedAt: null, groups: [], items: [] }],
+        }]),
+      },
+      sessionPackage: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const handler = construct(ListPackageFamiliesHandler, [prisma, {}, {}, {}]) as {
+      execute(): Promise<Array<{ id: string; vatRate: number }>>;
+    };
+    const result = await handler.execute();
+    expect(result[0]).toEqual(expect.objectContaining({ id: FAMILY_ID, vatRate: 0.15 }));
   });
 });

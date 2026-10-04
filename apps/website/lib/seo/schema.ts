@@ -131,13 +131,13 @@ export interface FAQPageSchema {
  * Use char codes so the source file is plain ASCII.
  */
 const RE_LT = /</g;
-const RE_U2028 = new RegExp(String.fromCharCode(0x2028), 'g');
-const RE_U2029 = new RegExp(String.fromCharCode(0x2029), 'g');
+const RE_U2028 = new RegExp(String.fromCodePoint(0x2028), 'g');
+const RE_U2029 = new RegExp(String.fromCodePoint(0x2029), 'g');
 function jsonLdEscape(json: string): string {
   return json
-    .replace(RE_LT, '\\u003C')
-    .replace(RE_U2028, '\\u2028')
-    .replace(RE_U2029, '\\u2029');
+    .replaceAll(RE_LT, '\\u003C')
+    .replaceAll(RE_U2028, '\\u2028')
+    .replaceAll(RE_U2029, '\\u2029');
 }
 
 export function generateMedicalBusinessSchema(data: MedicalBusinessSchema): string {

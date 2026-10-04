@@ -414,3 +414,22 @@ test("flexible credit renders flexibleTitle + flexibleSubtitle, not the old flex
     screen.getByText(/bookings\.pos\.package\.flexibleSubtitle/),
   ).toBeInTheDocument()
 })
+
+/* ─── Catalog card VAT (booking-wizard package sale) ─── */
+
+import { CatalogCard } from "@/components/features/bookings/wizard-steps/package-credit-picker"
+import type { SessionPackage } from "@/lib/types/package"
+
+const catalogPkg = (vatRate?: number) =>
+  ({ id: "pkg-1", nameAr: "باقة", nameEn: "Pack", finalPrice: 36_000, vatRate }) as unknown as SessionPackage
+
+test("catalog card shows the net price unchanged when VAT is 0", () => {
+  render(<CatalogCard pkg={catalogPkg(0)} selected={false} onToggle={vi.fn()} locale="ar" itemsCountLabel="5" />)
+  expect(screen.queryByText("packages.sell.price.inclVat")).toBeNull()
+})
+
+test("catalog card shows the VAT-inclusive price the sale will collect", () => {
+  render(<CatalogCard pkg={catalogPkg(0.15)} selected={false} onToggle={vi.fn()} locale="en" itemsCountLabel="5" />)
+  expect(screen.getByText("packages.sell.price.inclVat")).toBeTruthy()
+  expect(screen.getByText(/414/)).toBeTruthy()
+})

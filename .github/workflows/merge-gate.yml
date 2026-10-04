@@ -1,37 +1,13 @@
-# Merge Gate — ensures develop → main can only be merged with all checks green.
-#
-# This workflow is NOT a substitute for the standard CI (ci.yml). It is a
-# dedicated check that runs ON PRs targeting main, with the full test
-# surface (not just unit tests), so that the "merge to production" step
-# has an explicit, fast feedback gate.
-#
-# Why this exists separately from ci.yml:
-#   1. Branch protection rules in GitHub can list a specific check
-#      ("merge-gate") as a required status check. A single umbrella job
-#      named "gate" gives the team one thing to wait for, instead of
-#      asking them to interpret 5 parallel jobs.
-#   2. The umbrella gates ALL the other jobs: backend, dashboard,
-#      website, drift. If any fails, the gate fails.
-#   3. Adds a release-state consistency check (deploy-state.yml) that
-#      verifies the develop HEAD is at-or-after the last deployed main
-#      release. This catches the "merged something we never deployed"
-#      class of bug.
-#
-# Required checks before merge to main (per .github/RELEASE.md):
-#   - gate (this workflow)
-#   - OpenAPI snapshot drift (ci.yml)
-#   - api-client drift (ci.yml)
-#   - Prisma migration immutability (ci.yml)
-#   - Trivy filesystem scan HIGH/CRITICAL (ci.yml)
-#   - Gitleaks (ci.yml)
-#   - Dependabot auto-merge clean (dependabot.yml)
+# Additional merge checks. This job does not aggregate the separate CI jobs.
+# Require CI jobs separately in branch protection; see docs/operations/current-state.md.
+# The Git ancestry check is not proof of a deployed or manually accepted revision.
 
 name: merge-gate
 
 on:
   pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -42,7 +18,7 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────
-  # gate — single umbrella job that must pass for merge.
+  # gate — additional checks alongside the separate CI workflow.
   # ─────────────────────────────────────────────────────────────────────
   gate:
     name: gate
@@ -51,7 +27,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    # `edited` is included so a PR retargeted to develop/main gets a fresh
+    # gate. Every edit reruns the full gate on purpose: a skipped job would
+    # report success and could mask an earlier failure on the same SHA.
 
     env:
       # Backend unit tests + openapi:build-and-snapshot both load AppModule,
@@ -84,9 +62,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: 'pnpm'
@@ -104,14 +82,17 @@ jobs:
       - name: Deploy-state regression tests
         run: node --test scripts/check-deploy-state.test.mjs
 
+      - name: Staging OTP relay recipient boundary
+        run: node --test docker/openship/otp-relay.test.mjs
+
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
-        # last production release (most recent tag on main). Catches the
-        # "merged something we never deployed" scenario where develop was
+        # latest tagged code release on main; does not verify deployment. Catches the
+        # stale/divergent candidate scenario where develop was
         # force-pushed or someone re-targeted a stale PR.
         run: node scripts/check-deploy-state.mjs origin/main HEAD
 
-      - name: Backend — typecheck + unit + e2e (smoke)
+      - name: Backend — unit
         run: pnpm --filter backend test
 
       - name: Dashboard — typecheck + unit
@@ -124,11 +105,20 @@ jobs:
         working-directory: apps/mobile
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency security regression tests (root and mobile)
+        run: SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs scripts/security/refresh-dependency-fixes.test.cjs
+
       - name: Mobile — build shared package + typecheck
         working-directory: apps/mobile
         run: pnpm --filter=@sawaa/shared build && pnpm typecheck
 
-      - name: Mobile — unit tests
+      - name: Mobile — lint
+        working-directory: apps/mobile
+        run: pnpm lint
+
+      # `pnpm test` runs jest with --coverage, so the coverageThreshold block in
+      # apps/mobile/package.json is enforced here (not just collected locally).
+      - name: Mobile — unit tests (with coverage thresholds)
         working-directory: apps/mobile
         run: pnpm test --runInBand
 
@@ -143,7 +133,9 @@ jobs:
 
       - name: Prisma migration immutability
         if: github.event_name == 'pull_request'
-        run: node scripts/check-prisma-migration-immutability.mjs origin/main
+        # Diff against the PR's own base so develop-only migrations are
+        # protected too (origin/main would report them as additions).
+        run: node scripts/check-prisma-migration-immutability.mjs origin/${{ github.base_ref }}
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v3.0.0
@@ -163,6 +155,7 @@ jobs:
           limit-severities-for-sarif: true
           exit-code: '1'
           ignore-unfixed: false
+          trivyignores: '.trivyignore.yaml'
           skip-dirs: 'coverage,dist,node_modules,.next,**/coverage,**/dist,**/node_modules,**/.next'
           skip-files: 'coverage/**,dist/**,node_modules/**,.next/**,**/coverage/**,**/dist/**,**/node_modules/**,**/.next/**,apps/*/coverage/**,apps/*/dist/**'
           vuln-type: 'os,library'
@@ -171,7 +164,7 @@ jobs:
 
       - name: Upload Trivy SARIF artifact
         if: always() && hashFiles('trivy-fs.sarif') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: merge-gate-trivy-fs-sarif
           path: trivy-fs.sarif
@@ -200,3 +193,70 @@ jobs:
           echo "See the failing step output above."
           echo "This PR cannot be merged until all checks pass."
         shell: bash
+
+  # ─────────────────────────────────────────────────────────────────────
+  # critical-real-e2e — backend real-database e2e lane (test:e2e:critical).
+  # Runs against a disposable pgvector Postgres service. Redis, MinIO,
+  # Zoom, Moyasar and other providers stay mocked by test/setup-e2e.ts.
+  # ─────────────────────────────────────────────────────────────────────
+  critical-real-e2e:
+    name: critical-real-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d sawaa_e2e_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
+      REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
+      TZ: Asia/Riyadh
+      # Hosted runners can default to a ~2 GiB heap; the 28-suite run needs more.
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+
+      - name: Prisma generate + migrate test database
+        working-directory: apps/backend
+        run: pnpm run prisma:generate && pnpm run prisma:migrate:deploy
+
+      - name: Backend — critical real-database e2e
+        working-directory: apps/backend
+        run: pnpm run test:e2e:critical
+
+      - name: Upload critical e2e results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: critical-real-e2e-results
+          path: apps/backend/test-results-critical.json
+          if-no-files-found: ignore
+          retention-days: 7

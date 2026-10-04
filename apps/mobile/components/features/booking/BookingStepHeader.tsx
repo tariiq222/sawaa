@@ -1,69 +1,60 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { ProgressBar } from '@/components/ui/ProgressBar';
-import { Glass } from '@/theme/components/Glass';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
-
-const AR_DIGITS = ['١', '٢', '٣'] as const;
-const TOTAL_STEPS = 3;
+import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 interface BookingStepHeaderProps {
-  /** 1-based step within the 3-step booking flow. */
-  step: 1 | 2 | 3;
+  /** 1-based step within the booking flow. */
+  step: number;
+  total: number;
+  title: string;
   onBack: () => void;
-  backAccessibilityLabel?: string;
 }
 
-/**
- * Shared booking-wizard header: glass back button, step counter, and the
- * shared determinate ProgressBar (replaces the per-screen inline bars).
- */
-export function BookingStepHeader({ step, onBack, backAccessibilityLabel }: BookingStepHeaderProps) {
+/** Booking-wizard header: back + centred title, progress segments and the step counter. */
+export function BookingStepHeader({ step, total, title, onBack }: BookingStepHeaderProps) {
+  const colors = useSawaaColors();
+  const { t } = useTranslation();
   const dir = useDir();
-  const f600 = getFontName(dir.locale, '600');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const label = dir.isRTL
-    ? `خطوة ${AR_DIGITS[step - 1]} من ${AR_DIGITS[TOTAL_STEPS - 1]}`
-    : `Step ${step} of ${TOTAL_STEPS}`;
+  const fmt = (n: number) => (dir.isRTL ? n.toLocaleString('ar-SA') : String(n));
+  const stepText = t('booking.stepOf', { step: fmt(step), total: fmt(total) });
 
   return (
-    <View style={{ gap: sawaaSpacing.sm }}>
+    <View style={{ gap: sawaaSpacing.md }}>
+      <ScreenHeader title={title} onBack={onBack} />
       <View
-        style={{
-          flexDirection: dir.row,
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+        style={[styles.segments, { flexDirection: dir.row }]}
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 1, max: total, now: step }}
       >
-        <Glass
-          variant="strong"
-          radius={sawaaRadius.pill}
-          onPress={onBack}
-          interactive
-          accessibilityLabel={backAccessibilityLabel}
-          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-        </Glass>
-        <Text
-          style={{
-            fontSize: sawaaType.caption.fontSize,
-            lineHeight: sawaaType.caption.lineHeight,
-            fontFamily: f600,
-            fontWeight: '600',
-            color: sawaaColors.ink[500],
-            textAlign: dir.textAlign,
-            writingDirection: dir.writingDirection,
-          }}
-        >
-          {label}
-        </Text>
+        {Array.from({ length: total }, (_, i) => (
+          <View
+            key={i}
+            style={[styles.segment, { backgroundColor: i < step ? colors.teal[700] : withAlpha(colors.teal[700], 0.14) }]}
+          />
+        ))}
       </View>
-      <ProgressBar progress={step / TOTAL_STEPS} />
+      <Text
+        style={[styles.label, {
+          color: colors.ink[500],
+          fontFamily: getFontName(dir.locale, '500'),
+          textAlign: dir.textAlign,
+          writingDirection: dir.writingDirection,
+        }]}
+      >
+        {stepText}
+      </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  segments: { gap: 8 },
+  segment: { flex: 1, height: 4, borderRadius: sawaaRadius.pill },
+  label: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight + 2 },
+});

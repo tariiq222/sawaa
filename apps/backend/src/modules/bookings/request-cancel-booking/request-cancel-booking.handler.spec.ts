@@ -2,6 +2,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { RequestCancelBookingHandler } from './request-cancel-booking.handler';
 import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+import { NoEventConsumersRegisteredError } from '../../../infrastructure/events/event-bus.service';
 // CLIENT_REQUEST_CANCEL is valid from: PENDING, CONFIRMED, AWAITING_PAYMENT (state machine)
 
 describe('RequestCancelBookingHandler', () => {
@@ -20,7 +21,30 @@ describe('RequestCancelBookingHandler', () => {
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'CANCEL_REQUESTED' }) }),
     );
-    expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_requested', expect.anything());
+    expect(eb.publishOptional).toHaveBeenCalledWith('bookings.booking.cancel_requested', expect.anything());
+  });
+
+  it('does not use the strict publisher, so an unregistered consumer cannot fail a committed request', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
+    prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: 'CANCEL_REQUESTED' as BookingStatus });
+    const eb = buildEventBus();
+    // Reproduces the production wiring: no consumer is registered for this
+    // event name, so the strict publisher throws.
+    eb.publish.mockImplementation(() => {
+      throw new NoEventConsumersRegisteredError('bookings.booking.cancel_requested');
+    });
+    const handler = new RequestCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, eb as never);
+
+    await expect(handler.execute({
+      bookingId: 'book-1',
+      reason: CancellationReason.CLIENT_REQUESTED, requestedBy: 'client-1',
+    })).resolves.toBeDefined();
+
+    expect(eb.publish).not.toHaveBeenCalled();
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'CANCEL_REQUESTED' }) }),
+    );
   });
 
   it('sets status to CANCEL_REQUESTED for CONFIRMED booking', async () => {

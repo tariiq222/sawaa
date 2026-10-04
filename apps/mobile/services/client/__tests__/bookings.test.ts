@@ -8,7 +8,7 @@ jest.mock('../../api', () => ({
 }));
 
 import api from '../../api';
-import { clientBookingsService, type BookingsListResponse, type ClientBookingRow } from '../bookings';
+import { clientBookingsService, wasRatedInCurrentSession, type BookingsListResponse, type ClientBookingRow } from '../bookings';
 
 const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock; patch: jest.Mock };
 
@@ -52,10 +52,54 @@ const mappedBookingWire = {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
 });
 
 describe('clientBookingsService.list', () => {
+  it('passes the selected tab and next page to the server and retains pagination metadata', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [sampleRow], meta: { total: 51, page: 2, limit: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true } } });
+    const result = await clientBookingsService.list({ tab: 'upcoming', page: 2, limit: 50 });
+    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', { params: { tab: 'upcoming', page: 2, limit: 50 } });
+    expect(result.meta).toEqual({ total: 51, page: 2, perPage: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
+  });
+
+  it('uses real unfiltered pages when the deployed server rejects only the tab parameter', async () => {
+    mockedApi.get.mockRejectedValueOnce({
+      response: { status: 400, data: { message: ['property tab should not exist'] } },
+    });
+    mockedApi.get.mockResolvedValueOnce({ data: {
+      items: [
+        { ...sampleRow, id: 'past-1', status: 'COMPLETED' },
+        ...Array.from({ length: 99 }, (_, index) => ({ ...sampleRow, id: `future-${index}`, status: 'CONFIRMED' })),
+      ],
+      meta: { total: 102, page: 1, limit: 100, totalPages: 2, hasNextPage: true, hasPreviousPage: false },
+    } });
+    mockedApi.get.mockResolvedValueOnce({ data: {
+      items: [
+        { ...sampleRow, id: 'past-2', status: 'NO_SHOW' },
+        { ...sampleRow, id: 'cancelled-1', status: 'CANCELLED' },
+      ],
+      meta: { total: 102, page: 2, limit: 100, totalPages: 2, hasNextPage: false, hasPreviousPage: true },
+    } });
+
+    const result = await clientBookingsService.list({ tab: 'past', page: 2, limit: 1 });
+
+    expect(mockedApi.get.mock.calls.map(([, config]) => config.params)).toEqual([
+      { tab: 'past', page: 2, limit: 1 },
+      { page: 1, limit: 100 },
+      { page: 2, limit: 100 },
+    ]);
+    expect(result.items.map((item) => item.id)).toEqual(['past-2']);
+    expect(result.meta).toEqual({ total: 2, page: 2, perPage: 1, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
+  });
+
+  it('does not conceal a different bad request as a legacy tab response', async () => {
+    mockedApi.get.mockRejectedValueOnce({
+      response: { status: 400, data: { message: ['limit must be an integer number'] } },
+    });
+    await expect(clientBookingsService.list({ tab: 'upcoming', page: 1, limit: 50 })).rejects.toBeTruthy();
+    expect(mockedApi.get).toHaveBeenCalledTimes(1);
+  });
   it('normalizes mapped list rows and canonical limit metadata', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: {
       items: [mappedBookingWire],
@@ -128,8 +172,17 @@ describe('clientBookingsService.getById', () => {
   it('GETs the right detail URL', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: sampleRow });
     const r = await clientBookingsService.getById('b1');
-    expect(r).toEqual(sampleRow);
+    expect(r).toEqual({ ...sampleRow, ratingSubmittedLocally: false });
     expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1');
+  });
+
+  it('preserves the backend booking type and server rating state in the detail response', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { ...sampleRow, bookingType: 'GROUP', hasRated: true } });
+
+    await expect(clientBookingsService.getById('b1')).resolves.toMatchObject({
+      bookingType: 'group',
+      hasRated: true,
+    });
   });
 
   it('rejects on 401', async () => {
@@ -145,6 +198,7 @@ describe('clientBookingsService.getById', () => {
       invoiceId: 'inv-program',
       invoiceStatus: 'DRAFT',
       paymentStatus: 'pending',
+      type: 'group',
       status: 'pending',
       scheduledAt: '2026-09-25T15:00:00+03:00',
       branchName: 'Main branch',
@@ -181,6 +235,40 @@ describe('clientBookingsService.create', () => {
     expect(r).toEqual(sampleRow);
     expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
     expect(mockedApi.post.mock.calls[0][1]).not.toHaveProperty('deliveryType');
+  });
+
+  it('sends the chosen online session as the backend DeliveryType enum value', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
+    await clientBookingsService.create({
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      durationOptionId: 'duration-online',
+      deliveryType: 'online',
+    });
+
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', {
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      durationOptionId: 'duration-online',
+      deliveryType: 'ONLINE',
+    });
+  });
+
+  it('sends an in-person session explicitly rather than relying on the server default', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
+    await clientBookingsService.create({
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      deliveryType: 'in_person',
+    });
+
+    expect(mockedApi.post.mock.calls[0][1]).toMatchObject({ deliveryType: 'IN_PERSON' });
   });
 
   it('rejects when slot conflict (409)', async () => {
@@ -225,6 +313,22 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     );
   });
 
+  it('marks a booking as rated in this app session only after a successful response', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { id: 'b-rated-session' } });
+    await clientBookingsService.rate('b-rated-session', { score: 5 });
+    mockedApi.get.mockResolvedValueOnce({ data: { ...sampleRow, id: 'b-rated-session' } });
+
+    expect(wasRatedInCurrentSession('b-rated-session')).toBe(true);
+    await expect(clientBookingsService.getById('b-rated-session')).resolves.toMatchObject({ ratingSubmittedLocally: true });
+  });
+
+  it('recognizes the backend duplicate-rating conflict as already rated in this session', async () => {
+    mockedApi.post.mockRejectedValueOnce({ response: { data: { message: 'Rating already submitted for this booking' } } });
+
+    await expect(clientBookingsService.rate('b-duplicate-session', { score: 5 })).rejects.toBeDefined();
+    expect(wasRatedInCurrentSession('b-duplicate-session')).toBe(true);
+  });
+
   it('getJoinUrl returns the zoom join payload', async () => {
     mockedApi.get.mockResolvedValueOnce({
       data: { joinUrl: 'https://zoom/x', scheduledAt: '2026-05-01T10:00:00Z' },
@@ -238,4 +342,22 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     mockedApi.get.mockRejectedValueOnce(new Error('400 too early'));
     await expect(clientBookingsService.getJoinUrl('b1')).rejects.toThrow(/400/);
   });
+});
+
+
+it('loads cancellation preview and preserves immediate and persisted refund summaries', async () => {
+  const refund = { status: 'PROCESSING', refundAmount: 5000 };
+  const preview = { policyEnabled: true, canCancel: true, quoteToken: 'quote-1', refund };
+  mockedApi.get.mockResolvedValueOnce({ data: preview });
+  expect(await clientBookingsService.cancellationPreview('b1')).toEqual(preview);
+  expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1/cancellation-preview');
+  mockedApi.patch.mockResolvedValueOnce({ data: { status: 'CANCELLED', booking: { ...sampleRow, status: 'CANCELLED' }, requiresApproval: false, refund } });
+  expect(await clientBookingsService.cancel('b1', 'changed plan', { quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })).toMatchObject({ status: 'cancelled', refund });
+  expect(mockedApi.patch).toHaveBeenCalledWith('/mobile/client/bookings/b1/cancel', expect.objectContaining({ quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' }));
+});
+
+it('preserves settled cancellation refund evidence in a refreshed mapped detail', async () => {
+  const cancellationRefund = { status: 'COMPLETED', refundAmount: 5000, completedAmount: 5000, failedAmount: 0 };
+  mockedApi.get.mockResolvedValueOnce({ data: { id: 'b1', status: 'CANCELLED', service: { nameAr: 'جلسة' }, cancellationRefund } });
+  expect(await clientBookingsService.getById('b1')).toMatchObject({ cancellationRefund });
 });

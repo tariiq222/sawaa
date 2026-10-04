@@ -28,4 +28,11 @@ describe('VideoCallScreen source — no mock leftovers', () => {
   it('does not contain hardcoded user "Sara" / "س" labels', () => {
     expect(src).not.toMatch(/'سارة'/);
   });
+
+  it('uses the shared AquaBackground for the screen surface', () => {
+    expect(src).toMatch(/import\s+\{\s*AquaBackground\s*\}\s+from\s+['"]@\/theme\/sawaa['"]/);
+    expect(src).toMatch(/<AquaBackground\s+style=\{styles\.container\}>/);
+    expect(src).toMatch(/<\/AquaBackground>/);
+    expect(src).not.toMatch(/backgroundColor:\s*theme\.colors\.surface/);
+  });
 });

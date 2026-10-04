@@ -1,238 +1,81 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
-import { BookingStatus, ProgramStatus, CancellationReason, RefundType } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
 import { CancelProgramHandler } from './cancel-program.handler';
-
-/**
- * CancelProgram cascades the cancellation to every enrollment booking under
- * the program. It does NOT issue refunds — that's a manual per-invoice flow
- * handled by the refund-payment handler.
- */
-describe('CancelProgramHandler', () => {
-  let handler: CancelProgramHandler;
-  let prisma: any;
-  let rls: { withTransaction: jest.Mock };
-  let eventBus: { publish: jest.Mock };
-
-  const tx = () => prisma;
-
-  const setup = () => {
-    prisma = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
-      program: { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({}) },
-      programEnrollment: { findMany: jest.fn().mockResolvedValue([]) },
-      booking: { update: jest.fn().mockResolvedValue({}) },
-      bookingStatusLog: { create: jest.fn().mockResolvedValue({}) },
-    };
-    rls = { withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx())) };
-    eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+import { stableEventId } from '../../../common/events';
+const row = (id: string, status = 'CONFIRMED', extra = {}) => ({ id, status, clientId: `c-${id}`, employeeId: 'e1', scheduledAt: new Date('2030-01-01'), bookingNumber: 1, currency: 'SAR', checkedInAt: null, isHistoricalImport: false, client: { firstName: 'A', lastName: 'B' }, ...extra });
+function setup(rows = [row('b1')]) {
+  const program = { id: 'g1', nameAr: 'Group', status: 'OPEN', startDate: null };
+  const events = new Map();
+  const tx = {
+    $queryRaw: jest.fn().mockResolvedValue([]),
+    program: { findUnique: jest.fn(async () => program), update: jest.fn(async ({ data }) => Object.assign(program, data)) },
+    programEnrollment: { findMany: jest.fn(async () => rows.map(booking => ({ bookingId: booking.id, booking }))) },
+    client: { findMany: jest.fn(async () => rows.map(b => ({ id: b.clientId, name: 'Participant' }))) },
+    payment: { findMany: jest.fn().mockResolvedValue([]) },
+    booking: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    bookingStatusLog: { create: jest.fn() },
+    outboxEvent: { findUnique: jest.fn(async ({ where }) => events.get(where.id) ?? null), create: jest.fn(async ({ data }) => { events.set(data.id, data); return data; }) },
   };
-
-  beforeEach(async () => {
-    setup();
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CancelProgramHandler,
-        { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rls },
-        { provide: EventBusService, useValue: eventBus },
-      ],
-    }).compile();
-
-    handler = module.get<CancelProgramHandler>(CancelProgramHandler);
+  const handler = new CancelProgramHandler(tx as never, { withTransaction: async (fn: (value: typeof tx) => Promise<unknown>) => fn(tx) } as never);
+  return { handler, tx, program, events };
+}
+describe('program cancellation durable financial policy', () => {
+  it('reports a missing program without mutation', async () => {
+    const { handler, tx } = setup();
+    tx.program.findUnique.mockResolvedValue(null as never);
+    await expect(handler.preview('absent')).rejects.toMatchObject({ status: 404 });
+    expect(tx.program.update).not.toHaveBeenCalled();
   });
-
-  it('throws NotFoundException when the program does not exist', async () => {
-    prisma.program.findUnique.mockResolvedValue(null);
-
-    await expect(
-      handler.execute('prog-missing', { reason: 'low enrollment' }),
-    ).rejects.toThrow(NotFoundException);
-    expect(prisma.program.update).not.toHaveBeenCalled();
+  it('excludes historical participant funds and state from all cancellation effects', async () => {
+    const { handler, tx } = setup([row('b1', 'CONFIRMED', { isHistoricalImport: true })]);
+    tx.payment.findMany.mockResolvedValue([{ id: 'p1', invoiceId: 'i1', status: 'COMPLETED', amount: 10000, refundedAmount: 0, currency: 'SAR', method: 'CASH', gatewayRef: null, refundRequests: [] }] as never);
+    const quote = await handler.preview('g1');
+    expect(quote.participants[0].maxRefundAmount).toBe(0);
+    const result = await handler.execute('g1', { reason: 'Closed', quoteToken: quote.quoteToken, refunds: [{ bookingId: 'b1', amount: 0 }] }, 'staff1');
+    expect(result).toMatchObject({ cancelledEnrollments: 0, skippedEnrollments: 1, participants: [] });
+    expect(tx.booking.updateMany).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create.mock.calls.map(([call]) => call.data.eventType)).toEqual(['bookings.program.cancelled']);
   });
-
-  it('cancels a SCHEDULED program and resets enrolledCount to zero', async () => {
-    prisma.program.findUnique.mockResolvedValue({
-      id: 'prog-1',
-      status: ProgramStatus.SCHEDULED,
-    });
-    prisma.programEnrollment.findMany.mockResolvedValue([]);
-
-    const result = await handler.execute('prog-1', { reason: 'instructor sick' });
-
-    expect(prisma.program.update).toHaveBeenCalledWith({
-      where: { id: 'prog-1' },
-      data: expect.objectContaining({
-        status: ProgramStatus.CANCELLED,
-        cancelReason: 'instructor sick',
-        cancelledAt: expect.any(Date),
-        enrolledCount: 0,
-      }),
-    });
-    expect(result).toEqual({
-      id: 'prog-1',
-      status: ProgramStatus.CANCELLED,
-      cancelledEnrollments: 0,
-    });
+  it.each(['DRAFT', 'OPEN', 'MIN_REACHED', 'SCHEDULED'])('cancels %s without participants and durably stores zero counts', async status => {
+    const { handler, program } = setup([]);
+    program.status = status;
+    const quote = await handler.preview('g1');
+    expect(await handler.execute('g1', { reason: 'Closed', quoteToken: quote.quoteToken }, 'staff1')).toMatchObject({ status: 'CANCELLED', cancelledEnrollments: 0, skippedEnrollments: 0 });
   });
-
-  it('cascades the cancellation to every active enrollment booking', async () => {
-    prisma.program.findUnique.mockResolvedValue({
-      id: 'prog-1',
-      status: ProgramStatus.OPEN,
-    });
-    prisma.programEnrollment.findMany.mockResolvedValue([
-      {
-        bookingId: 'book-1',
-        booking: {
-          id: 'book-1',
-          status: BookingStatus.CONFIRMED,
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          scheduledAt: new Date('2026-05-01T10:00:00Z'),
-          bookingNumber: 101,
-        },
-      },
-      {
-        bookingId: 'book-2',
-        booking: {
-          id: 'book-2',
-          status: BookingStatus.PENDING,
-          clientId: 'client-2',
-          employeeId: 'emp-1',
-          scheduledAt: new Date('2026-05-02T10:00:00Z'),
-          bookingNumber: 102,
-        },
-      },
-    ]);
-
-    const result = await handler.execute('prog-1', { reason: 'venue unavailable' });
-
-    expect(prisma.booking.update).toHaveBeenCalledTimes(2);
-    expect(prisma.booking.update).toHaveBeenNthCalledWith(1, {
-      where: { id: 'book-1' },
-      data: expect.objectContaining({
-        status: BookingStatus.CANCELLED,
-        cancelReason: CancellationReason.SYSTEM_EXPIRED,
-        cancelNotes: 'Program cancelled: venue unavailable',
-        cancelledAt: expect.any(Date),
-      }),
-    });
-    expect(prisma.booking.update).toHaveBeenNthCalledWith(2, {
-      where: { id: 'book-2' },
-      data: expect.objectContaining({
-        status: BookingStatus.CANCELLED,
-        cancelReason: CancellationReason.SYSTEM_EXPIRED,
-      }),
-    });
-
-    // A status-log row is appended for every cascaded cancellation.
-    expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(2);
-    expect(prisma.bookingStatusLog.create).toHaveBeenNthCalledWith(1, {
-      data: expect.objectContaining({
-        bookingId: 'book-1',
-        fromStatus: BookingStatus.CONFIRMED,
-        toStatus: BookingStatus.CANCELLED,
-        changedBy: 'system:cancel-program',
-        reason: 'Program cancelled: venue unavailable',
-      }),
-    });
-
-    // And the cancelled count is reported back.
-    expect(result.cancelledEnrollments).toBe(2);
+  it('quotes first, cancels active rows, preserves terminal history and reports actual counts', async () => {
+    const { handler, tx } = setup([row('b1'), row('b2', 'COMPLETED'), row('b3', 'CONFIRMED', { isHistoricalImport: true })]);
+    const quote = await handler.preview('g1');
+    const result = await handler.execute('g1', { reason: 'Closed', quoteToken: quote.quoteToken }, 'staff1');
+    expect(result).toMatchObject({ cancelledEnrollments: 1, skippedEnrollments: 2 });
+    expect(tx.booking.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.bookingStatusLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ changedBy: 'staff1' }) }));
+    const event = tx.outboxEvent.create.mock.calls.map(([call]) => call.data).find(e => e.id === stableEventId('booking:b1:program-cancel:g1'));
+    expect(event.payload.payload.centerCancellation).toMatchObject({ initiatedBy: 'CENTER', performedBy: 'staff1', reason: expect.stringContaining('Group') });
   });
-
-  it('locks the program row before snapshotting enrollments so a concurrent enrollment is included or rejected', async () => {
-    prisma.program.findUnique.mockResolvedValue({
-      id: 'prog-1',
-      status: ProgramStatus.OPEN,
-    });
-
-    await handler.execute('prog-1', { reason: 'prevent enrollment race' });
-
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
-    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
-      prisma.programEnrollment.findMany.mock.invocationCallOrder[0],
-    );
+  it('requires fresh explicit confirmation after money or mode changes, without mutation', async () => {
+    const { handler, tx, program } = setup();
+    const quote = await handler.preview('g1');
+    program.startDate = new Date('2020-01-01') as never;
+    await expect(handler.execute('g1', { reason: 'Closed', quoteToken: quote.quoteToken }, 'staff1')).rejects.toMatchObject({ status: 409 });
+    expect(tx.program.update).not.toHaveBeenCalled();
   });
-
-  it('publishes a BookingCancelledEvent for every cascaded booking', async () => {
-    prisma.program.findUnique.mockResolvedValue({
-      id: 'prog-1',
-      status: ProgramStatus.OPEN,
-    });
-    prisma.programEnrollment.findMany.mockResolvedValue([
-      {
-        bookingId: 'book-1',
-        booking: {
-          id: 'book-1',
-          status: BookingStatus.CONFIRMED,
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          scheduledAt: new Date('2026-05-01T10:00:00Z'),
-          bookingNumber: 101,
-        },
-      },
-    ]);
-
-    await handler.execute('prog-1', { reason: 'low enrollment' });
-
-    expect(eventBus.publish).toHaveBeenCalledTimes(1);
-    expect(eventBus.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancelled',
-      expect.objectContaining({
-        payload: expect.objectContaining({
-          bookingId: 'book-1',
-          bookingNumber: 101,
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          reason: CancellationReason.SYSTEM_EXPIRED,
-          cancelNotes: 'Program cancelled: low enrollment',
-          refundType: RefundType.NONE,
-          paymentId: null,
-        }),
-        source: 'bookings',
-        version: 1,
-      }),
-    );
+  it('replays its durable frozen result without additional refunds or status logs', async () => {
+    const { handler, tx } = setup();
+    const quote = await handler.preview('g1');
+    const command = { reason: 'Closed', quoteToken: quote.quoteToken };
+    const first = await handler.execute('g1', command, 'staff1');
+    const second = await handler.execute('g1', command, 'staff1');
+    expect(second).toEqual(first);
+    expect(tx.bookingStatusLog.create).toHaveBeenCalledTimes(1);
   });
-
-  it('does not re-write history for already-terminal enrollment bookings', async () => {
-    prisma.program.findUnique.mockResolvedValue({
-      id: 'prog-1',
-      status: ProgramStatus.OPEN,
-    });
-    prisma.programEnrollment.findMany.mockResolvedValue([
-      // All three are terminal — the handler must not touch them.
-      { bookingId: 'book-1', booking: { id: 'book-1', status: BookingStatus.CANCELLED, clientId: 'c1', employeeId: 'e1', scheduledAt: new Date(), bookingNumber: 1 } },
-      { bookingId: 'book-2', booking: { id: 'book-2', status: BookingStatus.COMPLETED, clientId: 'c2', employeeId: 'e1', scheduledAt: new Date(), bookingNumber: 2 } },
-      { bookingId: 'book-3', booking: { id: 'book-3', status: BookingStatus.NO_SHOW, clientId: 'c3', employeeId: 'e1', scheduledAt: new Date(), bookingNumber: 3 } },
-      // One non-terminal — gets cancelled.
-      { bookingId: 'book-4', booking: { id: 'book-4', status: BookingStatus.PENDING, clientId: 'c4', employeeId: 'e1', scheduledAt: new Date(), bookingNumber: 4 } },
-    ]);
-
-    const result = await handler.execute('prog-1', { reason: 'cascading test' });
-
-    expect(prisma.booking.update).toHaveBeenCalledTimes(1);
-    expect(prisma.booking.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'book-4' } }),
-    );
-    expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(1);
-    expect(eventBus.publish).toHaveBeenCalledTimes(1);
-    expect(result.cancelledEnrollments).toBe(4);
+  it.each([{ code: 'P2010', meta: { code: '55P03' } }, { code: 'P2010', meta: { driverAdapterError: { cause: { originalCode: '55P03' } } } }])('converts lock contention to retryable conflict without changing any status: %p', async error => {
+    const { handler, tx } = setup();
+    tx.$queryRaw.mockRejectedValue(error);
+    await expect(handler.execute('g1', { reason: 'Closed', quoteToken: 'old' }, 'staff1')).rejects.toMatchObject({ status: 409 });
+    expect(tx.program.update).not.toHaveBeenCalled();
   });
-
-  it('runs the full cascade inside a single transaction', async () => {
-    prisma.program.findUnique.mockResolvedValue({
-      id: 'prog-1',
-      status: ProgramStatus.SCHEDULED,
-    });
-    prisma.programEnrollment.findMany.mockResolvedValue([]);
-
-    await handler.execute('prog-1', { reason: 'wrap in tx' });
-
-    expect(rls.withTransaction).toHaveBeenCalledTimes(1);
+  it('rejects concurrent status changes instead of overwriting history', async () => {
+    const { handler, tx } = setup();
+    const quote = await handler.preview('g1');
+    tx.booking.updateMany.mockResolvedValue({ count: 0 });
+    await expect(handler.execute('g1', { reason: 'Closed', quoteToken: quote.quoteToken }, 'staff1')).rejects.toMatchObject({ status: 409 });
   });
 });

@@ -59,8 +59,17 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'PAYMENT_CONFIRMED')).toBe(BookingStatus.CONFIRMED);
     });
 
-    it('EXPIRE: DEPOSIT_PAID → EXPIRED (balance never settled)', () => {
-      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
+    it('never expires an operationally confirmed deposit booking for an unpaid balance', () => {
+      expect(() => assertTransition(BookingStatus.DEPOSIT_PAID, 'EXPIRE')).toThrow(BadRequestException);
+    });
+
+    it.each([
+      ['CHECK_IN', BookingStatus.DEPOSIT_PAID],
+      ['RESCHEDULE', BookingStatus.DEPOSIT_PAID],
+      ['COMPLETE', BookingStatus.COMPLETED],
+      ['NO_SHOW', BookingStatus.NO_SHOW],
+    ] as const)('DEPOSIT_PAID supports %s without asserting full payment', (transition, expected) => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, transition)).toBe(expected);
     });
 
     it('DIRECT_CANCEL: DEPOSIT_PAID → CANCELLED', () => {
@@ -97,6 +106,16 @@ describe('BookingStateMachine — assertTransition', () => {
 
     it('DIRECT_CANCEL: CANCEL_REQUESTED → CANCELLED', () => {
       expect(assertTransition(BookingStatus.CANCEL_REQUESTED, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
+    });
+
+    // Reception must be able to release a slot held for an online payment that
+    // never arrived, without waiting for the expiry cron.
+    it('DIRECT_CANCEL: AWAITING_PAYMENT → CANCELLED', () => {
+      expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('DIRECT_CANCEL: PENDING_GROUP_FILL → CANCELLED', () => {
+      expect(assertTransition(BookingStatus.PENDING_GROUP_FILL, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
     });
 
     it('CLIENT_DIRECT_CANCEL: PENDING → CANCELLED', () => {

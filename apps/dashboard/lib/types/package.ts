@@ -126,6 +126,8 @@ export interface SessionPackage {
   subtotal: number | string
   discountAmount: number | string
   finalPrice: number | string
+  /** VAT rate the sale invoice adds on top of finalPrice (fraction; 0 unless enabled). */
+  vatRate?: number
   /** Total true value incl. free sessions, and the value given for free (display). */
   fullValue?: number | string
   freeValue?: number | string

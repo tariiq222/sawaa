@@ -29,7 +29,7 @@ describe('SendSmsHandler', () => {
   it('skips when provider is NONE', async () => {
     factory.resolve.mockResolvedValue({ name: 'NONE' });
     const loggerSpy = jest.spyOn((handler as any).logger, 'warn').mockImplementation(() => {});
-    await handler.execute(cmd);
+    await expect(handler.execute(cmd)).resolves.toEqual({ sent: false, reason: 'NO_PROVIDER' });
     expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('SMS skipped'));
     expect(prisma.smsDelivery.create).not.toHaveBeenCalled();
     loggerSpy.mockRestore();
@@ -40,7 +40,7 @@ describe('SendSmsHandler', () => {
       name: 'TAQNYAT',
       send: jest.fn().mockResolvedValue({ status: 'SENT', providerMessageId: 'msg-1' }),
     });
-    await handler.execute(cmd);
+    await expect(handler.execute(cmd)).resolves.toEqual({ sent: true });
     expect(prisma.smsDelivery.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ provider: 'TAQNYAT', status: 'SENT', providerMessageId: 'msg-1' }),
@@ -80,7 +80,7 @@ describe('SendSmsHandler', () => {
       send: jest.fn().mockRejectedValue(new SmsProviderNotConfiguredError()),
     });
     const loggerSpy = jest.spyOn((handler as any).logger, 'warn').mockImplementation(() => {});
-    await handler.execute(cmd);
+    await expect(handler.execute(cmd)).resolves.toEqual({ sent: false, reason: 'NO_PROVIDER' });
     expect(loggerSpy).toHaveBeenCalledWith('SMS provider not configured for this organization');
     expect(prisma.smsDelivery.create).toHaveBeenCalledWith(
       expect.objectContaining({

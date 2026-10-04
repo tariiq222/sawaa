@@ -109,7 +109,25 @@ export class ResilientNotificationDispatcher {
     attemptNumber: number,
   ): Promise<void> {
     try {
-      await this.runChannel(channel, payload);
+      const outcome = await this.runChannel(channel, payload);
+
+      if (outcome.skipped) {
+        // Nothing reached a provider and retrying cannot change that, so
+        // record it honestly instead of reporting a send.
+        await this.prisma.notificationDeliveryLog.update({
+          where: { id: logId },
+          data: {
+            status: 'SKIPPED',
+            attempts: attemptNumber,
+            lastAttemptAt: new Date(),
+            errorMessage: outcome.skipped,
+          },
+        });
+        this.logger.warn(
+          `[${channel}] Skipped for ${payload.recipientId}: ${outcome.skipped}`,
+        );
+        return;
+      }
 
       await this.prisma.notificationDeliveryLog.update({
         where: { id: logId },
@@ -210,24 +228,26 @@ export class ResilientNotificationDispatcher {
   private async runChannel(
     channel: DeliveryChannelUpper,
     payload: DispatchPayload,
-  ): Promise<void> {
+  ): Promise<{ skipped?: string }> {
     switch (channel) {
       case 'EMAIL': {
         if (!payload.recipientEmail || !payload.emailTemplateSlug) {
           throw new Error('Missing email address or template slug');
         }
-        await this.email.execute({
+        const result = await this.email.execute({
           to: payload.recipientEmail,
           templateSlug: payload.emailTemplateSlug,
           vars: payload.emailVars ?? {},
         });
+        if (!result.sent) return { skipped: `Email template "${payload.emailTemplateSlug}" is missing or inactive` };
         break;
       }
       case 'SMS': {
         if (!payload.recipientPhone || !payload.smsBody) {
           throw new Error('Missing phone or SMS body');
         }
-        await this.sms.execute({ phone: payload.recipientPhone, body: payload.smsBody });
+        const result = await this.sms.execute({ phone: payload.recipientPhone, body: payload.smsBody });
+        if (!result.sent) return { skipped: 'No SMS provider configured' };
         break;
       }
       case 'PUSH': {
@@ -258,6 +278,7 @@ export class ResilientNotificationDispatcher {
         throw new Error(`Unsupported delivery channel: ${String(exhaustiveCheck)}`);
       }
     }
+    return {};
   }
 
   private resolveToAddress(

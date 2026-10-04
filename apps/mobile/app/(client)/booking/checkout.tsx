@@ -1,9 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { APP_SCHEME } from '@/constants/config';
@@ -12,18 +12,20 @@ import { getFontName } from '@/theme/fonts';
 import { useBranding, useGroupSession } from '@/hooks/queries';
 import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
-import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import {
   useExistingBookingCheckout,
   canResumeHostedPayment,
   canStartHostedPayment,
   type ExistingBookingCheckoutPhase,
-} from './use-existing-booking-checkout';
+} from '@/features/booking/use-existing-booking-checkout';
 
 function phaseCopy(phase: ExistingBookingCheckoutPhase, t: (key: string) => string) {
   switch (phase) {
     case 'loading': return { title: t('checkout.title'), body: t('checkout.loading') };
+    case 'deposit_confirmed': return { title: t('checkout.depositConfirmed'), body: t('checkout.depositConfirmedDescription') };
     case 'success': return { title: t('checkout.success'), body: t('checkout.successDescription') };
     case 'pending': return { title: t('checkout.pending'), body: t('checkout.pendingDescription') };
     case 'failed': return { title: t('checkout.failed'), body: t('checkout.failedDescription') };
@@ -59,6 +61,8 @@ function remainingHalalas(invoice: ClientInvoice | null): number | null {
 }
 
 export default function ExistingBookingCheckoutScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { bookingId, invoiceId, programId } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
@@ -75,7 +79,6 @@ export default function ExistingBookingCheckoutScreen() {
   const checkout = useExistingBookingCheckout({ bookingId, invoiceId });
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const copy = phaseCopy(checkout.phase, t);
   const amount = remainingHalalas(checkout.invoice);
   const currency = checkout.invoice?.currency ?? 'SAR';
@@ -86,7 +89,7 @@ export default function ExistingBookingCheckoutScreen() {
       })
     : t('checkout.amountUnavailable');
   const canPay = Boolean(checkout.invoice?.id) && canStartHostedPayment(checkout.invoice) && !submitting && (
-    ['ready', 'failed'].includes(checkout.phase) ||
+    ['ready', 'failed', 'deposit_confirmed'].includes(checkout.phase) ||
     (checkout.phase === 'pending' && canResumeHostedPayment(checkout.invoice))
   );
 
@@ -114,7 +117,7 @@ export default function ExistingBookingCheckoutScreen() {
   };
 
   const showPaymentChoice = canPay && checkout.invoice;
-  const showRetry = checkout.phase === 'pending' || checkout.phase === 'error';
+  const showRetry = ['pending', 'deposit_confirmed', 'error'].includes(checkout.phase);
   const showContact = Boolean(brandingQuery.data?.contactPhone) &&
     ['error', 'missing_invoice', 'invoice_mismatch', 'cancelled', 'expired'].includes(checkout.phase);
 
@@ -124,9 +127,7 @@ export default function ExistingBookingCheckoutScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive style={styles.back}>
-          <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-        </Glass>
+        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
 
         <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
           {copy.title}
@@ -135,7 +136,7 @@ export default function ExistingBookingCheckoutScreen() {
           {copy.body}
         </Text>
 
-        {checkout.isRefreshing && !checkout.booking ? <ActivityIndicator color={sawaaColors.teal[600]} /> : null}
+        {checkout.isRefreshing && !checkout.booking ? <ActivityIndicator color={colors.teal[600]} /> : null}
 
         <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
           <Text style={[styles.label, { fontFamily: f400, textAlign: dir.textAlign }]}>
@@ -182,7 +183,7 @@ export default function ExistingBookingCheckoutScreen() {
             fontFamily={f700}
           />
         ) : null}
-        {checkout.phase === 'success' ? (
+        {['success', 'deposit_confirmed'].includes(checkout.phase) ? (
           <PrimaryButton
             label={t('checkout.appointments')}
             onPress={() => router.replace('/(client)/(tabs)/appointments')}
@@ -204,15 +205,14 @@ export default function ExistingBookingCheckoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  body: { color: sawaaColors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  title: { color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, textAlign: 'center' },
+  body: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'center' },
   card: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
-  label: { color: sawaaColors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
-  value: { color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  label: { color: colors.ink[500], fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight, textAlign: 'right' },
+  value: { color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'right' },
   amountBlock: { marginTop: sawaaSpacing.md, gap: sawaaSpacing.xs },
-  amount: { color: sawaaColors.teal[700], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  contact: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
+  amount: { color: colors.teal[700], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, textAlign: 'right' },
+  contact: { color: colors.teal[700], fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, textAlign: 'center' },
 });

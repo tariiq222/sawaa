@@ -41,7 +41,7 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
     },
   )
 
-  const modules = Array.from(moduleMap.keys()).sort()
+  const modules = Array.from(moduleMap.keys()).sort((a, b) => a.localeCompare(b))
 
   // Build a set of "module:action" for quick lookup
   const rolePerms = new Set(

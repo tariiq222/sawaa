@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Locale } from '@/features/locale/locale';
 import { localizedName } from '@/features/locale/localized-name';
 import { halalasToSar } from '@/lib/money';
@@ -12,13 +12,18 @@ import { useCurrentClient } from '@/features/auth/public';
 import { IntakeFormsSection } from '@/features/intake/intake-forms-section';
 import { AccountLoadError } from './load-error';
 import { useDialogFocus } from '@/hooks/use-dialog-focus';
+import type { CancellationQuoteInput, CancellationRefund } from '@sawaa/api-client';
+import { CancellationRefundSummary } from './cancellation-refund-summary';
 import type { ClientBookingItem } from '@sawaa/shared';
 import {
   getMyBookingApi,
+  getMyCancellationPreviewApi,
   cancelMyBookingApi,
   rescheduleMyBookingApi,
 } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
+import { usePaymentMethods } from '@/features/payment/use-payment-methods';
+import { paymentFailureMessage } from '@/features/payment/payment-error';
 import { riyadhWallTimeToUtcIso } from '@/features/booking/booking-timezone';
 import {
   paymentStatusKey,
@@ -74,6 +79,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   // Local override so the UI reflects a cancellation immediately, without
   // waiting for the booking query to refetch.
   const [cancelledStatus, setCancelledStatus] = useState<'CANCELLED' | 'CANCEL_REQUESTED' | null>(null);
+  const [cancelRefund, setCancelRefund] = useState<CancellationRefund | null>(null);
   const [cancelNotice, setCancelNotice] = useState<string | null>(null);
 
   const { data: booking, isLoading, isError, refetch } = useQuery({
@@ -81,6 +87,12 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     queryFn: () => getMyBookingApi(bookingId),
     enabled: !!client && !!bookingId,
   });
+
+  // Never offer a checkout the backend will reject: when online payment is off
+  // (or Moyasar is unconfigured) the client gets a note instead of a button that
+  // fails after the click. Declared before the early returns so the hook order
+  // is stable across the loading/error/empty states.
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
 
   if (isLoading) {
     return (
@@ -121,7 +133,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   const serviceLabel = localizedName(locale, booking.serviceName, booking.serviceNameAr);
   const employeeLabel = localizedName(locale, booking.employeeName, booking.employeeNameAr);
   const branchLabel = localizedName(locale, booking.branchName, booking.branchNameAr);
-  const canAct = displayStatus === 'PENDING' || displayStatus === 'CONFIRMED';
+  const canAct = ['PENDING', 'CONFIRMED', 'DEPOSIT_PAID'].includes(displayStatus);
+  const canCancel = canAct || displayStatus === 'AWAITING_PAYMENT';
   // The booking-detail payload may carry context IDs even though the shared
   // ClientBookingItem type does not declare them yet. Read them defensively;
   // IntakeFormsSection stays inert when serviceId is absent.
@@ -134,8 +147,10 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   const payPillKey = paymentStatusKey(booking.paymentStatus);
   const payPillColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
   const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus);
+  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
   const canJoin =
-    booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && booking.status === 'CONFIRMED';
+    booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && ['CONFIRMED', 'DEPOSIT_PAID'].includes(displayStatus);
 
   async function handlePayNow() {
     if (!booking?.invoiceId) return;
@@ -144,8 +159,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     try {
       const { redirectUrl } = await initPayment(booking.invoiceId);
       window.location.assign(redirectUrl);
-    } catch {
-      setPayError(tt('account.payError'));
+    } catch (err) {
+      setPayError(paymentFailureMessage(err, tt('account.payError')));
       setPaying(false);
     }
   }
@@ -197,6 +212,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
         </div>
       )}
 
+      {(booking.cancellationRefund ?? cancelRefund) && <CancellationRefundSummary refund={(booking.cancellationRefund ?? cancelRefund)!} />}
+
       <section className="grid sm:grid-cols-2 gap-3">
         <DetailTile icon={<Calendar size={16} />} label={tt('booking.detail.date')} value={dateStr} />
         <DetailTile
@@ -236,18 +253,21 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
             <span className="text-sm font-medium text-[var(--sw-neutral-500)]">{booking.currency}</span>
           </span>
         </div>
-        {(payable || canJoin) && (
+        {(canPayOnline || showPayUnavailable || canJoin) && (
           <div className="mt-4 flex items-center gap-2 flex-wrap">
-            {payable && (
+            {canPayOnline && (
               <button
                 type="button"
                 onClick={handlePayNow}
                 disabled={paying}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
               >
                 <CreditCard size={14} aria-hidden="true" />
                 {paying ? tt('account.paying') : tt('account.payNow')}
               </button>
+            )}
+            {showPayUnavailable && (
+              <span className="text-sm text-[var(--sw-body)]">{tt('account.payUnavailable')}</span>
             )}
             {canJoin && (
               <a
@@ -277,28 +297,30 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
         enabled={canAct}
       />
 
-      {canAct && (
+      {(canAct || canCancel) && (
         <div className="flex flex-col-reverse sm:flex-row gap-3">
-          <button
+          {canCancel && <button
             onClick={() => setShowCancel(true)}
             className="flex-1 px-5 py-3 rounded-full font-bold text-sm border bg-[var(--sw-neutral-0)] text-[var(--error)] border-[color-mix(in_srgb,var(--error)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--error)_6%,transparent)] transition-colors"
           >
             {t(locale, 'booking.cancel')}
-          </button>
-          <button
+          </button>}
+          {canAct && <button
             onClick={() => setShowReschedule(true)}
-            className="flex-1 px-5 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+            className="flex-1 px-5 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
           >
             {t(locale, 'booking.reschedule')}
-          </button>
+          </button>}
         </div>
       )}
 
       {showCancel && (
         <CancelModal
+          bookingId={bookingId}
           locale={locale}
           onClose={() => setShowCancel(false)}
-          onSuccess={(status) => {
+          onSuccess={(status, refund) => {
+            setCancelRefund(refund ?? null);
             setShowCancel(false);
             setCancelledStatus(status);
             setCancelNotice(
@@ -307,7 +329,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
             // Refresh cached bookings (list + detail) so the new status persists.
             void queryClient.invalidateQueries({ queryKey: ['client', 'bookings'] });
           }}
-          cancelApi={(reason) => cancelMyBookingApi(bookingId, reason)}
+          cancelApi={(reason, quote) => cancelMyBookingApi(bookingId, reason, quote)}
         />
       )}
 
@@ -399,6 +421,7 @@ function ModalShell({
 }
 
 function CancelModal({
+  bookingId,
   locale,
   onClose,
   onSuccess,
@@ -406,29 +429,37 @@ function CancelModal({
 }: {
   locale: Locale;
   onClose: () => void;
-  onSuccess: (status: 'CANCELLED' | 'CANCEL_REQUESTED') => void;
-  cancelApi: (reason?: string) => Promise<{ status: string; requiresApproval: boolean }>;
+  bookingId: string;
+  onSuccess: (status: 'CANCELLED' | 'CANCEL_REQUESTED', refund?: CancellationRefund) => void;
+  cancelApi: (reason?: string, quote?: CancellationQuoteInput) => Promise<{ status: string; requiresApproval: boolean; refund?: CancellationRefund }>;
 }) {
   const tt = useT();
   const [reason, setReason] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const actionId = useRef<string | undefined>(undefined);
+  const quote = useQuery({ queryKey: ['client', 'cancellation-preview', bookingId], queryFn: () => getMyCancellationPreviewApi(bookingId), retry: false, staleTime: 0 });
+  const mutation = useMutation({ mutationFn: (input: { reason?: string; quote?: CancellationQuoteInput }) => cancelApi(input.reason, input.quote), retry: false });
+  const isLoading = mutation.isPending;
+  const eligible = !!quote.data && (!quote.data.policyEnabled || quote.data.canCancel);
 
   async function handleConfirm() {
-    setIsLoading(true);
+    if (!eligible || quote.isError || quote.isFetching || mutation.isPending) return;
     setError(null);
     try {
-      const result = await cancelApi(reason || undefined);
-      onSuccess(result.status === 'CANCELLED' ? 'CANCELLED' : 'CANCEL_REQUESTED');
-    } catch {
-      setError(tt('booking.cancelFailed'));
-    } finally {
-      setIsLoading(false);
+      if (quote.data?.policyEnabled && !actionId.current) actionId.current = crypto.randomUUID();
+      const result = await mutation.mutateAsync({ reason: reason || undefined, quote: quote.data?.policyEnabled ? { quoteToken: quote.data.quoteToken, sourceActionId: actionId.current } : undefined });
+      onSuccess(result.status === 'CANCELLED' ? 'CANCELLED' : 'CANCEL_REQUESTED', result.refund);
+    } catch (err) {
+      if ((err as { status?: number })?.status === 409) {
+        setError(tt('cancellation.changed'));
+        actionId.current = undefined;
+        await quote.refetch();
+      } else setError(tt('booking.cancelFailed'));
     }
   }
 
   return (
-    <ModalShell onClose={onClose} labelledById="cancel-modal-title">
+    <ModalShell onClose={() => { if (!isLoading) onClose(); }} labelledById="cancel-modal-title">
       <div className="flex items-start gap-3">
         <span className="shrink-0 w-10 h-10 rounded-full grid place-items-center bg-[color-mix(in_srgb,var(--error)_12%,transparent)] text-[var(--error)]">
           <AlertTriangle size={18} aria-hidden="true" />
@@ -442,6 +473,14 @@ function CancelModal({
           </p>
         </div>
       </div>
+
+      {quote.isFetching && <p role="status">{tt('cancellation.loading')}</p>}
+      {quote.isError && <div role="alert"><p>{tt('cancellation.loadError')}</p><button onClick={() => void quote.refetch()}>{tt('cancellation.retry')}</button></div>}
+      {quote.data && !quote.isFetching && !quote.isError && (quote.data.policyEnabled ? <div>
+        <p>{tt(`cancellation.${quote.data.reasonCode}` as never)}</p>
+        {quote.data.cutoffAt && <p>{tt('cancellation.cutoff')}: {new Date(quote.data.cutoffAt).toLocaleString(locale, { timeZone: 'Asia/Riyadh' })}</p>}
+        {quote.data.canCancel && <CancellationRefundSummary refund={quote.data.refund} preview />}
+      </div> : <p>{tt('cancellation.legacy')}</p>)}
 
       <label
         htmlFor="cancel-reason"
@@ -472,14 +511,14 @@ function CancelModal({
         >
           {tt('booking.keep')}
         </button>
-        <button
+        {(!quote.data || eligible) && <button
           onClick={handleConfirm}
-          disabled={isLoading}
+          disabled={isLoading || quote.isFetching || quote.isError || !eligible}
           className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm text-white hover:opacity-90 transition-opacity disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error)] focus-visible:ring-offset-2"
           style={{ background: 'var(--error)' }}
         >
           {isLoading ? tt('booking.detail.cancelling') : tt('booking.confirmCancel')}
-        </button>
+        </button>}
       </div>
     </ModalShell>
   );
@@ -591,7 +630,7 @@ function RescheduleModal({
         <button
           onClick={handleConfirm}
           disabled={isLoading || !newDate || !newTime}
-          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+          className="flex-1 px-4 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
         >
           {isLoading ? tt('booking.detail.rescheduling') : tt('booking.detail.confirm')}
         </button>

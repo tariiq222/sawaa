@@ -185,7 +185,7 @@ function IntakeFormCard({ bookingId, form }: { bookingId: string; form: IntakeFo
       <button
         type="submit"
         disabled={isSubmitting}
-        className="self-start px-5 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+        className="self-start px-5 py-2.5 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
       >
         {isSubmitting ? tt('intake.submitting') : tt('intake.submit')}
       </button>

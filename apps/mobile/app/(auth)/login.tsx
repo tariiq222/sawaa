@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,20 +11,26 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import Animated, { Easing, FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { Glass } from '@/theme';
-import { sawaaTokens, sawaaColors } from '@/theme/sawaa/tokens';
+import { BackButton } from '@/components/ui/BackButton';
+import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
+import { goBackOrHome } from '@/lib/navigation';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function LoginScreen() {
+  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -38,6 +44,13 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | undefined>();
 
   const requestOtp = useRequestLoginOtp();
+  const continuation = authContinuationParams(booking, redirect);
+  const forgotPasswordHref = booking || redirect
+    ? { pathname: '/(auth)/forgot-password' as const, params: continuation }
+    : '/(auth)/forgot-password';
+  const registerHref = booking || redirect
+    ? { pathname: '/(auth)/register' as const, params: continuation }
+    : '/(auth)/register';
 
   const handleLogin = useCallback(async () => {
     if (!identifier.trim()) {
@@ -55,13 +68,16 @@ export default function LoginScreen() {
           purpose: 'login',
           identifier: identifier.trim(),
           maskedIdentifier: result.maskedIdentifier,
+          ...authContinuationParams(booking, redirect),
         },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('error.generic'));
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     }
-  }, [identifier, requestOtp, router, t]);
+  }, [identifier, requestOtp, router, t, booking, redirect]);
+
+  const centered = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
 
   return (
     <AquaBackground>
@@ -72,154 +88,163 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View
-            entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}
-            style={styles.logoContainer}
-          >
-            <Image
-              source={require('../../assets/sawa/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-              accessible={false}
-            />
-          </Animated.View>
+          <BackButton onPress={() => goBackOrHome(router)} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
 
-          <Animated.Text
-            entering={FadeInDown.delay(150).duration(700).easing(Easing.out(Easing.cubic))}
-            style={[
-              styles.title,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f700 }
-            ]}
-          >
-            {t('auth.login.title')}
-          </Animated.Text>
-          <Animated.Text
-            entering={FadeInDown.delay(250).duration(700).easing(Easing.out(Easing.cubic))}
-            style={[
-              styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
-            ]}
-          >
-            {t('auth.welcomeBackSub')}
-          </Animated.Text>
-
-          <Animated.View entering={FadeInUp.delay(400).duration(800).easing(Easing.out(Easing.cubic))}>
-          <Glass
-            variant="regular"
-            radius={sawaaTokens.radius.lg}
-            style={[styles.form, { marginTop: 32 }]}
-          >
-            <View style={styles.formInner}>
-              <View style={styles.field}>
-                <Text
-                  style={[
-                    styles.label,
-                    { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f600, fontWeight: '600' }
-                  ]}
-                >
-                  {t('auth.login.identifier')}
-                </Text>
-                <View style={[styles.input, inputFocused && styles.inputFocused, error ? styles.inputError : undefined]}>
-                  <TextInput
-                    value={identifier}
-                    onChangeText={(text) => {
-                      setIdentifier(text.trim());
-                      if (error) setError(undefined);
-                    }}
-                    placeholder={t('auth.login.identifierPlaceholder')}
-                    accessibilityLabel={t('auth.login.identifier')}
-                    onFocus={() => setInputFocused(true)}
-                    onBlur={() => setInputFocused(false)}
-                    autoCorrect={false}
-                    selectionColor={sawaaColors.teal[600]}
-                    placeholderTextColor={sawaaColors.ink[500]}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    style={[
-                      styles.inputText,
-                      { textAlign: 'left', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
-                    ]}
-                  />
-                </View>
-                {error ? (
-                  <Text
-                    style={[
-                      styles.error,
-                      { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
-                    ]}
-                  >
-                    {error}
-                  </Text>
-                ) : null}
-              </View>
-
-              <PrimaryButton
-                label={requestOtp.isPending ? t('auth.login.submitting') : t('auth.login.submit')}
-                onPress={handleLogin}
-                fontFamily={f700}
-                disabled={requestOtp.isPending}
-                style={{ marginTop: 8 }}
+          <View style={styles.logoWrap}>
+            <Glass variant="strong" radius={sawaaTokens.radius.xl} style={styles.logoCard}>
+              <Image
+                source={require('../../assets/sawa/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                accessible={false}
               />
+            </Glass>
+          </View>
 
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/(auth)/forgot-password');
+          <Text accessibilityRole="header" style={[styles.title, centered, { fontFamily: f700 }]}>
+            {t('auth.login.welcome')}
+          </Text>
+          <Text style={[styles.subtitle, centered, { fontFamily: f400, fontWeight: '400' }]}>
+            {t('auth.login.subtitle')}
+          </Text>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f700 }]}>
+              {t('auth.login.identifier')}
+            </Text>
+            <View style={[styles.input, inputFocused && styles.inputFocused, error ? styles.inputError : undefined]}>
+              <TextInput
+                value={identifier}
+                onChangeText={(text) => {
+                  setIdentifier(text.trim());
+                  if (error) setError(undefined);
                 }}
-                style={{ alignSelf: 'center', marginTop: 4 }}
-              >
-                <Text style={[styles.forgotLink, { fontFamily: f600, fontWeight: '600' }]}>
-                  نسيت كلمة المرور؟
-                </Text>
-              </Pressable>
-
-              <View style={[styles.registerRow, { flexDirection: dir.row }]}>
-                <Text style={[styles.registerText, { fontFamily: f400, fontWeight: '400' }]}>{t('auth.noAccount')} </Text>
-                <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push('/(auth)/register');
-                  }}
-                >
-                  <Text style={[styles.registerLink, { fontFamily: f700 }]}>{t('auth.createAccount')}</Text>
-                </Pressable>
-              </View>
+                placeholder={t('auth.login.identifierPlaceholder')}
+                accessibilityLabel={t('auth.login.identifier')}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                autoCorrect={false}
+                selectionColor={colors.teal[600]}
+                placeholderTextColor={colors.ink[500]}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
+                style={[styles.inputText, { textAlign: 'center', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }]}
+              />
             </View>
-          </Glass>
-          </Animated.View>
+            {error ? (
+              <Text style={[styles.error, centered, { fontFamily: f400, fontWeight: '400' }]}>{error}</Text>
+            ) : null}
+          </View>
+
+          <PrimaryButton
+            label={requestOtp.isPending ? t('auth.login.submitting') : t('auth.login.sendCode')}
+            onPress={handleLogin}
+            fontFamily={f700}
+            disabled={requestOtp.isPending}
+            style={styles.primary}
+          />
+
+          <View style={[styles.registerRow, { flexDirection: dir.row }]}>
+            <Text style={[styles.registerText, { fontFamily: f400, fontWeight: '400' }]}>{t('auth.noAccount')} </Text>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push(registerHref);
+              }}
+              accessibilityRole="link"
+              style={styles.linkTarget}
+            >
+              <Text style={[styles.registerLink, { fontFamily: f700 }]}>{t('auth.createAccount')}</Text>
+            </Pressable>
+          </View>
+
+          {booking ? null : (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.replace('/(guest)/home');
+              }}
+              accessibilityRole="button"
+              style={styles.secondary}
+            >
+              <Text style={[styles.secondaryText, { fontFamily: f700 }]}>{t('auth.login.continueAsGuest')}</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push(forgotPasswordHref);
+            }}
+            accessibilityRole="link"
+            style={styles.linkTarget}
+          >
+            <Text style={[styles.smallLink, { fontFamily: f600, fontWeight: '600' }]}>
+              {t('auth.forgotPassword.linkLabel')}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
+            }}
+            accessibilityRole="button"
+            style={styles.linkTarget}
+          >
+            <Text style={[styles.smallLink, { fontFamily: f600 }]}>{t('auth.review.link')}</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </AquaBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { paddingHorizontal: 24 },
-  logoContainer: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  logo: { width: 144, height: 144, tintColor: sawaaColors.teal[700] },
-  title: { fontSize: 32, color: sawaaColors.teal[700], lineHeight: 42, marginBottom: 8, alignSelf: 'stretch' },
-  subtitle: { fontSize: 14, color: sawaaColors.ink[500], lineHeight: 20, marginBottom: 32, alignSelf: 'stretch' },
-  form: { padding: 24 },
-  formInner: { gap: 20 },
-  field: { gap: 10 },
-  label: { fontSize: 14, color: sawaaColors.teal[700] },
-  input: { minHeight: 56, paddingHorizontal: 16, borderRadius: sawaaTokens.radius.md, borderWidth: 1, borderColor: sawaaColors.teal[200], backgroundColor: sawaaColors.glass.opaqueBg, flexDirection: 'row', alignItems: 'center' },
-  inputFocused: { borderColor: sawaaColors.teal[600], backgroundColor: sawaaColors.glass.opaqueBg },
-  inputError: { borderColor: sawaaColors.accent.coral },
-  inputRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', width: '100%' },
-  inputText: { flex: 1, minHeight: 56, paddingVertical: 12, fontSize: 16, color: sawaaColors.ink[900] },
-  error: { fontSize: 12, color: sawaaColors.accent.coral },
-  forgotLink: { fontSize: 13, color: sawaaColors.teal[600] },
-  registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  registerText: { fontSize: 14, color: sawaaColors.ink[500] },
-  registerLink: { fontSize: 14, color: sawaaColors.teal[700] },
+  scroll: { paddingHorizontal: 16 },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  logoWrap: { alignItems: 'center', marginBottom: 20 },
+  logoCard: { width: 88, height: 88, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 60, height: 60, tintColor: colors.teal[700] },
+  title: { fontSize: 28, lineHeight: 38, color: colors.ink[900] },
+  subtitle: { fontSize: 15, lineHeight: 24, color: colors.ink[700], marginTop: 8, marginBottom: 28 },
+  field: { gap: 8 },
+  label: { fontSize: 14, lineHeight: 20, color: colors.ink[900] },
+  input: {
+    minHeight: 56,
+    paddingHorizontal: 16,
+    borderRadius: sawaaTokens.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.teal[200],
+    backgroundColor: colors.glass.opaqueBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputFocused: { borderColor: colors.teal[600] },
+  inputError: { borderColor: colors.accent.coral },
+  inputText: { flex: 1, minHeight: 54, paddingVertical: 12, fontSize: 16, color: colors.ink[900] },
+  error: { fontSize: 13, color: colors.accent.coral },
+  primary: { marginTop: 16 },
+  registerRow: { alignItems: 'center', justifyContent: 'center', marginTop: 20 },
+  registerText: { fontSize: 14, color: colors.ink[700], textAlign: 'center' },
+  registerLink: { fontSize: 14, color: colors.teal[700], textAlign: 'center' },
+  linkTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', alignSelf: 'center' },
+  secondary: {
+    minHeight: 56,
+    marginTop: 12,
+    borderRadius: sawaaTokens.radius.pill,
+    borderWidth: 1,
+    borderColor: colors.teal[700],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryText: { fontSize: 16, color: colors.teal[700] },
+  smallLink: { fontSize: 13, color: colors.teal[700], textAlign: 'center' },
 });

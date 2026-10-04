@@ -25,7 +25,7 @@ export const sawaaColors = {
   ink: {
     900: '#0a2a2a',
     700: '#2e4747',
-    500: '#5c7878',
+    500: '#4d6868',
     400: '#84a0a0',
   },
   glass: {
@@ -70,8 +70,8 @@ export const sawaaBlur = {
 
 /**
  * Official typography scale. `weight` is an RN `fontWeight` string —
- * pair with `getFontName(locale, weight)` so heading weights resolve to
- * the Handicrafts brand typeface and body weights to the system font.
+ * pair with `getFontName(locale, weight)` for the matching IBM Plex Sans
+ * Arabic weight bundled with the mobile app.
  */
 export const sawaaType = {
   display: { fontSize: 32, lineHeight: 42, weight: '700' },
@@ -90,7 +90,116 @@ export const sawaaSemantic = {
   info: sawaaColors.accent.sky,
 } as const;
 
-export type SawaaColors = typeof sawaaColors;
+/** Same public shape in either appearance; values intentionally widen to strings. */
+export type SawaaColors = {
+  readonly [Group in keyof typeof sawaaColors]: {
+    readonly [Key in keyof typeof sawaaColors[Group]]: string;
+  };
+};
+
+const darkSawaaColors: SawaaColors = {
+  teal: {
+    50: '#102d2b', 100: '#153733', 200: '#1c413c',
+    300: '#458d80', 400: '#55b49f', 500: '#65cdb4',
+    600: '#7dddc7', 700: '#a0ebdb', 900: '#d1f5ec',
+  },
+  accent: { violet: '#b3a7ff', coral: '#ffa599', amber: '#f3c779', rose: '#f7a6c4', sky: '#8bc7f3' },
+  ink: { 900: '#e8f4f2', 700: '#c1d6d2', 500: '#a5c1bc', 400: '#9fbcba' },
+  glass: {
+    ...sawaaColors.glass,
+    bg: 'rgba(12, 36, 36, 0.55)',
+    bgStrong: 'rgba(17, 48, 47, 0.88)',
+    bgSoft: 'rgba(12, 36, 36, 0.42)',
+    border: 'rgba(255,255,255,0.14)',
+    borderSoft: 'rgba(255,255,255,0.09)',
+    opaqueBg: '#0c2424',
+  },
+};
+
+export function getSawaaColors(scheme: 'light' | 'dark'): SawaaColors {
+  return scheme === 'dark' ? darkSawaaColors : sawaaColors;
+}
+
+/** Roles that must not borrow the text-accent ramp (mint in dark mode). */
+const lightRoles = {
+  background: '#EAF8F4', surface: '#F7F9FB', surfaceLow: '#F2F4F6', surfaceHigh: '#E6E8EA',
+  accent: '#E7DBC4', focus: '#098a7d',
+  action: { fill: '#087a6f', gradient: ['#087a6f', '#066962'] as const, foreground: '#FFFFFF', sheen: 'rgba(255,255,255,0.06)' },
+  /**
+   * Selected pill on a segmented track. Kept apart from `action`: a CTA keeps its
+   * dark fill in both appearances, but a selection has to separate from the track
+   * behind it, which the dark surface does not allow (2.50:1).
+   */
+  selection: { fill: '#087a6f', foreground: '#FFFFFF' },
+  /**
+   * On/off switch. The off track must read as a shape against a near-white card
+   * (the old `surfaceLow` track was 1.04:1 — invisible), and the knob must read
+   * against that track.
+   */
+  switch: { trackOff: '#C3CFD0', thumbOff: '#FFFFFF', trackOn: '#087a6f', thumbOn: '#FFFFFF' },
+  backdrop: { base: '#0a1416', wash: 'rgba(11, 42, 46, 0.82)' },
+  highlight: ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.25)'] as const,
+};
+const darkRoles = {
+  background: '#0a1f1e', surface: '#0c2424', surfaceLow: '#0e2927', surfaceHigh: '#173632',
+  accent: '#dfc89f', focus: darkSawaaColors.teal[600],
+  action: lightRoles.action,
+  selection: { fill: darkSawaaColors.teal[600], foreground: darkSawaaColors.teal[50] },
+  switch: {
+    trackOff: '#27564F',
+    thumbOff: darkSawaaColors.ink[500],
+    trackOn: darkSawaaColors.teal[600],
+    thumbOn: darkSawaaColors.teal[50],
+  },
+  backdrop: { base: '#0a1f1e', wash: 'rgba(6, 24, 24, 0.94)' },
+  highlight: ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.10)'] as const,
+};
+
+export function getSawaaRoles(scheme: 'light' | 'dark') {
+  return scheme === 'dark' ? darkRoles : lightRoles;
+}
+
+/** Shared aqua optical treatment for every iOS glass surface. */
+const glassAppearance = {
+  light: {
+    nativeTint: 'rgba(180, 231, 244, 0.26)',
+    fallbackFill: 'rgba(180, 231, 244, 0.18)',
+    fallbackBlur: 'rgba(180, 231, 244, 0.06)',
+    rim: 'rgba(241, 253, 255, 0.9)',
+    sheen: ['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.04)', 'rgba(255, 255, 255, 0)'] as const,
+    lowerRim: 'rgba(255, 255, 255, 0.7)',
+  },
+  dark: {
+    nativeTint: 'rgba(77, 171, 183, 0.16)',
+    fallbackFill: 'rgba(30, 89, 96, 0.25)',
+    fallbackBlur: 'rgba(13, 48, 53, 0.1)',
+    rim: 'rgba(180, 230, 235, 0.46)',
+    sheen: ['rgba(255, 255, 255, 0.14)', 'rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0)'] as const,
+    lowerRim: 'rgba(180, 230, 235, 0.38)',
+  },
+} as const;
+
+export function getSawaaGlassAppearance(scheme: 'light' | 'dark') {
+  return glassAppearance[scheme];
+}
+
+/** Glass renderer effects live with the palette, never inside screen styles. */
+export function getGlassEffects(isDark: boolean) {
+  return {
+    tint: (alpha: number) => `rgba(${isDark ? '12,36,36' : '255,255,255'},${alpha})`,
+    border: (alpha: number) => `rgba(255,255,255,${isDark ? alpha * 0.35 : alpha})`,
+    pressGlow: isDark
+      ? 'radial-gradient(ellipse at center, rgba(125,221,199,0.12) 0%, rgba(125,221,199,0) 72%)'
+      : 'radial-gradient(ellipse at center, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0) 72%)',
+    pressedShadow: 'inset 0 2px 10px rgba(21,79,87,0.18), inset 0 0 0 1px rgba(21,79,87,0.08)',
+    restingShadow: 'inset 0 0 0 rgba(0,0,0,0)',
+    innerShadow: 'inset 0 0 0 1px rgba(21,79,87,0.08)',
+    sheen: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.15)',
+    edgeShadow: isDark
+      ? 'inset 0 1px 3px rgba(255,255,255,0.10), inset 0 -1px 2px rgba(255,255,255,0.03)'
+      : 'inset 0 2px 6px rgba(255,255,255,0.55), inset 0 -1px 2px rgba(255,255,255,0.2)',
+  };
+}
 
 export type GlassVariant = 'regular' | 'strong' | 'clear';
 

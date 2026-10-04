@@ -10,18 +10,25 @@ export function getApiBase(): string {
       ? process.env.NEXT_PUBLIC_API_URL
       : undefined) ??
     DEFAULT_ORIGIN;
-  const trimmed = origin.replace(/\/+$/, '');
+  let end = origin.length;
+  while (end > 0 && origin[end - 1] === '/') end -= 1;
+  const trimmed = origin.slice(0, end);
   return trimmed.endsWith(API_PREFIX) ? trimmed : `${trimmed}${API_PREFIX}`;
 }
 
 /**
  * Origin (no path) of the API server. Use for `<link rel="preconnect">` so
  * the browser can warm up the TLS/DNS handshake before the first fetch.
- * Falls back to the same env chain as `getApiBase` then to the local
- * backend default.
+ * Prefers the browser-facing API URL even during SSR, then falls back to the
+ * server API base and finally the local backend default.
  */
 export function getApiOrigin(): string {
-  const base = getApiBase();
+  // This value is emitted into browser preconnect hints, so it must never
+  // expose the server-only Docker service URL selected by getApiBase().
+  const base =
+    process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.length > 0
+      ? process.env.NEXT_PUBLIC_API_URL
+      : getApiBase();
   try {
     return new URL(base).origin;
   } catch {

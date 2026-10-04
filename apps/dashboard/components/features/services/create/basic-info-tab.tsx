@@ -1,7 +1,6 @@
 // EXCEPTION: basic-info-tab integrates display-settings switches, avatar picker, and two-language form; 344 lines approved 2026-06-19
 "use client"
 
-import { useState } from "react"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
@@ -24,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sawaa/ui"
-import { useCategories } from "@/hooks/use-services"
+import { useServiceFormCategories } from "@/hooks/use-service-form-categories"
 import { useDepartmentOptions } from "@/hooks/use-departments"
 import { useLocale } from "@/components/locale-provider"
 import { ServiceAvatarPicker } from "@/components/features/shared/service-avatar-picker"
@@ -40,31 +39,35 @@ interface BasicInfoTabProps {
   form: UseFormReturn<CreateServiceFormData>
   onImageSelect?: (file: File) => void
   serviceId?: string
+  isEdit?: boolean
+  isInternalService?: boolean
+  internalCategoryName?: string
+  savedCategoryId?: string | null
+  savedCategoryName?: string | null
+  clinicManagementHref?: string
 }
 
 /* ─── Component ─── */
 
-export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabProps) {
+export function BasicInfoTab({ form, onImageSelect, serviceId, isEdit = false, isInternalService = false, internalCategoryName, savedCategoryId, savedCategoryName, clinicManagementHref = "/categories" }: BasicInfoTabProps) {
   const { t, locale } = useLocale()
-  const { data: categoriesData, isLoading: loadingCategories } = useCategories()
-  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.items ?? [])
+  const { data: categories = [], isLoading: loadingCategories, isError: categoriesError } = useServiceFormCategories()
   const { options: departments } = useDepartmentOptions()
   // Single-branch center: branch restrictions UI is hidden; services apply to the only branch.
   const isMultiBranch = false
-  const [selectedDeptId, setSelectedDeptId] = useState<string>("")
-
-  const hasDepts = departments.length > 0
-  const hasAnyCategories = (categories ?? []).length > 0
-  const visibleCategories = selectedDeptId
-    ? (categories ?? []).filter((c) => c.departmentId === selectedDeptId || !c.departmentId)
-    : (categories ?? [])
+  const hasAnyCategories = categories.length > 0
+  const visibleCategories = isEdit
+    ? categories.filter((category) => category.bookingMode !== "DIRECT" || category.id === savedCategoryId)
+    : categories.filter((category) => category.bookingMode !== "DIRECT")
+  const currentCategoryId = form.watch("categoryId")
+  const categoryMissingFromList = isEdit && currentCategoryId && !visibleCategories.some((category) => category.id === currentCategoryId)
+  const selectedCategory = categories.find((category) => category.id === form.watch("categoryId"))
+  const selectedDepartment = selectedCategory?.department
+    ?? departments.find((department) => department.id === selectedCategory?.departmentId)
+    ?? null
 
   const handleCategoryChange = (categoryId: string) => {
     form.setValue("categoryId", categoryId, { shouldValidate: true })
-    const cat = categories?.find((c) => c.id === categoryId)
-    if (cat?.departmentId && cat.departmentId !== selectedDeptId) {
-      setSelectedDeptId(cat.departmentId)
-    }
   }
 
   const {
@@ -72,7 +75,6 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
     isHidden,
     hidePriceOnBooking,
     hideDurationOnBooking,
-    categoryId: watchedCategoryId,
     iconName,
     iconBgColor,
     imageUrl,
@@ -193,11 +195,12 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <Switch
-                    id={item.id}
-                    checked={item.checked}
-                    onCheckedChange={item.onChange}
-                    size="sm"
+                <Switch
+                  id={item.id}
+                  checked={item.checked}
+                  onCheckedChange={item.onChange}
+                  disabled={isInternalService && item.id === "hdr-is-hidden"}
+                  size="sm"
                   />
                 </div>
               ))}
@@ -210,7 +213,16 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
         <div className="space-y-6">
 
           {/* First-run guidance: category is required but none exist yet */}
-          {!loadingCategories && !hasAnyCategories && (
+          {!loadingCategories && categoriesError && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
+              <p className="text-sm text-warning-foreground">{t("services.create.categoryContextError")}</p>
+              <Link href="/categories" className="shrink-0 text-sm font-medium underline underline-offset-4">
+                {t("services.create.categoryContextManage")}
+              </Link>
+            </div>
+          )}
+
+          {!loadingCategories && !categoriesError && !hasAnyCategories && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
               <p className="text-sm text-warning-foreground">
                 {t("services.create.noCategoriesBanner")}
@@ -227,70 +239,63 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
           {/* ── Row 1: Names ── */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label={`${primaryNameLabel} *`} error={form.formState.errors[primaryName] ? t(form.formState.errors[primaryName]?.message ?? "") : undefined}>
-              <Input {...form.register(primaryName)} dir={primaryDir} />
+              <Input {...form.register(primaryName)} dir={primaryDir} readOnly={isInternalService} />
             </FormField>
             <FormField label={`${secondaryNameLabel} *`} error={form.formState.errors[secondaryName] ? t(form.formState.errors[secondaryName]?.message ?? "") : undefined}>
-              <Input {...form.register(secondaryName)} dir={secondaryDir} />
+              <Input {...form.register(secondaryName)} dir={secondaryDir} readOnly={isInternalService} />
             </FormField>
           </div>
 
-          {/* ── Row 2: Department (optional) + Category ── */}
-          <div className={`grid grid-cols-1 gap-4 ${hasDepts ? "sm:grid-cols-2" : ""}`}>
-            {/* Department filter — only shown when departments exist */}
-            {hasDepts && (
-              <FormField label={t("services.create.department")}>
+          {/* ── Row 2: Clinic / service group with derived department ── */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField label={t("services.create.category")} required error={form.formState.errors.categoryId ? t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired") : undefined}>
+              {isInternalService ? (
+                <div className="space-y-2">
+                  <Input readOnly value={internalCategoryName || savedCategoryName || currentCategoryId || ""} />
+                  <Link className="text-sm text-primary underline-offset-4 hover:underline" href={clinicManagementHref}>
+                    {t("services.manageClinic")}
+                  </Link>
+                </div>
+              ) : (
                 <Select
-                  value={selectedDeptId || "__none__"}
-                  onValueChange={(v) => {
-                    const val = v === "__none__" ? "" : v
-                    setSelectedDeptId(val)
-                    const current = categories?.find((c) => c.id === watchedCategoryId)
-                    if (current && val && current.departmentId !== val) {
-                      form.setValue("categoryId", "", { shouldValidate: false })
-                    }
-                  }}
+                  value={currentCategoryId || ""}
+                  onValueChange={handleCategoryChange}
+                  disabled={loadingCategories || categoriesError}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("services.create.allDepartments")} />
+                    <SelectValue placeholder={t("services.create.categoryPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">{t("services.create.allDepartments")}</SelectItem>
-                    {departments.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {locale === "ar" ? d.nameAr : d.nameEn}
-                      </SelectItem>
-                    ))}
+                    {categoryMissingFromList && currentCategoryId && (
+                      <SelectItem value={currentCategoryId}>{savedCategoryName || currentCategoryId}</SelectItem>
+                    )}
+                    {visibleCategories.length === 0 && !categoryMissingFromList ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        {t("services.create.noCategories")}
+                      </div>
+                    ) : (
+                      visibleCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {locale === "ar" ? category.nameAr : (category.nameEn ?? category.nameAr)}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+              )}
+            </FormField>
+            {selectedDepartment && (
+              <FormField label={t("services.create.department")}>
+                <Input
+                  readOnly
+                  className="bg-surface-muted text-muted-foreground"
+                  value={locale === "ar" ? selectedDepartment.nameAr : (selectedDepartment.nameEn ?? selectedDepartment.nameAr)}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("services.create.departmentDerivedHint")}
+                </p>
               </FormField>
             )}
-
-            {/* Category */}
-            <FormField label={t("services.create.category")} required error={form.formState.errors.categoryId ? t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired") : undefined}>
-              <Select
-                key={`${selectedDeptId}-${watchedCategoryId || "empty"}`}
-                value={watchedCategoryId || ""}
-                onValueChange={handleCategoryChange}
-                disabled={loadingCategories}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("services.create.categoryPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {visibleCategories.length === 0 ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                      {t("services.create.noCategories")}
-                    </div>
-                  ) : (
-                    visibleCategories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {locale === "ar" ? c.nameAr : c.nameEn}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </FormField>
           </div>
 
           {/* ── Row 2: Descriptions — 2 equal columns ── */}

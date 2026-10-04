@@ -165,18 +165,20 @@ describe('mapBookingRow', () => {
     expect(result.status).toBe('pending');
   });
 
-  it('maps awaiting_payment status to pending', () => {
+  // Holds keep their own status: folding them into `pending` made the
+  // dashboard offer confirm/cancel for states the state machine rejects.
+  it('maps awaiting_payment status to its own awaiting_payment status', () => {
     const booking = { ...mockBooking, status: 'AWAITING_PAYMENT' } as Booking;
     const result = mapBookingRow(booking, relations);
 
-    expect(result.status).toBe('pending');
+    expect(result.status).toBe('awaiting_payment');
   });
 
-  it('maps pending_group_fill status to pending', () => {
+  it('maps pending_group_fill status to its own pending_group_fill status', () => {
     const booking = { ...mockBooking, status: 'PENDING_GROUP_FILL' } as Booking;
     const result = mapBookingRow(booking, relations);
 
-    expect(result.status).toBe('pending');
+    expect(result.status).toBe('pending_group_fill');
   });
 
   it('maps DEPOSIT_PAID status to its own deposit_paid status (not folded into pending)', () => {

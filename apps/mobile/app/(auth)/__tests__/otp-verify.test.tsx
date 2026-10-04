@@ -1,25 +1,46 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+let mockBooking: string | undefined;
+let mockRedirect: string | undefined;
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
     back: mockBack,
   }),
   useLocalSearchParams: () => ({
-    identifier: 'test@example.com',
-    maskedIdentifier: 't***@example.com',
-    purpose: 'login',
+    ...mockParams,
+    booking: mockBooking,
+    redirect: mockRedirect,
   }),
 }));
 
+const loginParams = {
+  identifier: 'test@example.com',
+  maskedIdentifier: 't***@example.com',
+  purpose: 'login',
+};
+const registerParams = {
+  identifier: '0501234567',
+  maskedIdentifier: '+966***67',
+  purpose: 'register',
+  firstName: 'Sara',
+  lastName: 'Ahmad',
+  email: 'sara@example.com',
+};
+let mockParams: Record<string, string> = loginParams;
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { index?: number; total?: number }) => {
+    t: (key: string, options?: { index?: number; total?: number; seconds?: number }) => {
       if (key === 'auth.otpBoxLabel') {
         return `OTP digit ${options?.index} of ${options?.total}`;
+      }
+      if (key === 'auth.otp.resendIn') {
+        return `auth.otp.resendIn ${options?.seconds}`;
       }
       return key;
     },
@@ -46,6 +67,7 @@ const mockVerifyOtp = jest.fn().mockResolvedValue({
   sessionEpoch: 1,
 });
 const mockRequestLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: 't***@example.com' });
+const mockRegister = jest.fn().mockResolvedValue({ userId: 'u1', maskedPhone: '+966***67' });
 const mockGetProfile = jest.fn().mockResolvedValue({
   success: true,
   data: { id: 'u1', role: 'CLIENT' },
@@ -53,6 +75,7 @@ const mockGetProfile = jest.fn().mockResolvedValue({
 jest.mock('@/hooks/queries', () => ({
   useVerifyOtp: () => ({ mutateAsync: mockVerifyOtp }),
   useRequestLoginOtp: () => ({ mutateAsync: mockRequestLoginOtp }),
+  useRegister: () => ({ mutateAsync: mockRegister }),
 }));
 
 jest.mock('@/services/push', () => ({
@@ -95,6 +118,10 @@ jest.mock('@/theme/useTheme', () => ({
         textPrimary: '#000',
         textSecondary: '#666',
         textMuted: '#999',
+        primary: '#098a7d',
+        primaryFill: '#087a6f',
+        primaryGradient: ['#087a6f', '#066962'],
+        primaryForeground: '#FFFFFF',
       },
       typography: {
         fontFamily: {
@@ -114,17 +141,24 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCurrentEpoch = 1;
+    mockBooking = undefined;
+    mockRedirect = undefined;
+    mockParams = loginParams;
   });
 
-  it('renders 4 OTP input boxes with SMS autofill attributes', () => {
+  it('uses one four-character input for native SMS autofill', () => {
     const { getByLabelText } = render(<OtpVerifyScreen />);
+    const input = getByLabelText('auth.otp.code');
+    expect(input.props.textContentType).toBe('oneTimeCode');
+    expect(input.props.autoComplete).toBe('sms-otp');
+    expect(input.props.keyboardType).toBe('number-pad');
+    expect(input.props.maxLength).toBe(4);
+  });
 
-    for (let i = 1; i <= 4; i += 1) {
-      const input = getByLabelText(`OTP digit ${i} of 4`);
-      expect(input.props.textContentType).toBe('oneTimeCode');
-      expect(input.props.autoComplete).toBe('sms-otp');
-      expect(input.props.keyboardType).toBe('number-pad');
-    }
+  it('renders translated copy rather than untranslated keys', () => {
+    const { getByText, queryByText } = render(<OtpVerifyScreen />);
+    expect(getByText('auth.otp.title')).toBeTruthy();
+    expect(queryByText('otp.title')).toBeNull();
   });
 
   it('exposes the icon-only back control as a labeled button', () => {
@@ -137,14 +171,10 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
 
   it('auto-submits when all 4 digits are filled', async () => {
     const { getByLabelText } = render(<OtpVerifyScreen />);
-
-    for (let i = 1; i <= 3; i += 1) {
-      fireEvent.changeText(getByLabelText(`OTP digit ${i} of 4`), i.toString());
-    }
-
+    const input = getByLabelText('auth.otp.code');
+    fireEvent.changeText(input, '123');
     expect(mockVerifyOtp).not.toHaveBeenCalled();
-
-    fireEvent.changeText(getByLabelText('OTP digit 4 of 4'), '4');
+    fireEvent.changeText(input, '1234');
 
     await waitFor(() => {
       expect(mockVerifyOtp).toHaveBeenCalledWith({
@@ -161,7 +191,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   it('handles paste and auto-submits', async () => {
     const { getByLabelText } = render(<OtpVerifyScreen />);
 
-    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '6543');
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '6543');
 
     await waitFor(() => {
       expect(mockVerifyOtp).toHaveBeenCalledWith({
@@ -175,6 +205,116 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     });
   });
 
+  it('returns a verified client to confirmation with the selected practitioner price', async () => {
+    mockRedirect = '/(client)/(tabs)/appointments';
+    mockBooking = JSON.stringify({
+      clinicId: 'clinic-1', serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+      deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+      durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+    });
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/confirm',
+      params: {
+        clinicId: 'clinic-1',
+        serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+        deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+        durationOptionId: 'duration-1', chargedPrice: '45000', currency: 'SAR',
+      },
+    }));
+  });
+
+  it('resumes a guarded client route after OTP when there is no booking draft', async () => {
+    mockRedirect = '/(client)/booking/confirm?clinicId=clinic-1&serviceId=service-1&employeeId=employee-1';
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/booking/confirm',
+      params: { clinicId: 'clinic-1', serviceId: 'service-1', employeeId: 'employee-1' },
+    }));
+  });
+
+  it('resumes a guarded employee route for a verified staff session', async () => {
+    mockRedirect = '/(employee)/client/client-9';
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'staff-access', refreshToken: 'staff-refresh' },
+      sessionEpoch: 1, sessionKind: 'staff',
+    });
+    mockGetProfile.mockResolvedValueOnce({ success: true, data: { id: 'staff-1', role: 'RECEPTIONIST' } });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(employee)/client/client-9'));
+  });
+
+  it('rejects an employee route redirect for a verified client session', async () => {
+    mockRedirect = '/(employee)/client/client-9';
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home'));
+  });
+
+  it('resumes the protected route a guard handed to login', async () => {
+    mockRedirect = '/(client)/video-call?bookingId=booking-9';
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/(client)/video-call',
+      params: { bookingId: 'booking-9' },
+    }));
+  });
+
+  it('ignores a redirect target that leaves the app or re-enters auth', async () => {
+    mockRedirect = 'https://evil.example/steal';
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home'));
+  });
+
+  it('keeps an in-progress booking ahead of the guarded redirect', async () => {
+    mockRedirect = '/(client)/(tabs)/appointments';
+    mockBooking = JSON.stringify({
+      serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1',
+      deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z',
+      durationOptionId: 'duration-1', amount: '45000', currency: 'SAR',
+    });
+    mockVerifyOtp.mockResolvedValueOnce({
+      tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      sessionEpoch: 1, sessionKind: 'client',
+    });
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/(client)/booking/confirm' }),
+    ));
+  });
+
+  it('filters non-digits and never submits an incomplete code', async () => {
+    const { getByLabelText } = render(<OtpVerifyScreen />);
+    const input = getByLabelText('auth.otp.code');
+    fireEvent.changeText(input, '12a');
+    expect(input.props.value).toBe('12');
+    expect(mockVerifyOtp).not.toHaveBeenCalled();
+  });
+
   it('routes a verified staff session to employee tabs after the profile is loaded', async () => {
     mockVerifyOtp.mockResolvedValueOnce({
       tokens: { accessToken: 'staff-access', refreshToken: 'staff-refresh' },
@@ -186,7 +326,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
       data: { id: 'u1', role: 'RECEPTIONIST' },
     });
     const { getByLabelText } = render(<OtpVerifyScreen />);
-    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '1234');
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today'));
     expect(mockGetProfile).toHaveBeenCalledWith('staff');
   });
@@ -197,7 +337,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
       resolveProfile = resolve;
     }));
     const { getByLabelText } = render(<OtpVerifyScreen />);
-    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '1234');
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
 
     await waitFor(() => expect(mockGetProfile).toHaveBeenCalled());
     expect(mockDispatch).not.toHaveBeenCalled();
@@ -215,7 +355,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   it('does not commit auth or navigate when the profile fetch fails', async () => {
     mockGetProfile.mockResolvedValueOnce({ success: false, data: undefined });
     const { getByLabelText } = render(<OtpVerifyScreen />);
-    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '1234');
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '1234');
 
     await waitFor(() => expect(mockGetProfile).toHaveBeenCalled());
     expect(mockDispatch).not.toHaveBeenCalled();
@@ -230,7 +370,7 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
     });
     const { getByLabelText } = render(<OtpVerifyScreen />);
 
-    fireEvent.changeText(getByLabelText('OTP digit 1 of 4'), '6543');
+    fireEvent.changeText(getByLabelText('auth.otp.code'), '6543');
 
     await waitFor(() => {
       expect(mockVerifyOtp).toHaveBeenCalledWith({
@@ -243,5 +383,81 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
       expect(mockDispatch).not.toHaveBeenCalled();
       expect(mockReplace).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('OtpVerifyScreen resend', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    mockCurrentEpoch = 1;
+    mockBooking = undefined;
+    mockRedirect = undefined;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  function waitOutCooldown() {
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+  }
+
+  it('shows a cooldown on the register screen before resend is allowed', () => {
+    mockParams = registerParams;
+    const { getByText, queryByText } = render(<OtpVerifyScreen />);
+
+    expect(getByText('auth.otp.resendIn 60')).toBeTruthy();
+    expect(queryByText('auth.otp.resend')).toBeNull();
+    expect(queryByText('auth.otp.registerNoResend')).toBeNull();
+  });
+
+  it('re-submits the same registration details to re-send the register code', async () => {
+    mockParams = registerParams;
+    const { getByText } = render(<OtpVerifyScreen />);
+
+    waitOutCooldown();
+    fireEvent.press(getByText('auth.otp.resend'));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith({
+        firstName: 'Sara',
+        lastName: 'Ahmad',
+        phone: '0501234567',
+        email: 'sara@example.com',
+      });
+    });
+    expect(mockRequestLoginOtp).not.toHaveBeenCalled();
+    // Cooldown restarts after a successful resend.
+    await waitFor(() => expect(getByText('auth.otp.resendIn 60')).toBeTruthy());
+  });
+
+  it('shows an error and keeps resend available when the register resend fails', async () => {
+    mockParams = registerParams;
+    mockRegister.mockRejectedValueOnce(new Error('429'));
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { getByText } = render(<OtpVerifyScreen />);
+
+    waitOutCooldown();
+    fireEvent.press(getByText('auth.otp.resend'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('common.error', 'auth.error.generic'));
+    expect(getByText('auth.otp.resend')).toBeTruthy();
+    alertSpy.mockRestore();
+  });
+
+  it('uses the login OTP request on the login screen', async () => {
+    mockParams = loginParams;
+    const { getByText } = render(<OtpVerifyScreen />);
+
+    waitOutCooldown();
+    fireEvent.press(getByText('auth.otp.resend'));
+
+    await waitFor(() => {
+      expect(mockRequestLoginOtp).toHaveBeenCalledWith({ identifier: 'test@example.com' });
+    });
+    expect(mockRegister).not.toHaveBeenCalled();
   });
 });

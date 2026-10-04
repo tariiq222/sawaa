@@ -34,7 +34,10 @@ import {
 } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitClientPaymentDto } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
+import { InitPackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
+import { InitPackagePurchaseDto } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.dto';
 import { Public } from '../../../common/guards/jwt.guard';
+import { GetClientBankTransferSettingsHandler } from '../../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
 
 export class MobileListPaymentsQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -64,6 +67,8 @@ export class MobileClientPaymentsController {
     private readonly getInvoice: GetInvoiceHandler,
     private readonly bankTransferUpload: BankTransferUploadHandler,
     private readonly initClientPayment: InitClientPaymentHandler,
+    private readonly getClientBankTransferSettings: GetClientBankTransferSettingsHandler,
+    private readonly initPackagePurchase: InitPackagePurchaseHandler,
   ) {}
 
   @Get()
@@ -78,6 +83,36 @@ export class MobileClientPaymentsController {
       page: q.page ?? 1,
       limit: q.limit ?? 20,
     });
+  }
+
+  @Get('bank-transfer/settings')
+  @ApiOperation({ summary: 'Get client-visible bank transfer settings and accounts' })
+  @ApiOkResponse({
+    description: 'Bank transfer availability and configured recipient accounts',
+    schema: {
+      type: 'object',
+      required: ['enabled', 'accounts'],
+      properties: {
+        enabled: { type: 'boolean' },
+        accounts: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'label', 'bankName', 'beneficiaryName', 'iban'],
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              bankName: { type: 'string' },
+              beneficiaryName: { type: 'string' },
+              iban: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  getBankTransferSettings() {
+    return this.getClientBankTransferSettings.execute();
   }
 
   @Get('invoices/:id')
@@ -115,6 +150,35 @@ export class MobileClientPaymentsController {
       invoiceId: body.invoiceId,
       method: body.method,
       returnTo: 'MOBILE',
+    });
+  }
+
+  @Post('package-purchases/init')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ApiOperation({ summary: 'Initialize a Moyasar payment to self-purchase a session package' })
+  @ApiCreatedResponse({
+    description: 'Package purchase initialized (PENDING until the Moyasar payment completes)',
+    schema: {
+      type: 'object',
+      required: ['purchaseId', 'invoiceId', 'paymentId', 'redirectUrl'],
+      properties: {
+        purchaseId: { type: 'string', format: 'uuid' },
+        invoiceId: { type: 'string', format: 'uuid' },
+        paymentId: { type: 'string', format: 'uuid' },
+        redirectUrl: { type: 'string', example: 'https://checkout.moyasar.com/pay/payment-id' },
+      },
+    },
+  })
+  initPackagePurchaseEndpoint(
+    @ClientSession() user: ClientSession,
+    @Body() body: InitPackagePurchaseDto,
+  ) {
+    return this.initPackagePurchase.execute({
+      clientId: user.id,
+      idempotencyKey: body.idempotencyKey,
+      packageId: body.packageId,
+      packageFamilyId: body.packageFamilyId,
+      branchId: body.branchId,
     });
   }
 

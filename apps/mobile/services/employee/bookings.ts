@@ -25,6 +25,21 @@ interface GetBookingsParams {
   limit?: number;
 }
 
+/**
+ * Host-side meeting details from GET /mobile/employee/bookings/{id}/start-meeting.
+ * The booking detail payload never carries the Zoom host link or exact timing
+ * (`scheduledAt` / `durationMins`); this is the only place they come from.
+ */
+export interface EmployeeMeetingStart {
+  bookingId: string;
+  /** Exact UTC instant of the session start. */
+  scheduledAt: string;
+  durationMins: number;
+  meetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
+  /** Host link; null until the meeting has been created. */
+  startUrl: string | null;
+}
+
 export interface EmployeeBookingPage {
   items: Booking[];
   meta: {
@@ -49,7 +64,7 @@ function sortByBookingTime(a: Booking, b: Booking) {
   return bookingTimestamp(a) - bookingTimestamp(b);
 }
 
-function businessDateToday() {
+export function getEmployeeBusinessDateToday() {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Riyadh',
     year: 'numeric',
@@ -101,6 +116,13 @@ export const employeeBookingsService = {
     return { success: true as const, data: response.data };
   },
 
+  async getMeetingStart(id: string) {
+    const response = await api.get<EmployeeMeetingStart>(
+      `/mobile/employee/bookings/${id}/start-meeting`,
+    );
+    return response.data;
+  },
+
   async create(data: CreateEmployeeBookingData) {
     const response = await api.post<Booking>('/mobile/employee/bookings', data);
     return { success: true as const, data: response.data };
@@ -122,7 +144,7 @@ export const employeeBookingsService = {
   },
 
   async getUpcoming() {
-    const fromDate = businessDateToday();
+    const fromDate = getEmployeeBusinessDateToday();
     const now = Date.now();
     const candidates = await Promise.all(
       (['pending', 'confirmed'] as const).map((status) =>

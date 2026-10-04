@@ -18,6 +18,7 @@ export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDa
   toDate?: Date;
   role?: string | null;
   userId?: string;
+  clientTab?: 'upcoming' | 'past' | 'cancelled';
 };
 
 /**
@@ -110,17 +111,21 @@ export class ListBookingsHandler {
     if (searchTerm) {
       const tokens = searchTerm.split(/\s+/).filter(Boolean);
       const orConditions: Prisma.ClientWhereInput[] = [
+        { name: { contains: searchTerm, mode: 'insensitive' } },
         { firstName: { contains: searchTerm, mode: 'insensitive' } },
+        { middleName: { contains: searchTerm, mode: 'insensitive' } },
         { lastName: { contains: searchTerm, mode: 'insensitive' } },
         { phone: { contains: searchTerm, mode: 'insensitive' } },
       ];
-      // Full name spanning firstName + lastName (e.g. "اختبار دفع 13855"):
-      // require every token to appear in either name field.
+      // Require every full-name token in a name component or the synchronized
+      // legacy name, including clients whose middle name contains several words.
       if (tokens.length > 1) {
         orConditions.push({
           AND: tokens.map((tok) => ({
             OR: [
+              { name: { contains: tok, mode: 'insensitive' } },
               { firstName: { contains: tok, mode: 'insensitive' } },
+              { middleName: { contains: tok, mode: 'insensitive' } },
               { lastName: { contains: tok, mode: 'insensitive' } },
             ],
           })),
@@ -133,7 +138,14 @@ export class ListBookingsHandler {
       searchClientIds = matched.map((c) => c.id);
     }
 
+    // Mobile tabs classify by lifecycle status, independent of appointment date.
+    const pastStatuses = ['COMPLETED', 'NO_SHOW'];
+    const cancelledStatuses = ['CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'];
+    const tabStatus = query.clientTab === 'past' ? { in: pastStatuses }
+      : query.clientTab === 'cancelled' ? { in: cancelledStatuses }
+      : { notIn: [...pastStatuses, ...cancelledStatuses] };
     const where: Record<string, unknown> = {
+      ...(query.clientTab ? { AND: [{ status: tabStatus }] } : {}),
       ...sourceClientWhere,
       ...(query.clientId ? { clientId: query.clientId } : {}),
       ...(query.employeeId ? { employeeId: query.employeeId } : {}),
@@ -167,7 +179,7 @@ export class ListBookingsHandler {
         where,
         skip: (query.page - 1) * query.limit,
         take: query.limit,
-        orderBy: { scheduledAt: 'asc' },
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
         // See BOOKING_LIST_SELECT — narrow SELECT keeps the dashboard list
         // independent of columns that may not yet exist on every dev DB.
         select: BOOKING_LIST_SELECT,

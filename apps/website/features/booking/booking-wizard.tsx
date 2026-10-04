@@ -33,7 +33,7 @@ function IconButton({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="grid place-items-center h-10 w-10 rounded-full cursor-pointer transition-all bg-white"
+      className="grid place-items-center h-10 w-10 rounded-full cursor-pointer transition-all bg-[var(--surface)]"
       style={{
         color: 'var(--sw-secondary-700)',
         border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
@@ -158,7 +158,7 @@ function PractitionerChoicePicker({
               <button
                 type="button"
                 onClick={() => onSelect({ durationOptionId: opt.durationOptionId, deliveryType: opt.deliveryType })}
-                className="w-full text-start rounded-[1.25rem] bg-white transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+                className="w-full text-start rounded-[1.25rem] bg-[var(--surface)] transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                 style={{
                   border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                   boxShadow: 'var(--sw-shadow-xs)',
@@ -181,6 +181,11 @@ function PractitionerChoicePicker({
                     </span>
                     <span className="text-[0.8125rem] font-medium" style={{ color: 'var(--sw-body)' }}>
                       {`${opt.durationMins} ${isAr ? 'دقيقة' : 'min'}`}
+                    </span>
+                    <span className="text-[0.75rem]" style={{ color: 'var(--sw-neutral-500)' }}>
+                      {opt.deliveryType === 'ONLINE'
+                        ? t('booking.delivery.onlineNote')
+                        : t('booking.delivery.inPersonNote')}
                     </span>
                   </div>
                   <div className="flex flex-col items-end shrink-0 gap-0.5">
@@ -231,7 +236,7 @@ function BookingWizardInner() {
         <div className="mx-auto w-full max-w-[1024px] px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <div className="flex items-center gap-2">
-              <IconButton onClick={w.handleClose} ariaLabel="إغلاق">
+              <IconButton onClick={w.handleClose} ariaLabel={w.t('common.close')}>
                 <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M4 4l8 8M12 4l-8 8" />
                 </svg>
@@ -276,7 +281,7 @@ function BookingWizardInner() {
               {(w.loadError || w.submitError) && (
                 <div
                   role="alert"
-                  className="mb-6 flex items-start gap-3 rounded-2xl px-4 py-3 text-sm bg-white"
+                  className="mb-6 flex items-start gap-3 rounded-2xl px-4 py-3 text-sm bg-[var(--surface)]"
                   style={{
                     color: 'var(--error)',
                     border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
@@ -321,7 +326,7 @@ function BookingWizardInner() {
               <div key={w.screenKey} className="sw-step-in">
                 {w.nothingBookable && (
                   <div
-                    className="flex flex-col items-center text-center gap-4 px-6 py-14 rounded-[1.25rem] bg-white"
+                    className="flex flex-col items-center text-center gap-4 px-6 py-14 rounded-[1.25rem] bg-[var(--surface)]"
                     style={{
                       border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 18%, transparent)',
                       boxShadow: 'var(--sw-shadow-xs)',
@@ -354,7 +359,7 @@ function BookingWizardInner() {
                       className="mt-2 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99]"
                       style={{
                         background: 'var(--primary)',
-                        color: '#FFFFFF',
+                        color: 'var(--on-primary)',
                         boxShadow: 'var(--sw-shadow-primary)',
                       }}
                     >
@@ -445,6 +450,8 @@ function BookingWizardInner() {
                     employee={w.employee}
                     vatRate={w.vatRate}
                     selectedPriceHalalas={w.selectedPriceHalalas}
+                    paymentMethods={w.paymentMethods}
+                    paymentMethodsLoading={w.paymentMethodsLoading}
                     onBack={w.handleBackFromInfo}
                     onSubmitInfo={w.handleSubmitInfo}
                     isSubmitting={w.isSubmitting}
@@ -458,7 +465,7 @@ function BookingWizardInner() {
                         <div
                           className="sw-pop-in inline-flex h-16 w-16 items-center justify-center rounded-full"
                           style={{
-                            background: 'color-mix(in srgb, var(--primary) 14%, #FFFFFF)',
+                            background: 'color-mix(in srgb, var(--primary) 14%, var(--surface))',
                             color: 'var(--primary-dark)',
                             boxShadow: '0 0 0 8px color-mix(in srgb, var(--primary) 6%, transparent)',
                           }}
@@ -479,7 +486,7 @@ function BookingWizardInner() {
                         <div
                           className="sw-pop-in inline-flex h-16 w-16 items-center justify-center rounded-full"
                           style={{
-                            background: 'color-mix(in srgb, var(--error) 10%, #FFFFFF)',
+                            background: 'color-mix(in srgb, var(--error) 10%, var(--surface))',
                             color: 'var(--error)',
                             boxShadow: '0 0 0 8px color-mix(in srgb, var(--error) 5%, transparent)',
                           }}
@@ -502,7 +509,7 @@ function BookingWizardInner() {
                       className="mt-2 inline-flex items-center justify-center px-7 py-3 rounded-full text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99] cursor-pointer"
                       style={{
                         background: 'var(--primary)',
-                        color: '#FFFFFF',
+                        color: 'var(--on-primary)',
                         boxShadow: 'var(--sw-shadow-primary)',
                       }}
                     >

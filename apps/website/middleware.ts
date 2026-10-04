@@ -8,7 +8,7 @@
  *      — without it, the client bundle refuses to boot and the booking
  *      wizard renders skeletons forever. The production CSP stays
  *      byte-for-byte locked down.
- *   2. Redirects unauthenticated users away from /account, /booking/confirm.
+ *   2. Redirects unauthenticated users away from /account.
  *   3. Redirects authenticated users away from the auth pages to /account.
  *
  * Combining both concerns in one middleware means the auth redirect and
@@ -18,7 +18,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PROTECTED_PATHS = ['/account', '/booking/confirm']
+const PROTECTED_PATHS = ['/account']
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password']
 const LOCAL_SIGNED_OUT_COOKIE = 'sawa_local_signed_out'
 
@@ -116,7 +116,7 @@ export function middleware(request: NextRequest): NextResponse {
   // 2. CSP nonce for everything else.
   const nonce = crypto
     .randomUUID()
-    .replace(/-/g, '')
+    .replaceAll('-', '')
     .slice(0, 16)
 
   const requestHeaders = new Headers(request.headers)

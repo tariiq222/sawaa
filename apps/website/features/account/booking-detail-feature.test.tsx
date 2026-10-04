@@ -18,11 +18,13 @@ vi.mock('@/features/auth/public', () => ({
 
 vi.mock('@/features/auth/auth.api', () => ({
   getMyBookingApi: vi.fn(),
+  getMyCancellationPreviewApi: vi.fn(),
   cancelMyBookingApi: vi.fn(),
   rescheduleMyBookingApi: vi.fn(),
 }));
 
 vi.mock('@/features/booking/booking.api', () => ({
+  getPublicPaymentMethods: vi.fn().mockResolvedValue({ moyasarEnabled: true, atClinicEnabled: true }),
   initPayment: vi.fn(),
 }));
 
@@ -40,10 +42,15 @@ vi.mock('@/features/intake/intake-forms-section', () => ({
 }));
 
 import { BookingDetailFeature } from './booking-detail-feature';
-import { getMyBookingApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
+import { getMyBookingApi, getMyCancellationPreviewApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
 import { riyadhWallTimeToUtcIso } from '@/features/booking/booking-timezone';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
+
+const previewMock = vi.mocked(getMyCancellationPreviewApi);
+const policyRefund = { status: 'PENDING_REVIEW' as const, paidAmount: 10000, alreadyRefundedAmount: 0, pendingRefundAmount: 0, refundAmount: 5000, refundPercent: 50, currency: 'SAR', execution: 'REVIEW' as const, window: 'LATE' as const };
+const preview = { policyEnabled: true, canCancel: true, reasonCode: 'ALLOWED' as const, cutoffAt: '2099-01-01T00:00:00Z', quoteToken: 'quote-1', refund: policyRefund };
+beforeEach(() => { previewMock.mockReset(); previewMock.mockResolvedValue({ ...preview, policyEnabled: false }); });
 
 const getBookingMock = vi.mocked(getMyBookingApi);
 const cancelMock = vi.mocked(cancelMyBookingApi);
@@ -87,6 +94,7 @@ function booking(overrides: Partial<ClientBookingItem> = {}): ClientBookingItem 
 
 async function openCancelAndConfirm() {
   fireEvent.click(await screen.findByRole('button', { name: 'إلغاء الموعد' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'نعم، ألغِ الموعد' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'نعم، ألغِ الموعد' }));
 }
 
@@ -96,6 +104,13 @@ describe('BookingDetailFeature', () => {
     refreshMock.mockReset();
     getBookingMock.mockReset();
     cancelMock.mockReset();
+  });
+
+  it('allows a deposit-confirmed client to reschedule and join the online appointment', async () => {
+    getBookingMock.mockResolvedValue(booking({ status: 'DEPOSIT_PAID', invoiceStatus: 'PARTIALLY_PAID', deliveryType: 'ONLINE', zoomJoinUrl: 'https://zoom.us/j/deposit' }));
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    expect(await screen.findByRole('button', { name: 'Reschedule' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Join/ })).toHaveAttribute('href', 'https://zoom.us/j/deposit');
   });
 
   it('renders the price converted from halalas to SAR (regression: 20000 → 200.00)', async () => {
@@ -313,4 +328,70 @@ describe('BookingDetailFeature reschedule timezone conversion', () => {
     // The modal stays open so the client can retry with a valid time.
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
+});
+
+
+describe('cancellation policy preview', () => {
+  beforeEach(() => { cancelMock.mockReset(); getBookingMock.mockResolvedValue(booking()); previewMock.mockResolvedValue(preview); });
+  it('shows the refund amount before confirmation and keeps the pending-review outcome visible', async () => {
+    cancelMock.mockResolvedValue({ status: 'CANCELLED', requiresApproval: false, refund: policyRefund });
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText(/50.00 SAR/)).toBeTruthy();
+    expect(cancelMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel booking' }));
+    await waitFor(() => expect(cancelMock).toHaveBeenCalledWith('bk_1', undefined, expect.objectContaining({ quoteToken: 'quote-1', sourceActionId: expect.any(String) })));
+    expect(await screen.findByText('Refund awaiting staff review')).toBeTruthy();
+  });
+  it('shows the server rejection and prevents cancellation', async () => {
+    previewMock.mockResolvedValue({ ...preview, canCancel: false, reasonCode: 'CUTOFF_PASSED' });
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText('The cancellation cutoff has passed. Contact the center.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Yes, cancel booking' })).toBeNull();
+  });
+  it('reloads a stale quote without retrying cancellation until a second confirmation', async () => {
+    cancelMock.mockRejectedValueOnce({ status: 409 });
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await screen.findByText(/50.00 SAR/);
+    previewMock.mockResolvedValue({ ...preview, quoteToken: 'quote-2', refund: { ...policyRefund, refundAmount: 2500, refundPercent: 25 } });
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel booking' }));
+    expect(await screen.findByText(/25.00 SAR/)).toBeTruthy();
+    expect(cancelMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel booking' }));
+    await waitFor(() => expect(cancelMock).toHaveBeenCalledTimes(2));
+  });
+  it.each([
+    ['NOT_APPLICABLE', 'NONE', 'No payment needs a refund.'],
+    ['NO_REFUND', 'NONE', 'No monetary refund is due for this cancellation.'],
+    ['PROCESSING', 'AUTOMATIC', 'The refund will start automatically after cancellation.'],
+    ['CREDIT_RETURNED', 'NONE', 'Session credit will be returned after cancellation; no monetary refund.'],
+  ] as const)('shows truthful %s policy before cancellation', async (status, execution, message) => {
+    previewMock.mockResolvedValue({ ...preview, refund: { ...policyRefund, status, execution, refundAmount: status === 'PROCESSING' ? 5000 : 0 } });
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(cancelMock).not.toHaveBeenCalled();
+  });
+  it.each([
+    ['PROCESSING', 'Refund processing; not completed yet'],
+    ['PENDING_REVIEW', 'Refund awaiting staff review'],
+    ['COMPLETED', 'Monetary refund completed'],
+    ['FAILED', 'Refund failed. Contact the center.'],
+  ] as const)('retains persisted %s on reopening', async (status, message) => {
+    getBookingMock.mockResolvedValue({ ...booking({ status: 'CANCELLED' }), cancellationRefund: { ...policyRefund, status, completedAmount: status === 'COMPLETED' ? 5000 : 0, failedAmount: status === 'FAILED' ? 5000 : 0 } });
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+  });
+  it('does not bypass preview network or authentication errors', async () => {
+    previewMock.mockRejectedValue({ status: 401 });
+    render(wrap('en', <BookingDetailFeature bookingId="bk_1" locale="en" />));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await screen.findByRole('alert');
+    expect(screen.getByRole('button', { name: 'Yes, cancel booking' })).toBeDisabled();
+    expect(cancelMock).not.toHaveBeenCalled();
+  });
+
 });

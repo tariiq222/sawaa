@@ -72,6 +72,32 @@ describe('UpdateProgramHandler', () => {
     jest.clearAllMocks();
   });
 
+  describe('capacity vs enrolled participants', () => {
+    it('rejects lowering maxParticipants below the locked enrolled count', async () => {
+      tx.program.findUnique.mockResolvedValue({ ...baseExisting(), status: ProgramStatus.OPEN, enrolledCount: 3 });
+      // A concurrent enrollment raised the count to 6 before the lock.
+      tx.$queryRaw.mockResolvedValueOnce([{ enrolledCount: 6 }]);
+
+      await expect(handler.execute(PROGRAM_ID, { maxParticipants: 5, minParticipants: 1 } as UpdateProgramDto))
+        .rejects.toThrow(BadRequestException);
+      expect(tx.program.update).not.toHaveBeenCalled();
+    });
+
+    it('allows a capacity equal to the enrolled count', async () => {
+      tx.program.findUnique.mockResolvedValue({ ...baseExisting(), status: ProgramStatus.OPEN, enrolledCount: 6 });
+      tx.$queryRaw.mockResolvedValueOnce([{ enrolledCount: 6 }]);
+
+      await handler.execute(PROGRAM_ID, { maxParticipants: 6, minParticipants: 1 } as UpdateProgramDto);
+      expect(tx.program.update).toHaveBeenCalled();
+    });
+
+    it('does not lock or check when capacity is not being changed', async () => {
+      tx.program.findUnique.mockResolvedValue({ ...baseExisting(), enrolledCount: 6 });
+      await handler.execute(PROGRAM_ID, { nameAr: 'اسم' } as UpdateProgramDto);
+      expect(tx.$queryRaw).not.toHaveBeenCalled();
+    });
+  });
+
   it('updates the existing program row and returns id + status + supervisors', async () => {
     const dto: UpdateProgramDto = {
       departmentId: DEPARTMENT_ID,

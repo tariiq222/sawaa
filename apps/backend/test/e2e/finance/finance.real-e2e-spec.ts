@@ -351,6 +351,65 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
   // INVOICE LIFECYCLE
   // ═══════════════════════════════════════════════════════════════════════════
 
+  describe("VAT follows OrganizationSettings for every booking invoice path", () => {
+    async function withVatRate<T>(rate: string, fn: () => Promise<T>): Promise<T> {
+      const existing = await prisma.organizationSettings.findFirst({});
+      const previous = existing?.vatRate ?? null;
+      const id = existing
+        ? (await prisma.organizationSettings.update({ where: { id: existing.id }, data: { vatRate: rate } })).id
+        : (await prisma.organizationSettings.create({ data: { vatRate: rate } })).id;
+      try {
+        return await fn();
+      } finally {
+        if (existing) await prisma.organizationSettings.update({ where: { id }, data: { vatRate: previous ?? "0" } });
+        else await prisma.organizationSettings.delete({ where: { id } });
+      }
+    }
+
+    async function ensureInvoice(bookingId: string) {
+      const res = await withAuth(ctx.authToken)(
+        api().post(`/api/v1/dashboard/finance/bookings/${bookingId}/invoice`),
+      ).send({});
+      expect(res.status).toBe(201);
+      const row = await prisma.invoice.findUniqueOrThrow({ where: { bookingId } });
+      ctx.invoiceIds.push(row.id);
+      return row;
+    }
+
+    it("ensure-booking-invoice adds VAT on top when the setting is 15%", async () => {
+      await withVatRate("0.15", async () => {
+        const row = await ensureInvoice(await seedBooking(20_000));
+        expect(Number(row.vatRate)).toBe(0.15);
+        expect(Number(row.vatAmt)).toBe(3_000);
+        expect(Number(row.total)).toBe(23_000);
+      });
+    });
+
+    it("ensure-booking-invoice charges no VAT when the setting is 0", async () => {
+      await withVatRate("0", async () => {
+        const row = await ensureInvoice(await seedBooking(20_000));
+        expect(Number(row.vatRate)).toBe(0);
+        expect(Number(row.vatAmt)).toBe(0);
+        expect(Number(row.total)).toBe(20_000);
+      });
+    });
+
+    it("a manual invoice without a rate follows the setting", async () => {
+      await withVatRate("0.15", async () => {
+        const bookingId = await seedBooking(10_000);
+        const res = await withAuth(ctx.authToken)(api().post("/api/v1/dashboard/finance/invoices")).send({
+          branchId: ctx.branchId, clientId: ctx.clientId, employeeId: ctx.employeeId,
+          bookingId, subtotal: 10_000, discountAmt: 2_000,
+        });
+        expect(res.status).toBe(201);
+        ctx.invoiceIds.push(res.body.id);
+        // (10000 − 2000) × 0.15 = 1200 → total 9200
+        expect(Number(res.body.vatAmt)).toBe(1_200);
+        expect(Number(res.body.total)).toBe(9_200);
+      });
+    });
+  });
+
   describe("Invoice lifecycle: create, list, get", () => {
     it("creates an invoice with exact halala amounts persisted (no float drift)", async () => {
       const bookingId = await seedBooking(23_499);
@@ -723,6 +782,33 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
   // ═══════════════════════════════════════════════════════════════════════════
   // REFUND FLOW — happy path + over-refund rejection
   // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("Refund VAT accumulates across partial cash refunds", () => {
+    it("three partial manual refunds refund exactly the invoice VAT", async () => {
+      // subtotal 10000 + 15% VAT 1500 = 11500, paid in cash (off-gateway).
+      const invoice = await seedIssuedInvoice({ subtotalHalalas: 10_000, vatRate: 0.15 });
+      const pay = await withAuth(ctx.authToken)(api().post("/api/v1/dashboard/finance/payments"))
+        .send({ invoiceId: invoice.id, amount: 11_500, method: "CASH" });
+      expect(pay.status).toBe(201);
+      const paymentId = pay.body.id ?? pay.body.payment?.id;
+      expect(paymentId).toBeTruthy();
+      // Track it so cleanup removes refunds + payment before the invoices.
+      ctx.paymentIds.push(paymentId);
+
+      // Proportional shares alone would give 131 + 684 + 684 = 1499.
+      for (const amount of [1_007, 5_246, 5_247]) {
+        const res = await withAuth(ctx.authToken)(
+          api().patch(`/api/v1/dashboard/finance/payments/${paymentId}/manual-refund`),
+        ).send({ amount, reason: "partial cash refund" });
+        expect(res.status).toBe(200);
+      }
+
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
+      expect(after.status).toBe("REFUNDED");
+      expect(Number(after.refundedAmount)).toBe(11_500);
+      expect(Number(after.refundedVatAmt)).toBe(1_500);
+    });
+  });
 
   describe("Refund: happy path + over-refund rejection", () => {
     async function seedCompletedPaymentWithGatewayRef(amount: number) {

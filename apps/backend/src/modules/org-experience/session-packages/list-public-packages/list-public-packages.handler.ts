@@ -1,3 +1,4 @@
+import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.handler';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
@@ -48,11 +49,15 @@ export class ListPublicPackagesHandler {
   }
 
   async execute() {
-    return this.cache.getOrSet(
+    const packages = await this.cache.getOrSet(
       PUBLIC_PACKAGES_CACHE_KEY,
       () => this.load(),
       PUBLIC_PACKAGES_CACHE_TTL_SECONDS,
     );
+    // Prices are net; the purchase invoice adds VAT at this rate. Read outside
+    // the cache so a rate change applies immediately.
+    const vatRate = (await resolveVatRate(this.prisma)).toNumber();
+    return packages.map((pkg) => ({ ...pkg, vatRate }));
   }
 
   private async load() {

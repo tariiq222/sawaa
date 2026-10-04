@@ -38,7 +38,8 @@ const publicPackage = {
 };
 
 function buildPrisma() {
-  return { sessionPackage: { findMany: jest.fn() } };
+  return { organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
+    sessionPackage: { findMany: jest.fn() } };
 }
 
 const PUBLIC_PRICE = {
@@ -96,6 +97,19 @@ function buildHandler(
 
 describe('ListPublicPackagesHandler', () => {
   afterEach(() => jest.clearAllMocks());
+
+  it('attaches the current VAT rate even when the package list comes from cache', async () => {
+    const { handler, prisma } = buildHandler();
+    prisma.sessionPackage.findMany.mockResolvedValue([publicPackage]);
+
+    const first = (await handler.execute()) as Array<{ vatRate: number }>;
+    expect(first[0].vatRate).toBe(0);
+
+    prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
+    const second = (await handler.execute()) as Array<{ vatRate: number }>;
+    expect(prisma.sessionPackage.findMany).toHaveBeenCalledTimes(1); // served from cache
+    expect(second[0].vatRate).toBe(0.15);
+  });
 
   it('queries ONLY public + active + non-archived packages', async () => {
     const { handler, prisma } = buildHandler();

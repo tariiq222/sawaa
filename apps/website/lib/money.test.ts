@@ -33,6 +33,10 @@ describe('money helpers', () => {
       expect(grossWithVat(10000, 0)).toBe(10000);
     });
 
+    it('rounds an exact half up despite float noise (5000 × 0.0003 = 1.5 → 2)', () => {
+      expect(grossWithVat(5000, 0.0003)).toBe(5002);
+    });
+
     it('zero amount stays zero', () => {
       expect(grossWithVat(0, 0.15)).toBe(0);
     });

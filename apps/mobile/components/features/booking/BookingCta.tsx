@@ -1,14 +1,14 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { StyleSheet, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { sawaaColors, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-import { FloatingActionBar } from '@/components/ui/FloatingActionBar';
-import { useReduceMotion } from '@/hooks/useA11y';
+import { FloatingCta } from '@/components/ui/FloatingCta';
 import type { DirState } from '@/hooks/useDir';
 import { formatTime, type Slot } from './TimeSlotsGrid';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 
 const DAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const DAYS_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -16,78 +16,53 @@ const DAYS_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 interface BookingCtaProps {
   selectedDay: Date;
   selectedSlot: Slot | null;
+  chargedPrice?: string;
+  currency?: string;
   onConfirm: () => void;
   dir: DirState;
   f400: string;
   f700: string;
 }
 
+/** Step-1 action: the selected day, time and price on one caption line above «متابعة». */
 export function BookingCta({
   selectedDay,
   selectedSlot,
+  chargedPrice,
+  currency,
   onConfirm,
   dir,
   f400,
   f700,
 }: BookingCtaProps) {
-  const reduceMotion = useReduceMotion();
-  const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
+  const colors = useSawaaColors();
+  const { t } = useTranslation();
   const dayLabel = dir.isRTL ? DAYS_AR[selectedDay.getDay()] : DAYS_EN_SHORT[selectedDay.getDay()];
   const dayNum = dir.isRTL ? selectedDay.getDate().toLocaleString('ar-SA') : selectedDay.getDate();
+  const price = chargedPrice != null && chargedPrice.trim() !== '' ? Number(chargedPrice) : NaN;
+  const parts: string[] = [];
+  if (selectedSlot) parts.push(`${dayLabel} ${dayNum} · ${formatTime(selectedSlot.startTime, dir.isRTL)}`);
+  if (Number.isFinite(price)) parts.push(formatCurrencyAmount(price, currency, dir.isRTL));
 
   return (
-    <Animated.View
-      entering={reduceMotion ? undefined : FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}
-      style={StyleSheet.absoluteFill}
-      pointerEvents="box-none"
-    >
-      <FloatingActionBar>
-        <View style={styles.summary}>
-          <Text
-            style={[
-              styles.summaryTop,
-              { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            {selectedSlot
-              ? `${dayLabel} ${dayNum} · ${formatTime(selectedSlot.startTime, dir.isRTL)}`
-              : dir.isRTL
-                ? 'اختاري وقتاً'
-                : 'Pick a time'}
-          </Text>
-          <Text
-            style={[
-              styles.summaryBot,
-              { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            {dir.isRTL ? 'تأمين مقبول' : 'Insurance accepted'}
-          </Text>
-        </View>
-        <PrimaryButton
-          label={dir.isRTL ? 'تأكيد' : 'Confirm'}
-          onPress={onConfirm}
-          disabled={!selectedSlot}
-          fontFamily={f700}
-          height={46}
-          icon={<GoIcon size={14} color={sawaaColors.teal[50]} strokeWidth={2} />}
-        />
-      </FloatingActionBar>
-    </Animated.View>
+    <FloatingCta>
+      {parts.length > 0 ? (
+        <Text
+          style={[styles.caption, { color: colors.ink[700], fontFamily: f400, textAlign: 'center', writingDirection: dir.writingDirection }]}
+        >
+          {parts.join('  ·  ')}
+        </Text>
+      ) : null}
+      <PrimaryButton
+        label={t('booking.continue')}
+        onPress={onConfirm}
+        disabled={!selectedSlot}
+        fontFamily={f700}
+      />
+    </FloatingCta>
   );
 }
 
 const styles = StyleSheet.create({
-  summary: { flex: 1, paddingHorizontal: sawaaSpacing.sm },
-  summaryTop: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
-  },
-  summaryBot: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[900],
-    marginTop: sawaaSpacing.xs,
-  },
+  caption: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight + 2 },
 });

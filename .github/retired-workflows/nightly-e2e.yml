@@ -1,0 +1,305 @@
+name: Nightly E2E
+
+# The full Playwright "flows" suite (~138 specs) is too slow to gate every PR,
+# so it runs on a nightly schedule and on-demand via workflow_dispatch. PRs are
+# still gated by the fast smoke suite in ci.yml (dashboard-smoke job). The
+# dashboard-flows job mirrors that smoke job's environment setup (postgres +
+# redis service containers, MinIO container, seeded DB, booted backend) but
+# runs e2e:flows. The backend-real-e2e job runs the *.real-e2e-spec.ts suites
+# (skipped on PR CI because REAL_E2E_DATABASE_URL is unset there) against a
+# real migrated Postgres.
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dashboard-flows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd "pg_isready -U test -d sawaa_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start MinIO
+        uses: ./.github/actions/start-minio
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+
+      - name: Build shared packages
+        run: pnpm --filter=@sawaa/shared build
+
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+
+      - name: Seed database
+        run: pnpm --filter=backend seed
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          MOYASAR_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          AI_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+          SUPER_ADMIN_PASSWORD: SuperAdmin@123456
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter=dashboard exec playwright install --with-deps chromium
+
+      - name: Start backend and wait for health
+        run: |
+          pnpm --filter=backend exec nest start > apps/backend/backend-flows.log 2>&1 &
+          echo $! > apps/backend/backend-flows.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5200/api/v1/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          cat apps/backend/backend-flows.log
+          exit 1
+        env:
+          NODE_ENV: test
+          PORT: 5200
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          JWT_REFRESH_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          JWT_OTP_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          JWT_CLIENT_ACCESS_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          CHAT_GUEST_TOKEN_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          MOYASAR_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          AI_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          SMS_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          ZOOM_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          EMAIL_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          AUTHENTICA_API_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+          SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+          SUPER_ADMIN_PASSWORD: SuperAdmin@123456
+          CORS_ORIGINS: http://localhost:5203
+          DASHBOARD_PUBLIC_URL: http://localhost:5203
+          API_PUBLIC_URL: http://localhost:5200
+          PUBLIC_WEBSITE_URL: http://localhost:5205
+          THROTTLER_DISABLED: true
+
+      - name: Run dashboard e2e flows
+        run: pnpm --filter=dashboard run e2e:flows
+        env:
+          PW_API_URL: http://localhost:5200
+          PW_DASHBOARD_URL: http://localhost:5203
+          NEXT_PUBLIC_API_URL: http://localhost:5200/api/v1
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-flows-playwright-artifacts
+          path: |
+            apps/dashboard/playwright-report/
+            apps/dashboard/test-results/
+            apps/backend/backend-flows.log
+          if-no-files-found: ignore
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend real-database e2e (*.real-e2e-spec.ts)
+  # ───────────────────────────────────────────────────────────────────────────
+  # These suites boot AppModule against a real migrated Postgres (no Prisma
+  # mock) and self-skip on PR CI because REAL_E2E_DATABASE_URL is unset there.
+  # The specs seed their own data in beforeAll, so no `pnpm seed` step is
+  # needed — only migrations. --runInBand is required: the booking-scenarios
+  # suite truncates shared tables in its cleanup, which would race with the
+  # other real-e2e suites if jest ran them in parallel workers.
+  backend-real-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd "pg_isready -U test -d sawaa_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start MinIO
+        uses: ./.github/actions/start-minio
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+
+      - name: Real-database e2e tests
+        run: pnpm --filter=backend test:e2e -- --runInBand --testPathPattern 'real-e2e-spec'
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          JWT_REFRESH_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          JWT_OTP_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          JWT_CLIENT_ACCESS_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          CHAT_GUEST_TOKEN_SECRET: GENERATED_SYNTHETIC_CI_FIXTURE
+          MOYASAR_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          AI_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          SMS_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          ZOOM_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          EMAIL_PROVIDER_ENCRYPTION_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          AUTHENTICA_API_KEY: GENERATED_SYNTHETIC_CI_FIXTURE
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+
+  # Keep the full real-database suite above and run the transport contract in
+  # its own isolated Redis namespace. The test may stop only this container
+  # during its controlled post-commit fault injection.
+  backend-outbox-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd "pg_isready -U test -d sawaa_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Start dedicated test Redis
+        run: |
+          redis_id=$(docker run -d --name sawaa-safe-ci-redis --label sawaa.test=true -p 35454:6379 redis:7-alpine)
+          echo "OUTBOX_TEST_REDIS_CONTAINER=$redis_id" >> "$GITHUB_ENV"
+          echo "OUTBOX_TEST_REDIS_PORT=35454" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            docker exec "$redis_id" redis-cli ping 2>/dev/null | grep -q '^PONG$' && break
+            sleep 1
+          done
+          docker exec "$redis_id" redis-cli ping | grep -q '^PONG$'
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+      - name: Run real outbox transport tests
+        run: pnpm --filter=backend test:e2e:outbox
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 35454
+          OUTBOX_TEST_REDIS_TARGET: ci
+          OUTBOX_TEST_ALLOW_REDIS_FAULT: '1'
+      - name: Ensure dedicated Redis is running for teardown
+        if: always()
+        run: docker start "$OUTBOX_TEST_REDIS_CONTAINER" >/dev/null 2>&1 || true
+      - name: Upload outbox transport artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-outbox-transport-results
+          path: apps/backend/test-results-outbox.json
+          if-no-files-found: ignore

@@ -57,13 +57,14 @@ describe('middleware', () => {
       expect(url.searchParams.get('redirect')).toBe('/account/bookings/abc');
     });
 
-    it('redirects /booking/confirm to /login with redirect query', () => {
+    it('passes through /booking/confirm without redirect for unauthenticated users', () => {
       const res = middleware(makeRequest('/booking/confirm'));
-      const location = res.headers.get('location');
-      expect(location).toBeTruthy();
-      const url = new URL(location!);
-      expect(url.pathname).toBe('/login');
-      expect(url.searchParams.get('redirect')).toBe('/booking/confirm');
+      expect(res.headers.get('location')).toBeNull();
+    });
+
+    it('passes through /booking/confirm with query parameters without redirect for unauthenticated users', () => {
+      const res = middleware(makeRequest('/booking/confirm?bookingId=550e8400-e29b-41d4-a716-446655440000&invoiceId=550e8400-e29b-41d4-a716-446655440001'));
+      expect(res.headers.get('location')).toBeNull();
     });
 
     it('passes through non-protected paths without redirect', () => {
@@ -94,6 +95,11 @@ describe('middleware', () => {
       const res = middleware(makeRequest('/account', { authed: true }));
       expect(res.headers.get('location')).toBeNull();
     });
+
+    it('does not redirect /booking/confirm when authenticated', () => {
+      const res = middleware(makeRequest('/booking/confirm', { authed: true }));
+      expect(res.headers.get('location')).toBeNull();
+    });
   });
 
   describe('locally invalidated session', () => {
@@ -107,6 +113,11 @@ describe('middleware', () => {
       const location = res.headers.get('location');
       expect(location).toBeTruthy();
       expect(new URL(location!).pathname).toBe('/login');
+    });
+
+    it('passes through /booking/confirm for signed-out users despite locally signed-out marker', () => {
+      const res = middleware(makeRequest('/booking/confirm', { locallySignedOut: true }));
+      expect(res.headers.get('location')).toBeNull();
     });
   });
 

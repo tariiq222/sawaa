@@ -12,9 +12,43 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
 ];
 
+function normalizeWebsiteApiProxyUrl(value) {
+  const raw = value?.trim();
+  if (!raw) return null;
+
+  let target;
+  try {
+    target = new URL(raw);
+  } catch {
+    throw new Error('WEBSITE_API_PROXY_URL must be an absolute HTTP(S) URL');
+  }
+
+  if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+    throw new Error('WEBSITE_API_PROXY_URL must use HTTP or HTTPS');
+  }
+  if (target.username || target.password || target.search || target.hash) {
+    throw new Error('WEBSITE_API_PROXY_URL cannot include credentials, query, or fragment');
+  }
+
+  const apiPath = target.pathname.replace(/\/+$/, '');
+  target.pathname = apiPath.endsWith('/api/v1') ? apiPath : `${apiPath}/api/v1`;
+  return target.toString().replace(/\/+$/, '');
+}
+
+const websiteApiProxyUrl = normalizeWebsiteApiProxyUrl(process.env.WEBSITE_API_PROXY_URL);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async rewrites() {
+    if (!websiteApiProxyUrl) return [];
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${websiteApiProxyUrl}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

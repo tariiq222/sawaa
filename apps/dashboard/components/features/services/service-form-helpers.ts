@@ -26,6 +26,24 @@ export function buildPayload(data: CreateServiceFormData) {
   }
 }
 
+function omitPayloadKeys<T extends object, K extends keyof T>(payload: T, keys: K[]): Omit<T, K> {
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => !keys.includes(key as K))) as Omit<T, K>
+}
+
+export function buildServiceEditPayload(
+  data: CreateServiceFormData,
+  preserveIdentity: boolean,
+  originalNameEn?: string | null,
+) {
+  const payload = buildPayload(data)
+  if (preserveIdentity) return omitPayloadKeys(payload, ["nameAr", "nameEn", "categoryId", "isHidden"])
+
+  const omittedKeys: (keyof typeof payload)[] = []
+  if (data.nameEn === "" && !originalNameEn) omittedKeys.push("nameEn")
+  if (!data.categoryId) omittedKeys.push("categoryId")
+  return omitPayloadKeys(payload, omittedKeys)
+}
+
 export function buildBookingTypesPayload(bookingTypes: DraftBookingType[]) {
   return bookingTypes.filter((bt) => bt.enabled).map((d) => ({
     deliveryType: d.deliveryType,

@@ -7,6 +7,7 @@ import { ClientTokenService } from '../shared/client-token.service';
 import { NativeRefreshHandler } from './native-refresh.handler';
 import { NativeLogoutHandler } from './native-logout.handler';
 import { NativeSessionLookup } from './native-session.lookup';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 
 jest.mock('bcryptjs', () => ({ compare: jest.fn() }));
 
@@ -28,6 +29,7 @@ describe('native session handlers', () => {
   let tokens: { issueTokenPair: jest.Mock };
   let clientTokens: { issueTokenPair: jest.Mock };
   let lookup: NativeSessionLookup;
+  let settings: { get: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -36,12 +38,14 @@ describe('native session handlers', () => {
       user: { findUnique: jest.fn(), update: jest.fn() },
       client: { findUnique: jest.fn(), update: jest.fn() },
       fcmToken: { deleteMany: jest.fn() },
+      employee: { findFirst: jest.fn() },
       $queryRaw: jest.fn(),
     };
     tx = prisma;
     rls = { withTransaction: jest.fn((callback) => callback(tx)) };
     tokens = { issueTokenPair: jest.fn() };
     clientTokens = { issueTokenPair: jest.fn() };
+    settings = { get: jest.fn() };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -52,6 +56,7 @@ describe('native session handlers', () => {
         { provide: RlsTransactionService, useValue: rls },
         { provide: TokenService, useValue: tokens },
         { provide: ClientTokenService, useValue: clientTokens },
+        { provide: PlatformSettingsService, useValue: settings },
       ],
     }).compile();
 
@@ -60,6 +65,46 @@ describe('native session handlers', () => {
     logout = module.get(NativeLogoutHandler);
     jest.clearAllMocks();
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    settings.get.mockResolvedValue(false);
+  });
+
+  describe('staff mobile eligibility on refresh', () => {
+    const staff = (isSuperAdmin: boolean) => ({
+      id: 'user-1', email: 'staff@example.com', role: 'ADMIN', customRoleId: null, customRole: null,
+      isActive: true, isSuperAdmin, tokenVersion: 1,
+    });
+
+    beforeEach(() => {
+      prisma.refreshToken.findMany.mockResolvedValue([candidate]);
+      prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+      tokens.issueTokenPair.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
+    });
+
+    it('refuses and revokes the token for staff without an active practitioner record', async () => {
+      prisma.user.findUnique.mockResolvedValue(staff(false));
+      prisma.employee.findFirst.mockResolvedValue(null);
+
+      await expect(refresh.execute('raw-token-value')).rejects.toThrow(UnauthorizedException);
+      expect(tokens.issueTokenPair).not.toHaveBeenCalled();
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: candidate.id, revokedAt: null }, data: { revokedAt: expect.any(Date) },
+      });
+    });
+
+    it('refuses a super-admin practitioner while two-factor is required', async () => {
+      prisma.user.findUnique.mockResolvedValue(staff(true));
+      settings.get.mockResolvedValue(true);
+
+      await expect(refresh.execute('raw-token-value')).rejects.toThrow(UnauthorizedException);
+      expect(tokens.issueTokenPair).not.toHaveBeenCalled();
+    });
+
+    it('rotates for an eligible practitioner', async () => {
+      prisma.user.findUnique.mockResolvedValue(staff(false));
+
+      await expect(refresh.execute('raw-token-value')).resolves.toEqual({ accessToken: 'a', refreshToken: 'r' });
+    });
   });
 
   it('rejects an unknown native refresh token without touching a user', async () => {
@@ -100,6 +145,7 @@ describe('native session handlers', () => {
       expect.objectContaining({ id: 'user-1', tokenVersion: 4 }),
       { isSuperAdmin: false },
       tx,
+      'MOBILE',
     );
   });
 

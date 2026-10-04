@@ -1,0 +1,42 @@
+> VERIFIED: Build 1.0.0 (5) is Ready to Test in Sawaa Internal (1 tester, 1 build). App Store Connect team invitation accepted, tester added, TestFlight invitation status Invited. Phone installation remains unverified. No public App Store submission.
+
+> Upload checkpoint (historical): build 1.0.0 (5) uploaded successfully using local Apple altool; Apple processing became VALID in App Store Connect. The API key stayed private/local and was not shared with Expo. Invitation acceptance, compliance save, and internal-group attachment were still pending at that checkpoint; their later verification is recorded above. Phone installation remains unverified. Evidence: [upload](releases/2026-09-24/evidence/testflight-build5-upload.json). Earlier no-upload/API-pending entries below are historical.
+
+# سجل App Store Connect
+
+الحالة بتاريخ 2026-09-24: مسودة محفوظة، بلا رفع بناء أو إرسال مراجعة مثبت.
+
+| الحقل | القيمة |
+|---|---|
+| الاسم المعتمد | سواء للارشاد الاسري &#124; sawaa |
+| Bundle / SKU | `sa.sawa.app` |
+| App Store Connect ID | `6815632181` |
+| Apple Team | `569M49FYA6` |
+| اللغة الأساسية | العربية |
+| Expo project ID | `f6349cef-8426-442c-b249-118a9b512cf1` |
+| Expo project | `tariq222/sawa` |
+| آخر بناء موثّق | `1.0.0 (5)` |
+| API الإنتاج في البناء | `https://api.sawaa.sa/api/v1` |
+| سياسة الخصوصية المحفوظة | `https://sawaa.sa/privacy` |
+
+[مسودة التطبيق](https://appstoreconnect.apple.com/apps/6815632181/distribution).
+
+## ما حُفظ
+
+يسجل تقرير عامل المتصفح حفظ النص الترويجي والوصف والكلمات المفتاحية وروابط الدعم والتسويق ووضع الإصدار اليدوي. حُفظت جهة اتصال المراجعة التي أجازها المالك؛ القيم الشخصية مستبعدة من التوثيق. لا تتوافر نسخة حرفية من حقول النص في هذا المجلد؛ تُراجع القيم الفعلية داخل المسودة قبل الإرسال.
+
+حُفظت خمس صور iPhone 6.9 وخمس iPad 13، وراجع المنسق دليلها بصريًا. ترتيب العرض: الرئيسية ← المختصون ← ملف المختص ← خيارات الحجز ← الدخول. أرقام أسماء الملفات تعكس الالتقاط وليست ترتيب المتجر. أبعاد الصور 1320×2868 و2064×2752؛ [النسخ المعتمدة](releases/2026-09-24/screenshots/) مع [بصماتها](releases/2026-09-24/SHA256SUMS).
+
+## المتبقي
+
+- رفع البناء إلى Apple ومعالجته واختيار البناء في المسودة، ثم اختبار TestFlight على جهاز.
+- API Access ما زال يعرض Request Access؛ لم تُمنح موافقة موثقة لطلب الوصول أو إنشاء مفتاح Developer وحفظه لدى EAS. موافقة شهادات التوقيع ليست موافقة لهذا المفتاح.
+- [حساب المراجعة](review-account.md): التنفيذ والاختبار المحليان أُنجزا؛ تفعيل الإنتاج وإدخال بياناته في ASC ما زالا معلقين.
+- حقوق النشر والتصنيف وحقوق المحتوى وتوفر الدول وجدول السعر غير مكتملة. اقتراح السعودية لا يثبت اختيارها.
+- استبيان العمر غير محفوظ؛ الخطوتان الأولى والثانية مسودة، وأسئلة المعلومات الطبية/العلاجية والصحة تحتاج إكمالًا ومراجعة.
+- إقرارات جمع بيانات App Privacy لم تُحفظ؛ يلزم مطابقة الواقع وSDKs مع الأغراض والربط والتتبع. حفظ رابط السياسة لا يُكمل الإقرار.
+- التصريح بالتشفير غير مكتمل؛ لا توجد وثائق تشفير مرفوعة من هذا العمل.
+- الحساب Individual؛ ملاحظة أهلية الكيان القانوني للخدمات الصحية وفق إرشاد Apple 5.1.1(ix) خطر مراجعة أُبلغ به المالك، وليست رفضًا أو منعًا مثبتًا.
+- Free Apps Agreement ظاهر Active؛ Paid Apps Agreement غير موقّع. إعداد DSA مشروط باختيار توزيع أوروبي؛ لا تثبت حالة الدول الحالية اكتمال هذا الاختيار.
+
+أجاز المالك متابعة الإطلاق بعد استيفاء متطلباته، لكن ذلك لا يغطي اتفاقات قانونية أو صلاحيات API الجديدة أو نشر backend إلى الإنتاج دون التفويض المطلوب.

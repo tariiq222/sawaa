@@ -178,6 +178,10 @@ export interface PackagePurchase {
   discountSnapshot: number
   /** Integer halalas. */
   amountPaid: number
+  /** VAT on the purchase invoice (halalas); 0 when VAT is not enabled. */
+  vatAmount?: number
+  /** What the client was charged — the invoice total, VAT-inclusive (halalas). */
+  totalCharged?: number
   /** Integer halalas. 0 unless status === REFUNDED. */
   refundAmount: number
   paidAt: string

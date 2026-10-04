@@ -15,8 +15,11 @@ export type {
   BookingStatus,
   BookingType,
   DeliveryType,
+  BookingResponseType,
+  BookingResponseDeliveryType,
   BookingSource,
   BookingListItem,
+  BookingWriteResult,
   BookingStats,
   BookingListQuery,
   BookingListResponse,
@@ -197,3 +200,5 @@ export type {
   GuestChatHandoffRequest,
   ClaimedChatConversation,
 } from './chat'
+
+export type { CancellationRefund, PersistedCancellationRefund, CancellationPreview, CancellationQuoteInput, ClientCancellationResult } from './cancellation'

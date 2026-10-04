@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BookingStatus, type Booking } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
-const UPCOMING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
+const UPCOMING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID];
 
 export interface ListClientUpcomingBookingsCommand {
   clientId: string;

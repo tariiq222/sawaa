@@ -31,6 +31,100 @@
         ],
         "type": "object"
       },
+      "AdminMobileHomeCardDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Timestamp when the card was created.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Card description in Arabic.",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Card description in English.",
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "description": "In-app destination opened when the card is selected.",
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique mobile home card identifier.",
+            "type": "string"
+          },
+          "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
+            "nullable": true,
+            "type": "string"
+          },
+          "imageFileId": {
+            "description": "Identifier of the uploaded card image.",
+            "nullable": true,
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "URL of the card image.",
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "description": "Whether the card is published for mobile clients.",
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "description": "Card display order; lower values appear first.",
+            "type": "number"
+          },
+          "titleAr": {
+            "description": "Card title in Arabic.",
+            "type": "string"
+          },
+          "titleEn": {
+            "description": "Card title in English.",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Timestamp when the card was last updated.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titleAr",
+          "titleEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageFileId",
+          "imageUrl",
+          "imageAltAr",
+          "imageAltEn",
+          "destination",
+          "sortOrder",
+          "isPublished",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "AiProviderConfigResponseDto": {
         "properties": {
           "connectionStatus": {
@@ -42,6 +136,11 @@
           "isEnabled": {
             "type": "boolean"
           },
+          "lastTestedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "lastTestErrorCode": {
             "nullable": true,
             "type": "string"
@@ -49,11 +148,6 @@
           "lastTestOk": {
             "nullable": true,
             "type": "boolean"
-          },
-          "lastTestedAt": {
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
           },
           "maxTokens": {
             "type": "number"
@@ -394,6 +488,43 @@
           "dayOfWeek",
           "startTime",
           "endTime"
+        ],
+        "type": "object"
+      },
+      "BankTransferAccountSettingsDto": {
+        "properties": {
+          "bankName": {
+            "description": "Bank name",
+            "example": "Saudi National Bank",
+            "type": "string"
+          },
+          "beneficiaryName": {
+            "description": "Account beneficiary name",
+            "example": "Sawaa Family Counseling Center",
+            "type": "string"
+          },
+          "iban": {
+            "description": "Saudi IBAN (spaces accepted)",
+            "example": "SA0380000000608010167519",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable account id used by the client app",
+            "example": "main-account",
+            "type": "string"
+          },
+          "label": {
+            "description": "Account label shown to clients",
+            "example": "Main account",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "bankName",
+          "beneficiaryName",
+          "iban"
         ],
         "type": "object"
       },
@@ -1098,18 +1229,6 @@
         ],
         "type": "object"
       },
-      "CancelProgramDto": {
-        "properties": {
-          "reason": {
-            "description": "Reason for cancelling the program",
-            "type": "string"
-          }
-        },
-        "required": [
-          "reason"
-        ],
-        "type": "object"
-      },
       "CancellationReason": {
         "description": "Reason for cancellation",
         "enum": [
@@ -1121,8 +1240,116 @@
         ],
         "type": "string"
       },
+      "CancellationRefundSummaryDto": {
+        "properties": {
+          "alreadyRefundedAmount": {
+            "description": "Already refunded amount in halalas",
+            "type": "integer"
+          },
+          "currency": {
+            "example": "SAR",
+            "type": "string"
+          },
+          "execution": {
+            "description": "Whether the refund needs no action, provider processing, or staff review",
+            "enum": [
+              "NONE",
+              "AUTOMATIC",
+              "REVIEW"
+            ],
+            "type": "string"
+          },
+          "paidAmount": {
+            "description": "Captured original amount in halalas",
+            "type": "integer"
+          },
+          "pendingRefundAmount": {
+            "description": "Reserved pending amount in halalas",
+            "type": "integer"
+          },
+          "refundAmount": {
+            "description": "New remaining refund entitlement in halalas",
+            "type": "integer"
+          },
+          "refundPercent": {
+            "description": "Policy percentage for the applicable cancellation window",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Expected financial outcome if the client confirms cancellation; pending states do not mean money has been returned",
+            "enum": [
+              "NOT_APPLICABLE",
+              "NO_REFUND",
+              "PENDING_REVIEW",
+              "PROCESSING",
+              "CREDIT_RETURNED"
+            ],
+            "type": "string"
+          },
+          "window": {
+            "description": "Refund policy window relative to the configured early cancellation threshold",
+            "enum": [
+              "EARLY",
+              "LATE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "paidAmount",
+          "alreadyRefundedAmount",
+          "pendingRefundAmount",
+          "refundAmount",
+          "refundPercent",
+          "currency",
+          "execution",
+          "window"
+        ],
+        "type": "object"
+      },
+      "CancelProgramDto": {
+        "properties": {
+          "quoteToken": {
+            "description": "Token from the current cancellation preview",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Reason for cancelling the program",
+            "type": "string"
+          },
+          "refunds": {
+            "description": "After program start, additional refunds in integer halalas for every paid participant, including explicit zero amounts; each amount must not exceed its preview maximum. Omit or send an empty list before start, when the full available balance is selected automatically.",
+            "example": [
+              {
+                "amount": 20000,
+                "bookingId": "11111111-1111-4111-8111-111111111111"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramParticipantRefundDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "reason",
+          "quoteToken"
+        ],
+        "type": "object"
+      },
       "CatalogCategoryDto": {
         "properties": {
+          "bookingMode": {
+            "description": "Whether booking starts at the clinic or with a service selection",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -1131,6 +1358,15 @@
             "description": "Short-lived presigned image URL (signed per response), or null",
             "nullable": true,
             "type": "object"
+          },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
           },
           "nameAr": {
             "example": "استشارات",
@@ -1152,7 +1388,9 @@
           "nameAr",
           "nameEn",
           "imageUrl",
-          "sortOrder"
+          "sortOrder",
+          "bookingMode",
+          "kind"
         ],
         "type": "object"
       },
@@ -1269,6 +1507,10 @@
             "description": "Short-lived presigned image URL (signed per response), or null",
             "nullable": true,
             "type": "object"
+          },
+          "isHidden": {
+            "description": "Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services",
+            "type": "boolean"
           },
           "nameAr": {
             "example": "جلسة استشارة فردية",
@@ -1458,6 +1700,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -1494,6 +1745,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -1595,6 +1847,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -1631,6 +1892,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -1871,11 +2133,80 @@
       },
       "ClientCancelBookingDto": {
         "properties": {
+          "quoteToken": {
+            "description": "Opaque cancellation preview token; refresh preview after conflict",
+            "type": "string"
+          },
           "reason": {
             "description": "Reason for cancellation",
             "type": "string"
+          },
+          "sourceActionId": {
+            "description": "Stable UUID for retrying the same cancellation",
+            "format": "uuid",
+            "type": "string"
           }
         },
+        "type": "object"
+      },
+      "ClientCancelCutoffMode": {
+        "description": "Client cancellation eligibility cutoff",
+        "enum": [
+          "BEFORE_START",
+          "BEFORE_CHECK_IN"
+        ],
+        "type": "string"
+      },
+      "ClientCancellationPreviewDto": {
+        "properties": {
+          "canCancel": {
+            "description": "Current eligibility to cancel this appointment directly",
+            "type": "boolean"
+          },
+          "cutoffAt": {
+            "description": "Effective cancellation deadline, or null when no valid deadline is configured",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "policyEnabled": {
+            "description": "Whether the new client cancellation policy is explicitly enabled",
+            "type": "boolean"
+          },
+          "quoteToken": {
+            "description": "Opaque effective terms fingerprint",
+            "type": "string"
+          },
+          "reasonCode": {
+            "description": "Eligibility decision or reason cancellation is unavailable",
+            "enum": [
+              "ALLOWED",
+              "POLICY_NOT_CONFIGURED",
+              "CUTOFF_PASSED",
+              "ATTENDED",
+              "FINAL_STATE",
+              "HISTORICAL",
+              "GROUP_STAFF_ONLY"
+            ],
+            "type": "string"
+          },
+          "refund": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+              }
+            ],
+            "description": "Financial terms shown to the client before cancellation confirmation"
+          }
+        },
+        "required": [
+          "policyEnabled",
+          "canCancel",
+          "reasonCode",
+          "cutoffAt",
+          "quoteToken",
+          "refund"
+        ],
         "type": "object"
       },
       "ClientChatConversationCursorMetaDto": {
@@ -2177,16 +2508,16 @@
             "nullable": true,
             "type": "string"
           },
-          "consentVersion": {
-            "description": "Accepted privacy consent version",
-            "example": "2026-01",
-            "nullable": true,
-            "type": "string"
-          },
           "consentedAt": {
             "description": "Privacy consent timestamp",
             "example": "2026-01-01T00:00:00.000Z",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentVersion": {
+            "description": "Accepted privacy consent version",
+            "example": "2026-01",
             "nullable": true,
             "type": "string"
           },
@@ -2789,6 +3120,15 @@
             "nullable": true,
             "type": "string"
           },
+          "kind": {
+            "description": "Category kind, independent of its department or name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Category name in Arabic",
             "example": "طب الأسنان",
@@ -2990,16 +3330,16 @@
             "nullable": true,
             "type": "string"
           },
-          "consentVersion": {
-            "description": "Accepted privacy consent version",
-            "example": "2026-01",
-            "nullable": true,
-            "type": "string"
-          },
           "consentedAt": {
             "description": "Privacy consent timestamp",
             "example": "2026-01-01T00:00:00.000Z",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consentVersion": {
+            "description": "Accepted privacy consent version",
+            "example": "2026-01",
             "nullable": true,
             "type": "string"
           },
@@ -3842,6 +4182,80 @@
         ],
         "type": "object"
       },
+      "CreateMobileHomeCardDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Card description in Arabic.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Card description in English.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "description": "In-app destination opened when the card is selected.",
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageFileId": {
+            "description": "Identifier of the uploaded card image.",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "default": false,
+            "description": "Whether the card is published for mobile clients.",
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "default": 0,
+            "description": "Card display order; lower values appear first.",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "number"
+          },
+          "titleAr": {
+            "description": "Card title in Arabic.",
+            "example": "مواعيد مرنة تناسب يومك",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "titleEn": {
+            "description": "Card title in English.",
+            "maxLength": 100,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "titleAr"
+        ],
+        "type": "object"
+      },
       "CreatePackageFamilyDto": {
         "properties": {
           "descriptionAr": {
@@ -4592,6 +5006,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -4628,6 +5051,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -4722,6 +5146,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Arabic category name",
             "example": "الإرشاد الأسري",
@@ -4758,6 +5191,7 @@
           "sortOrder",
           "isActive",
           "bookingMode",
+          "kind",
           "imageUrl",
           "iconName",
           "iconBgColor",
@@ -6588,12 +7022,12 @@
           "isPublished": {
             "type": "boolean"
           },
-          "lastIndexErrorCode": {
+          "lastIndexedAt": {
+            "format": "date-time",
             "nullable": true,
             "type": "object"
           },
-          "lastIndexedAt": {
-            "format": "date-time",
+          "lastIndexErrorCode": {
             "nullable": true,
             "type": "object"
           },
@@ -6702,12 +7136,12 @@
           "isPublished": {
             "type": "boolean"
           },
-          "lastIndexErrorCode": {
+          "lastIndexedAt": {
+            "format": "date-time",
             "nullable": true,
             "type": "object"
           },
-          "lastIndexedAt": {
-            "format": "date-time",
+          "lastIndexErrorCode": {
             "nullable": true,
             "type": "object"
           },
@@ -6914,6 +7348,29 @@
         ],
         "type": "object"
       },
+      "ManualRefundPaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount",
+            "example": 5000,
+            "type": "number"
+          },
+          "reason": {
+            "description": "Reason for the refund",
+            "example": "Service not delivered",
+            "type": "string"
+          },
+          "refundRequestId": {
+            "description": "Existing pending cash/bank-transfer refund request to settle; retries return the existing completion",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
       "MarkConversationReadDto": {
         "properties": {
           "throughMessageId": {
@@ -6946,6 +7403,10 @@
             "example": "Change of plans",
             "type": "string"
           },
+          "quoteToken": {
+            "description": "Cancellation preview fingerprint",
+            "type": "string"
+          },
           "reason": {
             "allOf": [
               {
@@ -6954,6 +7415,11 @@
             ],
             "description": "Reason for cancellation",
             "example": "CLIENT_REQUESTED"
+          },
+          "sourceActionId": {
+            "description": "Stable UUID for this cancellation attempt",
+            "format": "uuid",
+            "type": "string"
           }
         },
         "required": [
@@ -6967,6 +7433,15 @@
             "description": "Branch where the booking takes place",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Session delivery channel. Omitted defaults to IN_PERSON.",
+            "example": "IN_PERSON"
           },
           "durationOptionId": {
             "description": "Specific duration option to resolve price and duration",
@@ -6982,6 +7457,11 @@
             "description": "Free-text notes for the booking",
             "example": "Please prepare the room in advance",
             "type": "string"
+          },
+          "payAtClinic": {
+            "description": "Client chose to pay at the center. When true the booking is confirmed without an online invoice; the amount is collected at reception. Rejected when the deployment has pay-at-center disabled.",
+            "example": false,
+            "type": "boolean"
           },
           "scheduledAt": {
             "description": "ISO 8601 start datetime",
@@ -8009,6 +8489,88 @@
         ],
         "type": "object"
       },
+      "PersistedCancellationRefundDto": {
+        "properties": {
+          "alreadyRefundedAmount": {
+            "description": "Already refunded amount in halalas",
+            "type": "integer"
+          },
+          "completedAmount": {
+            "description": "Ledger-confirmed refunded amount toward this cancellation, in halalas",
+            "type": "integer"
+          },
+          "currency": {
+            "example": "SAR",
+            "type": "string"
+          },
+          "execution": {
+            "description": "Whether the refund needs no action, provider processing, or staff review",
+            "enum": [
+              "NONE",
+              "AUTOMATIC",
+              "REVIEW"
+            ],
+            "type": "string"
+          },
+          "failedAmount": {
+            "description": "Failed or denied request amount, in halalas",
+            "type": "integer"
+          },
+          "paidAmount": {
+            "description": "Captured original amount in halalas",
+            "type": "integer"
+          },
+          "pendingRefundAmount": {
+            "description": "Reserved pending amount in halalas",
+            "type": "integer"
+          },
+          "refundAmount": {
+            "description": "New remaining refund entitlement in halalas",
+            "type": "integer"
+          },
+          "refundPercent": {
+            "description": "Policy percentage for the applicable cancellation window",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Persisted cancellation refund outcome derived from confirmed ledger entries and request states",
+            "enum": [
+              "NOT_APPLICABLE",
+              "NO_REFUND",
+              "PENDING_REVIEW",
+              "PROCESSING",
+              "CREDIT_RETURNED",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "window": {
+            "description": "Refund policy window relative to the configured early cancellation threshold",
+            "enum": [
+              "EARLY",
+              "LATE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "paidAmount",
+          "alreadyRefundedAmount",
+          "pendingRefundAmount",
+          "refundAmount",
+          "refundPercent",
+          "currency",
+          "execution",
+          "window",
+          "status",
+          "completedAmount",
+          "failedAmount"
+        ],
+        "type": "object"
+      },
       "PreviewEmailTemplateDto": {
         "properties": {
           "context": {
@@ -8057,6 +8619,231 @@
           "invoiceId",
           "amount",
           "method"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationParticipantDto": {
+        "properties": {
+          "alreadyRefundedAmount": {
+            "description": "Amount already refunded in integer halalas",
+            "example": 5000,
+            "type": "number"
+          },
+          "bookingId": {
+            "description": "Booking identifier for this enrolled participant",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "type": "string"
+          },
+          "bookingNumber": {
+            "description": "Human-readable booking number for this participant",
+            "example": 1042,
+            "type": "number"
+          },
+          "clientId": {
+            "description": "Client identifier for this enrolled participant",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "type": "string"
+          },
+          "clientName": {
+            "description": "Display name of the enrolled client",
+            "example": "سارة محمد",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency shared by the booking and its captured payments",
+            "example": "SAR",
+            "type": "string"
+          },
+          "maxRefundAmount": {
+            "description": "Maximum additional refund in integer halalas after existing refunds and reservations; zero for historical imports",
+            "example": 20000,
+            "type": "number"
+          },
+          "paidAmount": {
+            "description": "Captured original amount in integer halalas, before refunds",
+            "example": 30000,
+            "type": "number"
+          },
+          "pendingRefundAmount": {
+            "description": "Amount reserved by pending refund requests in integer halalas",
+            "example": 5000,
+            "type": "number"
+          },
+          "refundAmount": {
+            "description": "Additional refund in integer halalas: the full available amount before program start, or null after start until staff select an amount",
+            "example": 20000,
+            "nullable": true,
+            "type": "number"
+          },
+          "status": {
+            "description": "Current booking status when the cancellation preview was generated",
+            "example": "CONFIRMED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "clientId",
+          "clientName",
+          "bookingNumber",
+          "status",
+          "currency",
+          "paidAmount",
+          "alreadyRefundedAmount",
+          "pendingRefundAmount",
+          "maxRefundAmount",
+          "refundAmount"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationParticipantResultDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking identifier for this participant cancellation outcome",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency of this participant refund amount",
+            "example": "SAR",
+            "type": "string"
+          },
+          "refundAmount": {
+            "description": "Additional refund amount recorded by this cancellation in integer halalas; does not mean the refund has completed",
+            "example": 20000,
+            "type": "number"
+          },
+          "refundStatus": {
+            "description": "Initial refund outcome: staff review required, automatic processing pending, or no additional refund",
+            "enum": [
+              "PENDING_REVIEW",
+              "PROCESSING",
+              "NO_REFUND"
+            ],
+            "example": "PENDING_REVIEW",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "refundAmount",
+          "currency",
+          "refundStatus"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationPreviewDto": {
+        "properties": {
+          "hasStarted": {
+            "description": "Whether the start date has elapsed or participant attendance, completion or historical-import evidence requires post-start refund selection",
+            "example": false,
+            "type": "boolean"
+          },
+          "participants": {
+            "description": "Current enrolled participants and their individual refundable balances, including bookings whose history must be retained",
+            "example": [
+              {
+                "alreadyRefundedAmount": 5000,
+                "bookingId": "11111111-1111-4111-8111-111111111111",
+                "bookingNumber": 1042,
+                "clientId": "22222222-2222-4222-8222-222222222222",
+                "clientName": "سارة محمد",
+                "currency": "SAR",
+                "maxRefundAmount": 20000,
+                "paidAmount": 30000,
+                "pendingRefundAmount": 5000,
+                "refundAmount": 20000,
+                "status": "CONFIRMED"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramCancellationParticipantDto"
+            },
+            "type": "array"
+          },
+          "programId": {
+            "description": "Program identifier for this cancellation preview",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "type": "string"
+          },
+          "quoteToken": {
+            "description": "Opaque token for these cancellation terms; submit it unchanged when cancelling and refresh the preview if the terms change",
+            "example": "a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468",
+            "type": "string"
+          }
+        },
+        "required": [
+          "programId",
+          "hasStarted",
+          "quoteToken",
+          "participants"
+        ],
+        "type": "object"
+      },
+      "ProgramCancellationResultDto": {
+        "properties": {
+          "cancelledEnrollments": {
+            "description": "Number of participant bookings transitioned to CANCELLED by this operation",
+            "example": 1,
+            "type": "number"
+          },
+          "id": {
+            "description": "Identifier of the cancelled program",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "type": "string"
+          },
+          "participants": {
+            "description": "Per-participant refund outcomes for non-historical bookings, including terminal bookings whose status was retained",
+            "example": [
+              {
+                "bookingId": "11111111-1111-4111-8111-111111111111",
+                "currency": "SAR",
+                "refundAmount": 20000,
+                "refundStatus": "PENDING_REVIEW"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramCancellationParticipantResultDto"
+            },
+            "type": "array"
+          },
+          "skippedEnrollments": {
+            "description": "Number of participant bookings whose status was retained, including terminal bookings and historical imports",
+            "example": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Program status after cancellation is committed",
+            "example": "CANCELLED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "cancelledEnrollments",
+          "skippedEnrollments",
+          "participants"
+        ],
+        "type": "object"
+      },
+      "ProgramParticipantRefundDto": {
+        "properties": {
+          "amount": {
+            "description": "Additional refund in integer halalas",
+            "minimum": 0,
+            "type": "number"
+          },
+          "bookingId": {
+            "description": "Participant booking identifier from the current program cancellation preview",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "amount"
         ],
         "type": "object"
       },
@@ -8202,7 +8989,7 @@
             "type": "array"
           },
           "vatRate": {
-            "description": "Fractional VAT rate (0.15 = 15%); 0 when the center is not VAT-registered or settings are missing",
+            "description": "VAT rate as a fraction of 1 from organization settings; 0 when the center is not VAT-registered or settings are missing",
             "example": 0,
             "type": "number"
           }
@@ -8356,6 +9143,72 @@
         ],
         "type": "object"
       },
+      "PublicMobileHomeCardDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Card description in Arabic.",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Card description in English.",
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "description": "In-app destination opened when the card is selected.",
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique mobile home card identifier.",
+            "type": "string"
+          },
+          "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
+            "nullable": true,
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "URL of the card image.",
+            "nullable": true,
+            "type": "string"
+          },
+          "titleAr": {
+            "description": "Card title in Arabic.",
+            "type": "string"
+          },
+          "titleEn": {
+            "description": "Card title in English.",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titleAr",
+          "titleEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "imageAltAr",
+          "imageAltEn",
+          "destination"
+        ],
+        "type": "object"
+      },
       "RefreshTokenDto": {
         "properties": {
           "refreshToken": {
@@ -8374,7 +9227,7 @@
             "type": "string"
           },
           "refundAmount": {
-            "description": "Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount paid. 0 records a cancellation with no money returned.",
+            "description": "Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount charged (the invoice total, VAT-inclusive). 0 records a cancellation with no money returned.",
             "example": 50000,
             "type": "number"
           }
@@ -8493,6 +9346,40 @@
         },
         "required": [
           "rejectReason"
+        ],
+        "type": "object"
+      },
+      "ReorderMobileHomeCardItemDto": {
+        "properties": {
+          "expectedUpdatedAt": {
+            "description": "Last known update timestamp used to detect concurrent changes.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique mobile home card identifier.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "expectedUpdatedAt"
+        ],
+        "type": "object"
+      },
+      "ReorderMobileHomeCardsDto": {
+        "properties": {
+          "items": {
+            "description": "Cards in their requested display order, with last known update timestamps.",
+            "items": {
+              "$ref": "#/components/schemas/ReorderMobileHomeCardItemDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -8662,6 +9549,25 @@
       },
       "RetryAdministrativeMessageDto": {
         "properties": {},
+        "type": "object"
+      },
+      "ReviewLoginDto": {
+        "properties": {
+          "email": {
+            "description": "Dedicated synthetic review account email",
+            "example": "apple@review.sawaa.invalid",
+            "type": "string"
+          },
+          "password": {
+            "description": "Review account password",
+            "example": "AccountPassword123!",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
         "type": "object"
       },
       "ScheduleProgramDto": {
@@ -9348,6 +10254,15 @@
             "example": true,
             "type": "boolean"
           },
+          "kind": {
+            "description": "Category kind, independent of its department or name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Category name in Arabic",
             "example": "طب الأسنان",
@@ -9964,6 +10879,82 @@
         },
         "type": "object"
       },
+      "UpdateMobileHomeCardDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Card description in Arabic.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Card description in English.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "description": "In-app destination opened when the card is selected.",
+            "enum": [
+              "CLINICS",
+              "SERVICES",
+              "SPECIALISTS",
+              "PACKAGES",
+              "PROGRAMS"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "expectedUpdatedAt": {
+            "description": "Last known update timestamp used to detect concurrent changes.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "imageAltAr": {
+            "description": "Alternative text for the card image in Arabic.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageAltEn": {
+            "description": "Alternative text for the card image in English.",
+            "maxLength": 240,
+            "nullable": true,
+            "type": "string"
+          },
+          "imageFileId": {
+            "description": "Identifier of the uploaded card image.",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "isPublished": {
+            "description": "Whether the card is published for mobile clients.",
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "description": "Card display order; lower values appear first.",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "number"
+          },
+          "titleAr": {
+            "description": "Card title in Arabic.",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "titleEn": {
+            "description": "Card title in English.",
+            "maxLength": 100,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedUpdatedAt"
+        ],
+        "type": "object"
+      },
       "UpdatePackageFamilyDto": {
         "properties": {
           "descriptionAr": {
@@ -10471,9 +11462,35 @@
             "example": 15,
             "type": "number"
           },
+          "clientCancelBeforeHours": {
+            "description": "Minimum hours before start to allow client cancellation; 0 is valid",
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
+          },
+          "clientCancelCutoffMode": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientCancelCutoffMode"
+              }
+            ],
+            "description": "Client cancellation eligibility cutoff",
+            "nullable": true
+          },
+          "clientCancellationPolicyEnabled": {
+            "description": "Enable the explicitly configured immediate client cancellation policy",
+            "type": "boolean"
+          },
           "clientRescheduleMinHoursBefore": {
             "description": "Minimum hours before booking start that a client may reschedule",
             "example": 24,
+            "type": "number"
+          },
+          "earlyCancelRefundPercent": {
+            "description": "Independent early cancellation partial refund percentage",
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
             "type": "number"
           },
           "freeCancelBeforeHours": {
@@ -10668,6 +11685,13 @@
             "example": "Riyadh, Saudi Arabia",
             "type": "string"
           },
+          "bankTransferAccounts": {
+            "description": "Bank accounts shown to clients for bank transfers",
+            "items": {
+              "$ref": "#/components/schemas/BankTransferAccountSettingsDto"
+            },
+            "type": "array"
+          },
           "bookingFlowOrder": {
             "description": "Booking flow order",
             "enum": [
@@ -10776,6 +11800,21 @@
             "example": "Riyadh",
             "type": "string"
           },
+          "paymentAtClinicEnabled": {
+            "description": "Enable pay-at-clinic option",
+            "example": true,
+            "type": "boolean"
+          },
+          "paymentBankTransferEnabled": {
+            "description": "Enable client bank transfer at booking checkout",
+            "example": false,
+            "type": "boolean"
+          },
+          "paymentMoyasarEnabled": {
+            "description": "Enable Moyasar online payment",
+            "example": true,
+            "type": "boolean"
+          },
           "payMethodBankEnabled": {
             "description": "Show \"Bank transfer\" in the record-payment dialog",
             "example": true,
@@ -10794,16 +11833,6 @@
           "payMethodTabbyEnabled": {
             "description": "Show \"Tabby\" in the record-payment dialog",
             "example": false,
-            "type": "boolean"
-          },
-          "paymentAtClinicEnabled": {
-            "description": "Enable pay-at-clinic option",
-            "example": true,
-            "type": "boolean"
-          },
-          "paymentMoyasarEnabled": {
-            "description": "Enable Moyasar online payment",
-            "example": true,
             "type": "boolean"
           },
           "postalCode": {
@@ -13335,623 +14364,6 @@
         ]
       }
     },
-    "/api/v1/dashboard/bookings/availability": {
-      "get": {
-        "operationId": "DashboardBookingsController_checkAvailability_v1",
-        "parameters": [
-          {
-            "description": "Employee whose availability to check",
-            "in": "query",
-            "name": "employeeId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Branch to check availability at",
-            "in": "query",
-            "name": "branchId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Date to check availability for (ISO 8601)",
-            "in": "query",
-            "name": "date",
-            "required": true,
-            "schema": {
-              "example": "2026-05-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Session duration in minutes (overrides service default)",
-            "in": "query",
-            "name": "durationMins",
-            "required": false,
-            "schema": {
-              "example": 60,
-              "type": "number"
-            }
-          },
-          {
-            "description": "Service to check availability for",
-            "in": "query",
-            "name": "serviceId",
-            "required": false,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Specific duration option to resolve duration",
-            "in": "query",
-            "name": "durationOptionId",
-            "required": false,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Booking type context for availability check",
-            "in": "query",
-            "name": "bookingType",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/BookingType"
-            }
-          },
-          {
-            "description": "Delivery channel context for availability check",
-            "in": "query",
-            "name": "deliveryType",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/DeliveryType"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "properties": {
-                      "endTime": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "startTime": {
-                        "format": "date-time",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Available time slots"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Check employee availability for a date",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/bookings/credits/{creditId}/transfer": {
-      "post": {
-        "operationId": "DashboardBookingsController_transferCredit_v1",
-        "parameters": [
-          {
-            "description": "Package credit ID",
-            "in": "path",
-            "name": "creditId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-4000-a000-000000000006",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferCreditDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "employeeId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Credit re-pointed to the target employee (price snapshot unchanged)"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Target employee does not provide the service/duration, is inactive, or is the current owner"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Credit or target employee not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Transfer a session-package credit to another practitioner",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/bookings/from-credit": {
-      "post": {
-        "operationId": "DashboardBookingsController_bookFromCredit_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookFromCreditDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "packageCreditId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "scheduledAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "CONFIRMED",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Zero-value booking created from a package credit"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Slot unavailable, missing credit selector, or past date"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "No usable package credit found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "No remaining credit or slot conflict (concurrent over-draw rejected)"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Book an appointment by consuming session-package credit",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/bookings/matching-credits": {
-      "get": {
-        "operationId": "DashboardBookingsController_getMatchingCredits_v1",
-        "parameters": [
-          {
-            "description": "Client ID",
-            "in": "query",
-            "name": "clientId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-4000-a000-000000000001",
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Service ID",
-            "in": "query",
-            "name": "serviceId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-4000-a000-000000000004",
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Employee ID",
-            "in": "query",
-            "name": "employeeId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-4000-a000-000000000003",
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Duration option ID",
-            "in": "query",
-            "name": "durationOptionId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-4000-a000-000000000005",
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Delivery type of the booking (for DELIVERY_TYPE-scoped credits)",
-            "in": "query",
-            "name": "deliveryType",
-            "required": false,
-            "schema": {
-              "enum": [
-                "IN_PERSON",
-                "ONLINE"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "properties": {
-                      "creditId": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "purchaseId": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "remaining": {
-                        "type": "number"
-                      },
-                      "reservedQuantity": {
-                        "type": "number"
-                      },
-                      "totalQuantity": {
-                        "type": "number"
-                      },
-                      "usedQuantity": {
-                        "type": "number"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Matching ACTIVE credits with remaining capacity (FIFO order)"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List a client's usable session-package credits matching a service/employee/duration",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/bookings/stats": {
-      "get": {
-        "operationId": "DashboardBookingsController_getStats_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "completedToday": {
-                      "example": 7,
-                      "type": "number"
-                    },
-                    "pendingCount": {
-                      "example": 3,
-                      "type": "number"
-                    },
-                    "revenueToday": {
-                      "example": 1500,
-                      "type": "number"
-                    },
-                    "todayCount": {
-                      "example": 12,
-                      "type": "number"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Today/pending counts and today revenue"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Today's booking counters + revenue for the dashboard StatsGrid",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
     "/api/v1/dashboard/bookings/{id}": {
       "delete": {
         "operationId": "DashboardBookingsController_deleteBooking_v1",
@@ -15476,6 +15888,623 @@
           }
         ],
         "summary": "Retry creating Zoom meeting for a booking",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/availability": {
+      "get": {
+        "operationId": "DashboardBookingsController_checkAvailability_v1",
+        "parameters": [
+          {
+            "description": "Employee whose availability to check",
+            "in": "query",
+            "name": "employeeId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Branch to check availability at",
+            "in": "query",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Date to check availability for (ISO 8601)",
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "example": "2026-05-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Session duration in minutes (overrides service default)",
+            "in": "query",
+            "name": "durationMins",
+            "required": false,
+            "schema": {
+              "example": 60,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Service to check availability for",
+            "in": "query",
+            "name": "serviceId",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Specific duration option to resolve duration",
+            "in": "query",
+            "name": "durationOptionId",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Booking type context for availability check",
+            "in": "query",
+            "name": "bookingType",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BookingType"
+            }
+          },
+          {
+            "description": "Delivery channel context for availability check",
+            "in": "query",
+            "name": "deliveryType",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DeliveryType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "endTime": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "startTime": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Available time slots"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Check employee availability for a date",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/credits/{creditId}/transfer": {
+      "post": {
+        "operationId": "DashboardBookingsController_transferCredit_v1",
+        "parameters": [
+          {
+            "description": "Package credit ID",
+            "in": "path",
+            "name": "creditId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000006",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferCreditDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "employeeId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Credit re-pointed to the target employee (price snapshot unchanged)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Target employee does not provide the service/duration, is inactive, or is the current owner"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Credit or target employee not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transfer a session-package credit to another practitioner",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/from-credit": {
+      "post": {
+        "operationId": "DashboardBookingsController_bookFromCredit_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookFromCreditDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "packageCreditId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "scheduledAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "CONFIRMED",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Zero-value booking created from a package credit"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Slot unavailable, missing credit selector, or past date"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No usable package credit found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No remaining credit or slot conflict (concurrent over-draw rejected)"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment by consuming session-package credit",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/matching-credits": {
+      "get": {
+        "operationId": "DashboardBookingsController_getMatchingCredits_v1",
+        "parameters": [
+          {
+            "description": "Client ID",
+            "in": "query",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000001",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service ID",
+            "in": "query",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000004",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Employee ID",
+            "in": "query",
+            "name": "employeeId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000003",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Duration option ID",
+            "in": "query",
+            "name": "durationOptionId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000005",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Delivery type of the booking (for DELIVERY_TYPE-scoped credits)",
+            "in": "query",
+            "name": "deliveryType",
+            "required": false,
+            "schema": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "creditId": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "purchaseId": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "remaining": {
+                        "type": "number"
+                      },
+                      "reservedQuantity": {
+                        "type": "number"
+                      },
+                      "totalQuantity": {
+                        "type": "number"
+                      },
+                      "usedQuantity": {
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Matching ACTIVE credits with remaining capacity (FIFO order)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List a client's usable session-package credits matching a service/employee/duration",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/stats": {
+      "get": {
+        "operationId": "DashboardBookingsController_getStats_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "completedToday": {
+                      "example": 7,
+                      "type": "number"
+                    },
+                    "pendingCount": {
+                      "example": 3,
+                      "type": "number"
+                    },
+                    "revenueToday": {
+                      "example": 1500,
+                      "type": "number"
+                    },
+                    "todayCount": {
+                      "example": 12,
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Today/pending counts and today revenue"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Today's booking counters + revenue for the dashboard StatsGrid",
         "tags": [
           "Dashboard / Bookings"
         ]
@@ -18783,76 +19812,6 @@
         ]
       }
     },
-    "/api/v1/dashboard/finance/coupons/apply": {
-      "post": {
-        "operationId": "DashboardFinanceController_applyCouponEndpoint_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplyCouponDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Coupon applied; returns updated discount amount"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Apply a coupon code to an invoice",
-        "tags": [
-          "Dashboard / Finance"
-        ]
-      }
-    },
     "/api/v1/dashboard/finance/coupons/{id}": {
       "delete": {
         "operationId": "DashboardFinanceController_deleteCouponEndpoint_v1",
@@ -19097,6 +20056,76 @@
           }
         ],
         "summary": "Update a coupon",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/coupons/apply": {
+      "post": {
+        "operationId": "DashboardFinanceController_applyCouponEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyCouponDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Coupon applied; returns updated discount amount"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Apply a coupon code to an invoice",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -19927,7 +20956,7 @@
                 }
               }
             },
-            "description": "Already refunded or refundAmount outside [0, amountPaid]"
+            "description": "Already refunded or refundAmount outside [0, amount charged (invoice total)]"
           },
           "401": {
             "content": {
@@ -20178,237 +21207,6 @@
         ]
       }
     },
-    "/api/v1/dashboard/finance/payments/bank-transfer": {
-      "post": {
-        "operationId": "DashboardFinanceController_bankTransferEndpoint_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "properties": {
-                  "amount": {
-                    "description": "Transfer amount in integer halalas",
-                    "example": 10000,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "invoiceId": {
-                    "example": "00000000-0000-0000-0000-000000000000",
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "receipt": {
-                    "description": "Bank transfer receipt image or PDF",
-                    "format": "binary",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "receipt",
-                  "invoiceId",
-                  "amount"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "description": "Receipt file + invoice metadata",
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Bank transfer receipt uploaded"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Upload a bank transfer receipt for an invoice",
-        "tags": [
-          "Dashboard / Finance"
-        ]
-      }
-    },
-    "/api/v1/dashboard/finance/payments/stats": {
-      "get": {
-        "operationId": "DashboardFinanceController_getPaymentStatsEndpoint_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "completed": {
-                      "example": 20,
-                      "type": "number"
-                    },
-                    "completedAmount": {
-                      "example": 100000,
-                      "type": "number"
-                    },
-                    "failed": {
-                      "example": 3,
-                      "type": "number"
-                    },
-                    "historical": {
-                      "description": "Booknetic collections kept separate from operational finance",
-                      "properties": {
-                        "collectedAmount": {
-                          "description": "Integer halalas",
-                          "example": 103353250,
-                          "type": "number"
-                        },
-                        "collectedCount": {
-                          "example": 3427,
-                          "type": "number"
-                        },
-                        "reviewAmount": {
-                          "description": "Integer halalas",
-                          "example": 1575000,
-                          "type": "number"
-                        },
-                        "reviewCount": {
-                          "example": 109,
-                          "type": "number"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "pending": {
-                      "example": 2,
-                      "type": "number"
-                    },
-                    "pendingAmount": {
-                      "example": 10000,
-                      "type": "number"
-                    },
-                    "pendingVerification": {
-                      "example": 1,
-                      "type": "number"
-                    },
-                    "pendingVerificationAmount": {
-                      "example": 5000,
-                      "type": "number"
-                    },
-                    "refunded": {
-                      "example": 3,
-                      "type": "number"
-                    },
-                    "refundedAmount": {
-                      "example": 10000,
-                      "type": "number"
-                    },
-                    "total": {
-                      "example": 29,
-                      "type": "number"
-                    },
-                    "totalAmount": {
-                      "example": 125000,
-                      "type": "number"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Operational payment statistics plus a separate read-only legacy summary"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get payment statistics summary",
-        "tags": [
-          "Dashboard / Finance"
-        ]
-      }
-    },
     "/api/v1/dashboard/finance/payments/{id}": {
       "get": {
         "operationId": "DashboardFinanceController_getPaymentEndpoint_v1",
@@ -20509,7 +21307,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefundPaymentDto"
+                "$ref": "#/components/schemas/ManualRefundPaymentDto"
               }
             }
           },
@@ -20758,6 +21556,237 @@
           }
         ],
         "summary": "Approve or reject a pending bank transfer payment",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/payments/bank-transfer": {
+      "post": {
+        "operationId": "DashboardFinanceController_bankTransferEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "amount": {
+                    "description": "Transfer amount in integer halalas",
+                    "example": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "invoiceId": {
+                    "example": "00000000-0000-0000-0000-000000000000",
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "receipt": {
+                    "description": "Bank transfer receipt image or PDF",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "receipt",
+                  "invoiceId",
+                  "amount"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Receipt file + invoice metadata",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Bank transfer receipt uploaded"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a bank transfer receipt for an invoice",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/payments/stats": {
+      "get": {
+        "operationId": "DashboardFinanceController_getPaymentStatsEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "completed": {
+                      "example": 20,
+                      "type": "number"
+                    },
+                    "completedAmount": {
+                      "example": 100000,
+                      "type": "number"
+                    },
+                    "failed": {
+                      "example": 3,
+                      "type": "number"
+                    },
+                    "historical": {
+                      "description": "Booknetic collections kept separate from operational finance",
+                      "properties": {
+                        "collectedAmount": {
+                          "description": "Integer halalas",
+                          "example": 103353250,
+                          "type": "number"
+                        },
+                        "collectedCount": {
+                          "example": 3427,
+                          "type": "number"
+                        },
+                        "reviewAmount": {
+                          "description": "Integer halalas",
+                          "example": 1575000,
+                          "type": "number"
+                        },
+                        "reviewCount": {
+                          "example": 109,
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "pending": {
+                      "example": 2,
+                      "type": "number"
+                    },
+                    "pendingAmount": {
+                      "example": 10000,
+                      "type": "number"
+                    },
+                    "pendingVerification": {
+                      "example": 1,
+                      "type": "number"
+                    },
+                    "pendingVerificationAmount": {
+                      "example": 5000,
+                      "type": "number"
+                    },
+                    "refunded": {
+                      "example": 3,
+                      "type": "number"
+                    },
+                    "refundedAmount": {
+                      "example": 10000,
+                      "type": "number"
+                    },
+                    "total": {
+                      "example": 29,
+                      "type": "number"
+                    },
+                    "totalAmount": {
+                      "example": 125000,
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Operational payment statistics plus a separate read-only legacy summary"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payment statistics summary",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -22460,142 +23489,6 @@
         ]
       }
     },
-    "/api/v1/dashboard/media/upload": {
-      "post": {
-        "operationId": "DashboardMediaController_uploadFileEndpoint_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "properties": {
-                  "file": {
-                    "description": "File to upload",
-                    "format": "binary",
-                    "type": "string"
-                  },
-                  "ownerId": {
-                    "description": "UUID of the owning entity",
-                    "example": "b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f",
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "ownerType": {
-                    "description": "Entity type that owns the file",
-                    "example": "Employee",
-                    "type": "string"
-                  },
-                  "visibility": {
-                    "description": "Storage visibility",
-                    "enum": [
-                      "PUBLIC",
-                      "PRIVATE"
-                    ],
-                    "example": "PUBLIC",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "file"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "filename": {
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "mimetype": {
-                      "type": "string"
-                    },
-                    "size": {
-                      "type": "number"
-                    },
-                    "url": {
-                      "type": "string"
-                    },
-                    "visibility": {
-                      "enum": [
-                        "PUBLIC",
-                        "PRIVATE"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "File uploaded successfully"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Upload a file to object storage",
-        "tags": [
-          "Dashboard / Media"
-        ]
-      }
-    },
     "/api/v1/dashboard/media/{id}": {
       "delete": {
         "operationId": "DashboardMediaController_deleteFileEndpoint_v1",
@@ -22891,6 +23784,454 @@
         ]
       }
     },
+    "/api/v1/dashboard/media/upload": {
+      "post": {
+        "operationId": "DashboardMediaController_uploadFileEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "File to upload",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "ownerId": {
+                    "description": "UUID of the owning entity",
+                    "example": "b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f",
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "ownerType": {
+                    "description": "Entity type that owns the file",
+                    "example": "Employee",
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "description": "Storage visibility",
+                    "enum": [
+                      "PUBLIC",
+                      "PRIVATE"
+                    ],
+                    "example": "PUBLIC",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "mimetype": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "number"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "visibility": {
+                      "enum": [
+                        "PUBLIC",
+                        "PRIVATE"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "File uploaded successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a file to object storage",
+        "tags": [
+          "Dashboard / Media"
+        ]
+      }
+    },
+    "/api/v1/dashboard/mobile-home-cards": {
+      "get": {
+        "operationId": "DashboardMobileHomeCardsController_listEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List staff-managed mobile home cards",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardMobileHomeCardsController_createEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMobileHomeCardDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft mobile home card",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/mobile-home-cards/{id}": {
+      "patch": {
+        "operationId": "DashboardMobileHomeCardsController_updateEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMobileHomeCardDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a mobile home card with optimistic concurrency",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/mobile-home-cards/reorder": {
+      "put": {
+        "operationId": "DashboardMobileHomeCardsController_reorderEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderMobileHomeCardsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminMobileHomeCardDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Atomically reorder the full mobile home card list",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
     "/api/v1/dashboard/ops/activity": {
       "get": {
         "operationId": "DashboardOpsController_listActivityEndpoint_v1",
@@ -23123,6 +24464,121 @@
         ]
       }
     },
+    "/api/v1/dashboard/ops/outbox/{id}/retry": {
+      "post": {
+        "operationId": "DashboardOpsController_retryFailedOutboxEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Outbox event UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "attemptCount": {
+                      "type": "number"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "eventType": {
+                      "type": "string"
+                    },
+                    "failedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "failureReason": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "PENDING"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Event reset to PENDING with attemptCount 0; the next outbox tick will publish it"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Outbox event not found"
+          },
+          "409": {
+            "description": "Outbox event is not in FAILED state"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retry a terminal failed outbox event",
+        "tags": [
+          "Dashboard / Ops"
+        ]
+      }
+    },
     "/api/v1/dashboard/ops/outbox/failed": {
       "get": {
         "operationId": "DashboardOpsController_listFailedOutboxEndpoint_v1",
@@ -23239,121 +24695,6 @@
           }
         ],
         "summary": "List terminal failed outbox events",
-        "tags": [
-          "Dashboard / Ops"
-        ]
-      }
-    },
-    "/api/v1/dashboard/ops/outbox/{id}/retry": {
-      "post": {
-        "operationId": "DashboardOpsController_retryFailedOutboxEndpoint_v1",
-        "parameters": [
-          {
-            "description": "Outbox event UUID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "attemptCount": {
-                      "type": "number"
-                    },
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "eventType": {
-                      "type": "string"
-                    },
-                    "failedAt": {
-                      "format": "date-time",
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "failureReason": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "status": {
-                      "enum": [
-                        "PENDING"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Event reset to PENDING with attemptCount 0; the next outbox tick will publish it"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Outbox event not found"
-          },
-          "409": {
-            "description": "Outbox event is not in FAILED state"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Retry a terminal failed outbox event",
         "tags": [
           "Dashboard / Ops"
         ]
@@ -25687,169 +27028,6 @@
         ]
       }
     },
-    "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
-      "get": {
-        "operationId": "DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1",
-        "parameters": [
-          {
-            "description": "Booking UUID",
-            "in": "path",
-            "name": "bookingId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/IntakeBookingResponseDto"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "List of intake responses for the booking, each with its form, resolved scope label and submission count"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get intake form responses for a booking",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      },
-      "post": {
-        "operationId": "DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1",
-        "parameters": [
-          {
-            "description": "Booking UUID",
-            "in": "path",
-            "name": "bookingId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubmitIntakeResponseDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IntakeSubmissionResponseDto"
-                }
-              }
-            },
-            "description": "Persisted intake response"
-          },
-          "400": {
-            "description": "Validation failed (missing required field, unknown field, or invalid option)"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Booking or form not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Submit (or overwrite) intake answers on behalf of a client for a booking",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      }
-    },
     "/api/v1/dashboard/organization/intake-forms/{formId}": {
       "delete": {
         "operationId": "DashboardOrganizationSettingsController_deleteIntakeFormEndpoint_v1",
@@ -26184,6 +27362,169 @@
           }
         ],
         "summary": "Replace all fields on an intake form",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
+      "get": {
+        "operationId": "DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntakeBookingResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List of intake responses for the booking, each with its form, resolved scope label and submission count"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get intake form responses for a booking",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitIntakeResponseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeSubmissionResponseDto"
+                }
+              }
+            },
+            "description": "Persisted intake response"
+          },
+          "400": {
+            "description": "Validation failed (missing required field, unknown field, or invalid option)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Booking or form not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit (or overwrite) intake answers on behalf of a client for a booking",
         "tags": [
           "Dashboard / Org Experience"
         ]
@@ -27376,6 +28717,9 @@
           },
           "404": {
             "description": "Service not found"
+          },
+          "409": {
+            "description": "Clinic booking services and services referenced by packages cannot be deleted or archived"
           },
           "500": {
             "content": {
@@ -28910,163 +30254,6 @@
           }
         ],
         "summary": "Create an employee",
-        "tags": [
-          "Dashboard / People"
-        ]
-      }
-    },
-    "/api/v1/dashboard/people/employees/onboarding": {
-      "post": {
-        "operationId": "DashboardPeopleController_onboardEmployeeEndpoint_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OnboardEmployeeDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "employee": {
-                      "$ref": "#/components/schemas/EmployeeResponseDto"
-                    },
-                    "message": {
-                      "example": "Employee onboarded successfully",
-                      "type": "string"
-                    },
-                    "success": {
-                      "example": true,
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Employee onboarded"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Onboard a new employee with full profile details",
-        "tags": [
-          "Dashboard / People"
-        ]
-      }
-    },
-    "/api/v1/dashboard/people/employees/stats": {
-      "get": {
-        "operationId": "DashboardPeopleController_employeeStatsEndpoint_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmployeeStatsResponseDto"
-                }
-              }
-            },
-            "description": "Employee statistics summary"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get employee statistics",
         "tags": [
           "Dashboard / People"
         ]
@@ -32431,6 +33618,163 @@
         ]
       }
     },
+    "/api/v1/dashboard/people/employees/onboarding": {
+      "post": {
+        "operationId": "DashboardPeopleController_onboardEmployeeEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardEmployeeDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "employee": {
+                      "$ref": "#/components/schemas/EmployeeResponseDto"
+                    },
+                    "message": {
+                      "example": "Employee onboarded successfully",
+                      "type": "string"
+                    },
+                    "success": {
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Employee onboarded"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Onboard a new employee with full profile details",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
+    "/api/v1/dashboard/people/employees/stats": {
+      "get": {
+        "operationId": "DashboardPeopleController_employeeStatsEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeStatsResponseDto"
+                }
+              }
+            },
+            "description": "Employee statistics summary"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get employee statistics",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
     "/api/v1/dashboard/platform/integrations": {
       "get": {
         "operationId": "DashboardPlatformController_listIntegrationsEndpoint_v1",
@@ -33115,6 +34459,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramCancellationResultDto"
+                }
+              }
+            },
             "description": ""
           },
           "400": {
@@ -33163,7 +34514,84 @@
             "bearer": []
           }
         ],
-        "summary": "Cancel a program (cascades to enrollments, no automatic refund)",
+        "summary": "Cancel a program and queue participant refunds from the confirmed preview",
+        "tags": [
+          "Dashboard / Programs"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "DashboardProgramsController_cancellationPreview_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramCancellationPreviewDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview participant refunds for center cancellation",
         "tags": [
           "Dashboard / Programs"
         ]
@@ -34128,6 +35556,105 @@
         ]
       }
     },
+    "/api/v1/mobile/auth/review-login": {
+      "post": {
+        "operationId": "MobileReviewAuthController_loginReviewAccount_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewLoginDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "sessionKind": {
+                      "enum": [
+                        "client"
+                      ],
+                      "type": "string"
+                    },
+                    "tokens": {
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "accessToken",
+                        "refreshToken"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "sessionKind",
+                    "tokens"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Log in to the explicitly configured synthetic review account",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
     "/api/v1/mobile/auth/verify-otp": {
       "post": {
         "operationId": "MobileClientAuthController_verifyMobileOtp_v1",
@@ -34225,6 +35752,20 @@
       "get": {
         "operationId": "MobileClientBookingsController_listMyBookings_v1",
         "parameters": [
+          {
+            "description": "Filter by appointment tab before pagination",
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
+          },
           {
             "description": "Page number (1-based)",
             "in": "query",
@@ -34421,6 +35962,12 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "cancellationRefund": {
+                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
+                    }
+                  },
                   "type": "object"
                 }
               }
@@ -34519,11 +36066,23 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    },
+                    "refund": {
+                      "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+                    },
+                    "requiresApproval": {
+                      "type": "boolean"
+                    }
+                  },
                   "type": "object"
                 }
               }
             },
-            "description": "Booking cancelled"
+            "description": "Booking cancelled; enabled policy includes refund and requiresApproval"
           },
           "400": {
             "content": {
@@ -34565,6 +36124,9 @@
             },
             "description": "Booking not found"
           },
+          "409": {
+            "description": "Cancellation terms changed; refresh the preview"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -34582,6 +36144,83 @@
           }
         ],
         "summary": "Cancel a booking",
+        "tags": [
+          "Mobile Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/bookings/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "MobileClientBookingsController_cancellationPreviewEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCancellationPreviewDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview client cancellation eligibility and refund terms",
         "tags": [
           "Mobile Client / Bookings"
         ]
@@ -35615,6 +37254,112 @@
         ]
       }
     },
+    "/api/v1/mobile/client/payments/bank-transfer/settings": {
+      "get": {
+        "operationId": "MobileClientPaymentsController_getBankTransferSettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "accounts": {
+                      "items": {
+                        "properties": {
+                          "bankName": {
+                            "type": "string"
+                          },
+                          "beneficiaryName": {
+                            "type": "string"
+                          },
+                          "iban": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "bankName",
+                          "beneficiaryName",
+                          "iban"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "accounts"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Bank transfer availability and configured recipient accounts"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get client-visible bank transfer settings and accounts",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
     "/api/v1/mobile/client/payments/init": {
       "post": {
         "operationId": "MobileClientPaymentsController_initPaymentEndpoint_v1",
@@ -35787,6 +37532,107 @@
         ]
       }
     },
+    "/api/v1/mobile/client/payments/package-purchases/init": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_initPackagePurchaseEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "invoiceId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "paymentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "purchaseId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "example": "https://checkout.moyasar.com/pay/payment-id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "purchaseId",
+                    "invoiceId",
+                    "paymentId",
+                    "redirectUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Package purchase initialized (PENDING until the Moyasar payment completes)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a Moyasar payment to self-purchase a session package",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
     "/api/v1/mobile/client/portal/home": {
       "get": {
         "operationId": "MobileClientHomeController_home_v1",
@@ -35894,12 +37740,15 @@
                       "type": "string"
                     },
                     "outstandingBalance": {
-                      "example": 250,
-                      "type": "number"
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "example": 25000,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "totalBookings": {
                       "example": 8,
-                      "type": "number"
+                      "minimum": 0,
+                      "type": "integer"
                     }
                   },
                   "type": "object"
@@ -37102,6 +38951,111 @@
           }
         ],
         "summary": "Start the session for an assigned booking (check-in)",
+        "tags": [
+          "Mobile Employee / Bookings"
+        ]
+      }
+    },
+    "/api/v1/mobile/employee/bookings/{id}/start-meeting": {
+      "get": {
+        "operationId": "MobileEmployeeBookingsController_startMeeting_v1",
+        "parameters": [
+          {
+            "description": "Booking ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bookingId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "durationMins": {
+                      "type": "integer"
+                    },
+                    "meetingStatus": {
+                      "enum": [
+                        "PENDING",
+                        "CREATED",
+                        "FAILED",
+                        "CANCELLED"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "scheduledAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "startUrl": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Meeting start details; startUrl is null until the meeting has been created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the Zoom host link and timing for an assigned online booking",
         "tags": [
           "Mobile Employee / Bookings"
         ]
@@ -38733,41 +40687,6 @@
         ]
       }
     },
-    "/api/v1/public/chat/conversations/current": {
-      "get": {
-        "operationId": "PublicChatController_current_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Current conversation for the supplied guest cookie"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "summary": "Get the current guest chat conversation",
-        "tags": [
-          "Public / Chat"
-        ]
-      }
-    },
     "/api/v1/public/chat/conversations/{conversationId}/handoff": {
       "post": {
         "operationId": "PublicChatController_requestReceptionForGuest_v1",
@@ -39019,6 +40938,41 @@
         ]
       }
     },
+    "/api/v1/public/chat/conversations/current": {
+      "get": {
+        "operationId": "PublicChatController_current_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current conversation for the supplied guest cookie"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get the current guest chat conversation",
+        "tags": [
+          "Public / Chat"
+        ]
+      }
+    },
     "/api/v1/public/contact-messages": {
       "post": {
         "operationId": "PublicContactMessagesController_submit_v1",
@@ -39067,7 +41021,17 @@
     "/api/v1/public/employees": {
       "get": {
         "operationId": "PublicEmployeesController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Include direct clinic booking service links",
+            "in": "query",
+            "name": "includeDirectClinics",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -39349,6 +41313,15 @@
             "schema": {
               "example": "dr-ahmed",
               "type": "string"
+            }
+          },
+          {
+            "description": "Include hidden booking links for direct clinics",
+            "in": "query",
+            "name": "includeDirectClinics",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -39753,6 +41726,19 @@
             "schema": {
               "type": "number"
             }
+          },
+          {
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -39838,7 +41824,13 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "description": "Booking detail",
+                  "properties": {
+                    "cancellationRefund": {
+                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
+                    }
+                  },
                   "type": "object"
                 }
               }
@@ -39929,8 +41921,113 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Updated booking",
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    },
+                    "refund": {
+                      "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+                    },
+                    "requiresApproval": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "enum": [
+                        "CANCELLED",
+                        "CANCEL_REQUESTED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "booking",
+                    "requiresApproval"
+                  ],
                   "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Booking not found"
+          },
+          "409": {
+            "description": "Cancellation terms changed; refresh the preview"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a client booking",
+        "tags": [
+          "Public / Me"
+        ]
+      }
+    },
+    "/api/v1/public/me/bookings/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "PublicMeController_cancellationPreviewEndpoint_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCancellationPreviewDto"
                 }
               }
             },
@@ -39985,7 +42082,7 @@
             "bearer": []
           }
         ],
-        "summary": "Cancel a client booking",
+        "summary": "Preview client cancellation eligibility and refund terms",
         "tags": [
           "Public / Me"
         ]
@@ -40244,66 +42341,6 @@
           }
         ],
         "summary": "List the authenticated client chat conversation history",
-        "tags": [
-          "Public / Chat"
-        ]
-      }
-    },
-    "/api/v1/public/me/chat/conversations/current": {
-      "get": {
-        "operationId": "MyChatController_current_v1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Current conversation for the authenticated client"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get the authenticated client chat conversation",
         "tags": [
           "Public / Chat"
         ]
@@ -40836,6 +42873,66 @@
         ]
       }
     },
+    "/api/v1/public/me/chat/conversations/current": {
+      "get": {
+        "operationId": "MyChatController_current_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current conversation for the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated client chat conversation",
+        "tags": [
+          "Public / Chat"
+        ]
+      }
+    },
     "/api/v1/public/me/chat/operations/{operationId}/acknowledge": {
       "post": {
         "operationId": "MyChatController_acknowledgeAdditionalBooking_v1",
@@ -41105,7 +43202,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Paginated invoices list",
+                  "description": "Paginated invoices with the full client outstanding balance",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "outstandingBalance": {
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize",
+                    "outstandingBalance"
+                  ],
                   "type": "object"
                 }
               }
@@ -41371,6 +43500,51 @@
         "summary": "Read an authenticated client package purchase status",
         "tags": [
           "Mobile Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/public/mobile-home-cards": {
+      "get": {
+        "operationId": "PublicMobileHomeCardsController_listEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicMobileHomeCardDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "List published mobile home cards",
+        "tags": [
+          "Public / Catalog"
         ]
       }
     },
@@ -41717,6 +43891,62 @@
           }
         ],
         "summary": "Initialize a Moyasar payment for a booking invoice (requires a logged-in client session)",
+        "tags": [
+          "Public / Payments"
+        ]
+      }
+    },
+    "/api/v1/public/payments/methods": {
+      "get": {
+        "operationId": "PublicPaymentsController_getPaymentMethods_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "atClinicEnabled": {
+                      "description": "Clients may confirm a booking and pay at the center",
+                      "type": "boolean"
+                    },
+                    "moyasarEnabled": {
+                      "description": "Online card checkout (Moyasar) can complete for this deployment",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "moyasarEnabled",
+                    "atClinicEnabled"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Client-facing payment capabilities. `moyasarEnabled` is false when online payment is disabled or the gateway is not configured, so a client surface never offers a method the backend would reject."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "List the payment methods clients can actually use",
         "tags": [
           "Public / Payments"
         ]
@@ -42070,7 +44300,17 @@
     "/api/v1/public/services": {
       "get": {
         "operationId": "PublicCatalogController_getCatalog_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Include internal booking services for direct clinics",
+            "in": "query",
+            "name": "includeDirectClinics",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { LocaleProvider } from '@/features/locale/locale-provider';
+import { BrandingProvider } from '@/features/branding/branding-provider';
+import { testBranding } from '@/test/fixtures/branding';
 
 const { paramsGetMock, fetchMock } = vi.hoisted(() => ({
   paramsGetMock: vi.fn(),
@@ -11,12 +13,13 @@ const { paramsGetMock, fetchMock } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: paramsGetMock }),
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 import VerifyEmailPage from './page';
 
 function withLocale(locale: 'ar' | 'en', children: ReactNode) {
-  return <LocaleProvider locale={locale}>{children}</LocaleProvider>;
+  return <LocaleProvider locale={locale}><BrandingProvider branding={testBranding}>{children}</BrandingProvider></LocaleProvider>;
 }
 
 function mockOkResponse() {
@@ -73,7 +76,7 @@ describe('VerifyEmailPage', () => {
       expect.stringContaining('verify-email?token=tok123'),
     );
     expect(
-      screen.getByRole('link', { name: 'تسجيل الدخول' }),
+      within(screen.getByRole('main')).getByRole('link', { name: 'تسجيل الدخول' }),
     ).toBeTruthy();
   });
 

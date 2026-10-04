@@ -36,6 +36,9 @@ import { generateInvoicePdf } from "@/lib/api/invoices"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
 import { BookingRefundDialog } from "@/components/features/bookings/booking-refund-dialog"
 import { canCollectBooking } from "@/components/features/bookings/booking-collect-action"
+import {
+  CANCELLABLE_BOOKING_STATUSES as CANCELLABLE_STATUSES,
+} from "@/lib/booking-statuses"
 import type { Booking } from "@/lib/types/booking"
 
 export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow" | "reschedule"
@@ -59,27 +62,21 @@ const rescheduleAction: QuickStatusAction = {
   icon: Calendar03Icon,
 }
 
-/* Quick status actions available per status */
+/* Quick status actions per status. Mirrors the backend state machine: a hold
+ * (awaiting_payment / pending_group_fill) is released through the cancel action,
+ * not "confirm" — CONFIRM is PENDING-only. */
+const confirmedStatusActions: QuickStatusAction[] = [
+  { action: "checkin",  labelKey: "bookings.actions.action.checkin",  icon: UserCheck01Icon },
+  { action: "complete", labelKey: "bookings.actions.action.complete", icon: CheckmarkCircle01Icon },
+  { action: "noshow",   labelKey: "bookings.actions.action.noshow",   icon: EyeIcon, destructive: true },
+  rescheduleAction,
+]
+
 const quickStatusActions: Record<string, QuickStatusAction[]> = {
   pending:            [confirmAction, rescheduleAction],
-  pending_group_fill: [confirmAction],
-  awaiting_payment:   [confirmAction],
-  confirmed: [
-    { action: "checkin",  labelKey: "bookings.actions.action.checkin",  icon: UserCheck01Icon },
-    { action: "complete", labelKey: "bookings.actions.action.complete", icon: CheckmarkCircle01Icon },
-    { action: "noshow",   labelKey: "bookings.actions.action.noshow",   icon: EyeIcon, destructive: true },
-    rescheduleAction,
-  ],
+  confirmed: confirmedStatusActions,
+  deposit_paid: confirmedStatusActions,
 }
-
-/* Statuses that can still be cancelled from the quick menu */
-const CANCELLABLE_STATUSES = new Set([
-  "pending",
-  "pending_group_fill",
-  "awaiting_payment",
-  "confirmed",
-  "cancel_requested",
-])
 
 /* Terminal statuses — the booking is over, so it can no longer be edited */
 /* ── Actions cell — delete opens the parent's AdminCancelDialog directly ──
@@ -257,14 +254,16 @@ export function StatusCell({
 }) {
   const { t } = useLocale()
   if (booking.isHistoricalImport) return <StatusBadge status={booking.status} />
-  const actions = quickStatusActions[booking.status] ?? []
+  const actions = (quickStatusActions[booking.status] ?? []).filter(
+    ({ action }) => action !== "checkin" || !booking.checkedInAt,
+  )
   const canCancel = CANCELLABLE_STATUSES.has(booking.status)
   // Confirmed + not-yet-checked-in bookings surface a dedicated one-click
   // "تسجيل حضور" control beside the dropdown — reception used to miss it
   // when it lived only inside the status menu, so confirmed rows defaulted
   // to لم يحضر after the fact.
   const showCheckinButton =
-    booking.status === "confirmed" && !booking.checkedInAt
+    (booking.status === "confirmed" || booking.status === "deposit_paid") && !booking.checkedInAt
   if (!actions.length && !canCancel && !showCheckinButton)
     return <StatusBadge status={booking.status} />
 

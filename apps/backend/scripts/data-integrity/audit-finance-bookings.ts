@@ -443,7 +443,7 @@ export async function auditFinanceBookings(
     findings.sort((left, right) => left.evidenceId.localeCompare(right.evidenceId) || left.category.localeCompare(right.category));
     return { schemaVersion: 1, ruleVersion: AUDIT_RULE_VERSION, database: identity.database, schema: identity.schema,
       generatedAt: now.toISOString(), stalledOutboxHours, batchSize, cursors, nextCursors,
-      completedCategories, nextCompletedCategories: [...nextCompletedCategories].sort(), complete,
+      completedCategories, nextCompletedCategories: [...nextCompletedCategories].sort((a, b) => a.localeCompare(b)), complete,
       completion, counts, scanned, totalFindings: findings.length, checksum: checksum(findings), findings };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 30_000 });
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { withAlpha } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 interface AvatarProps {
   size?: number;
@@ -13,8 +14,10 @@ export function Avatar({
   size = 48,
   name,
   imageUrl,
-  color = '#1D4ED8',
+  color: colorOverride,
 }: AvatarProps) {
+  const colors = useSawaaColors();
+  const color = colorOverride ?? colors.teal[700];
   if (imageUrl) {
     return (
       <Image
@@ -23,7 +26,7 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: '#F2F4F6',
+          backgroundColor: colors.glass.opaqueBg,
         }}
       />
     );

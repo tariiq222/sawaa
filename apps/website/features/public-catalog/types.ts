@@ -17,6 +17,9 @@ export interface PublicServiceCategory {
   nameEn: string | null;
   sortOrder: number;
   isActive: boolean;
+  bookingMode?: 'DIRECT' | 'SERVICES';
+  kind?: 'CLINIC' | 'SERVICE_GROUP';
+  archivedAt?: string | null;
   imageUrl: string | null;
   iconName: string | null;
   iconBgColor: string | null;
@@ -42,6 +45,9 @@ export interface PublicServiceBookingConfig {
 export interface PublicService {
   id: string;
   categoryId: string | null;
+  isHidden?: boolean;
+  isActive?: boolean;
+  archivedAt?: string | null;
   nameAr: string;
   nameEn: string | null;
   descriptionAr: string | null;
@@ -63,7 +69,7 @@ export interface PublicCatalog {
   categories: PublicServiceCategory[];
   services: PublicService[];
   /**
-   * Org VAT rate as a fraction (0.15 = 15%). Optional for tolerance: older
+   * Org VAT rate as a fraction of 1 (0 when VAT is off). Optional for tolerance: older
    * cached responses may lack the field — always read with `?? 0`.
    */
   vatRate?: number;

@@ -3,7 +3,8 @@ import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video } from 'lucide-react-native';
 
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { getSawaaRoles, sawaaRadius } from '@/theme/sawaa';
+import { useTheme } from '@/theme/useTheme';
 import { getFontName } from '@/theme/fonts';
 import { FEATURE_FLAGS } from '@/constants/feature-flags';
 
@@ -16,6 +17,8 @@ interface Props {
   isRTL: boolean;
   /** "join" for client, "start" for employee (host) */
   variant: 'join' | 'start';
+  /** Stretch to the container width (stacked layouts) instead of flexing inside a row. */
+  fullWidth?: boolean;
 }
 
 const JOIN_WINDOW_MS_BEFORE = 15 * 60 * 1000;
@@ -27,7 +30,10 @@ export function JoinVideoCallButton({
   status,
   isRTL,
   variant,
+  fullWidth = false,
 }: Props) {
+  const { theme, scheme } = useTheme();
+  const action = getSawaaRoles(scheme).action;
   // Hooks must run unconditionally — feature-flag gating happens after.
   const f600 = getFontName(isRTL ? 'ar' : 'en', '600');
   const f700 = getFontName(isRTL ? 'ar' : 'en', '700');
@@ -69,17 +75,23 @@ export function JoinVideoCallButton({
   };
 
   return (
-    <Pressable onPress={onPress} disabled={!withinWindow} style={styles.btn}>
+    <Pressable
+      onPress={onPress}
+      disabled={!withinWindow}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !withinWindow }}
+      style={fullWidth ? styles.btnFull : styles.btn}
+    >
       <LinearGradient
         colors={withinWindow
-          ? [sawaaColors.teal[500], sawaaColors.teal[700]]
-          : ['#cbd5da', '#a3b0b8']}
+          ? action.gradient
+          : [theme.colors.surfaceHigh, theme.colors.surfaceLow]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.gradient, { borderRadius: sawaaRadius.pill }]}
       >
-        <Video size={18} color="#fff" strokeWidth={1.75} />
-        <Text style={[styles.text, { fontFamily: withinWindow ? f700 : f600, fontWeight: withinWindow ? undefined : '600' }]}>
+        <Video size={18} color={withinWindow ? action.foreground : theme.colors.textMuted} strokeWidth={1.75} />
+        <Text style={[styles.text, { color: withinWindow ? action.foreground : theme.colors.textMuted, fontFamily: withinWindow ? f700 : f600, fontWeight: withinWindow ? undefined : '600' }]}>
           {label}
         </Text>
       </LinearGradient>
@@ -89,9 +101,10 @@ export function JoinVideoCallButton({
 
 const styles = StyleSheet.create({
   btn: { flex: 1.4 },
+  btnFull: { alignSelf: 'stretch' },
   gradient: {
-    height: 52,
+    height: 56,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  text: { color: '#fff', fontSize: 13.5 },
+  text: { fontSize: 15 },
 });

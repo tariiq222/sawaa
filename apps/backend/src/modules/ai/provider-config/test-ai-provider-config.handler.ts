@@ -22,7 +22,7 @@ export class TestAiProviderConfigHandler {
 
   async execute(dto: TestAiProviderConfigDto, actor?: { id?: string; email?: string }) {
     try { assertProviderModel(dto.provider, dto.model); } catch { throw new BadRequestException('Invalid provider or model'); }
-    if ([...dto.candidateApiKey].some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127)) throw new BadRequestException('Invalid candidate credential');
+    if ([...dto.candidateApiKey].some((c) => { const code = c.codePointAt(0) ?? 0; return code < 32 || code === 127; })) throw new BadRequestException('Invalid candidate credential');
     const testedAt = new Date();
     let ok = false;
     let errorCode: string | null = null;

@@ -44,7 +44,7 @@ export async function SupportGroups({ intro, items, loadFailed = false }: Props)
 
         {items.length === 0 ? (
           <div
-            className="mx-auto max-w-md rounded-2xl bg-white px-10 py-14 text-center"
+            className="mx-auto max-w-md rounded-2xl bg-[var(--surface)] px-10 py-14 text-center"
             style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
           >
             <div
@@ -74,7 +74,7 @@ export async function SupportGroups({ intro, items, loadFailed = false }: Props)
               <Link
                 href="/support-groups"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold transition hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
-                style={{ background: 'var(--sw-primary-700)', color: '#fff' }}
+                style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)' }}
               >
                 {t('supportGroups.viewAll')}
                 <ArrowLeft aria-hidden className="h-4 w-4 rtl:rotate-180" />
@@ -119,7 +119,7 @@ function ProgramCard({ program, locale }: { program: SupportGroup; locale: 'ar' 
 
   return (
     <article
-      className="sw-home-support-card group relative h-full overflow-hidden rounded-2xl bg-white p-5 transition duration-300 hover:-translate-y-1 sm:p-6"
+      className="sw-home-support-card group relative h-full overflow-hidden rounded-2xl bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 sm:p-6"
     >
       <div
         aria-hidden

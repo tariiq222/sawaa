@@ -5,11 +5,24 @@ import {
   IsOptional,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { RefundType } from '@prisma/client';
+import { ClientCancelCutoffMode, RefundType } from '@prisma/client';
 
 export class UpsertBookingSettingsDto {
+  @ApiPropertyOptional({ description: 'Enable the explicitly configured immediate client cancellation policy' })
+  @ValidateIf((_object, value) => value !== undefined) @IsBoolean() clientCancellationPolicyEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Client cancellation eligibility cutoff', enum: ClientCancelCutoffMode, enumName: 'ClientCancelCutoffMode', nullable: true })
+  @IsOptional() @IsEnum(ClientCancelCutoffMode) clientCancelCutoffMode?: ClientCancelCutoffMode | null;
+
+  @ApiPropertyOptional({ description: 'Minimum hours before start to allow client cancellation; 0 is valid', minimum: 0, nullable: true, type: Number })
+  @IsOptional() @IsInt() @Min(0) clientCancelBeforeHours?: number | null;
+
+  @ApiPropertyOptional({ description: 'Independent early cancellation partial refund percentage', minimum: 0, maximum: 100, nullable: true, type: Number })
+  @IsOptional() @IsInt() @Min(0) @Max(100) earlyCancelRefundPercent?: number | null;
+
   @ApiPropertyOptional({ description: 'Buffer time between bookings in minutes', example: 15 })
   @IsOptional() @IsInt() @Min(0) @Max(120) bufferMinutes?: number;
 

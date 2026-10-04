@@ -1,3 +1,4 @@
+import { CancellationRefundIntentService } from '../cancellation-refund/cancellation-refund-intent.service';
 import { Injectable } from '@nestjs/common';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { BookingCancelledPayload } from '../../bookings/events/booking-cancelled.event';
@@ -12,6 +13,7 @@ export class OnBookingCancelledRefundHandler {
   constructor(
     private readonly eventBus: EventBusService,
     private readonly refund: RefundPaymentHandler,
+    private readonly cancellationRefunds: CancellationRefundIntentService,
   ) {}
 
   register(): void {
@@ -23,6 +25,14 @@ export class OnBookingCancelledRefundHandler {
   }
 
   async handle(envelope: DomainEventEnvelope<BookingCancelledPayload>): Promise<void> {
+    if (envelope.payload.centerCancellation) {
+      await this.cancellationRefunds.execute(envelope.eventId, envelope.payload.bookingId, envelope.payload.clientId, envelope.payload.centerCancellation);
+      return;
+    }
+    if (envelope.payload.clientCancellation) {
+      await this.cancellationRefunds.execute(envelope.eventId, envelope.payload.bookingId, envelope.payload.clientId, envelope.payload.clientCancellation);
+      return;
+    }
     const { refundType, paymentId, bookingId, clientId, refundRequestId, idempotencyKey } = envelope.payload;
     if (refundType === 'NONE' || !paymentId) {
       return;

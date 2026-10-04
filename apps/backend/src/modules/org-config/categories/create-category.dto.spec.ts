@@ -76,6 +76,11 @@ describe('CreateCategoryDto', () => {
     expect(errors).toHaveLength(0);
   });
 
+  it('rejects an unknown category kind', async () => {
+    const errors = await validateDto({ ...valid, kind: 'UNKNOWN' });
+    expect(errors.some((e) => e.property === 'kind')).toBe(true);
+  });
+
   it('rejects an iconName longer than 50 chars', async () => {
     const errors = await validateDto({ ...valid, iconName: 'A'.repeat(51) });
     expect(errors.some((e) => e.property === 'iconName')).toBe(true);

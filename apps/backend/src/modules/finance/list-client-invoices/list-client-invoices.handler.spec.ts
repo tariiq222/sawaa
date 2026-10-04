@@ -24,6 +24,7 @@ describe('ListClientInvoicesHandler', () => {
   };
 
   const mockPrisma = {
+    $queryRaw: jest.fn(),
     invoice: {
       findMany: jest.fn(),
       count: jest.fn(),
@@ -34,6 +35,7 @@ describe('ListClientInvoicesHandler', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.$queryRaw.mockResolvedValue([{ outstandingBalance: 0 }]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,7 +53,7 @@ describe('ListClientInvoicesHandler', () => {
 
     const result = await handler.execute('cl-1');
 
-    expect(result).toEqual({ items: [], total: 0, page: 1, pageSize: 20 });
+    expect(result).toEqual({ items: [], total: 0, page: 1, pageSize: 20, outstandingBalance: 0 });
     expect(mockPrisma.booking.findMany).not.toHaveBeenCalled();
     expect(mockPrisma.payment.findMany).not.toHaveBeenCalled();
   });
@@ -153,4 +155,14 @@ describe('ListClientInvoicesHandler', () => {
       expect.objectContaining({ skip: 20, take: 10 }),
     );
   });
+  it('returns the remaining balance across every invoice even when the requested page is empty', async () => {
+    mockPrisma.invoice.count.mockResolvedValue(53);
+    mockPrisma.invoice.findMany.mockResolvedValue([]);
+    mockPrisma.$queryRaw.mockResolvedValue([{ outstandingBalance: 15000 }]);
+
+    const result = await handler.execute('cl-1', 5, 20);
+    expect(result).toMatchObject({ items: [], total: 53, page: 5, outstandingBalance: 15000 });
+    expect(mockPrisma.$queryRaw.mock.calls[0][0].values).toEqual(['cl-1']);
+  });
+
 });

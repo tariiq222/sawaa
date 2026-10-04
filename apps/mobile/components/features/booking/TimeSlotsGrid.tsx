@@ -1,11 +1,11 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
-import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { DirState } from '@/hooks/useDir';
@@ -21,8 +21,10 @@ export function formatTime(iso: string, isRTL: boolean): string {
   const m = d.getMinutes();
   const suffix = h < 12 ? (isRTL ? 'ص' : 'AM') : isRTL ? 'م' : 'PM';
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const mm = String(m).padStart(2, '0');
-  return `${h12}:${mm} ${suffix}`;
+  const locale = isRTL ? 'ar-SA-u-nu-arab' : 'en-US';
+  const hour = new Intl.NumberFormat(locale, { useGrouping: false }).format(h12);
+  const minute = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(m);
+  return `${hour}:${minute} ${suffix}`;
 }
 
 const SKELETON_SLOTS = 6;
@@ -52,6 +54,9 @@ export function TimeSlotsGrid({
   reduceMotion = false,
   onRetry,
 }: TimeSlotsGridProps) {
+  const sawaaColors = useSawaaColors();
+  const { scheme } = useTheme();
+  const roles = getSawaaRoles(scheme);
   if (loading) {
     return (
       <View style={[styles.slotsGrid, { flexDirection: dir.row }]}>
@@ -100,35 +105,22 @@ export function TimeSlotsGrid({
               Haptics.selectionAsync();
               onSelect(i);
             }}
-            style={styles.slotWrap}
+            style={[styles.slotWrap, styles.slot, {
+              backgroundColor: isSelected ? roles.selection.fill : roles.surface,
+              borderColor: isSelected ? roles.selection.fill : roles.surfaceHigh,
+            }]}
             accessibilityRole="button"
             accessibilityLabel={`${dir.isRTL ? 'وقت' : 'Time'} ${formatTime(s.startTime, dir.isRTL)}`}
             accessibilityState={{ selected: isSelected }}
           >
-            <GlassSurface variant={isSelected ? 'strong' : 'base'} radius={sawaaRadius.md} style={styles.slot}>
-              {isSelected ? (
-                <LinearGradient
-                  colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : null}
-              <View style={styles.slotInner}>
-                <Text
-                  style={[
-                    styles.slotText,
-                    {
-                      fontFamily: f600,
-                      fontWeight: '600',
-                      color: isSelected ? sawaaColors.teal[50] : sawaaColors.ink[900],
-                    },
-                  ]}
-                >
-                  {formatTime(s.startTime, dir.isRTL)}
-                </Text>
-              </View>
-            </GlassSurface>
+            <Text
+              style={[styles.slotText, {
+                fontFamily: f600,
+                color: isSelected ? roles.selection.foreground : sawaaColors.ink[900],
+              }]}
+            >
+              {formatTime(s.startTime, dir.isRTL)}
+            </Text>
           </Pressable>
         );
       })}
@@ -138,11 +130,17 @@ export function TimeSlotsGrid({
 
 const styles = StyleSheet.create({
   slotsGrid: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
-  slotWrap: { width: '48.5%' },
-  slot: { overflow: 'hidden' },
-  slotInner: { paddingVertical: sawaaSpacing.lg, alignItems: 'center' },
+  slotWrap: { width: '31.5%' },
+  slot: {
+    minHeight: 48,
+    borderRadius: sawaaRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   slotText: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
+    textAlign: 'center',
   },
 });

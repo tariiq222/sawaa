@@ -48,6 +48,21 @@ describe('clientPaymentsService.initPayment', () => {
   });
 });
 
+describe('clientPaymentsService.getBankTransferSettings', () => {
+  it('loads only the bank-transfer settings exposed to the signed-in client', async () => {
+    const settings = {
+      enabled: true,
+      accounts: [{ id: 'bank-1', label: 'Main', bankName: 'Bank', beneficiaryName: 'Sawa', iban: 'SA0380000000608010167519' }],
+    };
+    (mockedApi as unknown as { get: jest.Mock }).get.mockResolvedValueOnce({ data: settings });
+
+    await expect(clientPaymentsService.getBankTransferSettings()).resolves.toEqual(settings);
+    expect((mockedApi as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
+      '/mobile/client/payments/bank-transfer/settings',
+    );
+  });
+});
+
 describe('receipt upload metadata', () => {
   it('preserves a picker PNG mime type and filename', () => {
     expect(getReceiptUploadMetadata({

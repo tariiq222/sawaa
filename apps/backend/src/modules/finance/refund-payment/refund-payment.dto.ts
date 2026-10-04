@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsInt, IsOptional, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsOptional, Min, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RefundPaymentDto {
@@ -12,4 +12,11 @@ export class RefundPaymentDto {
   @IsOptional()
   @Min(1)
   amount?: number;
+}
+
+export class ManualRefundPaymentDto extends RefundPaymentDto {
+  @ApiPropertyOptional({ description: 'Existing pending cash/bank-transfer refund request to settle; retries return the existing completion', format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  refundRequestId?: string;
 }

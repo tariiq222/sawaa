@@ -1,139 +1,193 @@
-import React from 'react';
-import { Platform, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { Platform, Pressable, StyleSheet, View, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useReducedTransparency, useIncreasedContrast } from '../../hooks/useA11y';
+import { useReducedTransparency, useIncreasedContrast, useReduceMotion } from '../../hooks/useA11y';
 import { useTheme } from '../useTheme';
-import { sawaaBlur, sawaaColors, sawaaRadius } from './tokens';
+import { sawaaBlur, getSawaaColors, getSawaaRoles, sawaaRadius } from './tokens';
 
-type Variant = 'base' | 'strong' | 'soft' | 'dark';
+type SurfaceVariant = 'base' | 'strong' | 'soft' | 'dark';
+export type GlassSurfaceVariant = SurfaceVariant | 'regular' | 'clear';
 
-interface Props extends ViewProps {
-  variant?: Variant;
+export type GlassSurfaceProps = Omit<PressableProps, 'style' | 'children' | 'onPress'> & {
+  variant?: GlassSurfaceVariant;
+  /** Reserve the translucent material for the bottom navigation dock. */
+  material?: 'surface' | 'glass';
+  tint?: string;
   radius?: number;
   padding?: number | ViewStyle['padding'];
+  style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
+  interactive?: boolean;
+  pressed?: boolean;
+  onPress?: PressableProps['onPress'];
+};
+
+function toSurfaceVariant(variant: GlassSurfaceVariant): SurfaceVariant {
+  if (variant === 'regular') return 'base';
+  if (variant === 'clear') return 'soft';
+  return variant;
 }
 
-const intensityMap: Record<Variant, number> = {
-  base: sawaaBlur.base,
-  strong: sawaaBlur.strong,
-  soft: sawaaBlur.soft,
-  dark: sawaaBlur.dark,
-};
-
-const tintMap: Record<Variant, 'light' | 'dark' | 'default'> = {
-  base: 'light',
-  strong: 'light',
-  soft: 'light',
-  dark: 'dark',
-};
-
-const fillMap: Record<Variant, string> = {
-  base: sawaaColors.glass.bg,
-  strong: sawaaColors.glass.bgStrong,
-  soft: sawaaColors.glass.bgSoft,
-  dark: sawaaColors.glass.darkBg,
-};
-
-const borderMap: Record<Variant, string> = {
-  base: sawaaColors.glass.border,
-  strong: sawaaColors.glass.border,
-  soft: sawaaColors.glass.borderSoft,
-  dark: sawaaColors.glass.darkBorder,
-};
-
 /**
- * Liquid glass surface — mirrors `.lg` / `.lg-strong` / `.lg-soft` / `.lg-dark`
- * from sawaa-design/v2/styles.css. Uses expo-blur for backdrop blur and a
- * diagonal gradient overlay to approximate the specular highlight.
+ * Shared Sawaa surface, using the original GlassSurface treatment: native
+ * Liquid Glass on supported iOS, otherwise a translucent fill and diagonal
+ * highlight. The legacy Glass entry point delegates here too.
  */
 export function GlassSurface({
   variant = 'base',
+  material = 'surface',
+  tint,
   radius = sawaaRadius.xl,
   padding,
   style,
   children,
-  ...rest
-}: Props) {
-  const isDark = variant === 'dark';
+  interactive = false,
+  onPress,
+  onPressIn,
+  onPressOut,
+  onLongPress,
+  delayLongPress,
+  disabled,
+  pressed: pressedOverride,
+  ...viewProps
+}: GlassSurfaceProps) {
+  const surfaceVariant = toSurfaceVariant(variant);
+  const isDark = surfaceVariant === 'dark';
   const reduceTransparency = useReducedTransparency();
   const increasedContrast = useIncreasedContrast();
+  const reduceMotion = useReduceMotion();
   const { theme, scheme } = useTheme();
   const glassScheme = isDark || scheme === 'dark' ? 'dark' : 'light';
-  const isDarkAppearance = glassScheme === 'dark';
+  const colors = getSawaaColors(glassScheme);
+  const fillMap = {
+    base: colors.glass.bg,
+    strong: colors.glass.bgStrong,
+    soft: colors.glass.bgSoft,
+    dark: colors.glass.darkBg,
+  };
+  const borderMap = {
+    base: colors.glass.border,
+    strong: colors.glass.border,
+    soft: colors.glass.borderSoft,
+    dark: colors.glass.darkBorder,
+  };
   const opaqueSurface = isDark
-    ? sawaaColors.glass.opaqueDarkBg
-    : theme.colors.surface ?? sawaaColors.glass.opaqueBg;
-  const fallbackFill = isDarkAppearance ? sawaaColors.glass.darkBg : fillMap[variant];
-  const fallbackBorder = isDarkAppearance ? sawaaColors.glass.darkBorder : borderMap[variant];
+    ? colors.glass.opaqueDarkBg
+    : theme.colors.surface ?? colors.glass.opaqueBg;
+  const fallbackFill = fillMap[surfaceVariant];
+  const solidFill = surfaceVariant === 'soft'
+    ? getSawaaRoles(glassScheme).surfaceLow
+    : surfaceVariant === 'strong'
+      ? getSawaaRoles(glassScheme).surface
+      : getSawaaRoles(glassScheme).surface;
+  const useGlass = material === 'glass' && !reduceTransparency;
+  const usePressable = Boolean(interactive || onPress || onPressIn || onPressOut || onLongPress);
   const nativeGlass =
     Platform.OS === 'ios' &&
-    !reduceTransparency &&
+    useGlass &&
     isGlassEffectAPIAvailable() &&
     isLiquidGlassAvailable();
+  const [pressedInternal, setPressedInternal] = useState(false);
+  const pressed = pressedOverride ?? pressedInternal;
+  const flat = StyleSheet.flatten(style) ?? {};
   const containerStyle: ViewStyle = {
     borderRadius: radius,
+    position: 'relative',
     borderWidth: increasedContrast ? 2 : StyleSheet.hairlineWidth,
     borderColor: increasedContrast
-      ? isDark
-        ? sawaaColors.glass.opaqueDarkBorder
-        : theme.colors.textPrimary
-      : fallbackBorder,
+      ? isDark ? colors.glass.opaqueDarkBorder : theme.colors.textPrimary
+      : useGlass ? borderMap[surfaceVariant] : getSawaaRoles(glassScheme).surfaceHigh,
     overflow: 'hidden',
-    backgroundColor: reduceTransparency
-      ? opaqueSurface
-      : Platform.OS === 'android'
-        ? fallbackFill
-        : 'transparent',
+    backgroundColor: reduceTransparency ? opaqueSurface
+      : useGlass ? (Platform.OS === 'android' ? fallbackFill : 'transparent') : solidFill,
   };
-
-  const highlightColors = isDarkAppearance
-    ? (['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.10)'] as const)
-    : (['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.25)'] as const);
-
-  return (
-    <View
-      style={[
-        containerStyle,
-        style,
-        reduceTransparency && { backgroundColor: opaqueSurface },
-      ]}
-      {...rest}
-    >
-      {Platform.OS === 'ios' && nativeGlass ? (
+  const pressTransform: ViewStyle | undefined = usePressable && pressed && !reduceMotion
+    ? { transform: [{ scale: 0.96 }] }
+    : undefined;
+  const wrapperTransition = Platform.OS === 'web' && usePressable && !reduceMotion
+    ? { transition: 'transform 220ms cubic-bezier(0.2,0.9,0.25,1)', cursor: 'pointer' } as ViewStyle
+    : null;
+  const wrapperStyle = [
+    containerStyle,
+    style,
+    reduceTransparency ? { backgroundColor: opaqueSurface }
+      : !useGlass ? { backgroundColor: solidFill } : null,
+    pressTransform,
+    wrapperTransition,
+  ];
+  const body = (
+    <>
+      {nativeGlass ? (
         <GlassView
-          style={StyleSheet.absoluteFill}
-          glassEffectStyle={variant === 'soft' ? 'clear' : 'regular'}
+          style={[StyleSheet.absoluteFillObject, { borderRadius: radius }]}
+          glassEffectStyle={surfaceVariant === 'soft' ? 'clear' : 'regular'}
           colorScheme={glassScheme}
-          tintColor={isDark ? sawaaColors.glass.darkBg : undefined}
+          tintColor={tint ?? (isDark ? colors.glass.darkBg : undefined)}
+          isInteractive={usePressable}
         />
-      ) : (
+      ) : useGlass ? (
         <>
-          {Platform.OS === 'ios' && !reduceTransparency && (
+          {Platform.OS === 'ios' ? (
             <BlurView
-              intensity={intensityMap[variant]}
-              tint={isDarkAppearance ? 'dark' : tintMap[variant]}
+              intensity={sawaaBlur[surfaceVariant]}
+              tint={glassScheme}
               style={StyleSheet.absoluteFill}
             />
-          )}
-          {!reduceTransparency ? (
-            <>
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: fallbackFill }]} pointerEvents="none" />
-              <LinearGradient
-                colors={highlightColors}
-                locations={[0, 0.22, 0.55, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-              />
-            </>
+          ) : null}
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: fallbackFill }]}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={getSawaaRoles(glassScheme).highlight}
+            locations={[0, 0.22, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {tint ? (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} pointerEvents="none" />
           ) : null}
         </>
-      )}
-      <View style={{ padding }}>{children}</View>
-    </View>
+      ) : null}
+      <View style={[
+        { position: 'relative', zIndex: 1 },
+        flat.gap != null && { gap: flat.gap },
+        flat.flexDirection != null && { flexDirection: flat.flexDirection },
+        flat.alignItems != null && { alignItems: flat.alignItems },
+        flat.justifyContent != null && { justifyContent: flat.justifyContent },
+        padding !== undefined && { padding },
+      ]}>{children}</View>
+    </>
   );
+  const handlePressIn: NonNullable<GlassSurfaceProps['onPressIn']> = (event) => {
+    setPressedInternal(true);
+    onPressIn?.(event);
+  };
+  const handlePressOut: NonNullable<GlassSurfaceProps['onPressOut']> = (event) => {
+    setPressedInternal(false);
+    onPressOut?.(event);
+  };
+
+  if (usePressable) {
+    return (
+      <Pressable
+        {...viewProps}
+        disabled={disabled}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={delayLongPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole={viewProps.accessibilityRole ?? 'button'}
+        style={wrapperStyle}
+      >
+        {body}
+      </Pressable>
+    );
+  }
+  return <View {...viewProps} style={wrapperStyle}>{body}</View>;
 }

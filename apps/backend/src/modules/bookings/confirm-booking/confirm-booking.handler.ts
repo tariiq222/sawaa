@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus, DeliveryType, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
 import { BookingZoomCreateRequestedEvent } from '../events/booking-zoom-create-requested.event';
 import { ZoomMeetingQueueService } from '../create-zoom-meeting/zoom-meeting-queue.service';
@@ -21,7 +20,6 @@ export class ConfirmBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
     private readonly zoomMeetingQueue: ZoomMeetingQueueService,
   ) {}
 
@@ -31,33 +29,6 @@ export class ConfirmBookingHandler {
     const zoomEvent = booking.deliveryType === DeliveryType.ONLINE
       ? new BookingZoomCreateRequestedEvent({ organizationId: DEFAULT_ORG_ID, bookingId: booking.id })
       : null;
-
-    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-      updateBookingAtomically(tx, {
-        bookingId: cmd.bookingId,
-        currentStatus: booking.status,
-        actionLabel: 'confirmed',
-        data: { status: nextStatus, confirmedAt: new Date() },
-      }),
-      tx.bookingStatusLog.create({
-        data: {
-          bookingId: cmd.bookingId,
-          fromStatus: booking.status,
-          toStatus: nextStatus,
-          changedBy: cmd.changedBy,
-        },
-      }),
-      ...(zoomEvent ? [tx.outboxEvent.create({
-        data: {
-          id: zoomEvent.eventId,
-          aggregateId: booking.id,
-          eventType: zoomEvent.eventName,
-          status: 'PENDING_V2',
-          deliveryLane: 'PENDING_V2',
-          payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
-        },
-      })] : []),
-    ]));
 
     const event = new BookingConfirmedEvent({
       bookingId: booking.id,
@@ -74,7 +45,43 @@ export class ConfirmBookingHandler {
         : null,
       bookingType: booking.bookingType,
     });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
+
+    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
+      updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'confirmed',
+        data: { status: nextStatus, confirmedAt: new Date() },
+      }),
+      tx.bookingStatusLog.create({
+        data: {
+          bookingId: cmd.bookingId,
+          fromStatus: booking.status,
+          toStatus: nextStatus,
+          changedBy: cmd.changedBy,
+        },
+      }),
+      tx.outboxEvent.create({
+        data: {
+          id: event.eventId,
+          aggregateId: booking.id,
+          eventType: event.eventName,
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      }),
+      ...(zoomEvent ? [tx.outboxEvent.create({
+        data: {
+          id: zoomEvent.eventId,
+          aggregateId: booking.id,
+          eventType: zoomEvent.eventName,
+          status: 'PENDING_V2',
+          deliveryLane: 'PENDING_V2',
+          payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      })] : []),
+    ]));
 
     if (booking.deliveryType === DeliveryType.ONLINE) {
       try {

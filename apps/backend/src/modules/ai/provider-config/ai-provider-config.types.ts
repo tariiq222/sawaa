@@ -59,7 +59,7 @@ function assertModel(provider: AiProvider, model: unknown): asserts model is str
   const segment = /^[A-Za-z0-9._:-]+$/;
   const isSafeSegment = (value: string): boolean => value !== '.' && value !== '..' && segment.test(value);
   const hasControlCharacter = typeof model === 'string' && [...model].some((character) => {
-    const code = character.charCodeAt(0);
+    const code = character.codePointAt(0) ?? 0;
     return code < 32 || code === 127;
   });
   if (typeof model !== 'string' || model.length < 1 || model.length > 200 || /\s/.test(model) || hasControlCharacter) {

@@ -1,52 +1,56 @@
 import React from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
+  Building2,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   MapPin,
   Video,
-  XCircle,
 } from 'lucide-react-native';
 
-import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { useBooking, useCancelBooking } from '@/hooks/queries';
+import { useBooking } from '@/hooks/queries';
+import { BookingCancellation } from '@/components/features/BookingCancellation';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
+import { DateBox } from '@/components/ui/DateBox';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { InfoRows, type InfoRow } from '@/components/ui/InfoRows';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { StatusPill } from '@/components/ui/StatusPill';
+import { STATUS_LABEL_MAP } from '@/lib/status-helpers';
+import { getBookingServiceName } from '@/lib/booking-service-name';
+import { formatLongDate, formatTimeOfDay } from '@/lib/session-format';
 import { hasZoomMeetingAccess, resolveDeliveryType } from '@/types/booking-enums';
+import { goBackOrHome } from '@/lib/navigation';
 
 export default function AppointmentDetailScreen() {
+  const colors = useSawaaColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
+  const handleBack = () => goBackOrHome(router, '/(client)/(tabs)/appointments');
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const { data: booking } = useBooking(id);
-  const cancelMutation = useCancelBooking();
-  const cancelling = cancelMutation.isPending;
+  const { data: booking, isLoading, isError, refetch } = useBooking(id);
 
   const therapistName = booking
     ? (dir.isRTL
         ? booking.employee?.nameAr ?? booking.employee?.nameEn
         : booking.employee?.nameEn ?? booking.employee?.nameAr) ?? '—'
     : '—';
-  const deliveryType = booking
-    ? resolveDeliveryType(booking.deliveryType)
-    : 'in_person';
-  const isOnline = deliveryType === 'online';
+  const serviceName = booking ? getBookingServiceName(booking, dir.isRTL) : null;
+  const isOnline = booking ? resolveDeliveryType(booking.deliveryType) === 'online' : false;
   const canShowZoom = booking ? hasZoomMeetingAccess(booking) : false;
   const canResumePayment = Boolean(
     booking?.invoiceId &&
@@ -58,241 +62,139 @@ export default function AppointmentDetailScreen() {
         booking.invoiceStatus === 'DRAFT' ||
         booking.invoiceStatus === 'ISSUED'),
   );
-  const hasScheduledTime = Boolean(booking?.scheduledAt);
-  const scheduledDate = booking && hasScheduledTime
-    ? new Date(booking.scheduledAt).toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-      })
-    : t('appointments.toBeScheduled');
-  const scheduledTime = booking && hasScheduledTime
-    ? `${new Date(booking.scheduledAt).toLocaleTimeString(dir.isRTL ? 'ar-SA' : 'en-US', {
-        hour: 'numeric', minute: '2-digit',
-      })} · ${booking.durationMins} ${dir.isRTL ? 'دقيقة' : 'min'}`
-    : t('appointments.toBeScheduled');
+  const canRate = booking?.status === 'completed'
+    && booking.hasRated !== true
+    && booking.ratingSubmittedLocally !== true;
+  const bookingType = booking?.bookingType?.toLowerCase();
+  const legacyType = booking?.type?.toLowerCase();
+  const canCancel = Boolean(booking && bookingType !== 'group' && legacyType !== 'group' && [
+    'pending', 'awaiting_payment', 'deposit_paid', 'confirmed',
+  ].includes(booking.status));
+  const scheduledTime = booking ? formatTimeOfDay(booking.scheduledAt, dir.isRTL) : null;
+  const scheduledDate = booking ? formatLongDate(booking.scheduledAt, dir.isRTL) : null;
   const branchLocation = booking
     ? (dir.isRTL
         ? booking.branch?.nameAr ?? booking.branch?.nameEn
         : booking.branch?.nameEn ?? booking.branch?.nameAr) ?? '—'
     : '—';
 
-  const rows = [
-    { icon: <Calendar size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, color: sawaaColors.teal[600], labelAr: 'التاريخ', labelEn: 'Date', value: scheduledDate },
-    { icon: <Clock size={18} color={sawaaColors.accent.amber} strokeWidth={1.75} />, color: sawaaColors.accent.amber, labelAr: 'الوقت', labelEn: 'Time', value: scheduledTime },
-    { icon: <Video size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, color: sawaaColors.accent.violet, labelAr: 'نوع الجلسة', labelEn: 'Session type', value: isOnline ? (dir.isRTL ? 'جلسة عن بُعد' : 'Remote session') : (dir.isRTL ? 'حضوري' : 'In person') },
-    { icon: <MapPin size={18} color={sawaaColors.accent.rose} strokeWidth={1.75} />, color: sawaaColors.accent.rose, labelAr: 'الموقع', labelEn: 'Location', value: isOnline ? (dir.isRTL ? 'تُحدد طريقة الاتصال قبل الموعد' : 'Connection method confirmed before session') : branchLocation },
+  const rows: InfoRow[] = [
+    { icon: Calendar, label: t('appointments.date'), value: scheduledDate ?? t('appointments.toBeScheduled') },
+    {
+      icon: Clock,
+      label: t('appointments.duration'),
+      value: t('appointments.durationMins', { count: booking?.durationMins ?? 0 }),
+    },
+    {
+      icon: isOnline ? Video : Building2,
+      label: t('appointments.sessionType'),
+      value: isOnline ? t('appointments.remoteSession') : t('appointments.inPerson'),
+    },
+    ...(isOnline ? [] : [{ icon: MapPin, label: t('appointments.location'), value: branchLocation }]),
   ];
 
-  const askCancel = () => {
-    if (!id || cancelling) return;
-    Alert.alert(
-      dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking',
-      dir.isRTL ? 'هل تريد إلغاء هذا الموعد؟' : 'Cancel this booking?',
-      [
-        { text: dir.isRTL ? 'رجوع' : 'Back', style: 'cancel' },
-        {
-          text: dir.isRTL ? 'إلغاء الموعد' : 'Cancel',
-          style: 'destructive',
-          onPress: () => {
-            cancelMutation.mutate(
-              { id, reason: dir.isRTL ? 'إلغاء من العميل' : 'Client cancelled' },
-              {
-                onSuccess: () => router.back(),
-                onError: (err) => {
-                  Alert.alert(
-                    dir.isRTL ? 'تعذّر الإلغاء' : 'Cancel failed',
-                    err instanceof Error ? err.message : String(err),
-                  );
-                },
-              },
-            );
-          },
-        },
-      ],
+  if (isLoading || isError || !booking) {
+    return (
+      <AquaBackground>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
+          <ScreenHeader title={t('appointments.details')} onBack={handleBack} />
+          <EmptyState
+            icon={isError ? 'alert-circle-outline' : 'calendar-outline'}
+            title={t(isLoading ? 'common.loading' : isError ? 'common.error' : 'common.noResults')}
+            tone={isError ? 'danger' : 'default'}
+            actionLabel={isError ? t('common.retry') : undefined}
+            onAction={isError ? () => { void refetch(); } : undefined}
+          />
+        </ScrollView>
+      </AquaBackground>
     );
-  };
+  }
 
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 140 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-          </Glass>
-        </Animated.View>
+        <ScreenHeader title={t('appointments.details')} onBack={handleBack} />
 
-        {/* Hero therapist */}
-        <Animated.View entering={FadeInDown.delay(80).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.heroCard}>
-            <View style={[styles.heroRow, { flexDirection: dir.row }]}>
-              <LinearGradient
-                colors={['#f7cbb7', '#e88f6c']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>ف</Text>
-                <View style={styles.onlineDot} />
-              </LinearGradient>
-              <View style={styles.heroMid}>
-                <Text style={[styles.heroName, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {therapistName}
+        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.summary}>
+            <View style={[styles.summaryTop, { flexDirection: dir.row }]}>
+              <DateBox iso={booking.scheduledAt} fallback={t('appointments.toBeScheduled')} />
+              <View style={styles.summaryMid}>
+                <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                  {scheduledTime ?? t('appointments.toBeScheduled')}
                 </Text>
-                <Text style={[styles.heroSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                  {(dir.isRTL ? booking?.service?.nameAr : booking?.service?.nameEn) ?? ''}
-                </Text>
-                <View style={[styles.statusChip, { flexDirection: dir.row }]}>
-                  <View style={styles.statusDot} />
-                  <Text style={[styles.statusText, { fontFamily: f600, fontWeight: '600' }]}>
-                    {dir.isRTL ? 'مؤكدة · قريباً' : 'Confirmed · Upcoming'}
+                {serviceName ? (
+                  <Text testID="appointment-service-name" numberOfLines={2} style={[styles.therapist, { color: colors.ink[900], fontFamily: f500, textAlign: dir.textAlign }]}>
+                    {serviceName}
                   </Text>
-                </View>
+                ) : null}
+                <Text numberOfLines={1} style={[styles.therapist, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {t('appointments.with', { name: therapistName })}
+                </Text>
               </View>
+              <StatusPill
+                status={booking.status}
+                label={STATUS_LABEL_MAP[booking.status] ? t(STATUS_LABEL_MAP[booking.status]) : '—'}
+              />
             </View>
+            {canShowZoom ? (
+              <JoinVideoCallButton
+                url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}
+                scheduledAt={booking.scheduledAt}
+                durationMins={booking.durationMins}
+                status={booking.zoomMeetingStatus}
+                isRTL={dir.isRTL}
+                variant="join"
+                fullWidth
+              />
+            ) : null}
           </Glass>
         </Animated.View>
 
-        {/* Rows */}
-        <Animated.View entering={FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
-            {rows.map((r, i) => (
-              <View
-                key={`row-${i}`}
-                style={[
-                  styles.row,
-                  { flexDirection: dir.row },
-                  i < rows.length - 1 && styles.rowDivider,
-                ]}
-              >
-                <View style={[styles.rowIcon, { backgroundColor: `${r.color}1e` }]}>{r.icon}</View>
-                <View style={styles.rowMid}>
-                  <Text style={[styles.rowLabel, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? r.labelAr : r.labelEn}
-                  </Text>
-                  <Text style={[styles.rowValue, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {r.value}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </Glass>
-        </Animated.View>
-
-        {/* Notes */}
-        <Animated.View entering={FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'ملاحظات' : 'Notes'}
-          </Text>
-          <Glass variant="regular" radius={sawaaRadius.xl} style={styles.notesCard}>
-            <Text style={[styles.notesText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-              {dir.isRTL
-                ? 'سنتناول تقنيات الاسترخاء التدريجي. يُرجى تحضير مفكرة الأفكار التلقائية.'
-                : 'We will cover progressive relaxation. Please bring your thought log.'}
+        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
+          <InfoRows rows={rows} />
+          {isOnline ? (
+            <Text style={[styles.hint, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
+              {t('appointments.locationRemote')}
             </Text>
-          </Glass>
+          ) : null}
         </Animated.View>
 
         {canResumePayment ? (
-          <Animated.View entering={FadeInDown.delay(300).duration(700)}>
-            <PrimaryButton
-              label={t('appointments.completePayment')}
-              onPress={() => router.push({
-                pathname: '/(client)/booking/checkout',
-                params: { bookingId: booking!.id, invoiceId: booking!.invoiceId! },
-              })}
-              fontFamily={f700}
-            />
-          </Animated.View>
-        ) : null}
-      </ScrollView>
-
-      {/* Bottom actions */}
-      <Animated.View
-        entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + 20, flexDirection: dir.row }]}
-      >
-        {canShowZoom && booking ? (
-          <JoinVideoCallButton
-            url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}
-            scheduledAt={booking.scheduledAt}
-            durationMins={booking.durationMins}
-            status={booking.zoomMeetingStatus}
-            isRTL={dir.isRTL}
-            variant="join"
+          <PrimaryButton
+            label={t('appointments.completePayment')}
+            onPress={() => router.push({
+              pathname: '/(client)/booking/checkout',
+              params: { bookingId: booking.id, invoiceId: booking.invoiceId! },
+            })}
+            fontFamily={f700}
           />
         ) : null}
-      </Animated.View>
 
-      {/* Cancel link */}
-      <Animated.View
-        entering={FadeInDown.delay(460).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.cancelRow, { bottom: insets.bottom + 80 }]}
-      >
-        <Pressable onPress={askCancel} disabled={cancelling} style={styles.cancelBtn}>
-          <XCircle size={14} color={sawaaColors.accent.coral} strokeWidth={2} />
-          <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
-            {cancelling
-              ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
-              : (dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking')}
-          </Text>
-        </Pressable>
-      </Animated.View>
+        {canRate ? (
+          <PrimaryButton
+            label={t('appointments.rate')}
+            onPress={() => router.push(`/(client)/rate/${booking.id}`)}
+            fontFamily={f700}
+          />
+        ) : null}
+
+        <BookingCancellation bookingId={booking.id} canCancel={canCancel} persistedRefund={booking.cancellationRefund} />
+      </ScrollView>
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, gap: 14 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  heroCard: { padding: 16 },
-  heroRow: { alignItems: 'center', gap: 14 },
-  avatar: {
-    width: 64, height: 64, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center', position: 'relative',
-  },
-  avatarText: { fontSize: 26, color: '#fff' },
-  onlineDot: {
-    position: 'absolute', bottom: 2, right: 2,
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#4bd67a', borderWidth: 2, borderColor: '#fff',
-  },
-  heroMid: { flex: 1 },
-  heroName: { fontSize: 16, color: sawaaColors.ink[900] },
-  heroSpec: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 2 },
-  statusChip: {
-    alignItems: 'center', gap: 6, marginTop: 8,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
-    backgroundColor: 'rgba(20,168,154,0.14)', alignSelf: 'flex-start',
-  },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: sawaaColors.teal[500] },
-  statusText: { fontSize: 11, color: sawaaColors.teal[700] },
-  card: { padding: 0 },
-  row: { alignItems: 'center', gap: 14, padding: 14 },
-  rowDivider: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.5)' },
-  rowIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  rowMid: { flex: 1 },
-  rowLabel: { fontSize: 11, color: sawaaColors.ink[500] },
-  rowValue: { fontSize: 13.5, color: sawaaColors.ink[900], marginTop: 2 },
-  sectionTitle: { fontSize: 14, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
-  notesCard: { padding: 14 },
-  notesText: { fontSize: 12.5, color: sawaaColors.ink[700], lineHeight: 22 },
-  ctaWrap: { position: 'absolute', left: 16, right: 16, gap: 10, alignItems: 'stretch' },
-  secondaryBtn: { flex: 1 },
-  secondaryGlass: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 52, gap: 8,
-  },
-  secondaryText: { color: sawaaColors.teal[700], fontSize: 13 },
-  primaryBtn: { flex: 1.4 },
-  primaryGradient: {
-    borderRadius: 999, height: 52,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
-  },
-  primaryText: { color: '#fff', fontSize: 13.5 },
-  cancelRow: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  cancelBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cancelText: { fontSize: 12, color: sawaaColors.accent.coral },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
+  summary: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
+  summaryTop: { alignItems: 'center', gap: sawaaSpacing.md },
+  summaryMid: { flex: 1, minWidth: 0, gap: 2 },
+  time: { fontSize: 20, lineHeight: 28 },
+  therapist: { fontSize: 14, lineHeight: 20 },
+  section: { gap: sawaaSpacing.sm },
+  hint: { fontSize: 13, lineHeight: 18, paddingHorizontal: sawaaSpacing.xs },
 });

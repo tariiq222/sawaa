@@ -54,7 +54,13 @@ describe('PublicEmployeesController (e2e)', () => {
         .expect(200);
 
       expect(res.body.name).toBe('Dr. Ahmed');
-      expect(mockGet.execute).toHaveBeenCalledWith('dr-ahmed');
+      expect(mockGet.execute).toHaveBeenCalledWith('dr-ahmed', { includeDirectClinics: false });
+    });
+
+    it('passes direct-clinic opt-in to the detail handler', async () => {
+      mockGet.execute.mockResolvedValue({ id: 'emp-1' });
+      await request(app.getHttpServer()).get('/public/employees/dr-ahmed?includeDirectClinics=true').expect(200);
+      expect(mockGet.execute).toHaveBeenCalledWith('dr-ahmed', { includeDirectClinics: true });
     });
 
     it('returns 200 with employee details by UUID', async () => {

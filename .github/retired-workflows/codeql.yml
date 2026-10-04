@@ -1,0 +1,79 @@
+name: Semgrep CE
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: semgrep/oss-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/security/requirements.txt
+
+      - name: Install Semgrep CE
+        run: python -m pip install --requirement scripts/security/requirements.txt
+
+      - name: Run Semgrep CE scan
+        shell: bash
+        env:
+          SEMGREP_APP_TOKEN: ""
+          SEMGREP_SEND_METRICS: "off"
+        run: |
+          set +e
+          semgrep scan \
+            --config p/ci \
+            --metrics=off \
+            --disable-version-check \
+            --error \
+            --strict \
+            --json \
+            --output semgrep-results.json \
+            --sarif-output semgrep-results.sarif \
+            --include '*.ts' \
+            --include '*.tsx' \
+            --include '*.js' \
+            --include '*.jsx' \
+            --exclude '**/node_modules/**' \
+            --exclude '**/dist/**' \
+            --exclude '**/coverage/**' \
+            --exclude 'apps/mobile/**' \
+            .
+          scan_status=$?
+          set -e
+
+          if [[ ! -s semgrep-results.json || ! -s semgrep-results.sarif ]]; then
+            echo "Semgrep did not produce both required report files."
+            exit 1
+          fi
+
+          exit "$scan_status"
+
+      - name: Upload Semgrep reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: semgrep-reports
+          path: |
+            semgrep-results.json
+            semgrep-results.sarif
+          if-no-files-found: error
+          retention-days: 7

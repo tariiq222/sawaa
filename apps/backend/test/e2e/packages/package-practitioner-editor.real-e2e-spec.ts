@@ -55,7 +55,7 @@ describeRealE2e('package practitioner editor — real DB', () => {
     );
 
     await prisma.branch.create({ data: { id: ids.branchId, nameAr: `phase3-${ids.branchId}`, isActive: true } });
-    await prisma.client.create({ data: { id: ids.clientId, name: `phase3-${ids.clientId}`, phone: `05${ids.clientId.replace(/-/g, '').slice(0, 8)}` } });
+    await prisma.client.create({ data: { id: ids.clientId, name: `phase3-${ids.clientId}`, phone: `05${ids.clientId.replaceAll('-', '').slice(0, 8)}` } });
     await prisma.employee.createMany({
       data: [
         { id: ids.ownerAId, name: `phase3-${ids.ownerAId}`, isActive: true },

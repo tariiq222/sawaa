@@ -44,6 +44,7 @@ export default defineConfig([
     files: ["**/*.test.js", "**/__tests__/**/*.js"],
     languageOptions: {
       globals: {
+        Buffer: "readonly",
         __dirname: "readonly",
         describe: "readonly",
         expect: "readonly",

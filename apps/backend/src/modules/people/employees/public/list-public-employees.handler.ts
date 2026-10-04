@@ -46,7 +46,7 @@ export interface PublicEmployeeItem {
 export class ListPublicEmployeesHandler {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(): Promise<PublicEmployeeItem[]> {
+  async execute(options: { includeDirectClinics?: boolean } = {}): Promise<PublicEmployeeItem[]> {
     const rows = await this.prisma.employee.findMany({
       where: { isPublic: true, isActive: true },
       orderBy: { createdAt: 'desc' },
@@ -102,12 +102,20 @@ export class ListPublicEmployeesHandler {
     const services =
       serviceIds.length > 0
         ? await this.prisma.service.findMany({
-            where: { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null },
-            select: { id: true, price: true },
+            where: options.includeDirectClinics
+              ? {
+                  id: { in: serviceIds }, isActive: true, archivedAt: null,
+                  OR: [
+                    { isHidden: false, OR: [{ categoryId: null }, { category: { isActive: true } }] },
+                    { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
+                  ],
+                }
+              : { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
+            select: { id: true, price: true, isHidden: true },
           })
         : [];
     const activeServiceIds = new Set(services.map((s) => s.id));
-    const priceByServiceId = new Map(services.map((s) => [s.id, parseFloat(String(s.price))]));
+    const priceByServiceId = new Map(services.filter((s) => !s.isHidden).map((s) => [s.id, Number.parseFloat(String(s.price))]));
 
     const linkedBranchIds = [...new Set(employeeBranchLinks.map((l) => l.branchId))];
     const activeBranches =

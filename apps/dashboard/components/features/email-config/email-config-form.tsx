@@ -74,7 +74,7 @@ export function EmailConfigForm() {
       if (smtpHost.trim() || !isSameProvider) {
         base.smtp = {
           host: smtpHost.trim(),
-          port: parseInt(smtpPort, 10) || 587,
+          port: Number.parseInt(smtpPort, 10) || 587,
           user: smtpUser.trim(),
           pass: smtpPass,
         }

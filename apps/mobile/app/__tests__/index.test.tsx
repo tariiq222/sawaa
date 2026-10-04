@@ -1,14 +1,12 @@
 /**
  * app/index.tsx — auth gate routing tests
  *
- * Regression suite for the DEV-bypass vulnerability:
- * unauthenticated users must always land on /(auth)/login,
- * never on a protected route.
+ * Unauthenticated visitors land on the shared home, never on a protected route.
  *
  * Covers 7 routing paths:
- *  1. No token anywhere               → /(auth)/login
- *  2. Stored token, profile throws    → /(auth)/login
- *  3. Stored token, profile success:false → /(auth)/login
+ *  1. No token anywhere               → /home
+ *  2. Stored token, profile throws    → /home
+ *  3. Stored token, profile success:false → /home
  *  4. Valid stored token, CLIENT role → /(client)/(tabs)/home + setCredentials dispatched
  *  5. Valid stored token, EMPLOYEE    → /(employee)/(tabs)/today + setCredentials dispatched
  *  6. Redux already has CLIENT token  → /(client)/(tabs)/home, no authService calls
@@ -19,6 +17,10 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 
 // ── mocks (must be hoisted before any import that uses them) ─────────────────
+
+jest.mock('@/theme/useTheme', () => ({
+  useTheme: () => ({ theme: jest.requireActual('@/theme/tokens').buildTheme() }),
+}));
 
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -132,8 +134,8 @@ beforeEach(() => {
 
 // ── tests ────────────────────────────────────────────────────────────────────
 
-describe('IndexScreen — unauthenticated paths always route to login', () => {
-  it('routes to /(auth)/login when no token is in Redux or SecureStore', async () => {
+describe('IndexScreen — unauthenticated paths route to public browsing', () => {
+  it('routes to guest home when no token is in Redux or SecureStore', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: null,
       refreshToken: null,
@@ -142,12 +144,12 @@ describe('IndexScreen — unauthenticated paths always route to login', () => {
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
     expect(mockReplace).not.toHaveBeenCalledWith('/(client)/(tabs)/home');
   });
 
-  it('routes to /(auth)/login when stored token is expired (profile fetch throws)', async () => {
+  it('routes to guest home when stored token is expired (profile fetch throws)', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -157,12 +159,12 @@ describe('IndexScreen — unauthenticated paths always route to login', () => {
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
     expect(mockReplace).not.toHaveBeenCalledWith('/(client)/(tabs)/home');
   });
 
-  it('routes to /(auth)/login when profile fetch returns success: false', async () => {
+  it('routes to guest home when profile fetch returns success: false', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'some-token',
       refreshToken: 'refresh-token',
@@ -172,7 +174,7 @@ describe('IndexScreen — unauthenticated paths always route to login', () => {
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
   });
 });
@@ -257,7 +259,7 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('finishes at login when an expired stored session is invalidated during bootstrap', async () => {
+  it('finishes at public browsing when an expired stored session is invalidated during bootstrap', async () => {
     mockedGetStoredTokens.mockResolvedValueOnce({
       accessToken: 'expired-access',
       refreshToken: 'expired-refresh',
@@ -271,7 +273,7 @@ describe('IndexScreen — valid stored token routes to correct tab', () => {
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+      expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     });
     expect(mockDispatch).not.toHaveBeenCalled();
   });

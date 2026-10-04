@@ -94,8 +94,25 @@ describe('GetPublicCatalogHandler', () => {
       orderBy: { sortOrder: 'asc' },
     });
     expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { isActive: true, isHidden: false, archivedAt: null },
+      where: { isActive: true, isHidden: false, archivedAt: null, OR: [{ categoryId: null }, { category: { isActive: true } }] },
       orderBy: { nameAr: 'asc' },
+    }));
+  });
+
+  it('includes only hidden services of active direct-booking clinics when requested', async () => {
+    await handler.execute({ includeDirectClinics: true });
+
+    expect(cache.getOrSet).toHaveBeenCalledWith('ref:public-catalog:direct-clinics', expect.any(Function), 300);
+    expect(prisma.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        isActive: true,
+        archivedAt: null,
+        OR: [
+          { isHidden: false, OR: [{ categoryId: null }, { category: { isActive: true } }] },
+          { isHidden: true, category: { isActive: true, bookingMode: 'DIRECT' } },
+        ],
+      },
+      select: expect.objectContaining({ isHidden: true }),
     }));
   });
 
@@ -156,4 +173,21 @@ describe('GetPublicCatalogHandler', () => {
     expect(result.vatRate).toBe(0);
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
+  it.each([false, true])('retains uncategorized visible services in the query with includeDirectClinics=%s', async (includeDirectClinics) => {
+    prisma.service.findMany.mockResolvedValue([
+      { id: 'legacy', categoryId: null, isHidden: false, imageUrl: null },
+    ]);
+
+    const result = await handler.execute({ includeDirectClinics });
+    const { where } = prisma.service.findMany.mock.calls[0][0];
+    const visibleWhere = includeDirectClinics ? where.OR[0] : where;
+
+    expect(visibleWhere).toEqual(expect.objectContaining({
+      isHidden: false,
+      OR: [{ categoryId: null }, { category: { isActive: true } }],
+    }));
+    expect(visibleWhere).not.toHaveProperty('category');
+    expect(result.services).toEqual([expect.objectContaining({ id: 'legacy', categoryId: null })]);
+  });
+
 });

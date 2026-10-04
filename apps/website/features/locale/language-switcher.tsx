@@ -49,7 +49,7 @@ export function LanguageSwitcher({ current }: Props) {
             className="px-2.5 py-1 text-[0.75rem] font-bold rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)]"
             style={{
               background: active ? 'var(--sw-primary-500)' : 'transparent',
-              color: active ? '#fff' : 'var(--sw-primary-700)',
+              color: active ? 'var(--on-primary)' : 'var(--sw-primary-700)',
             }}
           >
             {o.value === 'ar' ? 'ع' : 'EN'}

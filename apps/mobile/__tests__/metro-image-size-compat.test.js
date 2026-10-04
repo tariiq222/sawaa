@@ -1,4 +1,5 @@
 const { spawnSync } = require('node:child_process');
+const { Buffer } = require('node:buffer');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -68,6 +69,14 @@ describe('Metro image dimension compatibility', () => {
     await expect(
       metroAssets.getAssetData(imagePath, 'bg-aqua.png', [], 'ios', '/assets'),
     ).resolves.toMatchObject({ width: 853, height: 1844 });
+  });
+
+  it('reads the dark aqua background dimensions through Metro asset processing', async () => {
+    const imagePath = path.join(projectRoot, 'assets', 'bg-aqua-dark.png');
+
+    await expect(
+      metroAssets.getAssetData(imagePath, 'bg-aqua-dark.png', [], 'ios', '/assets'),
+    ).resolves.toMatchObject({ width: 848, height: 1855 });
   });
 
   it.each([

@@ -52,6 +52,11 @@ enum CategoryBookingMode {
   SERVICES // The category is a container for multiple visible services
 }
 
+enum CategoryKind {
+  CLINIC
+  SERVICE_GROUP
+}
+
 // ─── Service Categories ──────────────────────────────────────────────────────
 
 // departmentId nullable لدعم فئات بلا قسم (hierarchy مسطح).
@@ -65,6 +70,7 @@ model ServiceCategory {
   sortOrder    Int                 @default(0)
   isActive     Boolean             @default(true)
   bookingMode  CategoryBookingMode @default(SERVICES)
+  kind         CategoryKind        @default(CLINIC)
   imageUrl     String?
   iconName     String?
   iconBgColor  String?
@@ -292,6 +298,32 @@ enum IntakeFormScope {
   BRANCH
 }
 
+enum MobileHomeCardDestination {
+  CLINICS
+  SERVICES
+  SPECIALISTS
+  PACKAGES
+  PROGRAMS
+}
+
+model MobileHomeCard {
+  id            String                    @id @default(uuid())
+  titleAr       String
+  titleEn       String?
+  descriptionAr String?
+  descriptionEn String?
+  imageFileId   String?
+  imageAltAr    String?
+  imageAltEn    String?
+  destination   MobileHomeCardDestination?
+  sortOrder     Int                       @default(0)
+  isPublished   Boolean                   @default(false)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@index([isPublished, sortOrder, id])
+}
+
 model IntakeForm {
   id        String          @id @default(uuid())
   ref       Int             @unique @default(autoincrement())
@@ -418,6 +450,8 @@ model OrganizationSettings {
   bookingFlowOrder       String    @default("service_first")
   paymentMoyasarEnabled  Boolean   @default(true)
   paymentAtClinicEnabled Boolean   @default(true)
+  paymentBankTransferEnabled Boolean @default(false)
+  bankTransferAccounts   Json      @default("[]")
   // Manual payment-recording methods shown in the bookings "record payment"
   // dialog. Cash is on by default; the rest are opt-in from settings.
   payMethodCashEnabled   Boolean   @default(true)

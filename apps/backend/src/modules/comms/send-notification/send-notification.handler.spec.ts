@@ -45,6 +45,18 @@ describe('SendNotificationHandler', () => {
     channels: [] as Array<'email' | 'sms' | 'push'>,
   };
 
+  it('does not send duplicate legacy deliveries after stable notification identity already exists', async () => {
+    prisma.notification.create.mockRejectedValue({ code: 'P2002' });
+    await handler.execute({ ...baseDto, notificationId: 'stable-id', channels: ['push'], fcmTokens: ['token'] });
+    expect(push.execute).not.toHaveBeenCalled();
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('rethrows persistence failure for an event-derived notification so the consumer retries', async () => {
+    prisma.notification.create.mockRejectedValue(new Error('DB down'));
+    await expect(handler.execute({ ...baseDto, notificationId: 'stable-id' })).rejects.toThrow('DB down');
+  });
+
   it('persists in-app notification and returns for non-critical with no channels', async () => {
     await handler.execute({ ...baseDto, type: 'GENERIC' as any, channels: [] });
     expect(prisma.notification.create).toHaveBeenCalled();

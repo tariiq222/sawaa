@@ -36,6 +36,7 @@ export interface ClinicItem {
   icon: string | null;
   image?: string | null;
   iconBgColor?: string | null;
+  directServiceId?: string | null;
 }
 
 interface Props {
@@ -124,7 +125,7 @@ export function Clinics({ clinics, intro }: Props) {
           </AnimatedSection>
           <div className="flex justify-center mt-8">
             <div
-              className="text-center py-14 px-10 bg-white rounded-2xl max-w-md w-full"
+              className="text-center py-14 px-10 bg-[var(--surface)] rounded-2xl max-w-md w-full"
               style={{
                 border: '1px solid var(--sw-neutral-100)',
                 boxShadow: 'var(--sw-shadow-xs)',
@@ -176,7 +177,9 @@ export function Clinics({ clinics, intro }: Props) {
             {clinics.map((c, i) => {
               const tone = TONE;
               const Icon = resolveIcon(c.icon);
-              const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
+              const href = c.directServiceId
+                ? `/booking?serviceId=${encodeURIComponent(c.directServiceId)}`
+                : `/booking?categoryId=${encodeURIComponent(c.id)}`;
               const name = clinicName(c);
               const description = clinicDescription(c);
               // Guard against a bare object key reaching next/image (throws).
@@ -186,7 +189,7 @@ export function Clinics({ clinics, intro }: Props) {
                   <Link
                     href={href}
                     aria-label={`${t('clinics.bookAria')} ${name}`}
-                    className="group block w-[300px] bg-white rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+                    className="group block w-[300px] bg-[var(--surface)] rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
                     style={{
                       border: '1px solid var(--sw-neutral-100)',
                       boxShadow: 'var(--sw-shadow-xs)',
@@ -219,7 +222,7 @@ export function Clinics({ clinics, intro }: Props) {
                         />
                       )}
                       <span
-                        className="absolute top-2 end-2 text-[0.625rem] font-extrabold bg-white/95 backdrop-blur px-2 py-0.5 rounded-full"
+                        className="absolute top-2 end-2 text-[0.625rem] font-extrabold bg-[var(--surface)] backdrop-blur px-2 py-0.5 rounded-full"
                         style={{ color: tone.softText }}
                       >
                         {String(i + 1).padStart(2, '0')}
@@ -276,7 +279,7 @@ export function Clinics({ clinics, intro }: Props) {
             className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-700)',
-              color: '#fff',
+              color: 'var(--sw-primary-700-foreground)',
               boxShadow: 'var(--sw-shadow-sm)',
             }}
           >
@@ -286,7 +289,7 @@ export function Clinics({ clinics, intro }: Props) {
           <button
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="w-10 h-10 rounded-full bg-[var(--surface)] flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ border: '1px solid var(--sw-neutral-200)' }}
             aria-label={t('clinics.scrollNext')}
           >
@@ -298,7 +301,7 @@ export function Clinics({ clinics, intro }: Props) {
           <button
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="w-10 h-10 rounded-full bg-[var(--surface)] flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ border: '1px solid var(--sw-neutral-200)' }}
             aria-label={t('clinics.scrollPrev')}
           >

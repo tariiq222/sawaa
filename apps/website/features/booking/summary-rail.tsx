@@ -120,7 +120,9 @@ function useSummaryRows(sel: SummarySelection) {
   }
   rows.push({
     screen: 'service',
-    label: t('booking.step.service'),
+    label: (sel.service as (Service & { isHidden?: boolean }) | null)?.isHidden
+      ? t('booking.step.clinic')
+      : t('booking.step.service'),
     value: sel.service ? (isAr ? sel.service.nameAr : sel.service.nameEn) : null,
     sub: serviceMeta.length > 0 ? serviceMeta.join(' · ') : null,
   });
@@ -178,7 +180,7 @@ export function SummaryRail(sel: SummarySelection) {
       className="sticky top-6 flex flex-col rounded-[1.25rem] p-5"
       style={{
         background:
-          'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, #FFFDF8) 0%, color-mix(in srgb, var(--accent) 14%, #FFFDF8) 100%)',
+          'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 14%, var(--surface)) 100%)',
         border: '1px solid color-mix(in srgb, var(--accent-dark) 28%, transparent)',
         boxShadow: 'var(--sw-shadow-sm)',
       }}
@@ -198,7 +200,8 @@ export function SummaryRail(sel: SummarySelection) {
       <dl className="flex flex-col">
         {rows.map((row, i) => {
           const filled = !!row.value;
-          const editable = filled && !!sel.onEdit && row.screen !== sel.activeScreen;
+          const editable = filled && !!sel.onEdit && row.screen !== sel.activeScreen &&
+            !(row.screen === 'service' && (sel.service as (Service & { isHidden?: boolean }) | null)?.isHidden);
           return (
             <div
               key={row.screen}
@@ -328,7 +331,8 @@ export function SummaryChips(sel: SummarySelection) {
   return (
     <div className="flex items-center gap-2 -mx-4 px-4 overflow-x-auto sw-no-scrollbar lg:hidden">
       {filled.map((row) => {
-        const tappable = !!sel.onEdit && row.screen !== sel.activeScreen;
+        const tappable = !!sel.onEdit && row.screen !== sel.activeScreen &&
+          !(row.screen === 'service' && (sel.service as (Service & { isHidden?: boolean }) | null)?.isHidden);
         const Tag = tappable ? 'button' : 'span';
         return (
           <Tag
@@ -338,7 +342,7 @@ export function SummaryChips(sel: SummarySelection) {
               : {})}
             className={`sw-row-in shrink-0 inline-flex items-center gap-1.5 ps-2.5 pe-3 py-1.5 rounded-full text-xs font-bold max-w-[60vw] ${tappable ? 'cursor-pointer' : ''}`}
             style={{
-              background: 'color-mix(in srgb, var(--accent) 30%, #FFFDF8)',
+              background: 'color-mix(in srgb, var(--accent) 30%, var(--surface))',
               border: '1px solid color-mix(in srgb, var(--accent-dark) 30%, transparent)',
               color: 'var(--sw-secondary-700)',
             }}

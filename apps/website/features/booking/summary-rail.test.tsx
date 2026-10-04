@@ -80,6 +80,16 @@ function withLocale(children: ReactNode) {
 }
 
 describe('SummaryRail', () => {
+  it('labels a direct booking as a clinic and does not offer to edit its internal service', () => {
+    render(withLocale(
+      <SummaryRail showBranch={false} branch={null}
+        service={{ ...service, isHidden: true, nameAr: 'عيادة السعادة', nameEn: 'Happiness Clinic' }}
+        choice={null} employee={null} slot={null} activeScreen="slot" onEdit={vi.fn()} />,
+    ));
+    expect(screen.getByText('Clinic')).toBeTruthy();
+    expect(screen.getByText('Happiness Clinic')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Change' })).toBeNull();
+  });
   it('renders an empty row for each screen when nothing is selected', () => {
     render(
       withLocale(

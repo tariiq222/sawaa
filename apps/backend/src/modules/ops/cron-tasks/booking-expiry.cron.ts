@@ -22,15 +22,18 @@ export class BookingExpiryCron {
 
     await withCronLeader(this.prisma, 'booking-expiry', async () => {
       const now = new Date();
+      // Only explicit elapsed holds expire. Null deadlines and paid deposits
+      // remain staff-managed; the handler revalidates eligibility atomically.
       const stale = await this.prisma.booking.findMany({
         where: {
-          expiresAt: { lt: now },
+          isHistoricalImport: false,
           status: {
             in: [
               BookingStatus.PENDING,
               BookingStatus.AWAITING_PAYMENT,
             ],
           },
+          expiresAt: { lt: now },
         },
         select: { id: true },
         take: BATCH_SIZE,

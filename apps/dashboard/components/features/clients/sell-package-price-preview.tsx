@@ -14,6 +14,7 @@ import { Label } from "@sawaa/ui"
 
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useLocale } from "@/components/locale-provider"
+import { vatHalalas } from "@/lib/money"
 import type { SessionPackage } from "@/lib/types/package"
 
 interface Props {
@@ -27,6 +28,11 @@ export function SellPackagePricePreview({ pkg }: Props) {
   const subtotal = Number(pkg.subtotal) || 0
   const discountAmount = Number(pkg.discountAmount) || 0
   const finalPrice = Number(pkg.finalPrice) || 0
+  // The sale invoice adds VAT on top of the net price, rounded half-up to a
+  // whole halala — the same math as the backend's computeVat.
+  const vatRate = Number(pkg.vatRate) || 0
+  const vatAmount = vatHalalas(finalPrice, vatRate)
+  const total = finalPrice + vatAmount
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
@@ -52,12 +58,22 @@ export function SellPackagePricePreview({ pkg }: Props) {
           </span>
         </div>
       )}
+      {vatAmount > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            {t("packages.sell.price.vat").replace("{rate}", String(Math.round(vatRate * 10000) / 100))}
+          </span>
+          <span className="tabular-nums">
+            <FormattedCurrency amount={vatAmount} locale={locale} decimals={2} />
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between border-t pt-1.5 mt-0.5">
         <span className="text-sm font-medium">
           {t("packages.sell.price.total")}
         </span>
         <span className="tabular-nums text-base font-semibold text-foreground">
-          <FormattedCurrency amount={finalPrice} locale={locale} decimals={2} />
+          <FormattedCurrency amount={total} locale={locale} decimals={2} />
         </span>
       </div>
     </div>

@@ -34,7 +34,7 @@ function validate(state: FormState, t: Translator) {
 const inputClass =
   'w-full px-4 py-3 rounded-xl bg-[var(--sw-neutral-50)] text-[0.938rem] outline-none transition-all ' +
   'border border-[var(--sw-neutral-200)] ' +
-  'focus:bg-white focus:border-[var(--sw-primary-400)] ' +
+  'focus:bg-[var(--surface)] focus:border-[var(--sw-primary-400)] ' +
   'focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_12%,transparent)] ' +
   'placeholder:text-[var(--sw-neutral-400)]';
 

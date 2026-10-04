@@ -367,91 +367,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/bookings/availability": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Check employee availability for a date */
-        get: operations["DashboardBookingsController_checkAvailability_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/bookings/credits/{creditId}/transfer": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Transfer a session-package credit to another practitioner */
-        post: operations["DashboardBookingsController_transferCredit_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/bookings/from-credit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Book an appointment by consuming session-package credit */
-        post: operations["DashboardBookingsController_bookFromCredit_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/bookings/matching-credits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List a client's usable session-package credits matching a service/employee/duration */
-        get: operations["DashboardBookingsController_getMatchingCredits_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/bookings/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Today's booking counters + revenue for the dashboard StatsGrid */
-        get: operations["DashboardBookingsController_getStats_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/bookings/{id}": {
         parameters: {
             query?: never;
@@ -668,6 +583,91 @@ export interface paths {
         put?: never;
         /** Retry creating Zoom meeting for a booking */
         post: operations["DashboardBookingsController_retryZoomMeeting_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check employee availability for a date */
+        get: operations["DashboardBookingsController_checkAvailability_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/credits/{creditId}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer a session-package credit to another practitioner */
+        post: operations["DashboardBookingsController_transferCredit_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/from-credit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book an appointment by consuming session-package credit */
+        post: operations["DashboardBookingsController_bookFromCredit_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/matching-credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a client's usable session-package credits matching a service/employee/duration */
+        get: operations["DashboardBookingsController_getMatchingCredits_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Today's booking counters + revenue for the dashboard StatsGrid */
+        get: operations["DashboardBookingsController_getStats_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1230,23 +1230,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/finance/coupons/apply": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Apply a coupon code to an invoice */
-        post: operations["DashboardFinanceController_applyCouponEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/finance/coupons/{id}": {
         parameters: {
             query?: never;
@@ -1264,6 +1247,23 @@ export interface paths {
         head?: never;
         /** Update a coupon */
         patch: operations["DashboardFinanceController_updateCouponEndpoint_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/finance/coupons/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply a coupon code to an invoice */
+        post: operations["DashboardFinanceController_applyCouponEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard/finance/invoices": {
@@ -1423,40 +1423,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/finance/payments/bank-transfer": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Upload a bank transfer receipt for an invoice */
-        post: operations["DashboardFinanceController_bankTransferEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/finance/payments/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get payment statistics summary */
-        get: operations["DashboardFinanceController_getPaymentStatsEndpoint_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/finance/payments/{id}": {
         parameters: {
             query?: never;
@@ -1523,6 +1489,40 @@ export interface paths {
         head?: never;
         /** Approve or reject a pending bank transfer payment */
         patch: operations["DashboardFinanceController_verifyPaymentEndpoint_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/finance/payments/bank-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a bank transfer receipt for an invoice */
+        post: operations["DashboardFinanceController_bankTransferEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/finance/payments/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get payment statistics summary */
+        get: operations["DashboardFinanceController_getPaymentStatsEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard/identity/permissions": {
@@ -1751,23 +1751,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/media/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Upload a file to object storage */
-        post: operations["DashboardMediaController_uploadFileEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/media/{id}": {
         parameters: {
             query?: never;
@@ -1803,6 +1786,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a file to object storage */
+        post: operations["DashboardMediaController_uploadFileEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/mobile-home-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List staff-managed mobile home cards */
+        get: operations["DashboardMobileHomeCardsController_listEndpoint_v1"];
+        put?: never;
+        /** Create a draft mobile home card */
+        post: operations["DashboardMobileHomeCardsController_createEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/mobile-home-cards/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a mobile home card with optimistic concurrency */
+        patch: operations["DashboardMobileHomeCardsController_updateEndpoint_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/mobile-home-cards/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Atomically reorder the full mobile home card list */
+        put: operations["DashboardMobileHomeCardsController_reorderEndpoint_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/ops/activity": {
         parameters: {
             query?: never;
@@ -1812,23 +1864,6 @@ export interface paths {
         };
         /** List activity log entries */
         get: operations["DashboardOpsController_listActivityEndpoint_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/ops/outbox/failed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List terminal failed outbox events */
-        get: operations["DashboardOpsController_listFailedOutboxEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1848,6 +1883,23 @@ export interface paths {
         put?: never;
         /** Retry a terminal failed outbox event */
         post: operations["DashboardOpsController_retryFailedOutboxEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/ops/outbox/failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List terminal failed outbox events */
+        get: operations["DashboardOpsController_listFailedOutboxEndpoint_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2137,24 +2189,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get intake form responses for a booking */
-        get: operations["DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1"];
-        put?: never;
-        /** Submit (or overwrite) intake answers on behalf of a client for a booking */
-        post: operations["DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/organization/intake-forms/{formId}": {
         parameters: {
             query?: never;
@@ -2185,6 +2219,24 @@ export interface paths {
         /** Replace all fields on an intake form */
         put: operations["DashboardOrganizationSettingsController_setIntakeFieldsEndpoint_v1"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get intake form responses for a booking */
+        get: operations["DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1"];
+        put?: never;
+        /** Submit (or overwrite) intake answers on behalf of a client for a booking */
+        post: operations["DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2491,40 +2543,6 @@ export interface paths {
         put?: never;
         /** Create an employee */
         post: operations["DashboardPeopleController_createEmployeeEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/people/employees/onboarding": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Onboard a new employee with full profile details */
-        post: operations["DashboardPeopleController_onboardEmployeeEndpoint_v1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/people/employees/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get employee statistics */
-        get: operations["DashboardPeopleController_employeeStatsEndpoint_v1"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2898,6 +2916,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/people/employees/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Onboard a new employee with full profile details */
+        post: operations["DashboardPeopleController_onboardEmployeeEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/people/employees/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get employee statistics */
+        get: operations["DashboardPeopleController_employeeStatsEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/platform/integrations": {
         parameters: {
             query?: never;
@@ -3000,8 +3052,25 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Cancel a program (cascades to enrollments, no automatic refund) */
+        /** Cancel a program and queue participant refunds from the confirmed preview */
         patch: operations["DashboardProgramsController_cancel_v1"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/programs/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview participant refunds for center cancellation */
+        get: operations["DashboardProgramsController_cancellationPreview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard/programs/{id}/enrollments": {
@@ -3276,6 +3345,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/review-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log in to the explicitly configured synthetic review account */
+        post: operations["MobileReviewAuthController_loginReviewAccount_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/verify-otp": {
         parameters: {
             query?: never;
@@ -3343,6 +3429,23 @@ export interface paths {
         head?: never;
         /** Cancel a booking */
         patch: operations["MobileClientBookingsController_cancelBooking_v1"];
+        trace?: never;
+    };
+    "/api/v1/mobile/client/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview client cancellation eligibility and refund terms */
+        get: operations["MobileClientBookingsController_cancellationPreviewEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mobile/client/bookings/{id}/join": {
@@ -3553,6 +3656,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/client/payments/bank-transfer/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get client-visible bank transfer settings and accounts */
+        get: operations["MobileClientPaymentsController_getBankTransferSettings_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/client/payments/init": {
         parameters: {
             query?: never;
@@ -3581,6 +3701,23 @@ export interface paths {
         get: operations["MobileClientPaymentsController_getInvoiceEndpoint_v1"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/package-purchases/init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Initialize a Moyasar payment to self-purchase a session package */
+        post: operations["MobileClientPaymentsController_initPackagePurchaseEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3771,6 +3908,23 @@ export interface paths {
         put?: never;
         /** Start the session for an assigned booking (check-in) */
         post: operations["MobileEmployeeBookingsController_start_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/employee/bookings/{id}/start-meeting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the Zoom host link and timing for an assigned online booking */
+        get: operations["MobileEmployeeBookingsController_startMeeting_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4135,23 +4289,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/public/chat/conversations/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get the current guest chat conversation */
-        get: operations["PublicChatController_current_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/public/chat/conversations/{conversationId}/handoff": {
         parameters: {
             query?: never;
@@ -4198,6 +4335,23 @@ export interface paths {
         put?: never;
         /** Retry an unanswered administrative assistant message as a guest owner */
         post: operations["PublicChatController_retryMessageForGuest_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/chat/conversations/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the current guest chat conversation */
+        get: operations["PublicChatController_current_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4409,6 +4563,23 @@ export interface paths {
         patch: operations["PublicMeController_cancelBookingEndpoint_v1"];
         trace?: never;
     };
+    "/api/v1/public/me/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview client cancellation eligibility and refund terms */
+        get: operations["PublicMeController_cancellationPreviewEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/me/bookings/{id}/invoice": {
         parameters: {
             query?: never;
@@ -4452,23 +4623,6 @@ export interface paths {
         };
         /** List the authenticated client chat conversation history */
         get: operations["MyChatController_listConversationsForClient_v1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/me/chat/conversations/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get the authenticated client chat conversation */
-        get: operations["MyChatController_current_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4557,6 +4711,23 @@ export interface paths {
         put?: never;
         /** Retry an unanswered administrative assistant message as the client owner */
         post: operations["MyChatController_retryMessageForClient_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/me/chat/conversations/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authenticated client chat conversation */
+        get: operations["MyChatController_current_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4682,6 +4853,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/mobile-home-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List published mobile home cards */
+        get: operations["PublicMobileHomeCardsController_listEndpoint_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/otp/request": {
         parameters: {
             query?: never;
@@ -4795,6 +4983,23 @@ export interface paths {
         put?: never;
         /** Initialize a Moyasar payment for a booking invoice (requires a logged-in client session) */
         post: operations["PublicPaymentsController_initPayment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/payments/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the payment methods clients can actually use */
+        get: operations["PublicPaymentsController_getPaymentMethods_v1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5014,14 +5219,53 @@ export interface components {
              */
             nameEn?: string;
         };
+        AdminMobileHomeCardDto: {
+            /**
+             * Format: date-time
+             * @description Timestamp when the card was created.
+             */
+            createdAt: string;
+            /** @description Card description in Arabic. */
+            descriptionAr: string | null;
+            /** @description Card description in English. */
+            descriptionEn: string | null;
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
+            destination: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** @description Unique mobile home card identifier. */
+            id: string;
+            /** @description Alternative text for the card image in Arabic. */
+            imageAltAr: string | null;
+            /** @description Alternative text for the card image in English. */
+            imageAltEn: string | null;
+            /** @description Identifier of the uploaded card image. */
+            imageFileId: string | null;
+            /** @description URL of the card image. */
+            imageUrl: string | null;
+            /** @description Whether the card is published for mobile clients. */
+            isPublished: boolean;
+            /** @description Card display order; lower values appear first. */
+            sortOrder: number;
+            /** @description Card title in Arabic. */
+            titleAr: string;
+            /** @description Card title in English. */
+            titleEn: string | null;
+            /**
+             * Format: date-time
+             * @description Timestamp when the card was last updated.
+             */
+            updatedAt: string;
+        };
         AiProviderConfigResponseDto: {
             connectionStatus: string;
             hasCredential: boolean;
             isEnabled: boolean;
-            lastTestErrorCode: string | null;
-            lastTestOk: boolean | null;
             /** Format: date-time */
             lastTestedAt: string | null;
+            lastTestErrorCode: string | null;
+            lastTestOk: boolean | null;
             maxTokens: number;
             model: string;
             /** @enum {string} */
@@ -5206,6 +5450,33 @@ export interface components {
              * @example 09:00
              */
             startTime: string;
+        };
+        BankTransferAccountSettingsDto: {
+            /**
+             * @description Bank name
+             * @example Saudi National Bank
+             */
+            bankName: string;
+            /**
+             * @description Account beneficiary name
+             * @example Sawaa Family Counseling Center
+             */
+            beneficiaryName: string;
+            /**
+             * @description Saudi IBAN (spaces accepted)
+             * @example SA0380000000608010167519
+             */
+            iban: string;
+            /**
+             * @description Stable account id used by the client app
+             * @example main-account
+             */
+            id: string;
+            /**
+             * @description Account label shown to clients
+             * @example Main account
+             */
+            label: string;
         };
         BookFromCreditDto: {
             /**
@@ -5695,20 +5966,72 @@ export interface components {
              */
             source?: "client" | "admin" | "employee" | "system";
         };
-        CancelProgramDto: {
-            /** @description Reason for cancelling the program */
-            reason: string;
-        };
         /**
          * @description Reason for cancellation
          * @enum {string}
          */
         CancellationReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER";
+        CancellationRefundSummaryDto: {
+            /** @description Already refunded amount in halalas */
+            alreadyRefundedAmount: number;
+            /** @example SAR */
+            currency: string;
+            /**
+             * @description Whether the refund needs no action, provider processing, or staff review
+             * @enum {string}
+             */
+            execution: "NONE" | "AUTOMATIC" | "REVIEW";
+            /** @description Captured original amount in halalas */
+            paidAmount: number;
+            /** @description Reserved pending amount in halalas */
+            pendingRefundAmount: number;
+            /** @description New remaining refund entitlement in halalas */
+            refundAmount: number;
+            /** @description Policy percentage for the applicable cancellation window */
+            refundPercent: number;
+            /**
+             * @description Expected financial outcome if the client confirms cancellation; pending states do not mean money has been returned
+             * @enum {string}
+             */
+            status: "NOT_APPLICABLE" | "NO_REFUND" | "PENDING_REVIEW" | "PROCESSING" | "CREDIT_RETURNED";
+            /**
+             * @description Refund policy window relative to the configured early cancellation threshold
+             * @enum {string}
+             */
+            window: "EARLY" | "LATE";
+        };
+        CancelProgramDto: {
+            /** @description Token from the current cancellation preview */
+            quoteToken: string;
+            /** @description Reason for cancelling the program */
+            reason: string;
+            /**
+             * @description After program start, additional refunds in integer halalas for every paid participant, including explicit zero amounts; each amount must not exceed its preview maximum. Omit or send an empty list before start, when the full available balance is selected automatically.
+             * @example [
+             *       {
+             *         "amount": 20000,
+             *         "bookingId": "11111111-1111-4111-8111-111111111111"
+             *       }
+             *     ]
+             */
+            refunds?: components["schemas"]["ProgramParticipantRefundDto"][];
+        };
         CatalogCategoryDto: {
+            /**
+             * @description Whether booking starts at the clinic or with a service selection
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
             /** Format: uuid */
             id: string;
             /** @description Short-lived presigned image URL (signed per response), or null */
             imageUrl: Record<string, never> | null;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
             /** @example استشارات */
             nameAr: string;
             /** @example Consultations */
@@ -5767,6 +6090,8 @@ export interface components {
             id: string;
             /** @description Short-lived presigned image URL (signed per response), or null */
             imageUrl: Record<string, never> | null;
+            /** @description Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services */
+            isHidden?: boolean;
             /** @example جلسة استشارة فردية */
             nameAr: string;
             /** @example Individual Counseling Session */
@@ -5864,6 +6189,12 @@ export interface components {
              */
             isActive: boolean;
             /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
+            /**
              * @description Arabic category name
              * @example الإرشاد الأسري
              */
@@ -5957,6 +6288,12 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Arabic category name
              * @example الإرشاد الأسري
@@ -6076,8 +6413,40 @@ export interface components {
             status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
         };
         ClientCancelBookingDto: {
+            /** @description Opaque cancellation preview token; refresh preview after conflict */
+            quoteToken?: string;
             /** @description Reason for cancellation */
             reason?: string;
+            /**
+             * Format: uuid
+             * @description Stable UUID for retrying the same cancellation
+             */
+            sourceActionId?: string;
+        };
+        /**
+         * @description Client cancellation eligibility cutoff
+         * @enum {string}
+         */
+        ClientCancelCutoffMode: "BEFORE_START" | "BEFORE_CHECK_IN";
+        ClientCancellationPreviewDto: {
+            /** @description Current eligibility to cancel this appointment directly */
+            canCancel: boolean;
+            /**
+             * Format: date-time
+             * @description Effective cancellation deadline, or null when no valid deadline is configured
+             */
+            cutoffAt: string | null;
+            /** @description Whether the new client cancellation policy is explicitly enabled */
+            policyEnabled: boolean;
+            /** @description Opaque effective terms fingerprint */
+            quoteToken: string;
+            /**
+             * @description Eligibility decision or reason cancellation is unavailable
+             * @enum {string}
+             */
+            reasonCode: "ALLOWED" | "POLICY_NOT_CONFIGURED" | "CUTOFF_PASSED" | "ATTENDED" | "FINAL_STATE" | "HISTORICAL" | "GROUP_STAFF_ONLY";
+            /** @description Financial terms shown to the client before cancellation confirmation */
+            refund: components["schemas"]["CancellationRefundSummaryDto"];
         };
         ClientChatConversationCursorMetaDto: {
             hasMore: boolean;
@@ -6219,16 +6588,16 @@ export interface components {
              */
             claimedAt: string | null;
             /**
-             * @description Accepted privacy consent version
-             * @example 2026-01
-             */
-            consentVersion: string | null;
-            /**
              * Format: date-time
              * @description Privacy consent timestamp
              * @example 2026-01-01T00:00:00.000Z
              */
             consentedAt: string | null;
+            /**
+             * @description Accepted privacy consent version
+             * @example 2026-01
+             */
+            consentVersion: string | null;
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -6653,6 +7022,12 @@ export interface components {
              */
             imageUrl?: string | null;
             /**
+             * @description Category kind, independent of its department or name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind?: "CLINIC" | "SERVICE_GROUP";
+            /**
              * @description Category name in Arabic
              * @example طب الأسنان
              */
@@ -6805,16 +7180,16 @@ export interface components {
              */
             claimedAt: string | null;
             /**
-             * @description Accepted privacy consent version
-             * @example 2026-01
-             */
-            consentVersion: string | null;
-            /**
              * Format: date-time
              * @description Privacy consent timestamp
              * @example 2026-01-01T00:00:00.000Z
              */
             consentedAt: string | null;
+            /**
+             * @description Accepted privacy consent version
+             * @example 2026-01
+             */
+            consentVersion: string | null;
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -7412,6 +7787,43 @@ export interface components {
              */
             vatRate?: number;
         };
+        CreateMobileHomeCardDto: {
+            /** @description Card description in Arabic. */
+            descriptionAr?: string | null;
+            /** @description Card description in English. */
+            descriptionEn?: string | null;
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
+            destination?: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** @description Alternative text for the card image in Arabic. */
+            imageAltAr?: string | null;
+            /** @description Alternative text for the card image in English. */
+            imageAltEn?: string | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the uploaded card image.
+             */
+            imageFileId?: string | null;
+            /**
+             * @description Whether the card is published for mobile clients.
+             * @default false
+             */
+            isPublished: boolean;
+            /**
+             * @description Card display order; lower values appear first.
+             * @default 0
+             */
+            sortOrder: number;
+            /**
+             * @description Card title in Arabic.
+             * @example مواعيد مرنة تناسب يومك
+             */
+            titleAr: string;
+            /** @description Card title in English. */
+            titleEn?: string | null;
+        };
         CreatePackageFamilyDto: {
             /** @description Arabic family description */
             descriptionAr?: string;
@@ -7920,6 +8332,12 @@ export interface components {
              */
             isActive: boolean;
             /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
+            /**
              * @description Arabic category name
              * @example الإرشاد الأسري
              */
@@ -7999,6 +8417,12 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Arabic category name
              * @example الإرشاد الأسري
@@ -9154,9 +9578,9 @@ export interface components {
             /** Format: uuid */
             id: string;
             isPublished: boolean;
-            lastIndexErrorCode: Record<string, never> | null;
             /** Format: date-time */
             lastIndexedAt: Record<string, never> | null;
+            lastIndexErrorCode: Record<string, never> | null;
             metadata: Record<string, never> | null;
             /** Format: date-time */
             publishedAt: Record<string, never> | null;
@@ -9187,9 +9611,9 @@ export interface components {
             /** Format: uuid */
             id: string;
             isPublished: boolean;
-            lastIndexErrorCode: Record<string, never> | null;
             /** Format: date-time */
             lastIndexedAt: Record<string, never> | null;
+            lastIndexErrorCode: Record<string, never> | null;
             metadata: Record<string, never> | null;
             /** Format: date-time */
             publishedAt: Record<string, never> | null;
@@ -9286,6 +9710,23 @@ export interface components {
             /** @description Mailchimp Transactional (Mandrill) API key */
             apiKey: string;
         };
+        ManualRefundPaymentDto: {
+            /**
+             * @description Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount
+             * @example 5000
+             */
+            amount?: number;
+            /**
+             * @description Reason for the refund
+             * @example Service not delivered
+             */
+            reason: string;
+            /**
+             * Format: uuid
+             * @description Existing pending cash/bank-transfer refund request to settle; retries return the existing completion
+             */
+            refundRequestId?: string;
+        };
         MarkConversationReadDto: {
             /**
              * @description Owned message UUID through which messages are marked read
@@ -9311,11 +9752,18 @@ export interface components {
              * @example Change of plans
              */
             cancelNotes?: string;
+            /** @description Cancellation preview fingerprint */
+            quoteToken?: string;
             /**
              * @description Reason for cancellation
              * @example CLIENT_REQUESTED
              */
             reason: components["schemas"]["CancellationReason"];
+            /**
+             * Format: uuid
+             * @description Stable UUID for this cancellation attempt
+             */
+            sourceActionId?: string;
         };
         MobileCreateBookingDto: {
             /**
@@ -9323,6 +9771,11 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             branchId: string;
+            /**
+             * @description Session delivery channel. Omitted defaults to IN_PERSON.
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
             /**
              * @description Specific duration option to resolve price and duration
              * @example 00000000-0000-0000-0000-000000000000
@@ -9338,6 +9791,11 @@ export interface components {
              * @example Please prepare the room in advance
              */
             notes?: string;
+            /**
+             * @description Client chose to pay at the center. When true the booking is confirmed without an online invoice; the amount is collected at reception. Rejected when the deployment has pay-at-center disabled.
+             * @example false
+             */
+            payAtClinic?: boolean;
             /**
              * @description ISO 8601 start datetime
              * @example 2026-05-01T09:00:00.000Z
@@ -9940,6 +10398,39 @@ export interface components {
              */
             subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
+        PersistedCancellationRefundDto: {
+            /** @description Already refunded amount in halalas */
+            alreadyRefundedAmount: number;
+            /** @description Ledger-confirmed refunded amount toward this cancellation, in halalas */
+            completedAmount: number;
+            /** @example SAR */
+            currency: string;
+            /**
+             * @description Whether the refund needs no action, provider processing, or staff review
+             * @enum {string}
+             */
+            execution: "NONE" | "AUTOMATIC" | "REVIEW";
+            /** @description Failed or denied request amount, in halalas */
+            failedAmount: number;
+            /** @description Captured original amount in halalas */
+            paidAmount: number;
+            /** @description Reserved pending amount in halalas */
+            pendingRefundAmount: number;
+            /** @description New remaining refund entitlement in halalas */
+            refundAmount: number;
+            /** @description Policy percentage for the applicable cancellation window */
+            refundPercent: number;
+            /**
+             * @description Persisted cancellation refund outcome derived from confirmed ledger entries and request states
+             * @enum {string}
+             */
+            status: "NOT_APPLICABLE" | "NO_REFUND" | "PENDING_REVIEW" | "PROCESSING" | "CREDIT_RETURNED" | "COMPLETED" | "FAILED";
+            /**
+             * @description Refund policy window relative to the configured early cancellation threshold
+             * @enum {string}
+             */
+            window: "EARLY" | "LATE";
+        };
         PreviewEmailTemplateDto: {
             /**
              * @description Template variable values for the preview render
@@ -9973,6 +10464,166 @@ export interface components {
             invoiceId: string;
             /** @description Payment method used */
             method: components["schemas"]["PaymentMethod"];
+        };
+        ProgramCancellationParticipantDto: {
+            /**
+             * @description Amount already refunded in integer halalas
+             * @example 5000
+             */
+            alreadyRefundedAmount: number;
+            /**
+             * @description Booking identifier for this enrolled participant
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            bookingId: string;
+            /**
+             * @description Human-readable booking number for this participant
+             * @example 1042
+             */
+            bookingNumber: number;
+            /**
+             * @description Client identifier for this enrolled participant
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Display name of the enrolled client
+             * @example سارة محمد
+             */
+            clientName: string;
+            /**
+             * @description Currency shared by the booking and its captured payments
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Maximum additional refund in integer halalas after existing refunds and reservations; zero for historical imports
+             * @example 20000
+             */
+            maxRefundAmount: number;
+            /**
+             * @description Captured original amount in integer halalas, before refunds
+             * @example 30000
+             */
+            paidAmount: number;
+            /**
+             * @description Amount reserved by pending refund requests in integer halalas
+             * @example 5000
+             */
+            pendingRefundAmount: number;
+            /**
+             * @description Additional refund in integer halalas: the full available amount before program start, or null after start until staff select an amount
+             * @example 20000
+             */
+            refundAmount: number | null;
+            /**
+             * @description Current booking status when the cancellation preview was generated
+             * @example CONFIRMED
+             */
+            status: string;
+        };
+        ProgramCancellationParticipantResultDto: {
+            /**
+             * @description Booking identifier for this participant cancellation outcome
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            bookingId: string;
+            /**
+             * @description Currency of this participant refund amount
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Additional refund amount recorded by this cancellation in integer halalas; does not mean the refund has completed
+             * @example 20000
+             */
+            refundAmount: number;
+            /**
+             * @description Initial refund outcome: staff review required, automatic processing pending, or no additional refund
+             * @example PENDING_REVIEW
+             * @enum {string}
+             */
+            refundStatus: "PENDING_REVIEW" | "PROCESSING" | "NO_REFUND";
+        };
+        ProgramCancellationPreviewDto: {
+            /**
+             * @description Whether the start date has elapsed or participant attendance, completion or historical-import evidence requires post-start refund selection
+             * @example false
+             */
+            hasStarted: boolean;
+            /**
+             * @description Current enrolled participants and their individual refundable balances, including bookings whose history must be retained
+             * @example [
+             *       {
+             *         "alreadyRefundedAmount": 5000,
+             *         "bookingId": "11111111-1111-4111-8111-111111111111",
+             *         "bookingNumber": 1042,
+             *         "clientId": "22222222-2222-4222-8222-222222222222",
+             *         "clientName": "سارة محمد",
+             *         "currency": "SAR",
+             *         "maxRefundAmount": 20000,
+             *         "paidAmount": 30000,
+             *         "pendingRefundAmount": 5000,
+             *         "refundAmount": 20000,
+             *         "status": "CONFIRMED"
+             *       }
+             *     ]
+             */
+            participants: components["schemas"]["ProgramCancellationParticipantDto"][];
+            /**
+             * @description Program identifier for this cancellation preview
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            programId: string;
+            /**
+             * @description Opaque token for these cancellation terms; submit it unchanged when cancelling and refresh the preview if the terms change
+             * @example a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468a9b7c3d5e1f02468
+             */
+            quoteToken: string;
+        };
+        ProgramCancellationResultDto: {
+            /**
+             * @description Number of participant bookings transitioned to CANCELLED by this operation
+             * @example 1
+             */
+            cancelledEnrollments: number;
+            /**
+             * @description Identifier of the cancelled program
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            id: string;
+            /**
+             * @description Per-participant refund outcomes for non-historical bookings, including terminal bookings whose status was retained
+             * @example [
+             *       {
+             *         "bookingId": "11111111-1111-4111-8111-111111111111",
+             *         "currency": "SAR",
+             *         "refundAmount": 20000,
+             *         "refundStatus": "PENDING_REVIEW"
+             *       }
+             *     ]
+             */
+            participants: components["schemas"]["ProgramCancellationParticipantResultDto"][];
+            /**
+             * @description Number of participant bookings whose status was retained, including terminal bookings and historical imports
+             * @example 0
+             */
+            skippedEnrollments: number;
+            /**
+             * @description Program status after cancellation is committed
+             * @example CANCELLED
+             */
+            status: string;
+        };
+        ProgramParticipantRefundDto: {
+            /** @description Additional refund in integer halalas */
+            amount: number;
+            /**
+             * Format: uuid
+             * @description Participant booking identifier from the current program cancellation preview
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            bookingId: string;
         };
         PublicBrandingDto: {
             /**
@@ -10062,7 +10713,7 @@ export interface components {
             departments: components["schemas"]["CatalogDepartmentDto"][];
             services: components["schemas"]["CatalogServiceDto"][];
             /**
-             * @description Fractional VAT rate (0.15 = 15%); 0 when the center is not VAT-registered or settings are missing
+             * @description VAT rate as a fraction of 1 from organization settings; 0 when the center is not VAT-registered or settings are missing
              * @example 0
              */
             vatRate: number;
@@ -10164,6 +10815,29 @@ export interface components {
              */
             title?: Record<string, never> | null;
         };
+        PublicMobileHomeCardDto: {
+            /** @description Card description in Arabic. */
+            descriptionAr: string | null;
+            /** @description Card description in English. */
+            descriptionEn: string | null;
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
+            destination: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /** @description Unique mobile home card identifier. */
+            id: string;
+            /** @description Alternative text for the card image in Arabic. */
+            imageAltAr: string | null;
+            /** @description Alternative text for the card image in English. */
+            imageAltEn: string | null;
+            /** @description URL of the card image. */
+            imageUrl: string | null;
+            /** @description Card title in Arabic. */
+            titleAr: string;
+            /** @description Card title in English. */
+            titleEn: string | null;
+        };
         RefreshTokenDto: {
             /**
              * @description Client refresh token (optional when sent as httpOnly cookie)
@@ -10178,7 +10852,7 @@ export interface components {
              */
             notes?: string;
             /**
-             * @description Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount paid. 0 records a cancellation with no money returned.
+             * @description Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount charged (the invoice total, VAT-inclusive). 0 records a cancellation with no money returned.
              * @example 50000
              */
             refundAmount: number;
@@ -10253,6 +10927,22 @@ export interface components {
              * @example Outside cancellation window
              */
             rejectReason: string;
+        };
+        ReorderMobileHomeCardItemDto: {
+            /**
+             * Format: date-time
+             * @description Last known update timestamp used to detect concurrent changes.
+             */
+            expectedUpdatedAt: string;
+            /**
+             * Format: uuid
+             * @description Unique mobile home card identifier.
+             */
+            id: string;
+        };
+        ReorderMobileHomeCardsDto: {
+            /** @description Cards in their requested display order, with last known update timestamps. */
+            items: components["schemas"]["ReorderMobileHomeCardItemDto"][];
         };
         RequestDashboardOtpDto: {
             /**
@@ -10350,6 +11040,18 @@ export interface components {
             reason: string;
         };
         RetryAdministrativeMessageDto: Record<string, never>;
+        ReviewLoginDto: {
+            /**
+             * @description Dedicated synthetic review account email
+             * @example apple@review.sawaa.invalid
+             */
+            email: string;
+            /**
+             * @description Review account password
+             * @example AccountPassword123!
+             */
+            password: string;
+        };
         ScheduleProgramDto: {
             /** @description Override the duration in minutes (advisory) */
             durationMins?: number;
@@ -10726,6 +11428,12 @@ export interface components {
              * @example true
              */
             isActive?: boolean;
+            /**
+             * @description Category kind, independent of its department or name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind?: "CLINIC" | "SERVICE_GROUP";
             /**
              * @description Category name in Arabic
              * @example طب الأسنان
@@ -11198,6 +11906,39 @@ export interface components {
              */
             type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
         };
+        UpdateMobileHomeCardDto: {
+            /** @description Card description in Arabic. */
+            descriptionAr?: string | null;
+            /** @description Card description in English. */
+            descriptionEn?: string | null;
+            /**
+             * @description In-app destination opened when the card is selected.
+             * @enum {string|null}
+             */
+            destination?: "CLINICS" | "SERVICES" | "SPECIALISTS" | "PACKAGES" | "PROGRAMS" | null;
+            /**
+             * Format: date-time
+             * @description Last known update timestamp used to detect concurrent changes.
+             */
+            expectedUpdatedAt: string;
+            /** @description Alternative text for the card image in Arabic. */
+            imageAltAr?: string | null;
+            /** @description Alternative text for the card image in English. */
+            imageAltEn?: string | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the uploaded card image.
+             */
+            imageFileId?: string | null;
+            /** @description Whether the card is published for mobile clients. */
+            isPublished?: boolean;
+            /** @description Card display order; lower values appear first. */
+            sortOrder?: number;
+            /** @description Card title in Arabic. */
+            titleAr?: string;
+            /** @description Card title in English. */
+            titleEn?: string | null;
+        };
         UpdatePackageFamilyDto: {
             /** @description Arabic family description */
             descriptionAr?: string;
@@ -11526,11 +12267,19 @@ export interface components {
              * @example 15
              */
             bufferMinutes?: number;
+            /** @description Minimum hours before start to allow client cancellation; 0 is valid */
+            clientCancelBeforeHours?: number | null;
+            /** @description Client cancellation eligibility cutoff */
+            clientCancelCutoffMode?: components["schemas"]["ClientCancelCutoffMode"] | null;
+            /** @description Enable the explicitly configured immediate client cancellation policy */
+            clientCancellationPolicyEnabled?: boolean;
             /**
              * @description Minimum hours before booking start that a client may reschedule
              * @example 24
              */
             clientRescheduleMinHoursBefore?: number;
+            /** @description Independent early cancellation partial refund percentage */
+            earlyCancelRefundPercent?: number | null;
             /**
              * @description Hours before booking start that free cancellation is allowed
              * @example 24
@@ -11670,6 +12419,8 @@ export interface components {
              * @example Riyadh, Saudi Arabia
              */
             address?: string;
+            /** @description Bank accounts shown to clients for bank transfers */
+            bankTransferAccounts?: components["schemas"]["BankTransferAccountSettingsDto"][];
             /**
              * @description Booking flow order
              * @example service_first
@@ -11771,6 +12522,21 @@ export interface components {
              */
             organizationCity?: string;
             /**
+             * @description Enable pay-at-clinic option
+             * @example true
+             */
+            paymentAtClinicEnabled?: boolean;
+            /**
+             * @description Enable client bank transfer at booking checkout
+             * @example false
+             */
+            paymentBankTransferEnabled?: boolean;
+            /**
+             * @description Enable Moyasar online payment
+             * @example true
+             */
+            paymentMoyasarEnabled?: boolean;
+            /**
              * @description Show "Bank transfer" in the record-payment dialog
              * @example true
              */
@@ -11790,16 +12556,6 @@ export interface components {
              * @example false
              */
             payMethodTabbyEnabled?: boolean;
-            /**
-             * @description Enable pay-at-clinic option
-             * @example true
-             */
-            paymentAtClinicEnabled?: boolean;
-            /**
-             * @description Enable Moyasar online payment
-             * @example true
-             */
-            paymentMoyasarEnabled?: boolean;
             /**
              * @description Postal code
              * @example 12345
@@ -13593,389 +14349,6 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_checkAvailability_v1: {
-        parameters: {
-            query: {
-                /** @description Employee whose availability to check */
-                employeeId: string;
-                /** @description Branch to check availability at */
-                branchId: string;
-                /** @description Date to check availability for (ISO 8601) */
-                date: string;
-                /** @description Session duration in minutes (overrides service default) */
-                durationMins?: number;
-                /** @description Service to check availability for */
-                serviceId?: string;
-                /** @description Specific duration option to resolve duration */
-                durationOptionId?: string;
-                /** @description Booking type context for availability check */
-                bookingType?: components["schemas"]["BookingType"];
-                /** @description Delivery channel context for availability check */
-                deliveryType?: components["schemas"]["DeliveryType"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Available time slots */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        endTime?: string;
-                        /** Format: date-time */
-                        startTime?: string;
-                    }[];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_transferCredit_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Package credit ID */
-                creditId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransferCreditDto"];
-            };
-        };
-        responses: {
-            /** @description Credit re-pointed to the target employee (price snapshot unchanged) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: uuid */
-                        id?: string;
-                    };
-                };
-            };
-            /** @description Target employee does not provide the service/duration, is inactive, or is the current owner */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Credit or target employee not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_bookFromCredit_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BookFromCreditDto"];
-            };
-        };
-        responses: {
-            /** @description Zero-value booking created from a package credit */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: uuid */
-                        packageCreditId?: string;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        /** @example CONFIRMED */
-                        status?: string;
-                    };
-                };
-            };
-            /** @description Slot unavailable, missing credit selector, or past date */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description No usable package credit found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description No remaining credit or slot conflict (concurrent over-draw rejected) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_getMatchingCredits_v1: {
-        parameters: {
-            query: {
-                /** @description Client ID */
-                clientId: string;
-                /** @description Service ID */
-                serviceId: string;
-                /** @description Employee ID */
-                employeeId: string;
-                /** @description Duration option ID */
-                durationOptionId: string;
-                /** @description Delivery type of the booking (for DELIVERY_TYPE-scoped credits) */
-                deliveryType?: "IN_PERSON" | "ONLINE";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Matching ACTIVE credits with remaining capacity (FIFO order) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        creditId?: string;
-                        /** Format: uuid */
-                        purchaseId?: string;
-                        remaining?: number;
-                        reservedQuantity?: number;
-                        totalQuantity?: number;
-                        usedQuantity?: number;
-                    }[];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_getStats_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Today/pending counts and today revenue */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 7 */
-                        completedToday?: number;
-                        /** @example 3 */
-                        pendingCount?: number;
-                        /** @example 1500 */
-                        revenueToday?: number;
-                        /** @example 12 */
-                        todayCount?: number;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     DashboardBookingsController_getBooking_v1: {
         parameters: {
             query?: never;
@@ -15021,6 +15394,389 @@ export interface operations {
             };
             /** @description Booking not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_checkAvailability_v1: {
+        parameters: {
+            query: {
+                /** @description Employee whose availability to check */
+                employeeId: string;
+                /** @description Branch to check availability at */
+                branchId: string;
+                /** @description Date to check availability for (ISO 8601) */
+                date: string;
+                /** @description Session duration in minutes (overrides service default) */
+                durationMins?: number;
+                /** @description Service to check availability for */
+                serviceId?: string;
+                /** @description Specific duration option to resolve duration */
+                durationOptionId?: string;
+                /** @description Booking type context for availability check */
+                bookingType?: components["schemas"]["BookingType"];
+                /** @description Delivery channel context for availability check */
+                deliveryType?: components["schemas"]["DeliveryType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Available time slots */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        endTime?: string;
+                        /** Format: date-time */
+                        startTime?: string;
+                    }[];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_transferCredit_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Package credit ID */
+                creditId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferCreditDto"];
+            };
+        };
+        responses: {
+            /** @description Credit re-pointed to the target employee (price snapshot unchanged) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        employeeId?: string;
+                        /** Format: uuid */
+                        id?: string;
+                    };
+                };
+            };
+            /** @description Target employee does not provide the service/duration, is inactive, or is the current owner */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Credit or target employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_bookFromCredit_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookFromCreditDto"];
+            };
+        };
+        responses: {
+            /** @description Zero-value booking created from a package credit */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** Format: uuid */
+                        packageCreditId?: string;
+                        /** Format: date-time */
+                        scheduledAt?: string;
+                        /** @example CONFIRMED */
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Slot unavailable, missing credit selector, or past date */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No usable package credit found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No remaining credit or slot conflict (concurrent over-draw rejected) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_getMatchingCredits_v1: {
+        parameters: {
+            query: {
+                /** @description Client ID */
+                clientId: string;
+                /** @description Service ID */
+                serviceId: string;
+                /** @description Employee ID */
+                employeeId: string;
+                /** @description Duration option ID */
+                durationOptionId: string;
+                /** @description Delivery type of the booking (for DELIVERY_TYPE-scoped credits) */
+                deliveryType?: "IN_PERSON" | "ONLINE";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching ACTIVE credits with remaining capacity (FIFO order) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        creditId?: string;
+                        /** Format: uuid */
+                        purchaseId?: string;
+                        remaining?: number;
+                        reservedQuantity?: number;
+                        totalQuantity?: number;
+                        usedQuantity?: number;
+                    }[];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_getStats_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Today/pending counts and today revenue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 7 */
+                        completedToday?: number;
+                        /** @example 3 */
+                        pendingCount?: number;
+                        /** @example 1500 */
+                        revenueToday?: number;
+                        /** @example 12 */
+                        todayCount?: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17513,64 +18269,6 @@ export interface operations {
             };
         };
     };
-    DashboardFinanceController_applyCouponEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApplyCouponDto"];
-            };
-        };
-        responses: {
-            /** @description Coupon applied; returns updated discount amount */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     DashboardFinanceController_getCouponEndpoint_v1: {
         parameters: {
             query?: never;
@@ -17755,6 +18453,64 @@ export interface operations {
             };
             /** @description Coupon not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_applyCouponEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyCouponDto"];
+            };
+        };
+        responses: {
+            /** @description Coupon applied; returns updated discount amount */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18422,7 +19178,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Already refunded or refundAmount outside [0, amountPaid] */
+            /** @description Already refunded or refundAmount outside [0, amount charged (invoice total)] */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18596,177 +19352,6 @@ export interface operations {
             };
         };
     };
-    DashboardFinanceController_bankTransferEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Receipt file + invoice metadata */
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /**
-                     * @description Transfer amount in integer halalas
-                     * @example 10000
-                     */
-                    amount: number;
-                    /**
-                     * Format: uuid
-                     * @example 00000000-0000-0000-0000-000000000000
-                     */
-                    invoiceId: string;
-                    /**
-                     * Format: binary
-                     * @description Bank transfer receipt image or PDF
-                     */
-                    receipt: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Bank transfer receipt uploaded */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardFinanceController_getPaymentStatsEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Operational payment statistics plus a separate read-only legacy summary */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 20 */
-                        completed?: number;
-                        /** @example 100000 */
-                        completedAmount?: number;
-                        /** @example 3 */
-                        failed?: number;
-                        /** @description Booknetic collections kept separate from operational finance */
-                        historical?: {
-                            /**
-                             * @description Integer halalas
-                             * @example 103353250
-                             */
-                            collectedAmount?: number;
-                            /** @example 3427 */
-                            collectedCount?: number;
-                            /**
-                             * @description Integer halalas
-                             * @example 1575000
-                             */
-                            reviewAmount?: number;
-                            /** @example 109 */
-                            reviewCount?: number;
-                        };
-                        /** @example 2 */
-                        pending?: number;
-                        /** @example 10000 */
-                        pendingAmount?: number;
-                        /** @example 1 */
-                        pendingVerification?: number;
-                        /** @example 5000 */
-                        pendingVerificationAmount?: number;
-                        /** @example 3 */
-                        refunded?: number;
-                        /** @example 10000 */
-                        refundedAmount?: number;
-                        /** @example 29 */
-                        total?: number;
-                        /** @example 125000 */
-                        totalAmount?: number;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     DashboardFinanceController_getPaymentEndpoint_v1: {
         parameters: {
             query?: never;
@@ -18845,7 +19430,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RefundPaymentDto"];
+                "application/json": components["schemas"]["ManualRefundPaymentDto"];
             };
         };
         responses: {
@@ -19025,6 +19610,177 @@ export interface operations {
             };
             /** @description Payment not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_bankTransferEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Receipt file + invoice metadata */
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * @description Transfer amount in integer halalas
+                     * @example 10000
+                     */
+                    amount: number;
+                    /**
+                     * Format: uuid
+                     * @example 00000000-0000-0000-0000-000000000000
+                     */
+                    invoiceId: string;
+                    /**
+                     * Format: binary
+                     * @description Bank transfer receipt image or PDF
+                     */
+                    receipt: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Bank transfer receipt uploaded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_getPaymentStatsEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operational payment statistics plus a separate read-only legacy summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 20 */
+                        completed?: number;
+                        /** @example 100000 */
+                        completedAmount?: number;
+                        /** @example 3 */
+                        failed?: number;
+                        /** @description Booknetic collections kept separate from operational finance */
+                        historical?: {
+                            /**
+                             * @description Integer halalas
+                             * @example 103353250
+                             */
+                            collectedAmount?: number;
+                            /** @example 3427 */
+                            collectedCount?: number;
+                            /**
+                             * @description Integer halalas
+                             * @example 1575000
+                             */
+                            reviewAmount?: number;
+                            /** @example 109 */
+                            reviewCount?: number;
+                        };
+                        /** @example 2 */
+                        pending?: number;
+                        /** @example 10000 */
+                        pendingAmount?: number;
+                        /** @example 1 */
+                        pendingVerification?: number;
+                        /** @example 5000 */
+                        pendingVerificationAmount?: number;
+                        /** @example 3 */
+                        refunded?: number;
+                        /** @example 10000 */
+                        refundedAmount?: number;
+                        /** @example 29 */
+                        total?: number;
+                        /** @example 125000 */
+                        totalAmount?: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20279,100 +21035,6 @@ export interface operations {
             };
         };
     };
-    DashboardMediaController_uploadFileEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description File to upload
-                     */
-                    file: string;
-                    /**
-                     * Format: uuid
-                     * @description UUID of the owning entity
-                     * @example b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f
-                     */
-                    ownerId?: string;
-                    /**
-                     * @description Entity type that owns the file
-                     * @example Employee
-                     */
-                    ownerType?: string;
-                    /**
-                     * @description Storage visibility
-                     * @example PUBLIC
-                     * @enum {string}
-                     */
-                    visibility?: "PUBLIC" | "PRIVATE";
-                };
-            };
-        };
-        responses: {
-            /** @description File uploaded successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        createdAt?: string;
-                        filename?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        mimetype?: string;
-                        size?: number;
-                        url?: string;
-                        /** @enum {string} */
-                        visibility?: "PUBLIC" | "PRIVATE";
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     DashboardMediaController_getFileEndpoint_v1: {
         parameters: {
             query?: never;
@@ -20592,6 +21254,334 @@ export interface operations {
             };
         };
     };
+    DashboardMediaController_uploadFileEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description File to upload
+                     */
+                    file: string;
+                    /**
+                     * Format: uuid
+                     * @description UUID of the owning entity
+                     * @example b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f
+                     */
+                    ownerId?: string;
+                    /**
+                     * @description Entity type that owns the file
+                     * @example Employee
+                     */
+                    ownerType?: string;
+                    /**
+                     * @description Storage visibility
+                     * @example PUBLIC
+                     * @enum {string}
+                     */
+                    visibility?: "PUBLIC" | "PRIVATE";
+                };
+            };
+        };
+        responses: {
+            /** @description File uploaded successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        createdAt?: string;
+                        filename?: string;
+                        /** Format: uuid */
+                        id?: string;
+                        mimetype?: string;
+                        size?: number;
+                        url?: string;
+                        /** @enum {string} */
+                        visibility?: "PUBLIC" | "PRIVATE";
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_listEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_createEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMobileHomeCardDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_updateEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMobileHomeCardDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMobileHomeCardsController_reorderEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderMobileHomeCardsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMobileHomeCardDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardOpsController_listActivityEndpoint_v1: {
         parameters: {
             query?: {
@@ -20652,79 +21642,6 @@ export interface operations {
                             total?: number;
                             totalPages?: number;
                         };
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOpsController_listFailedOutboxEndpoint_v1: {
-        parameters: {
-            query?: {
-                /** @description Maximum events to return (default 50, max 100) */
-                limit?: number;
-                /** @description Filter by exact outbox event type */
-                eventType?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Failed outbox event metadata only — the event payload is never returned */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        items?: {
-                            attemptCount?: number;
-                            /** Format: date-time */
-                            createdAt?: string;
-                            eventType?: string;
-                            /** Format: date-time */
-                            failedAt?: string | null;
-                            failureReason?: string | null;
-                            /** Format: uuid */
-                            id?: string;
-                        }[];
                     };
                 };
             };
@@ -20839,6 +21756,79 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOpsController_listFailedOutboxEndpoint_v1: {
+        parameters: {
+            query?: {
+                /** @description Maximum events to return (default 50, max 100) */
+                limit?: number;
+                /** @description Filter by exact outbox event type */
+                eventType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Failed outbox event metadata only — the event payload is never returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: {
+                            attemptCount?: number;
+                            /** Format: date-time */
+                            createdAt?: string;
+                            eventType?: string;
+                            /** Format: date-time */
+                            failedAt?: string | null;
+                            failureReason?: string | null;
+                            /** Format: uuid */
+                            id?: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
             /** @description Unhandled server error */
             500: {
@@ -22600,133 +23590,6 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Booking UUID */
-                bookingId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of intake responses for the booking, each with its form, resolved scope label and submission count */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IntakeBookingResponseDto"][];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Booking UUID */
-                bookingId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitIntakeResponseDto"];
-            };
-        };
-        responses: {
-            /** @description Persisted intake response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IntakeSubmissionResponseDto"];
-                };
-            };
-            /** @description Validation failed (missing required field, unknown field, or invalid option) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Booking or form not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     DashboardOrganizationSettingsController_getIntakeFormEndpoint_v1: {
         parameters: {
             query?: never;
@@ -22995,6 +23858,133 @@ export interface operations {
             };
             /** @description Answered intake forms cannot change their fields */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking UUID */
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of intake responses for the booking, each with its form, resolved scope label and submission count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeBookingResponseDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking UUID */
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitIntakeResponseDto"];
+            };
+        };
+        responses: {
+            /** @description Persisted intake response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeSubmissionResponseDto"];
+                };
+            };
+            /** @description Validation failed (missing required field, unknown field, or invalid option) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking or form not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24036,6 +25026,13 @@ export interface operations {
             };
             /** @description Service not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Clinic booking services and services referenced by packages cannot be deleted or archived */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25106,128 +26103,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeResponseDto"];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardPeopleController_onboardEmployeeEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OnboardEmployeeDto"];
-            };
-        };
-        responses: {
-            /** @description Employee onboarded */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        employee?: components["schemas"]["EmployeeResponseDto"];
-                        /** @example Employee onboarded successfully */
-                        message?: string;
-                        /** @example true */
-                        success?: boolean;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardPeopleController_employeeStatsEndpoint_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Employee statistics summary */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmployeeStatsResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -27646,6 +28521,128 @@ export interface operations {
             };
         };
     };
+    DashboardPeopleController_onboardEmployeeEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardEmployeeDto"];
+            };
+        };
+        responses: {
+            /** @description Employee onboarded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        employee?: components["schemas"]["EmployeeResponseDto"];
+                        /** @example Employee onboarded successfully */
+                        message?: string;
+                        /** @example true */
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_employeeStatsEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee statistics summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeStatsResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardPlatformController_listIntegrationsEndpoint_v1: {
         parameters: {
             query?: never;
@@ -28192,7 +29189,66 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramCancellationResultDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardProgramsController_cancellationPreview_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramCancellationPreviewDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -28963,6 +30019,72 @@ export interface operations {
             };
         };
     };
+    MobileReviewAuthController_loginReviewAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewLoginDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        sessionKind: "client";
+                        tokens: {
+                            accessToken: string;
+                            refreshToken: string;
+                        };
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientAuthController_verifyMobileOtp_v1: {
         parameters: {
             query?: never;
@@ -29036,6 +30158,8 @@ export interface operations {
     MobileClientBookingsController_listMyBookings_v1: {
         parameters: {
             query?: {
+                /** @description Filter by appointment tab before pagination */
+                tab?: "upcoming" | "past" | "cancelled";
                 /** @description Page number (1-based) */
                 page?: number;
                 /** @description Records per page */
@@ -29179,7 +30303,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
+                    } & {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -29245,13 +30373,19 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Booking cancelled */
+            /** @description Booking cancelled; enabled policy includes refund and requiresApproval */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        booking?: Record<string, never>;
+                        refund?: components["schemas"]["CancellationRefundSummaryDto"];
+                        requiresApproval?: boolean;
+                    } & {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -29283,6 +30417,70 @@ export interface operations {
             };
             /** @description Booking not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Cancellation terms changed; refresh the preview */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientBookingsController_cancellationPreviewEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientCancellationPreviewDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30103,6 +31301,71 @@ export interface operations {
             };
         };
     };
+    MobileClientPaymentsController_getBankTransferSettings_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bank transfer availability and configured recipient accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        accounts: {
+                            bankName: string;
+                            beneficiaryName: string;
+                            iban: string;
+                            id: string;
+                            label: string;
+                        }[];
+                        enabled: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientPaymentsController_initPaymentEndpoint_v1: {
         parameters: {
             query?: never;
@@ -30234,6 +31497,75 @@ export interface operations {
             };
         };
     };
+    MobileClientPaymentsController_initPackagePurchaseEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitPackagePurchaseDto"];
+            };
+        };
+        responses: {
+            /** @description Package purchase initialized (PENDING until the Moyasar payment completes) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        invoiceId: string;
+                        /** Format: uuid */
+                        paymentId: string;
+                        /** Format: uuid */
+                        purchaseId: string;
+                        /** @example https://checkout.moyasar.com/pay/payment-id */
+                        redirectUrl: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientHomeController_home_v1: {
         parameters: {
             query?: never;
@@ -30314,7 +31646,10 @@ export interface operations {
                     "application/json": {
                         /** Format: date-time */
                         lastVisit?: string | null;
-                        /** @example 250 */
+                        /**
+                         * @description Outstanding balance across all client invoices, in halalas
+                         * @example 25000
+                         */
                         outstandingBalance?: number;
                         /** @example 8 */
                         totalBookings?: number;
@@ -31101,6 +32436,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeBookingsController_startMeeting_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meeting start details; startUrl is null until the meeting has been created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        bookingId?: string;
+                        durationMins?: number;
+                        /** @enum {string|null} */
+                        meetingStatus?: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+                        /** Format: date-time */
+                        scheduledAt?: string;
+                        startUrl?: string | null;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -32312,42 +33715,6 @@ export interface operations {
             };
         };
     };
-    PublicChatController_current_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current conversation for the supplied guest cookie */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     PublicChatController_requestReceptionForGuest_v1: {
         parameters: {
             query?: never;
@@ -32522,6 +33889,42 @@ export interface operations {
             };
         };
     };
+    PublicChatController_current_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current conversation for the supplied guest cookie */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PublicContactMessagesController_submit_v1: {
         parameters: {
             query?: never;
@@ -32564,7 +33967,10 @@ export interface operations {
     };
     PublicEmployeesController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include direct clinic booking service links */
+                includeDirectClinics?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -32710,7 +34116,10 @@ export interface operations {
     };
     PublicEmployeesController_getOne_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include hidden booking links for direct clinics */
+                includeDirectClinics?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Public slug or employee UUID */
@@ -33002,6 +34411,7 @@ export interface operations {
             query?: {
                 page?: number;
                 pageSize?: number;
+                tab?: "upcoming" | "past" | "cancelled";
             };
             header?: never;
             path?: never;
@@ -33071,7 +34481,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
+                    } & {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -33139,7 +34553,84 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        booking: Record<string, never>;
+                        refund?: components["schemas"]["CancellationRefundSummaryDto"];
+                        requiresApproval: boolean;
+                        /** @enum {string} */
+                        status: "CANCELLED" | "CANCEL_REQUESTED";
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cancellation terms changed; refresh the preview */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicMeController_cancellationPreviewEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientCancellationPreviewDto"];
                 };
             };
             /** @description Validation failed */
@@ -33334,60 +34825,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ListClientChatConversationsResponseDto"];
                 };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    MyChatController_current_v1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current conversation for the authenticated client */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Validation failed */
             400: {
@@ -33804,6 +35241,60 @@ export interface operations {
             };
         };
     };
+    MyChatController_current_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current conversation for the authenticated client */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MyChatController_acknowledgeAdditionalBooking_v1: {
         parameters: {
             query?: never;
@@ -34001,7 +35492,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        items: Record<string, never>[];
+                        /** @description Outstanding balance across all client invoices, in halalas */
+                        outstandingBalance: number;
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -34195,6 +35693,43 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicMobileHomeCardsController_listEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMobileHomeCardDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34508,6 +36043,49 @@ export interface operations {
             };
         };
     };
+    PublicPaymentsController_getPaymentMethods_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client-facing payment capabilities. `moyasarEnabled` is false when online payment is disabled or the gateway is not configured, so a client surface never offers a method the backend would reject. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Clients may confirm a booking and pay at the center */
+                        atClinicEnabled: boolean;
+                        /** @description Online card checkout (Moyasar) can complete for this deployment */
+                        moyasarEnabled: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PublicPaymentsController_initPackagePurchaseEndpoint_v1: {
         parameters: {
             query?: never;
@@ -34771,7 +36349,10 @@ export interface operations {
     };
     PublicCatalogController_getCatalog_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include internal booking services for direct clinics */
+                includeDirectClinics?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;

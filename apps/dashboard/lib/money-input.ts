@@ -5,8 +5,8 @@ export function normalizeMoneyInput(value: string): string {
   return (
     value
       .trim()
-      .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
-      .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+      .replace(/[٠-٩]/g, (digit) => String((digit.codePointAt(0) ?? 0) - 0x0660))
+      .replace(/[۰-۹]/g, (digit) => String((digit.codePointAt(0) ?? 0) - 0x06f0))
       // Arabic thousands separator is grouping, while Arabic/Persian comma and
       // decimal punctuation are accepted as decimal separators.
       .replace(/[٬]/g, "")

@@ -26,7 +26,7 @@ export const enDepartments: Record<string, string> = {
 
   // Columns
   "departments.col.name": "Name",
-  "departments.col.categories": "Clinics",
+  "departments.col.categories": "Categories",
   "departments.col.status": "Status",
 
   // Actions

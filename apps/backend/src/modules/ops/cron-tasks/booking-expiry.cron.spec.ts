@@ -65,8 +65,9 @@ describe('BookingExpiryCron', () => {
       expect(prisma.booking.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            expiresAt: { lt: expect.any(Date) },
+            isHistoricalImport: false,
             status: { in: ['PENDING', 'AWAITING_PAYMENT'] },
+            expiresAt: { lt: expect.any(Date) },
           },
           select: { id: true },
           take: 100,

@@ -49,7 +49,7 @@ describe('BookingAutocompleteCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('selects CONFIRMED bookings past cutoff with checkedInAt set', async () => {
+  it('selects confirmed and deposit-paid bookings past cutoff with checkedInAt set', async () => {
     const prisma = buildPrisma();
     const completeHandler = buildCompleteHandler();
     const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
@@ -57,7 +57,7 @@ describe('BookingAutocompleteCron', () => {
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          status: BookingStatus.CONFIRMED,
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
           checkedInAt: { not: null },
           isHistoricalImport: false,
         }),
@@ -149,7 +149,7 @@ describe('BookingExpiryCron', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           status: expect.objectContaining({ in: expect.arrayContaining([BookingStatus.PENDING]) }),
-          expiresAt: expect.anything(),
+          expiresAt: { lt: expect.any(Date) },
         }),
       }),
     );
@@ -165,7 +165,7 @@ describe('BookingNoShowCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('selects confirmed bookings past cutoff (no check-in)', async () => {
+  it('selects confirmed and deposit-paid bookings past cutoff (no check-in)', async () => {
     const prisma = buildPrisma();
     prisma.bookingSettings.findFirst = jest.fn().mockResolvedValue({
       autoNoShowAfterMinutes: 30,
@@ -176,7 +176,7 @@ describe('BookingNoShowCron', () => {
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          status: BookingStatus.CONFIRMED,
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
           checkedInAt: null,
           isHistoricalImport: false,
         }),

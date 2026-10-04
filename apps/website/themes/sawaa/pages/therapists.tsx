@@ -11,7 +11,7 @@ interface SawaaTherapistsPageProps {
 
 export async function SawaaTherapistsPage({ initialSpecialty = null }: SawaaTherapistsPageProps = {}) {
   const locale = await getLocale();
-  const therapists = await listPublicEmployees();
+  const therapists = await listPublicEmployees(true);
   const t = (key: MessageKey) => translate(locale, key);
 
   const total = therapists.length;
@@ -55,7 +55,7 @@ function TherapistsHero({ locale, t, total }: HeroProps) {
         background:
           'radial-gradient(ellipse 800px 480px at 88% 12%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 60%),' +
           'radial-gradient(ellipse 720px 420px at 8% 90%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 60%),' +
-          'linear-gradient(180deg, #FBF7F2 0%, #FDFAF6 100%)',
+          'var(--sw-warm-gradient)',
       }}
     >
       {/* Subtle marker quote — decorative comma in a navy hue, ARABIC has its own quote glyph for character */}
@@ -254,7 +254,7 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
             <div className="md:col-span-4 md:flex md:justify-end">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                 style={{
                   color: 'var(--sw-secondary-700)',
                   boxShadow: 'var(--sw-shadow-md)',

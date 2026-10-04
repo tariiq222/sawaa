@@ -37,3 +37,19 @@ export function formatPrice(
   if (halalas == null || Number.isNaN(halalas)) return "—"
   return formatHalalas(halalas, opts)
 }
+
+/**
+ * VAT in whole halalas, matching the backend computeVat:
+ * round_half_up(net × vatRate). The product is trimmed to 6 decimals first so
+ * float noise (5000 × 0.0003 = 1.4999999999999998) rounds like Decimal math.
+ */
+export function vatHalalas(netHalalas: number, vatRate: number | null | undefined): number {
+  const rate = Number(vatRate) || 0
+  if (!Number.isFinite(netHalalas) || rate <= 0) return 0
+  return Math.round(Number((netHalalas * rate).toFixed(6)))
+}
+
+/** Net package/booking price plus VAT — what the invoice will charge. */
+export function grossWithVat(netHalalas: number, vatRate: number | null | undefined): number {
+  return netHalalas + vatHalalas(netHalalas, vatRate)
+}

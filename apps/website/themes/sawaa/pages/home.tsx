@@ -1,7 +1,7 @@
 import { listPublicEmployees } from '@/features/therapists/public';
 import {
   getPublicCatalog,
-  selectBookableClinicServices,
+  selectBookableClinics,
 } from '@/features/public-catalog/public';
 import { listPublicTestimonials } from '@/features/testimonials/public';
 import {
@@ -24,7 +24,7 @@ import {
 import type { PublicEmployee } from '@sawaa/api-client';
 import { getLocale } from '@/features/locale/public';
 import { Blog } from '../components/sections/blog';
-import { Services } from '../components/sections/services';
+import { Clinics } from '../components/sections/clinics';
 import dynamic from 'next/dynamic';
 
 const FAQ = dynamic(() => import('../components/sections/faq').then((m) => m.FAQ), {
@@ -46,10 +46,11 @@ async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function SawaaHomePage() {
-  const [locale, [therapists, catalog, testimonials, programsResult]] = await Promise.all([
+  const [locale, [therapists, clinicTherapists, catalog, testimonials, programsResult]] = await Promise.all([
     getLocale(),
     Promise.all([
-      safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
+      safeFetch<PublicEmployee[]>(() => listPublicEmployees(true), []),
+      safeFetch<PublicEmployee[]>(() => listPublicEmployees(true), []),
       safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
       safeFetch(() => listPublicTestimonials(6), []),
       safeFetch<PublicProgramsResult>(() => getPublicGroupSessionsResult(), {
@@ -64,16 +65,29 @@ export async function SawaaHomePage() {
 
   const hero: HeroContent = resolveHeroContent(locale);
   const intros: HomeSectionIntros = resolveSectionIntros(locale);
-  const featureCards: FeatureCards = resolveFeatureCards();
+  const featureCards: FeatureCards = resolveFeatureCards(locale);
   const blogPosts: BlogPost[] = resolveBlogPosts();
   const faqItems: FaqItem[] = resolveFaqItems();
-  const services = selectBookableClinicServices(catalog, therapists);
+  const clinics = selectBookableClinics(catalog, clinicTherapists).map((clinic) => ({
+    id: clinic.id,
+    nameAr: clinic.nameAr,
+    nameEn: clinic.nameEn,
+    descriptionAr: null,
+    descriptionEn: null,
+    icon: clinic.iconName,
+    iconBgColor: clinic.iconBgColor,
+    image: clinic.imageUrl,
+    directServiceId: clinic.directServiceId,
+  }));
+  const clinicsIntro = locale === 'ar'
+    ? { tag: 'عياداتنا', titlePrefix: 'عيادة', titleHighlight: 'لكل احتياج', titleSuffix: '', subtitle: 'اختر العيادة المناسبة، ثم أكمل حجزك مع أحد مختصينا.' }
+    : { tag: 'Our Clinics', titlePrefix: 'A clinic', titleHighlight: 'for every need', titleSuffix: '', subtitle: 'Choose a clinic, then book with one of our specialists.' };
 
   return (
     <>
       <Hero content={hero} />
       <Features intro={intros.features} cards={featureCards} />
-      <Services services={services} intro={intros.services} vatRate={catalog.vatRate ?? 0} />
+      <Clinics clinics={clinics} intro={clinicsIntro} />
       <SupportGroups
         intro={intros.supportGroups}
         items={programsResult.programs}

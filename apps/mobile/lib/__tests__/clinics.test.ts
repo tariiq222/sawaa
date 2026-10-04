@@ -9,7 +9,7 @@ const catalog = {
     { id: 'cat-1', departmentId: 'dep-clinics', nameAr: 'عيادة القلق', nameEn: 'Anxiety Clinic', sortOrder: 2 },
     { id: 'cat-2', departmentId: 'dep-clinics', nameAr: 'عيادة الأسرة', nameEn: null, sortOrder: 1 },
     { id: 'cat-empty', departmentId: 'dep-clinics', nameAr: 'فارغة', nameEn: null, sortOrder: 3 },
-    { id: 'cat-other', departmentId: 'dep-groups', nameAr: 'مجموعة', nameEn: null, sortOrder: 1 },
+    { id: 'cat-other', departmentId: 'dep-groups', nameAr: 'مجموعة', nameEn: null, sortOrder: 1, kind: 'SERVICE_GROUP' },
   ],
   services: [
     { id: 'svc-1', categoryId: 'cat-1', nameAr: 'جلسة قلق', nameEn: null, price: 30000, currency: 'SAR' },
@@ -31,7 +31,24 @@ describe('deriveClinics', () => {
     expect(clinics[1]).toMatchObject({ nameAr: 'عيادة القلق', therapistCount: 2, serviceCount: 1 });
   });
 
-  it('returns [] when no clinics department matches', () => {
-    expect(deriveClinics({ departments: [], categories: [], services: [] } as never, [] as never)).toEqual([]);
+  it('keeps a clinic under a renamed or missing department', () => {
+    expect(deriveClinics({ ...catalog, departments: [] } as never, therapists as never).map((c) => c.id)).toEqual(['cat-2', 'cat-1']);
+  });
+
+  it('maps signed clinic artwork and a visible service description without exposing internal service count', () => {
+    const enriched = { ...catalog, categories: [{ ...catalog.categories[0], imageUrl: 'https://signed.example/clinic.png' }], services: [
+      { ...catalog.services[0], descriptionAr: 'وصف العيادة', descriptionEn: 'Clinic description' },
+    ] };
+    expect(deriveClinics(enriched as never, therapists as never)[0]).toMatchObject({
+      imageUrl: 'https://signed.example/clinic.png', descriptionAr: 'وصف العيادة', descriptionEn: 'Clinic description',
+    });
+  });
+
+  it('shows a direct clinic with zero visible services', () => {
+    const direct = { ...catalog, categories: [{ ...catalog.categories[0], bookingMode: 'DIRECT' }], services: [
+      { ...catalog.services[0], id: 'visible', isHidden: false },
+      { ...catalog.services[0], id: 'internal', isHidden: true },
+    ] };
+    expect(deriveClinics(direct as never, [{ isBookable: true, serviceIds: ['internal'] }] as never)[0]).toMatchObject({ directServiceId: 'internal', serviceCount: 0, descriptionAr: null });
   });
 });

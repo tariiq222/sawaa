@@ -78,20 +78,11 @@ describe('InvoicePdfRendererService', () => {
       );
     }, 30_000);
 
-    it('falls back to a placeholder VAT number in the QR when sellerVatNumber is null', async () => {
+    it('prints no QR when the org has no VAT registration number (never a placeholder)', async () => {
       const service = new InvoicePdfRendererService();
       await service.render({ ...baseData, sellerVatNumber: null });
 
-      const expectedTlv = buildZatcaQrTlv({
-        sellerName: baseData.sellerNameAr,
-        vatNumber: '300000000000003',
-        timestamp: baseData.paidAt,
-        totalWithVat: (baseData.total / 100).toFixed(2),
-        vatTotal: (baseData.vatAmt / 100).toFixed(2),
-      });
-
-      expect(QRCode.toDataURL).toHaveBeenCalledTimes(1);
-      expect(QRCode.toDataURL).toHaveBeenCalledWith(expectedTlv, expect.any(Object));
+      expect(QRCode.toDataURL).not.toHaveBeenCalled();
     }, 30_000);
 
     it('preserves an incoming qrDataUrl without recomputing', async () => {

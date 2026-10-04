@@ -195,17 +195,17 @@ describe("programs api — dashboard endpoints", () => {
   describe("cancelProgram", () => {
     it("PATCHes /dashboard/programs/:id/cancel with a reason", async () => {
       patchMock.mockResolvedValueOnce({ id: "p-1", status: "CANCELLED" })
-      await cancelProgram("p-1", { reason: "إلغاء إداري" })
+      await cancelProgram("p-1", { reason: "إلغاء إداري", quoteToken: "q1" })
       expect(patchMock).toHaveBeenCalledWith(
         "/dashboard/programs/p-1/cancel",
-        { reason: "إلغاء إداري" },
+        { reason: "إلغاء إداري", quoteToken: "q1" },
       )
     })
 
     it("propagates api-layer errors", async () => {
       patchMock.mockRejectedValueOnce(new Error("Already cancelled"))
       await expect(
-        cancelProgram("p-1", { reason: "إلغاء" }),
+        cancelProgram("p-1", { reason: "إلغاء", quoteToken: "q1" }),
       ).rejects.toThrow("Already cancelled")
     })
   })

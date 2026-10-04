@@ -16,7 +16,7 @@ Source of truth for the "Mental Health Home" visual language.
 
 ## 1. Principles
 
-1. **Glass, not plastic** — semi-transparent layered surfaces; never flat white or opaque gray.
+1. **Clarity before effects** — content surfaces are opaque and readable in both appearances; the bottom navigation dock alone retains translucent glass.
 2. **Arabic-first** — RTL is not an afterthought; `writingDirection: 'rtl'` + logical-start alignment.
 3. **Three tiers of everything** — shape, depth, and translucency each have exactly 3 levels. No free-form values.
 4. **Apple-grade motion** — ease-out-quart only; animate `transform` + `opacity` only; no bounce/elastic.
@@ -38,7 +38,7 @@ Consult [`apps/mobile/theme/sawaa/tokens.ts`](theme/sawaa/tokens.ts) for the can
 
 ### Background wash (top→bottom)
 
-Applied via `AquaBackground` component. Uses a multi-stop gradient from `sawaaColors.teal`.
+Applied via `AquaBackground` as a quiet, opaque semantic background (`getSawaaRoles(scheme).background`). The former photographic aqua wash is no longer used behind content.
 
 ### Glass layer tokens
 
@@ -96,19 +96,19 @@ Only these values — no ad-hoc numbers.
 
 ## 5. Depth (shadow)
 
-Shadows are now handled by the `Glass` component variants and the `sawaaTokens` system. **Avoid ad-hoc shadow styles.**
+Content elevation uses opaque semantic surfaces and restrained borders. The `Glass` component defaults to an opaque surface; **avoid ad-hoc shadow styles**.
 
 ---
 
 ## 6. Glass (translucency)
 
-Three variants, tuned in `apps/mobile/theme/sawaa/tokens.ts`:
+Glass is reserved for the guest bottom navigation dock (`material="glass"`). Other usages of `Glass` render opaque content surfaces by default. The dock's variants are tuned in `apps/mobile/theme/sawaa/tokens.ts`:
 
 | Variant | Typical use |
 |---|---|
 | `clear` | Tiny badges, inputs |
-| `regular` | Default — all cards |
-| `strong` | Floating bars, hero panels |
+| `regular` | Dock base lens |
+| `strong` | Reserved for elevated dock material |
 
 ### 6.1 Press feedback
 
@@ -155,7 +155,7 @@ Consult `sawaaTokens.spacing`.
 ### 10.2 Floating bar (tab bar, hero panel)
 
 ```tsx
-<Glass variant="strong" radius={sawaaTokens.radius.pill} style={{ bottom: 14 }}>
+<Glass material="glass" variant="regular" radius={sawaaTokens.radius.pill} style={{ bottom: 14 }}>
 ```
 
 ### 10.3 Pill / capsule

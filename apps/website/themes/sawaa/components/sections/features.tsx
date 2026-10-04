@@ -30,14 +30,14 @@ const TONES: readonly Tone[] = [
     ring: 'color-mix(in srgb, var(--primary) 18%, transparent)',
   },
   {
-    bg: 'color-mix(in srgb, var(--sw-home-sand) 24%, white)',
-    text: 'color-mix(in srgb, var(--sw-home-sand) 58%, var(--sw-home-midnight))',
+    bg: 'var(--sw-feature-sand-bg)',
+    text: 'var(--sw-feature-sand-text)',
     ring: 'color-mix(in srgb, var(--sw-home-sand) 25%, transparent)',
   },
   {
-    bg: 'color-mix(in srgb, var(--sw-home-midnight) 8%, white)',
-    text: 'var(--sw-home-midnight)',
-    ring: 'color-mix(in srgb, var(--sw-home-midnight) 12%, transparent)',
+    bg: 'var(--sw-feature-midnight-bg)',
+    text: 'var(--sw-feature-midnight-text)',
+    ring: 'var(--sw-feature-midnight-ring)',
   },
 ];
 
@@ -74,7 +74,7 @@ export function Features({ intro, cards }: Props) {
             return (
               <AnimatedSection key={`${card.label}-${i}`} delay={i * 80}>
                 <div
-                  className="sw-home-feature-card h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 flex flex-col"
+                  className="sw-home-feature-card h-full bg-[var(--surface)] rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 flex flex-col"
                 >
                   <div
                     className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"

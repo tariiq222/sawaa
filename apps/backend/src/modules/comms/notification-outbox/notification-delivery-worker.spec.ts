@@ -220,4 +220,23 @@ describe('NotificationDeliveryWorker', () => {
       }),
     );
   });
+  it.each([
+    ['DEPOSIT_PAID', false, true], ['CONFIRMED', false, true],
+    ['CANCELLED', false, false], ['DEPOSIT_PAID', true, false],
+  ])('reminder status=%s rescheduled=%s sends=%s', async (status, rescheduled, sends) => {
+    const scheduledAt = new Date(Date.now() + 3_600_000);
+    tx.notificationDelivery.findFirst.mockResolvedValue({
+      id: 'reminder', status: 'READY', attempts: 0, channel: 'EMAIL',
+      recipientType: 'CLIENT', recipientId: 'client-1', targetAddress: 'client@example.com',
+      channelPayload: { channel: 'EMAIL', subject: 'Reminder', html: '<p>Reminder</p>' },
+      expiresAt: scheduledAt,
+      intent: { expiresAt: scheduledAt, consumerKey: 'comms.booking-reminder-client.v2', payload: { bookingId: 'book-1', scheduledAt: scheduledAt.toISOString() } },
+    });
+    tx.booking.findUnique.mockResolvedValue({ status, scheduledAt: rescheduled ? new Date(scheduledAt.getTime() + 60_000) : scheduledAt });
+    sender.send.mockResolvedValue({ outcome: 'ACCEPTED' });
+    await worker.process('reminder', 1);
+    expect(sender.send).toHaveBeenCalledTimes(sends ? 1 : 0);
+    if (!sends) expect(tx.notificationDelivery.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'EXPIRED' }) }));
+  });
+
 });

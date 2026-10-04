@@ -286,9 +286,13 @@ describe("BookingActions — status→actions matrix", () => {
     count: number
   }> = [
     { status: "pending",              expected: ["confirm", "cancel"],       count: 2 },
-    { status: "pending_group_fill",   expected: ["confirm", "cancel"],       count: 2 },
-    { status: "awaiting_payment",     expected: ["confirm", "cancel"],       count: 2 },
-    { status: "deposit_paid",         expected: ["confirm", "cancel"],       count: 2 },
+    // Payment holds: cancellable (reception releases the slot immediately
+    // instead of waiting for the expiry cron) but never "confirm" — CONFIRM is
+    // PENDING-only, and a hold is settled by recording the payment.
+    { status: "pending_group_fill",   expected: ["cancel"],                  count: 1 },
+    { status: "awaiting_payment",     expected: ["cancel"],                  count: 1 },
+    // Deposit confirms the appointment; attendance does not settle the balance.
+    { status: "deposit_paid",         expected: ["checkin", "complete", "noshow", "cancel"], count: 4 },
     { status: "confirmed",            expected: ["checkin", "complete", "noshow", "cancel"], count: 4 },
     { status: "cancel_requested",     expected: ["approve_cancel", "reject_cancel"],        count: 2 },
     { status: "completed",            expected: [], count: 0 },

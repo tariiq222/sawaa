@@ -1,44 +1,50 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Leaf,
-  Lock,
-  Moon,
+  ClipboardList,
+  LogOut,
   Phone as PhoneIcon,
   Settings,
   Ticket,
+  User,
+  UsersRound,
+  type LucideIcon,
 } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
-import { PRIVACY_POLICY_URL } from '@/constants/config';
-import { DeleteAccountButton } from '@/components/features/settings/DeleteAccountButton';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatLastVisit(iso: string | null, isRTL: boolean): string {
-  if (!iso) return isRTL ? '—' : '—';
+  if (!iso) return '—';
   const d = new Date(iso);
   const month = isRTL ? MONTHS_AR[d.getMonth()] : MONTHS_EN[d.getMonth()];
   const day = isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate();
   return `${day} ${month}`;
 }
 
-export default function ProfileScreen() {
+type Row = { key: string; icon: LucideIcon; label: string; hint?: string; onPress: () => void };
+
+export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const router = useRouter();
@@ -47,7 +53,6 @@ export default function ProfileScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const { t } = useTranslation();
-  const [darkMode, setDarkMode] = useState(false);
   const summaryQuery = useSummary();
   const summary = summaryQuery.data ?? null;
   const brandingQuery = useBranding();
@@ -58,8 +63,7 @@ export default function ProfileScreen() {
   const displayName = user
     ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
     : '—';
-  const email = user?.email ?? '';
-  const initial = (user?.firstName ?? '·').charAt(0);
+  const secondary = user?.phone || user?.email || '';
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -70,242 +74,197 @@ export default function ProfileScreen() {
     }
   };
 
-  const stats: Array<{ value: string; ar: string; en: string }> = [
+  const stats: Array<{ key: string; value: string; label: string }> = [
     {
+      key: 'sessions',
       value: summary
         ? (dir.isRTL ? summary.totalBookings.toLocaleString('ar-SA') : String(summary.totalBookings))
         : '—',
-      ar: 'جلسة',
-      en: 'Sessions',
+      label: dir.isRTL ? 'جلسة' : 'Sessions',
     },
     {
+      key: 'lastVisit',
       value: summary ? formatLastVisit(summary.lastVisit, dir.isRTL) : '—',
-      ar: 'آخر زيارة',
-      en: 'Last visit',
+      label: dir.isRTL ? 'آخر زيارة' : 'Last visit',
     },
     {
-      value: summary
-        ? `${summary.outstandingBalance.toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US')} ⃁`
-        : '—',
-      ar: 'مبلغ مستحق',
-      en: 'Outstanding',
+      key: 'outstanding',
+      // outstandingBalance is integer halalas.
+      value: summary ? formatCurrencyAmount(summary.outstandingBalance, 'SAR', dir.isRTL) : '—',
+      label: dir.isRTL ? 'مبلغ مستحق' : 'Outstanding',
     },
   ];
 
-  type SettingItem = {
-    icon: React.ReactNode;
-    label: { ar: string; en: string };
-    color: string;
-    meta?: { ar: string; en: string };
-    toggle?: boolean;
-    onToggle?: () => void;
-    onPress?: () => void;
-  };
-
-  const settingsItems: SettingItem[] = [
-    { icon: <Ticket size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, label: { ar: t('packages.balance'), en: t('packages.balance') }, color: sawaaColors.teal[600], onPress: () => router.push('/(client)/packages/purchases') },
-    { icon: <Lock size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, label: { ar: 'الخصوصية والأمان', en: 'Privacy & Security' }, color: sawaaColors.teal[600], onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
-    { icon: <Bell size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, label: { ar: 'الإشعارات', en: 'Notifications' }, color: sawaaColors.accent.violet, onPress: () => router.push('/(client)/settings') },
-    { icon: <Moon size={18} color={sawaaColors.ink[700]} strokeWidth={1.75} />, label: { ar: 'الوضع الليلي', en: 'Dark mode' }, color: sawaaColors.ink[700], toggle: darkMode, onToggle: () => setDarkMode((v) => !v) },
-    { icon: <Settings size={18} color={sawaaColors.ink[500]} strokeWidth={1.75} />, label: { ar: 'الإعدادات العامة', en: 'General' }, color: sawaaColors.ink[500], onPress: () => router.push('/(client)/settings') },
+  const careRows: Row[] = [
+    { key: 'packages', icon: Ticket, label: t('packages.title'), onPress: () => router.push('/(client)/packages') },
+    { key: 'groups', icon: UsersRound, label: t('groups.title'), onPress: () => router.push('/(client)/groups') },
+    { key: 'records', icon: ClipboardList, label: t('tabs.records'), onPress: () => router.push('/(client)/records') },
   ];
+  const appRows: Row[] = [
+    { key: 'notifications', icon: Bell, label: t('profile.notifications'), onPress: () => router.push('/(client)/notifications') },
+    { key: 'settings', icon: Settings, label: t('settings.title'), hint: t('profile.settingsHint'), onPress: () => router.push('/(client)/settings') },
+  ];
+
+  const renderGroup = (rows: Row[]) => (
+    <Glass variant="strong" radius={sawaaRadius.lg} style={styles.group}>
+      {rows.map((row, index) => {
+        const Icon = row.icon;
+        return (
+          <Pressable
+            key={row.key}
+            onPress={row.onPress}
+            accessibilityRole="button"
+            style={[
+              styles.row,
+              { flexDirection: dir.row },
+              index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.ink[400] },
+            ]}
+          >
+            <Icon size={22} color={colors.teal[700]} strokeWidth={1.75} />
+            <Text style={[styles.rowLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{row.label}</Text>
+            {row.hint ? <Text style={[styles.rowHint, { fontFamily: f400 }]}>{row.hint}</Text> : null}
+            <Chevron size={18} color={colors.ink[500]} strokeWidth={2} />
+          </Pressable>
+        );
+      })}
+    </Glass>
+  );
 
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: 140 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + (asTab ? 24 : 12), paddingBottom: 140 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={sawaaColors.teal[600]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal[600]} />}
       >
-        <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+        {asTab ? (
+          <Text accessibilityRole="header" style={[styles.pageTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {t('profile.title')}
           </Text>
-        </Animated.View>
+        ) : (
+          <ScreenHeader title={t('profile.title')} onBack={() => router.back()} />
+        )}
 
-        <Animated.View entering={FadeInDown.delay(100).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.profileCard}>
+        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+          <Glass variant="strong" radius={sawaaRadius.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
-              <LinearGradient
-                colors={[sawaaColors.teal[400], sawaaColors.teal[700]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={[styles.avatarText, { fontFamily: f700 }]}>{initial}</Text>
-              </LinearGradient>
+              <View style={styles.avatar}>
+                <User size={30} color={colors.teal[700]} strokeWidth={1.75} />
+              </View>
               <View style={styles.profileMid}>
-                <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                <Text numberOfLines={1} style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {displayName}
                 </Text>
-                <Text style={[styles.profileEmail, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                  {email}
+                <Text numberOfLines={1} style={[styles.profileMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {secondary}
                 </Text>
-                {summary && summary.totalBookings > 0 ? (
-                  <View style={[styles.membership, { flexDirection: dir.row }]}>
-                    <Leaf size={11} color={sawaaColors.teal[700]} strokeWidth={2} />
-                    <Text style={[styles.membershipText, { fontFamily: f600, fontWeight: '600' }]}>
-                      {dir.isRTL
-                        ? `${summary.totalBookings.toLocaleString('ar-SA')} جلسة سابقة`
-                        : `${summary.totalBookings} past session${summary.totalBookings === 1 ? '' : 's'}`}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
-              <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings')} interactive style={styles.editBtn}>
-                <Text style={[styles.editText, { fontFamily: f600, fontWeight: '600' }]}>
-                  {t('profile.edit')}
-                </Text>
+              <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings-profile')} interactive style={styles.editBtn}>
+                <Text style={[styles.editText, { fontFamily: f600 }]}>{t('profile.edit')}</Text>
               </Glass>
             </View>
 
             <View style={[styles.statsRow, { flexDirection: dir.row }]}>
               {stats.map((s) => (
-                <View key={s.en} style={styles.statBox}>
-                  <Text style={[styles.statN, { fontFamily: f700 }]} numberOfLines={1}>
-                    {s.value}
-                  </Text>
-                  <Text style={[styles.statL, { fontFamily: f400, fontWeight: '400' }]}>
-                    {dir.isRTL ? s.ar : s.en}
-                  </Text>
+                <View key={s.key} style={styles.statBox}>
+                  <Text style={[styles.statN, { fontFamily: f700 }]} numberOfLines={1}>{s.value}</Text>
+                  <Text style={[styles.statL, { fontFamily: f400 }]}>{s.label}</Text>
                 </View>
               ))}
             </View>
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(220).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.settingsCard}>
-            {settingsItems.map((it, i) => (
-              <Pressable
-                key={it.label.en}
-                onPress={it.onToggle ?? it.onPress}
-                style={[
-                  styles.settingRow,
-                  { flexDirection: dir.row },
-                  i < settingsItems.length - 1 && styles.settingDivider,
-                ]}
-              >
-                <View style={[styles.settingIcon, { backgroundColor: `${it.color}1e` }]}>
-                  {it.icon}
-                </View>
-                <Text style={[styles.settingLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? it.label.ar : it.label.en}
-                </Text>
-                {it.meta && (
-                  <Text style={[styles.settingMeta, { fontFamily: f400, fontWeight: '400' }]}>
-                    {dir.isRTL ? it.meta.ar : it.meta.en}
-                  </Text>
-                )}
-                {it.toggle !== undefined ? (
-                  <View style={[
-                    styles.toggle,
-                    { backgroundColor: it.toggle ? sawaaColors.teal[500] : 'rgba(10,40,40,0.15)' },
-                  ]}>
-                    <View style={[
-                      styles.toggleKnob,
-                      it.toggle ? styles.toggleKnobOn : styles.toggleKnobOff,
-                    ]} />
-                  </View>
-                ) : (
-                  <Chevron size={14} color={sawaaColors.ink[400]} strokeWidth={2} />
-                )}
-              </Pressable>
-            ))}
-          </Glass>
+        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))}>
+          {renderGroup(careRows)}
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(140).duration(500).easing(Easing.out(Easing.cubic))}>
+          {renderGroup(appRows)}
         </Animated.View>
 
         {contactPhone ? (
-          <Animated.View entering={FadeInDown.delay(340).duration(700).easing(Easing.out(Easing.cubic))}>
-            <Glass
-              variant="strong"
-              radius={sawaaRadius.xl}
-              style={styles.sosCard}
-              onPress={() => void Linking.openURL(`tel:${contactPhone}`)}
-              interactive
-            >
-              <View style={[styles.sosRow, { flexDirection: dir.row }]}>
-                <View style={styles.sosIcon}>
-                  <PhoneIcon size={16} color="#fff" strokeWidth={2} />
-                </View>
-                <View style={styles.sosMid}>
-                  <Text style={[styles.sosTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {t('profile.crisisSupport.title')}
-                  </Text>
-                  <Text style={[styles.sosSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                    {t('profile.crisisSupport.subtitle')}
-                  </Text>
-                </View>
-                <Text style={[styles.sosPhone, { fontFamily: f700 }]}>{contactPhone}</Text>
+          <Glass
+            variant="strong"
+            radius={sawaaRadius.lg}
+            style={styles.sosCard}
+            onPress={() => void Linking.openURL(`tel:${contactPhone}`)}
+            interactive
+          >
+            <View style={[styles.sosRow, { flexDirection: dir.row }]}>
+              <PhoneIcon size={22} color={colors.accent.coral} strokeWidth={1.75} />
+              <View style={styles.profileMid}>
+                <Text style={[styles.rowLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                  {t('profile.crisisSupport.title')}
+                </Text>
+                <Text style={[styles.profileMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {t('profile.crisisSupport.subtitle')}
+                </Text>
               </View>
-            </Glass>
-          </Animated.View>
+              <Text style={[styles.sosPhone, { fontFamily: f700 }]}>{contactPhone}</Text>
+            </View>
+          </Glass>
         ) : null}
 
-        <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
-          <DeleteAccountButton />
-          <Glass variant="regular" radius={sawaaRadius.pill} onPress={() => void authService.logout()} interactive style={styles.logoutBtn}>
-            <Text style={[styles.logoutText, { fontFamily: f700 }]}>
-              {t('profile.signOut')}
-            </Text>
-          </Glass>
-        </Animated.View>
+        <Glass
+          variant="strong"
+          radius={sawaaRadius.lg}
+          onPress={() => { void authService.logout().then(() => router.replace('/(guest)/home')); }}
+          interactive
+          accessibilityRole="button"
+          style={styles.group}
+        >
+          <View style={[styles.row, { flexDirection: dir.row }]}>
+            <LogOut size={22} color={colors.accent.coral} strokeWidth={1.75} />
+            <Text style={[styles.rowLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>{t('profile.signOut')}</Text>
+          </View>
+        </Glass>
       </ScrollView>
     </AquaBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, gap: 14 },
-  pageTitle: { fontSize: 22, color: sawaaColors.ink[900], paddingHorizontal: 4 },
-  profileCard: { padding: 18 },
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
+  scroll: { paddingHorizontal: 16, gap: 16 },
+  pageTitle: { fontSize: 28, lineHeight: 38, color: colors.ink[900] },
+  profileCard: { padding: 16 },
   profileRow: { alignItems: 'center', gap: 14 },
   avatar: {
-    width: 68, height: 68, borderRadius: 34,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 },
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.teal[100],
   },
-  avatarText: { fontSize: 26, color: '#fff' },
-  profileMid: { flex: 1 },
-  profileName: { fontSize: 17, color: sawaaColors.ink[900] },
-  profileEmail: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 2 },
-  membership: { alignItems: 'center', gap: 4, marginTop: 6 },
-  membershipText: { fontSize: 11, color: sawaaColors.teal[700] },
-  editBtn: { paddingHorizontal: 12, paddingVertical: 6 },
-  editText: { fontSize: 11.5, color: sawaaColors.teal[700] },
+  profileMid: { flex: 1, minWidth: 0 },
+  profileName: { fontSize: 18, lineHeight: 26, color: colors.ink[900] },
+  profileMeta: { fontSize: sawaaType.body.fontSize, lineHeight: 20, color: colors.ink[700] },
+  // Compact pill: the fixed height + centered content stop the Glass inner
+  // `flex: 1` wrapper from stretching the button to the profile row's height.
+  editBtn: {
+    alignSelf: 'center',
+    height: 32,
+    minWidth: 68,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editText: { fontSize: 13, lineHeight: 18, color: colors.teal[700] },
   statsRow: { marginTop: 16, gap: 8 },
   statBox: {
-    flex: 1, paddingVertical: 10, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.6)',
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: sawaaRadius.md,
+    backgroundColor: withAlpha(colors.teal[500], 0.08),
     alignItems: 'center',
   },
-  statN: { fontSize: 18, color: sawaaColors.teal[700] },
-  statL: { fontSize: 10.5, color: sawaaColors.ink[500], marginTop: 2 },
-  settingsCard: { padding: 0 },
-  settingRow: { alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14 },
-  settingDivider: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.5)' },
-  settingIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  settingLabel: { flex: 1, fontSize: 13.5, color: sawaaColors.ink[900] },
-  settingMeta: { fontSize: 11, color: sawaaColors.ink[500] },
-  toggle: { width: 38, height: 22, borderRadius: 12, padding: 2, justifyContent: 'center' },
-  toggleKnob: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
-  },
-  toggleKnobOn: { alignSelf: 'flex-end' },
-  toggleKnobOff: { alignSelf: 'flex-start' },
-  sosCard: { padding: 14, backgroundColor: 'rgba(239, 122, 107, 0.15)' },
-  sosRow: { alignItems: 'center', gap: 12 },
-  sosIcon: {
-    width: 36, height: 36, borderRadius: 999,
-    backgroundColor: sawaaColors.accent.coral,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  sosMid: { flex: 1 },
-  sosTitle: { fontSize: 13.5, color: sawaaColors.ink[900] },
-  sosSub: { fontSize: 11, color: sawaaColors.ink[500], marginTop: 2 },
-  sosPhone: { fontSize: 12, color: sawaaColors.accent.coral },
-  logoutBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  logoutText: { fontSize: 14, color: sawaaColors.accent.coral },
+  statN: { fontSize: 16, lineHeight: 22, color: colors.teal[700] },
+  statL: { fontSize: 12, lineHeight: 16, color: colors.ink[700], marginTop: 2 },
+  group: { padding: 0 },
+  row: { alignItems: 'center', gap: 14, paddingHorizontal: 16, minHeight: 56 },
+  rowLabel: { flex: 1, fontSize: 16, lineHeight: 22, color: colors.ink[900] },
+  rowHint: { fontSize: 13, color: colors.ink[700] },
+  sosCard: { padding: 16 },
+  sosRow: { alignItems: 'center', gap: 14 },
+  sosPhone: { fontSize: 14, color: colors.ink[900] },
 });

@@ -180,3 +180,10 @@ Regenerate the OpenAPI snapshot after any change:
     npm run openapi:build-and-snapshot
 
 Commit `apps/backend/openapi.json` alongside the endpoint change — CI fails if the snapshot drifts from source.
+
+
+## Clinic catalog invariants
+
+[Canonical clinic/service contract](../../docs/architecture/clinic-service-booking-contract.md)
+
+Category handlers own kind/mode validation and internal-service lifecycle. Keep public employee list/detail opt-in behavior consistent. Do not convert booking mode or migrate service bindings implicitly. Schema changes are additive and API changes require OpenAPI sync.

@@ -1,4 +1,5 @@
 import { buildTheme } from '../tokens';
+import { sawaaColors } from '../sawaa/tokens';
 
 describe('buildTheme dark mode', () => {
   it('produces different textPrimary in dark vs light', () => {
@@ -32,7 +33,9 @@ describe('buildTheme dark mode', () => {
 
   it('keeps light values when scheme is light', () => {
     const light = buildTheme(null, 'light');
-    expect(light.colors.textPrimary).toBe('#191C1E');
+    // #191C1E was the shared pre-Sawa token; light mode now maps the ink roles
+    // onto the fixed palette exactly like dark mode does.
+    expect(light.colors.textPrimary).toBe(sawaaColors.ink[900]);
     expect(light.colors.surface).toBe('#F7F9FB');
   });
 

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { uuid } from 'expo-modules-core';
 import type {
   BookMyPackageCreditInput,
   ClientPackagePurchase,
@@ -8,6 +9,18 @@ import type {
 import type { PackageFamily } from '@sawaa/shared/types';
 
 import api from '../api';
+
+/**
+ * Public package family as the API returns it. `vatRate` is the centre's VAT
+ * fraction (0 when VAT is off or the field is missing); option prices are NET.
+ */
+export type ClientPackageFamily = PackageFamily & { vatRate?: number };
+
+/**
+ * Client purchase row. `amountPaid` is NET; `vatAmount` and `totalCharged`
+ * (VAT-inclusive) are halalas. Missing values mean 0 VAT / `amountPaid`.
+ */
+export type ClientPackagePurchaseRow = ClientPackagePurchase & { vatAmount?: number; totalCharged?: number };
 
 const ATTEMPT_STORAGE_PREFIX = 'sawaa.package-purchase.attempt';
 const PENDING_PURCHASE_STORAGE_KEY = 'sawaa.package-purchase.pending';
@@ -30,13 +43,11 @@ export function packagePurchaseAttemptStorageKey(
 }
 
 function newAttemptId(): string {
-  const nativeUuid = globalThis.crypto?.randomUUID?.();
-  if (nativeUuid) return nativeUuid;
-  const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  try {
+    return uuid.v4();
+  } catch {
+    throw new Error('Secure random generation is required for package purchases');
+  }
 }
 
 /**
@@ -96,31 +107,31 @@ export async function clearPendingPackagePurchase(): Promise<void> {
 }
 
 export const clientPackagesService = {
-  async listFamilies(): Promise<PackageFamily[]> {
-    const response = await api.get<PackageFamily[]>('/public/package-families');
+  async listFamilies(): Promise<ClientPackageFamily[]> {
+    const response = await api.get<ClientPackageFamily[]>('/public/package-families');
     return response.data;
   },
 
-  async getFamily(id: string): Promise<PackageFamily> {
-    const response = await api.get<PackageFamily>(`/public/package-families/${id}`);
+  async getFamily(id: string): Promise<ClientPackageFamily> {
+    const response = await api.get<ClientPackageFamily>(`/public/package-families/${id}`);
     return response.data;
   },
 
   async initPurchase(input: InitPackagePurchaseInput): Promise<InitPackagePurchaseResponse> {
     const response = await api.post<InitPackagePurchaseResponse>(
-      '/public/payments/package-purchases/init',
+      '/mobile/client/payments/package-purchases/init',
       input,
     );
     return response.data;
   },
 
-  async listPurchases(): Promise<ClientPackagePurchase[]> {
-    const response = await api.get<ClientPackagePurchase[]>('/mobile/client/packages/purchases');
+  async listPurchases(): Promise<ClientPackagePurchaseRow[]> {
+    const response = await api.get<ClientPackagePurchaseRow[]>('/mobile/client/packages/purchases');
     return response.data;
   },
 
-  async getPurchase(id: string): Promise<ClientPackagePurchase> {
-    const response = await api.get<ClientPackagePurchase>(`/mobile/client/packages/purchases/${id}`);
+  async getPurchase(id: string): Promise<ClientPackagePurchaseRow> {
+    const response = await api.get<ClientPackagePurchaseRow>(`/mobile/client/packages/purchases/${id}`);
     return response.data;
   },
 

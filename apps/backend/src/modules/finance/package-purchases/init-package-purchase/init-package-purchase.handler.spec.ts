@@ -112,6 +112,7 @@ function buildTx() {
 
 function buildPrisma() {
   const prisma: Record<string, any> = {
+    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
     $queryRaw: jest.fn().mockResolvedValue([{ id: INVOICE_ID }]),
     sessionPackage: { findFirst: jest.fn().mockResolvedValue(PACKAGE_ROW) },
     client: { findFirst: jest.fn().mockResolvedValue({ id: CLIENT_ID }) },
@@ -227,6 +228,39 @@ const cmd = () => ({
 
 describe("InitPackagePurchaseHandler", () => {
   afterEach(() => jest.clearAllMocks());
+
+  describe("VAT from OrganizationSettings", () => {
+    it("keeps amountPaid net and charges the gross invoice total when VAT is 15%", async () => {
+      const { handler, prisma, tx, moyasar } = buildHandler();
+      prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: "0.15" });
+
+      await handler.execute(cmd());
+
+      // 36000 × 0.15 = 5400 → gross 41400
+      expect(Number(tx.packagePurchase.create.mock.calls[0][0].data.amountPaid)).toBe(FINAL_PRICE);
+      const invoiceData = tx.invoice.create.mock.calls[0][0].data;
+      expect(Number(invoiceData.vatRate)).toBe(0.15);
+      expect(Number(invoiceData.vatAmt)).toBe(5_400);
+      expect(Number(invoiceData.total)).toBe(41_400);
+      expect(Number(tx.payment.create.mock.calls[0][0].data.amount)).toBe(41_400);
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        expect.objectContaining({ amountHalalas: 41_400 }),
+      );
+    });
+
+    it("charges the net price when VAT is 0", async () => {
+      const { handler, tx, moyasar } = buildHandler();
+
+      await handler.execute(cmd());
+
+      expect(Number(tx.invoice.create.mock.calls[0][0].data.vatAmt)).toBe(0);
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        expect.objectContaining({ amountHalalas: FINAL_PRICE }),
+      );
+    });
+  });
 
   describe("happy path — self-purchase init", () => {
     it("freezes the price, creates a PENDING purchase, an invoice + PENDING payment, and returns the Moyasar redirect", async () => {
@@ -533,6 +567,28 @@ describe("InitPackagePurchaseHandler", () => {
         DEFAULT_ORG_ID,
         expect.objectContaining({ amountHalalas: FINAL_PRICE }),
       );
+    });
+
+    it("lets a keyed retry reuse its frozen gross total even when the current rate would put it below the gateway minimum", async () => {
+      // Net 90 halalas was accepted at 15% VAT (gross 104). VAT is now 0, so
+      // the current rate alone would compute 90 < 100.
+      const prisma = buildPrisma();
+      const fingerprint = selfPurchaseFingerprint(cmd());
+      prisma.packagePurchase.findUnique.mockResolvedValue({
+        id: PURCHASE_ID, requestFingerprint: fingerprint, status: PackagePurchaseStatus.PENDING,
+        subtotalSnapshot: new Prisma.Decimal(90), discountSnapshot: new Prisma.Decimal(0), amountPaid: new Prisma.Decimal(90),
+        creditSnapshot: [{ serviceId: SERVICE_ID, employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID, unitPriceSnapshot: 90, totalQuantity: 1, constraints: [] }],
+      });
+      prisma.packagePurchase.findFirst.mockResolvedValue({ id: PURCHASE_ID, idempotencyKey: cmd().idempotencyKey, requestFingerprint: fingerprint });
+      prisma.invoice.findFirst.mockResolvedValue({ id: INVOICE_ID, total: 104 });
+      prisma.invoice.findUnique.mockResolvedValue({ id: INVOICE_ID, total: 104, currency: "SAR", status: "DRAFT" });
+      prisma.payment.findFirst.mockResolvedValueOnce({ id: "old-pay", status: PaymentStatus.FAILED, gatewayRef: null }).mockResolvedValue(null);
+      prisma.payment.findUnique.mockResolvedValue({ status: PaymentStatus.FAILED, gatewayRef: null });
+      const moyasar = buildMoyasar();
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      await expect(handler.execute(cmd())).resolves.toMatchObject({ purchaseId: PURCHASE_ID });
+      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(DEFAULT_ORG_ID, expect.objectContaining({ amountHalalas: 104 }));
     });
 
     it("rejects a second checkout key while the same client/package still has a PENDING purchase", async () => {

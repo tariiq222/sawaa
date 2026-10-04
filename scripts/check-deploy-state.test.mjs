@@ -64,3 +64,21 @@ test("rejects an invalid target instead of treating it as an initial release", (
   const { check } = fixture(t);
   assert.equal(check("missing-branch").status, 1);
 });
+
+test('ignores rollback tags when checking code release ancestry', (t) => {
+  const { git, release, check } = fixture(t);
+  release();
+  const released = git('rev-parse', 'HEAD');
+  git('commit', '--allow-empty', '-m', 'operational snapshot');
+  git('tag', '-a', 'rollback/operational-snapshot', '-m', 'not a code release');
+  assert.equal(check('main', released).status, 0);
+});
+
+test('ignores tags with release-like prefixes and non-release suffixes', (t) => {
+  const { git, release, check } = fixture(t);
+  release();
+  const released = git('rev-parse', 'HEAD');
+  git('commit', '--allow-empty', '-m', 'operational snapshot');
+  git('tag', '-a', 'v2026.09.24.1-rollback', '-m', 'not a code release');
+  assert.equal(check('main', released).status, 0);
+});

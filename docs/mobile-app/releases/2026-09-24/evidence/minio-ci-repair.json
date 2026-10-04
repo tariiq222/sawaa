@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-09-24T14:35:58.473017+00:00",
+  "commit": "0b8df2d6ae4c91eab1467a398c0098d0b9aca4c2",
+  "sourceCommit": "9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a",
+  "goVersion": "1.24.13",
+  "localBuild": "passed darwin/arm64",
+  "localS3Smoke": [
+    "create bucket",
+    "upload object",
+    "download byte equality",
+    "remove object",
+    "remove bucket"
+  ],
+  "actionlint": "passed for all three workflows",
+  "githubRun": 36013035373,
+  "githubMinioStart": "success",
+  "fullCI": "pending dashboard smoke and website retry",
+  "productionChanged": false,
+  "githubBackend": "success",
+  "backendUnit": {
+    "passed": 7841,
+    "skipped": 1,
+    "suitesPassed": 846,
+    "suitesSkipped": 1
+  },
+  "backendE2E": {
+    "passed": 25,
+    "skipped": 285,
+    "suitesPassed": 8,
+    "suitesSkipped": 41
+  },
+  "binaryCacheSaved": true
+}

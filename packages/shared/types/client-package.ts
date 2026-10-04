@@ -26,6 +26,10 @@ export interface ClientPackagePurchase {
   subtotalSnapshot: number
   discountSnapshot: number
   amountPaid: number
+  /** VAT on the purchase invoice (halalas); 0 when VAT is not enabled. */
+  vatAmount?: number
+  /** What the client was charged: the invoice total, VAT-inclusive (halalas). */
+  totalCharged?: number
   refundAmount: number
   paidAt: string
   refundedAt: string | null

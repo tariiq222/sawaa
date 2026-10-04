@@ -152,7 +152,32 @@ export class RefundPackagePurchaseHandler {
         }
       }
 
-      const amountPaid = decimalToHalalas(purchase.amountPaid);
+      const invoice = await tx.invoice.findFirst({
+        where: { packagePurchaseId: cmd.purchaseId },
+        select: {
+          id: true,
+          total: true,
+          vatAmt: true,
+          refundedAmount: true,
+          refundedVatAmt: true,
+          currency: true,
+          clientId: true,
+          payments: {
+            where: { status: { in: [PaymentStatus.COMPLETED, PaymentStatus.PARTIALLY_REFUNDED] } },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { id: true, refundedAmount: true },
+          },
+        },
+      });
+
+      // amountPaid is the NET package price (credit-valuation basis). The
+      // client paid the invoice total, which includes VAT when enabled, so
+      // refunds are measured against that gross amount. refundAmount on the
+      // purchase therefore accumulates gross money returned.
+      const amountPaid = invoice
+        ? decimalToHalalas(invoice.total)
+        : decimalToHalalas(purchase.amountPaid);
       const alreadyRefunded = decimalToHalalas(purchase.refundAmount ?? 0);
       // P1 (money-safety): clamp the refund to the outstanding (un-refunded)
       // balance, read under the same FOR UPDATE lock. A caller can never
@@ -244,24 +269,6 @@ export class RefundPackagePurchaseHandler {
       let recordedRefundRequestId: string | null = null;
 
       if (refundAmount > 0) {
-        const invoice = await tx.invoice.findFirst({
-          where: { packagePurchaseId: cmd.purchaseId },
-          select: {
-            id: true,
-            total: true,
-            vatAmt: true,
-            refundedAmount: true,
-            currency: true,
-            clientId: true,
-            payments: {
-              where: { status: { in: [PaymentStatus.COMPLETED, PaymentStatus.PARTIALLY_REFUNDED] } },
-              orderBy: { createdAt: 'desc' },
-              take: 1,
-              select: { id: true, refundedAmount: true },
-            },
-          },
-        });
-
         if (invoice) {
           recordedInvoiceId = invoice.id;
           recordedCurrency = invoice.currency;
@@ -274,7 +281,10 @@ export class RefundPackagePurchaseHandler {
               invoiceTotal: invoice.total,
               invoiceVatAmt: invoice.vatAmt,
               alreadyRefundedAmount: invoice.refundedAmount,
+              alreadyRefundedVatAmt: invoice.refundedVatAmt ?? 0,
               thisRefundAmount: refundAmount,
+              // The final refund takes the remaining VAT so partials sum exactly.
+              isLastRefund: isFullRefund,
             });
 
             // Persist a COMPLETED RefundRequest — the existing finance refund

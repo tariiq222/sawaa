@@ -60,6 +60,8 @@ describe('GetBookingSettingsHandler', () => {
     expect(result.freeCancelBeforeHours).toBe(24);
     expect(result.maxReschedulesPerBooking).toBe(3);
     expect(result.autoNoShowAfterEnd).toBe(true);
+    expect(result.payAtClinicEnabled).toBe(false);
+    expect(result).toMatchObject({ clientCancellationPolicyEnabled: false, clientCancelCutoffMode: null, clientCancelBeforeHours: null, earlyCancelRefundPercent: null });
   });
 
   it('bypasses cache and reads only through a supplied transaction', async () => {

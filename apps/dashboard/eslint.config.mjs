@@ -229,11 +229,12 @@ const reactCompilerRule = {
  * See: packages/ui/DESIGN_TOKENS.md
  *      packages/ui/COMPONENTS.md §5
  */
-const designTokensRules = {
+const featureSyntaxRules = {
   files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
   rules: {
     "no-restricted-syntax": [
       "error",
+      ...nativeDateInputRules.rules["no-restricted-syntax"].slice(1),
       {
         // Catch colour/shadow arbitrary values whose class prefix is
         // one of the colour/shadow utilities. The bracketed payload
@@ -288,8 +289,7 @@ const eslintConfig = defineConfig([
   libLayerRules,
   hooksLayerRules,
   ...featureRules,
-  nativeDateInputRules,
-  designTokensRules,
+  featureSyntaxRules,
   unusedVarsRule,
   reactCompilerRule,
 

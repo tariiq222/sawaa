@@ -10,11 +10,12 @@ function unwrap<T>(json: unknown): T {
   return json as T;
 }
 
-export async function listPublicEmployees(): Promise<PublicEmployee[]> {
+export async function listPublicEmployeesResult(includeDirectClinics = false): Promise<{ employees: PublicEmployee[]; failed: boolean }> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1500);
-    const json = await publicFetch<unknown>('/public/employees', {
+    const path = includeDirectClinics ? '/public/employees?includeDirectClinics=true' : '/public/employees';
+    const json = await publicFetch<unknown>(path, {
       next: { revalidate: 60 },
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
@@ -22,7 +23,7 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
     // Hide therapists that aren't actually bookable — no active services,
     // no branch, or no availability rules. Mirrors the booking wizard logic
     // so the directory never shows a card that dead-ends on booking.
-    return all.filter((e) => e.isBookable);
+    return { employees: all.filter((e) => e.isBookable), failed: false };
   } catch (err) {
     Sentry.addBreadcrumb({
       category: 'fetch',
@@ -30,13 +31,17 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
       message: '[therapists] listPublicEmployees error — using empty list',
       data: { error: err instanceof Error ? err.message : String(err) },
     });
-    return [];
+    return { employees: [], failed: true };
   }
+}
+
+export async function listPublicEmployees(includeDirectClinics = false): Promise<PublicEmployee[]> {
+  return (await listPublicEmployeesResult(includeDirectClinics)).employees;
 }
 
 export async function getPublicEmployee(slug: string): Promise<PublicEmployee> {
   const json = await publicFetch<unknown>(
-    `/public/employees/${encodeURIComponent(slug)}`,
+    `/public/employees/${encodeURIComponent(slug)}?includeDirectClinics=true`,
     { next: { revalidate: 60 } },
   );
   return unwrap<PublicEmployee>(json);

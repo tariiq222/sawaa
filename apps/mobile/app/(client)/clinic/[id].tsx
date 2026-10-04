@@ -1,235 +1,258 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Building2, ChevronLeft, ChevronRight, Heart, Star } from 'lucide-react-native';
+import { Building2, CalendarPlus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { getCategoryBookingServices } from '@sawaa/shared/catalog';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { ClinicProfileHeader } from '@/components/features/directory/ClinicProfileHeader';
+import { ServiceRow } from '@/components/features/directory/ServiceRow';
+import { TherapistCard } from '@/components/features/directory/TherapistCard';
+import { bookingStepPath } from '@/features/booking/guest-booking-flow';
+import { clinicBookingEntry } from '@/features/booking/booking-entry';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { GlassSegmented } from '@/components/ui/GlassSegmented';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { useAppSelector } from '@/hooks/use-redux';
+import { useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
+import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
+import { getSawaaRoles, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 
-const SPECIALTIES = [
-  { ar: 'القلق', en: 'Anxiety', color: sawaaColors.teal[600] },
-  { ar: 'الاكتئاب', en: 'Depression', color: sawaaColors.accent.violet },
-  { ar: 'العلاقات', en: 'Relationships', color: sawaaColors.accent.rose },
-  { ar: 'الصدمات', en: 'Trauma', color: sawaaColors.accent.amber },
-  { ar: 'اضطرابات النوم', en: 'Sleep', color: sawaaColors.accent.sky },
-];
-
-const HERO_HEIGHT = 200;
+type ClinicTab = 'about' | 'services' | 'therapists';
 
 export default function ClinicDetailScreen() {
-  const { id: _id } = useLocalSearchParams<{ id: string }>();
+  const colors = useSawaaColors();
+  const { scheme } = useTheme();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const f400 = getFontName(dir.locale, '400');
-  const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
-  const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
-  const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
+  const [tab, setTab] = useState<ClinicTab | null>(null);
 
-  const [aboutExpanded, setAboutExpanded] = useState(false);
+  // The clinic directory is derived from the public catalog + bookable
+  // therapists; this route renders one entry of that same list.
+  const clinicsQuery = useClinics();
+  const catalogQuery = usePublicCatalog();
+  const therapistsQuery = useTherapists();
+  const clinic = useMemo(
+    () => (clinicsQuery.data ?? []).find((entry) => entry.id === id),
+    [clinicsQuery.data, id],
+  );
 
-  const stats = [
-    { nAr: '١٢', nEn: '12', ar: 'معالج', en: 'Therapists' },
-    { nAr: '٦', nEn: '6', ar: 'تخصصات', en: 'Specialties' },
-    { nAr: '٢٤/٧', nEn: '24/7', ar: 'دعم', en: 'Support' },
+  const services = useMemo(() => {
+    if (!clinic || clinic.bookingMode !== 'SERVICES' || !catalogQuery.data) return [];
+    const category = catalogQuery.data.categories.find((item) => item.id === clinic.id);
+    if (!category) return [];
+    const allowedIds = new Set(clinic.serviceIds);
+    return getCategoryBookingServices(category, catalogQuery.data.services).filter((service) => allowedIds.has(service.id));
+  }, [catalogQuery.data, clinic]);
+  const therapists = useMemo(() => {
+    if (!clinic) return [];
+    const serviceIds = new Set(clinic.serviceIds);
+    return (therapistsQuery.data ?? []).filter((employee) => employee.serviceIds.some((serviceId) => serviceIds.has(serviceId)));
+  }, [clinic, therapistsQuery.data]);
+
+  const description = clinic
+    ? (dir.isRTL ? clinic.descriptionAr : clinic.descriptionEn ?? clinic.descriptionAr) ?? null
+    : null;
+  // DIRECT clinics are booked through their hidden internal service, so they have no services tab.
+  const hasServicesTab = clinic?.bookingMode === 'SERVICES';
+  const tabs = [
+    ...(hasServicesTab ? [{ value: 'services' as const, label: t('employeeProfile.services') }] : []),
+    { value: 'therapists' as const, label: t('clinics.specialistsTab') },
+    { value: 'about' as const, label: t('employeeProfile.about') },
   ];
+  // Open on what the visitor came for; the description is one tap away.
+  const activeTab: ClinicTab = tab ?? (hasServicesTab ? 'services' : 'therapists');
 
-  const aboutFull = dir.isRTL
-    ? 'عيادة متخصصة في العلاج النفسي والمعرفي السلوكي، تضم نخبة من أمهر المعالجين في المملكة. نقدّم جلسات فردية وجماعية بسرّية تامة، ودعم على مدار الساعة لمتابعتك بين الجلسات.'
-    : 'Specialized clinic in psychotherapy and CBT, home to top therapists in the kingdom. Confidential individual and group sessions, with around-the-clock support between visits.';
-  const aboutPreview = aboutFull.length > 110 ? aboutFull.slice(0, 110) + '…' : aboutFull;
+  const requestState = (loading: boolean, failed: boolean, emptyLabel: string, retry: () => unknown) => {
+    const style = [styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }];
+    if (loading) {
+      return <View style={[styles.requestState, { flexDirection: dir.row }]}><ActivityIndicator color={colors.teal[700]} /><Text style={style}>{t('common.loading')}</Text></View>;
+    }
+    if (failed) {
+      return (
+        <View style={styles.requestState}>
+          <Text style={style}>{t('guest.loadError')}</Text>
+          <Pressable onPress={() => { void retry(); }} accessibilityRole="button" style={styles.retryButton}>
+            <Text style={[styles.retryText, { color: colors.teal[700], fontFamily: f600 }]}>{t('common.retry')}</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return <Text style={style}>{emptyLabel}</Text>;
+  };
+
+  const openTherapists = (serviceId?: string) => {
+    if (!clinic) return;
+    router.push({
+      pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
+      params: { ...(!signedIn ? { kind: 'therapists' } : {}), clinicId: clinic.id, ...(serviceId ? { serviceId } : {}), steps: '4' },
+    });
+  };
+
+  const entry = clinic ? clinicBookingEntry(clinic) : null;
+  const startBooking = () => {
+    if (!clinic || !entry || entry.kind === 'misconfigured') return;
+    if (entry.kind === 'service') {
+      router.push({ pathname: bookingStepPath('service', signedIn), params: { clinicId: clinic.id, steps: String(entry.steps) } });
+      return;
+    }
+    router.push({
+      pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
+      params: {
+        ...(!signedIn ? { kind: 'therapists' } : {}),
+        clinicId: clinic.id,
+        serviceId: entry.serviceId,
+        steps: String(entry.steps),
+      },
+    });
+  };
+
+  const renderTab = () => {
+    if (activeTab === 'about') {
+      return (
+        <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+          {description ?? t('clinics.noAbout')}
+        </Text>
+      );
+    }
+    if (activeTab === 'services') {
+      return (
+        <View style={styles.list}>
+          {services.map((service) => {
+            const serviceName = (dir.isRTL ? service.nameAr : service.nameEn) ?? service.nameAr;
+            return (
+              <ServiceRow
+                key={service.id}
+                title={serviceName}
+                subtitle={(dir.isRTL ? service.descriptionAr : service.descriptionEn ?? service.descriptionAr) ?? null}
+                onPress={() => openTherapists(service.id)}
+              />
+            );
+          })}
+          {services.length === 0 ? requestState(catalogQuery.isLoading, catalogQuery.isError, t('guest.empty'), catalogQuery.refetch) : null}
+        </View>
+      );
+    }
+    return (
+      <View style={styles.list}>
+        {therapists.map((therapist) => {
+          const openProfile = () => router.push({
+            pathname: signedIn ? '/(client)/employee/[id]' : '/public-detail/[kind]/[id]',
+            params: signedIn
+              ? { id: therapist.slug ?? therapist.id, clinicId: clinic?.id }
+              : { kind: 'therapist', id: therapist.slug ?? therapist.id, clinicId: clinic?.id },
+          });
+          // A direct clinic has one fixed service: the card goes straight to the time step.
+          if (clinic && entry?.kind === 'therapist') {
+            return (
+              <TherapistCard
+                key={therapist.id}
+                item={therapist}
+                compact
+                onPress={() => router.push({
+                  pathname: signedIn ? '/(client)/booking/[serviceId]' : '/public-booking/[serviceId]',
+                  params: { serviceId: entry.serviceId, employeeId: therapist.id, clinicId: clinic.id, steps: '2' },
+                })}
+                onViewProfile={openProfile}
+              />
+            );
+          }
+          return <TherapistCard key={therapist.id} item={therapist} compact onPress={openProfile} />;
+        })}
+        {therapists.length === 0 ? requestState(therapistsQuery.isLoading, therapistsQuery.isError, t('therapists.empty'), therapistsQuery.refetch) : null}
+      </View>
+    );
+  };
+
+  const renderBody = () => {
+    if (clinicsQuery.isLoading) {
+      return (
+        <View style={styles.list}>
+          <Skeleton height={152} radius={sawaaRadius.xl} />
+          <Skeleton height={56} radius={sawaaRadius.lg} />
+        </View>
+      );
+    }
+    if (clinicsQuery.isError) {
+      return (
+        <EmptyState
+          icon="alert-circle-outline"
+          title={t('common.error')}
+          actionLabel={t('common.retry')}
+          onAction={() => { void clinicsQuery.refetch(); }}
+          tone="danger"
+        />
+      );
+    }
+    if (!clinic) {
+      return (
+        <EmptyState
+          icon="information-circle-outline"
+          title={t('clinics.notFound')}
+          actionLabel={t('clinics.title')}
+          onAction={() => router.replace(signedIn ? '/(client)/clinics' : '/public-list/clinics')}
+        />
+      );
+    }
+    return (
+      <>
+        <ClinicProfileHeader clinic={clinic} placeholderIcon={Building2} />
+        <GlassSegmented options={tabs} value={activeTab} onChange={setTab} />
+        {renderTab()}
+      </>
+    );
+  };
 
   return (
     <AquaBackground>
-      {/* Hero region with glass overlay (name + city + rating) */}
-      <LinearGradient
-        colors={[sawaaColors.teal[300], sawaaColors.teal[600], sawaaColors.teal[900]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.hero}
-      >
-        <View style={styles.heroIcon}>
-          <Building2 size={160} color="rgba(255,255,255,0.28)" strokeWidth={1} />
-        </View>
-      </LinearGradient>
-
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 180 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back button over hero */}
-        <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-          </Glass>
-        </Animated.View>
-
-        {/* Spacer so content starts below hero (hero is 200, with info card overlapping by ~36) */}
-        <View style={{ height: HERO_HEIGHT - 56 - 44 - 12 }} />
-
-        {/* Info card overlay (name + city + rating) — sits at the bottom of the hero */}
-        <Animated.View entering={FadeInDown.delay(100).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.infoCard}>
-            <View style={[styles.infoTop, { flexDirection: dir.row }]}>
-              <View style={styles.infoName}>
-                <Text style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'عيادة سواء النفسية' : 'Sawaa Wellness Clinic'}
-                </Text>
-                <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'الرياض · حي العليا · ٢.٤ كم' : 'Riyadh · Al-Olaya · 2.4 km'}
-                </Text>
-              </View>
-              <Glass variant="regular" radius={14} style={styles.ratingChip}>
-                <View style={[styles.ratingRow, { flexDirection: dir.row }]}>
-                  <Star size={12} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
-                  <Text style={[styles.ratingText, { fontFamily: f700 }]}>4.7</Text>
-                  <Text style={[styles.ratingCount, { fontFamily: f400, fontWeight: '400' }]}>
-                    {dir.isRTL ? '(٢٨٤)' : '(284)'}
-                  </Text>
-                </View>
-              </Glass>
-            </View>
-          </Glass>
-        </Animated.View>
-
-        {/* 3 stats row */}
-        <Animated.View entering={FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
-          <View style={[styles.statsRow, { flexDirection: dir.row }]}>
-            {stats.map((s) => (
-              <Glass key={s.en} variant="regular" radius={16} style={styles.statBox}>
-                <Text style={[styles.statN, { fontFamily: f700 }]}>
-                  {dir.isRTL ? s.nAr : s.nEn}
-                </Text>
-                <Text style={[styles.statL, { fontFamily: f500, fontWeight: '500' }]}>
-                  {dir.isRTL ? s.ar : s.en}
-                </Text>
-              </Glass>
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* About with read-more toggle */}
-        <Animated.View entering={FadeInDown.delay(220).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'عن العيادة' : 'About'}
-          </Text>
-          <Text style={[styles.aboutText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-            {aboutExpanded ? aboutFull : aboutPreview}
-          </Text>
-          {aboutFull.length > aboutPreview.length && (
-            <Pressable onPress={() => setAboutExpanded((v) => !v)}>
-              <Text style={[styles.readMore, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
-                {aboutExpanded
-                  ? dir.isRTL ? 'عرض أقل' : 'Show less'
-                  : dir.isRTL ? 'اقرأ المزيد' : 'Read more'}
-              </Text>
-            </Pressable>
-          )}
-        </Animated.View>
-
-        {/* Specialties tags */}
-        <Animated.View entering={FadeInDown.delay(280).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'التخصصات' : 'Specialties'}
-          </Text>
-          <View style={[styles.tagRow, { flexDirection: dir.row }]}>
-            {SPECIALTIES.map((s) => (
-              <View
-                key={s.en}
-                style={[
-                  styles.tag,
-                  { backgroundColor: `${s.color}1e`, borderColor: `${s.color}33` },
-                ]}
-              >
-                <Text style={[styles.tagText, { fontFamily: f600, fontWeight: '600', color: s.color }]}>
-                  {dir.isRTL ? s.ar : s.en}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
+        <ScreenHeader title={t('clinics.profileTitle')} onBack={() => router.back()} />
+        {renderBody()}
       </ScrollView>
 
-      {/* CTA bar — heart circle + gradient "اختاري معالجاً →" */}
-      <Animated.View
-        entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}
-      >
-        <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
-          <View style={[styles.ctaRow, { flexDirection: dir.row }]}>
-            <Pressable style={styles.favBtn} accessibilityRole="button" accessibilityLabel={dir.isRTL ? 'إضافة للمفضلة' : 'Favorite'}>
-              <Heart size={18} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(client)/therapists')}
-              style={styles.ctaBtnPress}
-              accessibilityRole="button"
-            >
-              <LinearGradient
-                colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.ctaBtn}
-              >
-                <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-                  {dir.isRTL ? 'اختاري معالجاً' : 'Choose therapist'}
-                </Text>
-                <GoIcon size={14} color="#fff" strokeWidth={2} />
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </Glass>
-      </Animated.View>
+      {clinic && entry ? (
+        <FloatingCta>
+          {entry.kind === 'misconfigured' ? (
+            <Text style={[styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: 'center' }]}>
+              {t('clinics.bookingSetupMissing')}
+            </Text>
+          ) : null}
+          <PrimaryButton
+            label={t('employeeProfile.bookAppointment')}
+            fontFamily={getFontName(dir.locale, '700')}
+            icon={<CalendarPlus size={22} color={getSawaaRoles(scheme).action.foreground} strokeWidth={1.75} />}
+            disabled={entry.kind === 'misconfigured'}
+            onPress={startBooking}
+          />
+        </FloatingCta>
+      ) : null}
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { position: 'absolute', top: 0, left: 0, right: 0, height: HERO_HEIGHT, overflow: 'hidden' },
-  heroIcon: { position: 'absolute', bottom: -20, left: 0, right: 0, alignItems: 'center' },
-  scroll: { paddingHorizontal: 16, gap: 16 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  infoCard: { padding: 16 },
-  infoTop: { justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  infoName: { flex: 1 },
-  clinicName: { fontSize: 20, color: sawaaColors.ink[900] },
-  clinicMeta: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 3 },
-  ratingChip: { paddingHorizontal: 12, paddingVertical: 6 },
-  ratingRow: { alignItems: 'center', gap: 4 },
-  ratingText: { fontSize: 12, color: sawaaColors.ink[900] },
-  ratingCount: { fontSize: 10.5, color: sawaaColors.ink[500] },
-  statsRow: { gap: 8 },
-  statBox: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  statN: { fontSize: 18, color: sawaaColors.teal[700] },
-  statL: { fontSize: 10.5, color: sawaaColors.ink[500], marginTop: 2 },
-  sectionTitle: { fontSize: 15, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
-  aboutText: { fontSize: 12.5, color: sawaaColors.ink[700], lineHeight: 22, paddingHorizontal: 4 },
-  readMore: { fontSize: 12, color: sawaaColors.teal[700], marginTop: 6, paddingHorizontal: 4 },
-  tagRow: { flexWrap: 'wrap', gap: 6 },
-  tag: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14, borderWidth: 0.5 },
-  tagText: { fontSize: 11.5 },
-  ctaWrap: { position: 'absolute', left: 16, right: 16 },
-  ctaPill: { padding: 6 },
-  ctaRow: { alignItems: 'center', gap: 6, height: 46 },
-  favBtn: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  ctaBtnPress: { flex: 1, height: 46 },
-  ctaBtn: {
-    flex: 1, borderRadius: 999, height: 46,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: { color: '#fff', fontSize: 13 },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
+  list: { gap: sawaaSpacing.md },
+  about: { fontSize: 15, lineHeight: 26 },
+  body: { fontSize: sawaaType.body.fontSize + 1, lineHeight: 22 },
+  requestState: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.sm, padding: sawaaSpacing.md },
+  retryButton: { minHeight: 44, paddingHorizontal: sawaaSpacing.lg, justifyContent: 'center' },
+  retryText: { fontSize: 14, textDecorationLine: 'underline' },
 });

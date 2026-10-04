@@ -1,3 +1,5 @@
+import type { Locale } from '@/features/locale/locale';
+
 export interface FeatureCard {
   label: string;
   title: string;
@@ -60,6 +62,27 @@ export const FEATURE_CARD_DEFAULTS: FeatureCards = [
   },
 ];
 
-export function resolveFeatureCards(): FeatureCards {
-  return FEATURE_CARD_DEFAULTS;
+export const FEATURE_CARD_DEFAULTS_EN: FeatureCards = [
+  {
+    label: 'Saudi specialists',
+    title: 'A therapist who understands your culture',
+    desc: 'Our Saudi team is licensed by the Saudi Commission for Health Specialties. They speak your language and understand your social and family context.',
+    icon: 'BadgeCheck',
+  },
+  {
+    label: 'Professional confidentiality',
+    title: 'Speak freely',
+    desc: 'Your information and sessions are protected by strict professional confidentiality. What you share here stays here.',
+    icon: 'ShieldCheck',
+  },
+  {
+    label: 'Flexible sessions',
+    title: 'Book today, talk tomorrow',
+    desc: 'Appointments are available throughout the week, in person in Riyadh or remotely from anywhere. Choose what fits your day.',
+    icon: 'Clock',
+  },
+];
+
+export function resolveFeatureCards(locale: Locale = 'ar'): FeatureCards {
+  return locale === 'en' ? FEATURE_CARD_DEFAULTS_EN : FEATURE_CARD_DEFAULTS;
 }

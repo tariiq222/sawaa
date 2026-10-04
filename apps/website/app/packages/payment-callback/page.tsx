@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SawaaPackageStatusPage } from '@/themes/sawaa/pages/package-status';
+import { SawaaLayout } from '@/themes/sawaa/layout/layout';
 
 function CallbackContent() {
   const params = useSearchParams();
@@ -10,5 +11,11 @@ function CallbackContent() {
 }
 
 export default function PackagePaymentCallbackPage() {
-  return <Suspense fallback={<p role="status">Loading payment status...</p>}><CallbackContent /></Suspense>;
+  return (
+    <SawaaLayout>
+      <Suspense fallback={<p role="status">Loading payment status...</p>}>
+        <CallbackContent />
+      </Suspense>
+    </SawaaLayout>
+  );
 }

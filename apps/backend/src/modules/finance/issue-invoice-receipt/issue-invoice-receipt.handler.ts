@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORG_ID } from '../../../common/constants';
@@ -14,7 +15,7 @@ const BUCKET = 'finance-invoices';
 /**
  * Subscribes to `finance.payment.completed`. When the related invoice has
  * reached PAID status and no PDF has been generated yet, renders the receipt
- * PDF, uploads it to MinIO, persists the URL on the invoice, and publishes
+ * PDF, uploads it to MinIO, atomically persists the storage key and an outbox event for
  * `finance.invoice.receipt.issued` so downstream channels (email/SMS/push)
  * can deliver it to the client.
  *
@@ -31,6 +32,7 @@ export class IssueInvoiceReceiptHandler {
     private readonly storage: MinioService,
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   register(): void {
@@ -73,14 +75,6 @@ export class IssueInvoiceReceiptHandler {
     // presigned URLs and no raw, un-presigned object URL ever leaks (S2.3a).
     await this.storage.uploadFile(BUCKET, key, pdfBuffer, 'application/pdf');
 
-    await this.cls.run(async () => {
-      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      await this.prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { pdfUrl: key, pdfGeneratedAt: new Date() },
-      });
-    });
-
     const issued = new InvoiceReceiptIssuedEvent({
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
@@ -89,6 +83,27 @@ export class IssueInvoiceReceiptHandler {
       pdfUrl: key,
       organizationId: organizationId ?? DEFAULT_ORG_ID,
     });
-    await this.eventBus.publish(issued.eventName, issued.toEnvelope());
+    await this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      await this.rlsTransaction.withTransaction(async (tx) => {
+        // Commit the PDF and its delivery intent together. The guarded write
+        // also prevents concurrent payment events from issuing two receipts.
+        const { count } = await tx.invoice.updateMany({
+          where: { id: invoice.id, status: 'PAID', pdfUrl: null },
+          data: { pdfUrl: key, pdfGeneratedAt: new Date() },
+        });
+        if (count === 0) return;
+        await tx.outboxEvent.create({
+          data: {
+            id: issued.eventId,
+            aggregateId: invoice.id,
+            eventType: issued.eventName,
+            status: 'PENDING_V2',
+            deliveryLane: 'PENDING_V2',
+            payload: issued.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
+      });
+    });
   }
 }

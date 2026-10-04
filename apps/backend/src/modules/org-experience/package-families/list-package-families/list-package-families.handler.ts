@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { decorateFamily, loadFamilyDisplayData } from '../package-family-catalog.helper';
+import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.handler';
 
 @Injectable()
 export class ListPackageFamiliesHandler {
@@ -18,6 +19,9 @@ export class ListPackageFamiliesHandler {
       include: { options: { where: { archivedAt: null }, orderBy: { sortOrder: 'asc' }, include: { groups: { orderBy: { sortOrder: 'asc' }, include: { items: { orderBy: { sessionPosition: 'asc' }, include: { constraints: { include: { targets: true } } } } } }, items: { orderBy: { sortOrder: 'asc' }, include: { constraints: { include: { targets: true } } } } } } },
     });
     const display = await loadFamilyDisplayData(this.prisma, families);
-    return Promise.all(families.map((family) => decorateFamily(family, this.pricing, this.storage, this.bucket, false, display)));
+    // Option prices are net; the sale invoice adds VAT at this rate.
+    const vatRate = (await resolveVatRate(this.prisma)).toNumber();
+    const decorated = await Promise.all(families.map((family) => decorateFamily(family, this.pricing, this.storage, this.bucket, false, display)));
+    return decorated.map((family) => ({ ...family, vatRate }));
   }
 }

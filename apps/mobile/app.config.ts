@@ -10,8 +10,14 @@ resolveApiUrl({
 });
 
 const config: ExpoConfig = {
-  name: 'سواء للإرشاد الأسري',
+  name: 'سواء للارشاد الاسري | sawaa',
   slug: 'sawa',
+  owner: 'tariq222',
+  extra: {
+    eas: {
+      projectId: 'f6349cef-8426-442c-b249-118a9b512cf1',
+    },
+  },
   version: '1.0.0',
   scheme: 'sawa',
   orientation: 'portrait',
@@ -20,9 +26,10 @@ const config: ExpoConfig = {
   splash: {
     image: './assets/sawa/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#14a89a',
   },
   ios: {
+    appleTeamId: '569M49FYA6',
     supportsTablet: true,
     bundleIdentifier: 'sa.sawa.app',
     ...(process.env.FIREBASE_IOS_GOOGLE_SERVICES_FILE
@@ -54,6 +61,8 @@ const config: ExpoConfig = {
     ['expo-build-properties', { ios: { useFrameworks: 'static', deploymentTarget: '15.1' } }],
     'expo-image-picker',
     './plugins/with-ios-pod-deployment-target',
+    './plugins/with-ios-splash-background',
+    './plugins/with-ios-scene-lifecycle',
     [
       '@sentry/react-native/expo',
       {

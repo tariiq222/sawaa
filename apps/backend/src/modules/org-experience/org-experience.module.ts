@@ -36,9 +36,16 @@ import { ListPublicTestimonialsHandler } from './ratings/list-public-testimonial
 import { UpdateRatingVisibilityHandler } from './ratings/update-rating-visibility.handler';
 import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.handler';
+import { GetClientBankTransferSettingsHandler } from './org-settings/get-client-bank-transfer-settings.handler';
 import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { DashboardDiscountReasonsController } from '../../api/dashboard/discount-reasons.controller';
+import { DashboardMobileHomeCardsController } from '../../api/dashboard/mobile-home-cards.controller';
+import { CreateMobileHomeCardHandler } from './mobile-home-cards/create-mobile-home-card.handler';
+import { ListMobileHomeCardsHandler } from './mobile-home-cards/list-mobile-home-cards.handler';
+import { ReorderMobileHomeCardsHandler } from './mobile-home-cards/reorder-mobile-home-cards.handler';
+import { UpdateMobileHomeCardHandler } from './mobile-home-cards/update-mobile-home-card.handler';
+import { GetPublicMobileHomeCardsHandler } from './mobile-home-cards/get-public-mobile-home-cards.handler';
 import { ListDiscountReasonsHandler } from './discount-reasons/list-discount-reasons.handler';
 import { CreateDiscountReasonHandler } from './discount-reasons/create-discount-reason.handler';
 import { UpdateDiscountReasonHandler } from './discount-reasons/update-discount-reason.handler';
@@ -99,14 +106,23 @@ const packageFamilyHandlers = [
   ArchivePackageFamilyHandler,
 ];
 
+const mobileHomeCardHandlers = [
+  CreateMobileHomeCardHandler,
+  ListMobileHomeCardsHandler,
+  ReorderMobileHomeCardsHandler,
+  UpdateMobileHomeCardHandler,
+  GetPublicMobileHomeCardsHandler,
+];
+
 @Module({
   imports: [DatabaseModule, MessagingModule],
-  controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController, DashboardPackageFamiliesController],
+  controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController, DashboardPackageFamiliesController, DashboardMobileHomeCardsController],
   providers: [
     ...serviceHandlers,
     ...discountReasonHandlers,
     ...sessionPackageHandlers,
     ...packageFamilyHandlers,
+    ...mobileHomeCardHandlers,
     ComputePackagePriceService,
     GetPublicBrandingHandler,
     GetPublicCatalogHandler,
@@ -114,7 +130,7 @@ const packageFamilyHandlers = [
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
-    GetOrgSettingsHandler, UpsertOrgSettingsHandler,
+    GetOrgSettingsHandler, UpsertOrgSettingsHandler, GetClientBankTransferSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
   exports: [
@@ -122,6 +138,7 @@ const packageFamilyHandlers = [
     ...discountReasonHandlers,
     ...sessionPackageHandlers,
     ...packageFamilyHandlers,
+    ...mobileHomeCardHandlers,
     ComputePackagePriceService,
     GetPublicBrandingHandler,
     GetPublicCatalogHandler,
@@ -129,7 +146,7 @@ const packageFamilyHandlers = [
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
-    GetOrgSettingsHandler, UpsertOrgSettingsHandler,
+    GetOrgSettingsHandler, UpsertOrgSettingsHandler, GetClientBankTransferSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
 })

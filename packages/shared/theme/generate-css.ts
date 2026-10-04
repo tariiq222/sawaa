@@ -13,15 +13,15 @@ function hexToRgbParts(hex: string): string {
   if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
     throw new Error(`Invalid hex color: ${hex}`)
   }
-  const r = parseInt(expanded.substring(0, 2), 16)
-  const g = parseInt(expanded.substring(2, 4), 16)
-  const b = parseInt(expanded.substring(4, 6), 16)
+  const r = Number.parseInt(expanded.substring(0, 2), 16)
+  const g = Number.parseInt(expanded.substring(2, 4), 16)
+  const b = Number.parseInt(expanded.substring(4, 6), 16)
   return `${r} ${g} ${b}`
 }
 
 function derivedTokens(theme: BrandingConfig): DerivedTokens {
-  const pr = hexToRgbParts(theme.colorPrimary).replace(/ /g, ',')
-  const ac = hexToRgbParts(theme.colorAccent).replace(/ /g, ',')
+  const pr = hexToRgbParts(theme.colorPrimary).replaceAll(' ', ',')
+  const ac = hexToRgbParts(theme.colorAccent).replaceAll(' ', ',')
   return {
     colorPrimaryGlow:  `rgba(${pr},0.35)`,
     colorPrimaryUltra: `rgba(${pr},0.08)`,

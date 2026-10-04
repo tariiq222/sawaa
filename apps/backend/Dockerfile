@@ -33,8 +33,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
-# Copy only manifests — this layer is cached until any package.json/lockfile changes
+# Copy manifests and dependency patches before installing from the lockfile.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 COPY apps/backend/package.json             ./apps/backend/
 COPY packages/shared/package.json          ./packages/shared/
 COPY packages/api-client/package.json      ./packages/api-client/
@@ -51,6 +52,7 @@ RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
 # Copy manifests + lockfile so pnpm install is a cache hit when nothing changed
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 COPY packages/shared/package.json          ./packages/shared/
 COPY packages/api-client/package.json      ./packages/api-client/
 COPY packages/ui/package.json              ./packages/ui/
@@ -93,6 +95,7 @@ RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 COPY --from=shared-build /app/node_modules ./node_modules
 COPY --from=shared-build /app/packages     ./packages
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY patches/ ./patches/
 # Keep the dependency layer keyed to manifests and the lockfile, not backend source.
 COPY apps/backend/package.json ./apps/backend/
 
@@ -153,7 +156,9 @@ COPY --chown=1001:1001 --from=app-build /app/apps/backend/prisma.config.ts      
 COPY --chown=1001:1001 --from=app-build /app/apps/backend/prisma                ./apps/backend/prisma
 COPY --chown=1001:1001 --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
 COPY --chown=1001:1001 --from=app-build /app/apps/backend/assets                ./apps/backend/assets
-COPY --chown=1001:1001 docker/openship/start-backend.sh                         ./apps/backend/start-backend.sh
+# Startup script is read by `sh`, not executed directly; keep it root-owned so
+# the application user cannot modify a future launch command.
+COPY --chown=0:0 --chmod=0444 docker/openship/start-backend.sh                  ./apps/backend/start-backend.sh
 
 # Ensure pnpm workspace symlinks resolve at runtime
 RUN mkdir -p /app/node_modules/@sawaa \

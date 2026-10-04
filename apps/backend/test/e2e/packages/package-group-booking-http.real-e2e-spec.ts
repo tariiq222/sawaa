@@ -455,7 +455,7 @@ describeRealE2e('grouped package booking HTTP acceptance (real DB)', () => {
       throw new Error(`Post-edit package purchase disappeared from HTTP list: clientId=${ids.clientAId} purchaseId=${ids.purchaseId} updateResponse=${JSON.stringify(changed.body)} listResponse=${JSON.stringify(afterEditResponse.body)} diagnostics=${JSON.stringify(diagnostics)}`);
     }
     const afterEdit = afterEditPurchases[0];
-    expect(afterEdit.credits.map((credit) => credit.netValue).sort()).toEqual(credits.map((credit) => credit.netValue).sort());
+    expect(afterEdit.credits.map((credit) => credit.netValue).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual(credits.map((credit) => credit.netValue).sort((a, b) => (a ?? 0) - (b ?? 0)));
     expect(afterEdit.credits.map((credit) => credit.unitPriceSnapshot).sort((left, right) => left - right)).toEqual([10_000, 10_000, 15_000, 20_000, 20_000, 20_000]);
     expect(snapshotOrder.map((credit) => credit.unitPriceSnapshot)).toEqual([10_000, 15_000, 20_000, 10_000, 20_000, 20_000]);
 

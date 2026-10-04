@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,23 +9,32 @@ import * as WebBrowser from 'expo-web-browser';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Apple, Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
-import { useTranslation } from 'react-i18next';
-
-import { AquaBackground, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { APP_SCHEME } from '@/constants/config';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
-import { formatHalalas } from '@/lib/money';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { DeliveryType } from '@/types/booking-enums';
-
+import { useBankTransferSettings } from '@/hooks/queries';
+import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
+import { useAppSelector } from '@/hooks/use-redux';
+import {
+  bookingPaymentDraft,
+  clearPendingBookingCheckout,
+  resolvePendingBookingResume,
+  savePendingBookingCheckout,
+  type BookingPaymentDraft,
+} from '@/features/booking/payment-resume-state';
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
-
 export default function BookingPaymentScreen() {
-  const { t } = useTranslation();
+  const colors = useSawaaColors();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const params = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
@@ -33,55 +44,97 @@ export default function BookingPaymentScreen() {
     durationOptionId?: string;
     amount?: string;
     currency?: string;
+    /** Set when this screen is re-entered to resume an existing invoice. */
+    bookingId?: string;
+    invoiceId?: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const { data: bankTransferSettings } = useBankTransferSettings();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
   const [method, setMethod] = useState<Method>('card');
   const [submitting, setSubmitting] = useState(false);
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
+  const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
+  const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
-
-  // params.amount is integer halalas (set by confirm.tsx from service.price).
   const total = params.amount ? Number(params.amount) : 0;
-  const formatMoney = (halalas: number) =>
-    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
-
+  const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
-    { key: 'card', icon: <CreditCard size={20} color={sawaaColors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: sawaaColors.teal[600] },
-    { key: 'apple_pay', icon: <Apple size={20} color={sawaaColors.ink[900]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: sawaaColors.ink[900] },
-    { key: 'bank_transfer', icon: <Banknote size={20} color={sawaaColors.accent.amber} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: sawaaColors.accent.amber },
+    { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: colors.teal[600] },
+    { key: 'apple_pay', icon: <Apple size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },
+    { key: 'bank_transfer', icon: <Banknote size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.teal[600] },
   ];
-
+  const availableMethods = methods.filter(
+    (paymentMethod) => paymentMethod.key !== 'bank_transfer' ||
+      isClientBankTransferAvailable(bankTransferSettings),
+  );
+  useEffect(() => {
+    let active = true;
+    setResumeState('loading');
+    setCreatedBooking(null);
+    if (!userId || (!draft && !params.bookingId)) { setResumeState('invalid'); return () => { active = false; }; }
+    void resolvePendingBookingResume(userId, draft, params.bookingId
+      ? { bookingId: params.bookingId, ...(params.invoiceId ? { invoiceId: params.invoiceId } : {}) } : undefined)
+      .then((result) => {
+        if (!active) return;
+        if (result.kind === 'invalid' || (result.kind === 'missing' && !!params.bookingId)) {
+          setResumeState('invalid');
+        } else if (result.kind === 'missing') {
+          setResumeState('ready');
+        } else if (result.kind === 'complete') {
+          if (result.checkout.draft) void clearPendingBookingCheckout(userId, result.checkout.draft).catch(() => undefined);
+          router.replace({ pathname: '/(client)/booking/success', params: {
+            bookingId: result.booking.id, ...(result.booking.invoiceId ? { invoiceId: result.booking.invoiceId } : {}),
+          } });
+        } else if (result.kind === 'ready') {
+          setCreatedBooking({ bookingId: result.checkout.bookingId, invoiceId: result.checkout.invoiceId });
+          setResumeState('ready');
+        }
+      })
+      .catch(() => { if (active) setResumeState('invalid'); });
+    return () => { active = false; };
+  }, [draft, params.bookingId, params.invoiceId, router, userId]);
   const canPay =
-    !!params.serviceId &&
-    !!params.employeeId &&
-    !!params.branchId &&
-    !!params.scheduledAt &&
+    resumeState === 'ready' &&
+    (!!createdBooking || !!draft) &&
     !submitting;
-
   const handlePay = async () => {
     if (!canPay) return;
     setSubmitting(true);
+    let resumeSafe = Boolean(createdBooking);
     try {
-      const booking = await clientBookingsService.create({
-        branchId: params.branchId!,
-        employeeId: params.employeeId!,
-        serviceId: params.serviceId!,
-        scheduledAt: params.scheduledAt!,
-        durationOptionId: params.durationOptionId,
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
+      let booking = createdBooking;
+      if (!booking) {
+        if (!userId || !draft) throw new Error('Booking details are unavailable');
+        try {
+          const created = await clientBookingsService.create({
+            branchId: params.branchId!,
+            employeeId: params.employeeId!,
+            serviceId: params.serviceId!,
+            scheduledAt: params.scheduledAt!,
+            durationOptionId: params.durationOptionId,
+            deliveryType: params.deliveryType,
+          });
+          booking = { bookingId: created.id, invoiceId: created.invoiceId ?? null };
+          await savePendingBookingCheckout(userId, draft, booking);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          resumeSafe = true;
+        } catch (error) {
+          setResumeState('invalid');
+          throw error;
+        }
+        setCreatedBooking(booking);
+      }
       if (method === 'bank_transfer') {
         if (!booking.invoiceId) {
           router.replace({
             pathname: '/(client)/booking/success',
-            params: { bookingId: booking.id },
+            params: { bookingId: booking.bookingId },
           });
           return;
         }
@@ -90,29 +143,22 @@ export default function BookingPaymentScreen() {
           params: {
             invoiceId: booking.invoiceId,
             amount: String(total),
-            bookingId: booking.id,
+            bookingId: booking.bookingId,
           },
         });
         return;
       }
-
       if (!booking.invoiceId) {
         router.replace({
           pathname: '/(client)/booking/success',
-          params: { bookingId: booking.id },
+          params: { bookingId: booking.bookingId },
         });
         return;
       }
-
       const payment = await clientPaymentsService.initPayment(
         booking.invoiceId,
         method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
       );
-
-      // Track whether the user explicitly dismissed/cancelled the gateway
-      // browser. The backend (polled on the success screen) is the source of
-      // truth for the payment state, but if the user backed out without
-      // completing the redirect we must NOT optimistically claim success.
       let webResult: WebBrowser.WebBrowserAuthSessionResult | null = null;
       if (payment.redirectUrl) {
         webResult = await WebBrowser.openAuthSessionAsync(
@@ -124,16 +170,16 @@ export default function BookingPaymentScreen() {
       router.replace({
         pathname: '/(client)/booking/success',
         params: {
-          bookingId: booking.id,
+          bookingId: booking.bookingId,
           invoiceId: booking.invoiceId,
           paymentId: payment.paymentId,
-          // 'success' | 'cancel' | 'dismiss' | 'locked' — the success screen
-          // uses this to short-circuit to the failed state when the user aborted
-          // the gateway and the backend has not confirmed the payment.
+          ...(params.amount ? { amount: String(total) } : {}),
+          ...(params.currency ? { currency: params.currency } : {}),
           webResult: webResult?.type ?? 'success',
         },
       });
     } catch (err) {
+      if (!resumeSafe) setResumeState('invalid');
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         (dir.isRTL ? 'تعذّر إكمال الدفع. حاولي مرة أخرى.' : 'Could not continue payment. Try again.');
@@ -150,9 +196,7 @@ export default function BookingPaymentScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive accessibilityLabel={t('a11y.buttonBack')} style={styles.backBtn}>
-            <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-          </Glass>
+          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -164,7 +208,7 @@ export default function BookingPaymentScreen() {
           </Text>
         </Animated.View>
 
-        {methods.map((m, i) => {
+        {availableMethods.map((m, i) => {
           const isSelected = method === m.key;
           return (
             <Animated.View
@@ -195,8 +239,8 @@ export default function BookingPaymentScreen() {
                     </Text>
                   </View>
                   {isSelected && (
-                    <View style={[styles.checkCircle, { backgroundColor: m.color }]}>
-                      <Check size={14} color={sawaaColors.teal[50]} strokeWidth={3} />
+                    <View style={[styles.checkCircle, { backgroundColor: theme.colors.primaryFill }]}>
+                      <Check size={14} color={theme.colors.primaryForeground} strokeWidth={3} />
                     </View>
                   )}
                 </View>
@@ -210,21 +254,21 @@ export default function BookingPaymentScreen() {
         entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
       >
-        <Pressable onPress={handlePay} disabled={!canPay}>
+        <Pressable testID="booking-payment-submit" onPress={handlePay} disabled={!canPay}>
           <LinearGradient
-            colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
+            colors={theme.colors.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.ctaBtn, !canPay && { opacity: 0.6 }]}
           >
             {submitting ? (
-              <ActivityIndicator color={sawaaColors.teal[50]} />
+              <ActivityIndicator color={theme.colors.primaryForeground} />
             ) : (
               <>
                 <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
                   {dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`}
                 </Text>
-                <GoIcon size={16} color={sawaaColors.teal[50]} strokeWidth={2} />
+                <GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />
               </>
             )}
           </LinearGradient>
@@ -234,25 +278,24 @@ export default function BookingPaymentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
+const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   title: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
-    color: sawaaColors.ink[900],
-    marginTop: sawaaSpacing.sm,
+    color: colors.ink[900],
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
   subtitle: {
     fontSize: sawaaType.caption.fontSize,
     lineHeight: sawaaType.caption.lineHeight,
-    color: sawaaColors.ink[500],
-    marginTop: sawaaSpacing.xs,
+    color: colors.ink[500],
+    marginTop: 0,
     paddingHorizontal: sawaaSpacing.xs,
   },
-  methodCard: { padding: sawaaSpacing.lg },
-  methodRow: { alignItems: 'center', gap: sawaaSpacing.lg },
+  methodCard: { padding: sawaaSpacing.md },
+  methodRow: { alignItems: 'center', gap: sawaaSpacing.md },
   methodIcon: {
     width: 44,
     height: 44,
@@ -264,12 +307,12 @@ const styles = StyleSheet.create({
   methodLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
-    color: sawaaColors.ink[900],
+    color: colors.ink[900],
   },
   methodSub: {
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
-    color: sawaaColors.ink[500],
+    color: colors.ink[500],
     marginTop: sawaaSpacing.xs,
   },
   checkCircle: {
@@ -287,13 +330,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: sawaaSpacing.sm,
-    shadowColor: sawaaColors.teal[600],
+    shadowColor: colors.teal[600],
     shadowOpacity: 0.35,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
   },
   ctaBtnText: {
-    color: sawaaColors.teal[50],
+    color: themeColors.primaryForeground,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
   },

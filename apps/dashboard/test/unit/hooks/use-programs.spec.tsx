@@ -321,11 +321,11 @@ describe("useCancelProgram", () => {
     await act(async () => {
       await result.current.mutateAsync({
         id: "p-1",
-        payload: { reason: "إلغاء إداري" },
+        payload: { reason: "إلغاء إداري", quoteToken: "q1" },
       })
     })
 
-    expect(cancelProgram).toHaveBeenCalledWith("p-1", { reason: "إلغاء إداري" })
+    expect(cancelProgram).toHaveBeenCalledWith("p-1", { reason: "إلغاء إداري", quoteToken: "q1" })
     expect(spy).toHaveBeenCalledWith({ queryKey: ["programs", "list"] })
     expect(spy).toHaveBeenCalledWith({ queryKey: ["programs", "detail", "p-1"] })
   })

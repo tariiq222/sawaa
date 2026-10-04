@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PublicEmployee } from '@sawaa/api-client';
 
 import type { PublicCatalog } from './types';
-import { selectBookableClinicServices } from './bookable-services';
+import { selectBookableClinicServices, selectBookableClinics } from './bookable-services';
 
 const catalog = {
   departments: [
@@ -43,6 +43,7 @@ const catalog = {
     },
     {
       id: 'category-groups',
+      kind: 'SERVICE_GROUP',
       departmentId: 'dept-groups',
       nameAr: 'العلاج بالفن',
       nameEn: 'Art Therapy',
@@ -137,10 +138,10 @@ const employees = [
 ] as unknown as PublicEmployee[];
 
 describe('selectBookableClinicServices', () => {
-  it('returns only clinic services assigned to bookable practitioners', () => {
+  it('returns public services assigned to bookable practitioners', () => {
     const result = selectBookableClinicServices(catalog, employees);
 
-    expect(result.map((item) => item.service.id)).toEqual(['service-mental-status']);
+    expect(result.map((item) => item.service.id)).toEqual(['service-mental-status', 'service-group']);
     expect(result[0]).toMatchObject({
       categoryId: 'category-assessment',
       categoryNameAr: 'القياس والتقويم',
@@ -155,12 +156,60 @@ describe('selectBookableClinicServices', () => {
     expect(result.deliveryTypes).toEqual(['IN_PERSON', 'ONLINE']);
   });
 
-  it('returns an empty list when the public clinics department is absent', () => {
+  it('keeps services under another public department when no department is named clinics', () => {
     const withoutClinics = {
       ...catalog,
       departments: catalog.departments.filter((department) => department.id !== 'dept-clinics'),
     };
 
-    expect(selectBookableClinicServices(withoutClinics, employees)).toEqual([]);
+    expect(selectBookableClinicServices(withoutClinics, employees).map((item) => item.service.id)).toEqual(['service-mental-status', 'service-group']);
+  });
+
+  it('keeps direct clinics bookable without listing their internal service', () => {
+    const directCatalog: PublicCatalog = {
+      ...catalog,
+      categories: [...catalog.categories, {
+        ...catalog.categories[0], id: 'category-direct', nameAr: 'عيادة السعادة',
+        bookingMode: 'DIRECT', sortOrder: 0, departmentId: null,
+      }],
+      services: [...catalog.services, {
+        ...catalog.services[0], id: 'service-direct', categoryId: 'category-direct',
+        isHidden: true,
+      }],
+    };
+    const directEmployees = [{ id: 'direct-employee', isBookable: true, serviceIds: ['service-direct'] }] as PublicEmployee[];
+
+    expect(selectBookableClinics({ ...directCatalog, departments: directCatalog.departments.filter((department) => department.id !== 'dept-clinics') }, directEmployees).map((clinic) => clinic.id)).toEqual([
+      'category-direct',
+    ]);
+    expect(selectBookableClinics(directCatalog, directEmployees)[0]).toMatchObject({
+      bookingMode: 'DIRECT', therapistCount: 1, serviceCount: 0,
+    });
+    expect(selectBookableClinicServices(directCatalog, directEmployees)).toEqual([]);
+  });
+
+  it('does not show a direct clinic when its therapist only offers a visible service', () => {
+    const directCatalog: PublicCatalog = {
+      ...catalog,
+      categories: [{ ...catalog.categories[0], bookingMode: 'DIRECT' }],
+      services: [
+        { ...catalog.services[0], isHidden: false },
+        { ...catalog.services[0], id: 'internal-service', isHidden: true },
+      ],
+    };
+
+    expect(selectBookableClinics(directCatalog, employees)).toEqual([]);
+  });
+
+  it('does not mutate inputs and excludes disabled or archived services', () => {
+    const scoped = { ...catalog, categories: [...catalog.categories].reverse(), services: [
+      ...catalog.services,
+      { ...catalog.services[0], id: 'disabled', isActive: false },
+      { ...catalog.services[0], id: 'archived', archivedAt: '2026-09-01' },
+    ] };
+    const before = JSON.stringify(scoped);
+    expect(selectBookableClinics(scoped, employees).map((clinic) => clinic.id)).toEqual(['category-assessment']);
+    expect(selectBookableClinicServices(scoped, employees).map((item) => item.service.id)).toEqual(['service-mental-status', 'service-group']);
+    expect(JSON.stringify(scoped)).toBe(before);
   });
 });

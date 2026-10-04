@@ -4,6 +4,8 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto;
 
@@ -16,6 +18,7 @@ export class RequestMobileLoginOtpHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly requestOtp: RequestOtpHandler,
+    private readonly settings: PlatformSettingsService,
   ) {}
 
   async execute(cmd: RequestMobileLoginOtpCommand): Promise<RequestMobileLoginOtpResult> {
@@ -25,7 +28,7 @@ export class RequestMobileLoginOtpHandler {
     const where = channel === 'EMAIL' ? { email: identifier } : { phone: identifier };
     const user = await this.prisma.user.findFirst({
       where,
-      select: { id: true, role: true, isActive: true, phoneVerifiedAt: true, emailVerifiedAt: true },
+      select: { id: true, role: true, isActive: true, isSuperAdmin: true, phoneVerifiedAt: true, emailVerifiedAt: true },
     });
 
     const linkedEmailClients = channel === 'EMAIL' && user?.role === 'CLIENT'
@@ -59,7 +62,11 @@ export class RequestMobileLoginOtpHandler {
       (client !== undefined && client.isActive && client.deletedAt === null &&
         channel === 'SMS');
 
-    if (shouldIssue) {
+    // Staff who cannot finish a mobile OTP login (see VerifyMobileOtpHandler)
+    // get the same generic response without a code.
+    const staffBlocked = shouldIssue && user !== null && user.role !== 'CLIENT' && !await isMobileStaffEligible(this.prisma, this.settings, user);
+
+    if (shouldIssue && !staffBlocked) {
       await this.requestOtp.execute({
         identifier,
         channel: channel === 'SMS' ? OtpChannel.SMS : OtpChannel.EMAIL,

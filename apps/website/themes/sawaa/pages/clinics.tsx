@@ -1,7 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
-  BadgeCheck,
   Building2,
   CheckCircle2,
   Heart,
@@ -15,10 +15,11 @@ import {
   RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
-import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
-import { listPublicEmployees } from '@/features/therapists/public';
+import { getPublicCatalogResult, selectBookableClinics, selectBookableClinicServices } from '@/features/public-catalog/public';
+import { listPublicEmployeesResult } from '@/features/therapists/public';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
+import { safeImageSrc } from '@/lib/image-url';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Sparkles,
@@ -43,58 +44,57 @@ interface ClinicEntry {
   nameEn: string | null;
   descriptionAr: string | null;
   descriptionEn: string | null;
+  imageUrl: string | null;
   icon: string | null;
   iconBgColor: string | null;
   therapistCount: number;
   serviceCount: number;
+  directServiceId: string | null;
 }
 
 export async function SawaaClinicsPage() {
   const locale = await getLocale();
-  const [catalog, therapists] = await Promise.all([
-    getPublicCatalog().catch(() => ({ departments: [], categories: [], services: [] })),
-    listPublicEmployees().catch(() => []),
+  const [catalogResult, therapists] = await Promise.all([
+    getPublicCatalogResult(),
+    listPublicEmployeesResult(true),
   ]);
+  const catalog = catalogResult.catalog;
   const t = (key: MessageKey) => translate(locale, key);
 
-  const clinicsDept = findDepartment(catalog.departments, { ar: ['عيادات'], en: ['clinic'] });
-  const clinics: ClinicEntry[] = clinicsDept
-    ? catalog.categories
-        .filter((c) => c.departmentId === clinicsDept.id)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((c) => {
-          const categoryServiceIds = new Set(
-            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
-          );
-          const therapistCount = therapists.filter((th) =>
-            th.serviceIds.some((id) => categoryServiceIds.has(id)),
-          ).length;
-          return {
-            id: c.id,
-            nameAr: c.nameAr,
-            nameEn: c.nameEn,
-            descriptionAr: null,
-            descriptionEn: null,
-            icon: c.iconName ?? null,
-            iconBgColor: c.iconBgColor ?? null,
-            therapistCount,
-            serviceCount: categoryServiceIds.size,
-          };
-        })
-        // Hide clinics with no bookable services/therapists — they'd dead-end on the booking wizard.
-        .filter((c) => c.serviceCount > 0 && c.therapistCount > 0)
-    : [];
+  const clinics: ClinicEntry[] = selectBookableClinics(catalog, therapists.employees).map((clinic) => ({
+    id: clinic.id,
+    nameAr: clinic.nameAr,
+    nameEn: clinic.nameEn,
+    descriptionAr: clinic.descriptionAr,
+    descriptionEn: clinic.descriptionEn,
+    imageUrl: clinic.imageUrl,
+    icon: clinic.iconName,
+    iconBgColor: clinic.iconBgColor,
+    therapistCount: clinic.therapistCount,
+    serviceCount: clinic.serviceCount,
+    directServiceId: clinic.directServiceId,
+  }));
 
+  const loadFailed = catalogResult.failed || therapists.failed;
   const total = clinics.length;
-  const totalTherapists = therapists.length;
+  const totalTherapists = therapists.employees.length;
+  // Real, derived count of bookable visible services (audit C3) — replaces the
+  // static certification claim.
+  const totalServices = selectBookableClinicServices(catalog, therapists.employees).length;
 
   return (
     <>
-      <ClinicsHero locale={locale} t={t} total={total} totalTherapists={totalTherapists} />
+      <ClinicsHero
+        locale={locale}
+        t={t}
+        total={total}
+        totalTherapists={totalTherapists}
+        totalServices={totalServices}
+      />
 
       <section className="relative pb-24 md:pb-28 -mt-6">
         <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
-          <ClinicsGrid clinics={clinics} locale={locale} t={t} />
+          <ClinicsGrid clinics={clinics} locale={locale} t={t} loadFailed={loadFailed} />
         </div>
       </section>
 
@@ -108,9 +108,10 @@ interface HeroProps {
   t: (key: MessageKey) => string;
   total: number;
   totalTherapists: number;
+  totalServices: number;
 }
 
-function ClinicsHero({ locale, t, total, totalTherapists }: HeroProps) {
+function ClinicsHero({ locale, t, total, totalTherapists, totalServices }: HeroProps) {
   return (
     <section
       className="relative -mt-[88px] pt-[120px] md:pt-[140px] pb-16 md:pb-20 overflow-hidden"
@@ -118,7 +119,7 @@ function ClinicsHero({ locale, t, total, totalTherapists }: HeroProps) {
         background:
           'radial-gradient(ellipse 800px 480px at 88% 12%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 60%),' +
           'radial-gradient(ellipse 720px 420px at 8% 90%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 60%),' +
-          'linear-gradient(180deg, #FBF7F2 0%, #FDFAF6 100%)',
+          'var(--sw-warm-gradient)',
       }}
     >
       <span
@@ -191,8 +192,8 @@ function ClinicsHero({ locale, t, total, totalTherapists }: HeroProps) {
             withDivider
           />
           <Stat
-            icon={<BadgeCheck className="w-7 h-7" strokeWidth={1.6} aria-hidden />}
-            label={t('clinics.statLicensed')}
+            value={String(totalServices).padStart(2, '0')}
+            label={t('clinics.statServices')}
             withDivider
           />
         </div>
@@ -262,14 +263,42 @@ interface GridProps {
   clinics: ClinicEntry[];
   locale: 'ar' | 'en';
   t: (key: MessageKey) => string;
+  loadFailed: boolean;
 }
 
-function ClinicsGrid({ clinics, locale, t }: GridProps) {
+function ClinicsGrid({ clinics, locale, t, loadFailed }: GridProps) {
+  if (loadFailed) {
+    return (
+      <div className="flex justify-center mt-8" role="alert">
+        <div
+          className="text-center py-14 px-10 bg-[var(--surface)] rounded-2xl max-w-md w-full"
+          style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
+        >
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+            style={{ background: 'var(--sw-primary-50)' }}
+          >
+            <RefreshCw className="w-6 h-6" style={{ color: 'var(--sw-primary-600)' }} />
+          </div>
+          <h3
+            className="text-base font-extrabold mb-2"
+            style={{ color: 'var(--sw-secondary-700)' }}
+          >
+            {t('clinics.loadFailedTitle')}
+          </h3>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--sw-neutral-500)' }}>
+            {t('clinics.loadFailed')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (clinics.length === 0) {
     return (
       <div className="flex justify-center mt-8">
         <div
-          className="text-center py-14 px-10 bg-white rounded-2xl max-w-md w-full"
+          className="text-center py-14 px-10 bg-[var(--surface)] rounded-2xl max-w-md w-full"
           style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
         >
           <div
@@ -294,100 +323,108 @@ function ClinicsGrid({ clinics, locale, t }: GridProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-      {clinics.map((c, i) => {
+      {clinics.map((c) => {
         const Icon = resolveIcon(c.icon);
-        const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
+        const href = c.directServiceId
+          ? `/booking?serviceId=${encodeURIComponent(c.directServiceId)}`
+          : `/booking?categoryId=${encodeURIComponent(c.id)}`;
         const name = locale === 'en' && c.nameEn ? c.nameEn : c.nameAr;
+        const description =
+          (locale === 'en' ? c.descriptionEn ?? c.descriptionAr : c.descriptionAr) ?? null;
+        const image = safeImageSrc(c.imageUrl);
         return (
           <Link
             key={c.id}
             href={href}
             aria-label={`${t('clinics.bookCta')} — ${name}`}
-            className="group relative block bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
+            className="group relative block bg-[var(--surface)] rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               border: '1px solid var(--sw-neutral-100)',
               boxShadow: 'var(--sw-shadow-xs)',
             }}
           >
-            <span
-              aria-hidden
-              className="absolute top-5 end-5 text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full"
-              style={{
-                background: 'var(--sw-primary-50)',
-                color: 'var(--sw-primary-700)',
-              }}
-            >
-              {String(i + 1).padStart(2, '0')}
-            </span>
+            {image ? (
+              <span className="relative block aspect-[3/2] w-full bg-[var(--sw-primary-50)]">
+                <Image
+                  src={image}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
+                  className="object-cover"
+                  aria-hidden
+                />
+              </span>
+            ) : null}
 
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-              style={{
-                background: c.iconBgColor
-                  ? `${c.iconBgColor}22`
-                  : 'linear-gradient(135deg, var(--sw-primary-50) 0%, color-mix(in srgb, var(--primary) 18%, transparent) 100%)',
-                boxShadow: c.iconBgColor
-                  ? `0 0 0 1px ${c.iconBgColor}33`
-                  : '0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent)',
-              }}
-            >
-              <Icon
-                className="w-7 h-7"
-                style={{ color: c.iconBgColor ?? 'var(--sw-primary-700)' }}
-                strokeWidth={1.6}
-              />
-            </div>
-
-            <span
-              className="inline-flex items-center gap-1 text-[0.65rem] font-bold px-2 py-0.5 rounded-full mb-3"
-              style={{ background: 'var(--sw-primary-50)', color: 'var(--sw-primary-700)' }}
-            >
-              <CheckCircle2 className="w-2.5 h-2.5" />
-              {t('clinics.badgeSpecialty')}
-            </span>
-
-            <h3
-              className="text-lg font-bold mb-2 leading-tight"
-              style={{ color: 'var(--sw-secondary-700)' }}
-            >
-              {name}
-            </h3>
-            <p
-              className="text-[0.875rem] leading-relaxed mb-5"
-              style={{ color: 'var(--sw-neutral-600)' }}
-            >
-              {c.descriptionAr ?? t('clinics.defaultDescription')}
-            </p>
-
-            <div
-              className="flex items-center gap-4 pt-4 mb-4"
-              style={{ borderTop: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)' }}
-            >
-              <Meter
-                value={c.therapistCount}
-                label={t('clinics.meterTherapists')}
-              />
+            <span className="block p-6">
               <span
-                aria-hidden
-                className="w-px self-stretch"
-                style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
-              />
-              <Meter
-                value={c.serviceCount}
-                label={t('clinics.meterServices')}
-              />
-            </div>
-
-            <span
-              className="inline-flex items-center gap-1.5 text-[0.75rem] font-bold uppercase tracking-wider"
-              style={{ color: 'var(--sw-primary-700)' }}
-            >
-              {t('clinics.bookCta')}
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover:-translate-x-0.5"
-                style={{ background: 'color-mix(in srgb, var(--primary) 12%, transparent)' }}
+                className="flex w-14 h-14 rounded-2xl items-center justify-center mb-5"
+                style={{
+                  background: c.iconBgColor
+                    ? `${c.iconBgColor}22`
+                    : 'linear-gradient(135deg, var(--sw-primary-50) 0%, color-mix(in srgb, var(--primary) 18%, transparent) 100%)',
+                  boxShadow: c.iconBgColor
+                    ? `0 0 0 1px ${c.iconBgColor}33`
+                    : '0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent)',
+                }}
               >
-                <ArrowLeft className="w-3 h-3" style={{ color: 'var(--sw-primary-700)' }} />
+                <Icon
+                  className="w-7 h-7"
+                  style={{ color: c.iconBgColor ?? 'var(--sw-primary-700)' }}
+                  strokeWidth={1.6}
+                />
+              </span>
+
+              <span
+                className="inline-flex items-center gap-1 text-[0.65rem] font-bold px-2 py-0.5 rounded-full mb-3"
+                style={{ background: 'var(--sw-primary-50)', color: 'var(--sw-primary-700)' }}
+              >
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                {t('clinics.badgeSpecialty')}
+              </span>
+
+              <h3
+                className="text-lg font-bold mb-2 leading-tight"
+                style={{ color: 'var(--sw-secondary-700)' }}
+              >
+                {name}
+              </h3>
+              <p
+                className="text-[0.875rem] leading-relaxed mb-5"
+                style={{ color: 'var(--sw-neutral-600)' }}
+              >
+                {description ?? t('clinics.defaultDescription')}
+              </p>
+
+              <span
+                className="flex items-center gap-4 pt-4 mb-4"
+                style={{ borderTop: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)' }}
+              >
+                <Meter
+                  value={c.therapistCount}
+                  label={t('clinics.meterTherapists')}
+                />
+                {c.serviceCount > 0 && <>
+                  <span
+                    aria-hidden
+                    className="w-px self-stretch"
+                    style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
+                  />
+                  <Meter value={c.serviceCount} label={t('clinics.meterServices')} />
+                </>}
+              </span>
+
+              <span
+                className="inline-flex items-center gap-1.5 text-[0.75rem] font-bold uppercase tracking-wider"
+                style={{ color: 'var(--sw-primary-700)' }}
+              >
+                {t('clinics.bookCta')}
+                <span
+                  className="w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover:-translate-x-0.5"
+                  style={{ background: 'color-mix(in srgb, var(--primary) 12%, transparent)' }}
+                >
+                  <ArrowLeft className="w-3 h-3" style={{ color: 'var(--sw-primary-700)' }} />
+                </span>
               </span>
             </span>
           </Link>
@@ -463,7 +500,7 @@ function NotSureCTA({ t }: { t: (key: MessageKey) => string }) {
             <div className="md:col-span-4 md:flex md:justify-end">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-6 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
                 style={{
                   color: 'var(--sw-secondary-700)',
                   boxShadow: 'var(--sw-shadow-md)',

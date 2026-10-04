@@ -865,7 +865,7 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
         if (r.status === 201 && r.body?.id) ctx.bookingIds.push(r.body.id);
       }
 
-      const statuses = [resA.status, resB.status].sort();
+      const statuses = [resA.status, resB.status].sort((a, b) => a - b);
       const successes = statuses.filter((s) => s === 201);
       const failures = statuses.filter((s) => s !== 201);
 
@@ -960,6 +960,75 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
   // ═══════════════════════════════════════════════════════════════════════════
   // 6. Manual refund
   // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("VAT enabled (15%): sale charges gross, refunds are measured against gross", () => {
+    async function setVat(rate: string) {
+      const settings = await prisma.organizationSettings.findFirst({});
+      await prisma.organizationSettings.update({ where: { id: settings!.id }, data: { vatRate: rate } });
+    }
+
+    it("invoices and collects net + VAT, keeps amountPaid net, and a full gross refund closes everything", async () => {
+      await setVat("0.15");
+      try {
+        await createPackage({
+          nameAr: tag("pack-vat"),
+          items: [validItem({ paidQuantity: 2, freeQuantity: 0 })],
+        });
+        const sale = await purchasePackage();
+        expect(sale.status).toBe(201);
+        const purchaseId = sale.body.purchase.id as string;
+        const invoiceId = sale.body.invoiceId as string;
+
+        // net 2 × 30000 = 60000; VAT 9000; gross 69000
+        const purchase = await prisma.packagePurchase.findUniqueOrThrow({ where: { id: purchaseId } });
+        expect(Number(purchase.amountPaid)).toBe(60_000);
+        const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+        expect(Number(invoice.vatRate)).toBe(0.15);
+        expect(Number(invoice.vatAmt)).toBe(9_000);
+        expect(Number(invoice.total)).toBe(69_000);
+        expect(invoice.status).toBe("PAID");
+        const payments = await prisma.payment.findMany({ where: { invoiceId } });
+        expect(payments.map((p) => Number(p.amount))).toEqual([69_000]);
+
+        // The client purchase list reports the gross amount charged.
+        const list = await withAuth(ctx.adminToken)(
+          api().get(`/api/v1/dashboard/finance/clients/${ctx.clientId}/package-purchases`),
+        );
+        expect(list.status).toBe(200);
+        const rows = Array.isArray(list.body) ? list.body : list.body.items ?? list.body.data;
+        const row = rows.find((r: { id: string }) => r.id === purchaseId);
+        expect(row).toEqual(expect.objectContaining({ amountPaid: 60_000, vatAmount: 9_000, totalCharged: 69_000 }));
+
+        // Refunding only the net amount is a partial refund now.
+        const partial = await withAuth(ctx.adminToken)(
+          api().post(`/api/v1/dashboard/finance/package-purchases/${purchaseId}/refund`),
+        ).send({ refundAmount: 60_000, notes: "net part" });
+        expect(partial.status).toBe(200);
+        expect((await prisma.packagePurchase.findUniqueOrThrow({ where: { id: purchaseId } })).status).toBe("ACTIVE");
+
+        // The remaining 9000 closes it: REFUNDED, invoice VAT fully refunded.
+        const rest = await withAuth(ctx.adminToken)(
+          api().post(`/api/v1/dashboard/finance/package-purchases/${purchaseId}/refund`),
+        ).send({ refundAmount: 9_000, notes: "VAT part" });
+        expect(rest.status).toBe(200);
+        const after = await prisma.packagePurchase.findUniqueOrThrow({ where: { id: purchaseId } });
+        expect(after.status).toBe("REFUNDED");
+        expect(Number(after.refundAmount)).toBe(69_000);
+        const invoiceAfter = await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+        expect(invoiceAfter.status).toBe("REFUNDED");
+        expect(Number(invoiceAfter.refundedAmount)).toBe(69_000);
+        expect(Number(invoiceAfter.refundedVatAmt)).toBe(9_000);
+
+        // Nothing is left to refund.
+        const over = await withAuth(ctx.adminToken)(
+          api().post(`/api/v1/dashboard/finance/package-purchases/${purchaseId}/refund`),
+        ).send({ refundAmount: 1, notes: "over" });
+        expect(over.status).toBe(400);
+      } finally {
+        await setVat("0");
+      }
+    });
+  });
 
   describe("Manual refund: REFUNDED + voided credits (refunded credit no longer bookable)", () => {
     it("marks the purchase REFUNDED, records the refund, and voids the credits", async () => {

@@ -63,6 +63,18 @@ export const verifyMobileOtp = async (body: VerifyOtpPayload): Promise<VerifiedM
   return { ...data, sessionEpoch: epoch };
 };
 
+export const loginReviewAccount = async (body: { email: string; password: string }): Promise<VerifiedMobileOtpResponse> => {
+  const epoch = beginSession();
+  const { data } = await api.post<VerifyOtpResponse>('/mobile/auth/review-login', body);
+  if (!isSessionCurrent(epoch)) throw new SessionSupersededError();
+  if (data.sessionKind !== 'client' || !data.tokens?.accessToken || !data.tokens?.refreshToken) {
+    throw new Error('Invalid review account response');
+  }
+  const persisted = await persistSessionTokensAtEpoch(data.tokens, epoch);
+  if (!persisted || !isSessionCurrent(epoch)) throw new SessionSupersededError();
+  return { ...data, sessionEpoch: epoch };
+};
+
 export const requestEmailVerification = async () => {
   await assertStaffSession('request email verification');
   return api.post<{ success: true }>('/mobile/auth/request-email-verification').then(r => r.data);
@@ -300,12 +312,12 @@ async function assertStaffSession(action: string): Promise<void> {
 
 function decodeBase64Url(value: string): string {
   if (!value) return '';
-  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const normalized = value.replaceAll('-', '+').replaceAll('_', '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
   if (typeof globalThis.atob === 'function') {
     const binary = globalThis.atob(padded);
     try {
-      return decodeURIComponent(Array.from(binary, (char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`).join(''));
+      return decodeURIComponent(Array.from(binary, (char) => `%${(char.codePointAt(0) ?? 0).toString(16).padStart(2, '0')}`).join(''));
     } catch {
       return binary;
     }

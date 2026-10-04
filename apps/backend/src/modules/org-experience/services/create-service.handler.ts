@@ -28,6 +28,12 @@ export class CreateServiceHandler {
   async execute(dto: CreateServiceCommand) {
     this.validateBusinessRules(dto);
 
+    // See docs/architecture/clinic-service-booking-contract.md: only category creation owns DIRECT's internal service.
+    const category = await this.prisma.serviceCategory.findFirst({ where: { id: dto.categoryId }, select: { bookingMode: true } });
+    if (category?.bookingMode === 'DIRECT') {
+      throw new BadRequestException('DIRECT clinic services are managed by the clinic');
+    }
+
     const existing = await this.prisma.service.findFirst({
       where: {
         archivedAt: null,

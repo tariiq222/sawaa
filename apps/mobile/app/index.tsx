@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AquaBackground } from '@/theme/sawaa';
+import { useTheme } from '@/theme/useTheme';
 
 import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
@@ -13,6 +15,7 @@ import {
 import { getPrimaryRole } from '@/types/auth';
 
 export default function IndexScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { token, user } = useAppSelector((state) => state.auth);
@@ -89,7 +92,7 @@ export default function IndexScreen() {
     if (hydrating) return;
 
     if (!token || !user) {
-      router.replace('/(auth)/login');
+      router.replace('/(guest)/home');
       return;
     }
 
@@ -103,9 +106,11 @@ export default function IndexScreen() {
 
   if (hydrating) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FB' }}>
-        <ActivityIndicator size="large" color="#1D4ED8" />
-      </View>
+      <AquaBackground>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </AquaBackground>
     );
   }
 

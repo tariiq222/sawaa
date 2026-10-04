@@ -19,6 +19,7 @@ import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/money"
+import { isDirectClinicBookingService } from "@/lib/service-catalog"
 import type { Service } from "@/lib/types/service"
 import { ServiceAvatar } from "@/components/features/shared/service-avatar"
 
@@ -107,7 +108,11 @@ export function ServiceDetailSheet({
               yes={t("services.status.active")}
               no={t("services.status.inactive")}
             />
-            {service.isHidden && (
+            {isDirectClinicBookingService(service) ? (
+              <Badge variant="outline" className="text-xs border-primary/20 bg-primary/5 text-primary">
+                {t("services.clinicBooking")}
+              </Badge>
+            ) : service.isHidden && (
               <Badge variant="outline" className="text-xs border-warning/30 bg-warning/10 text-warning">
                 {t("services.display.hideService")}
               </Badge>

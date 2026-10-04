@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType, Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { BookingZoomCreateRequestedEvent } from '../events/booking-zoom-create-requested.event';
 
 interface DepositPaidPayload {
   paymentId: string;
@@ -18,11 +19,9 @@ interface DepositPaidPayload {
  *
  * Fired when a client pays the EXACT configured service deposit (the invoice is
  * PARTIALLY_PAID, not PAID). Moves the booking PENDING|AWAITING_PAYMENT →
- * DEPOSIT_PAID, reserving the staff time while a balance stays due.
- *
- * Does NOT confirm the appointment and does NOT provision Zoom — the meeting is
- * only created once the booking reaches CONFIRMED (when the remaining balance is
- * settled, which emits PaymentCompletedEvent and runs the confirm path).
+ * DEPOSIT_PAID, operationally confirming the appointment while a balance stays due.
+ * ONLINE appointments stage a durable Zoom request in the confirmation transaction;
+ * invoice/payment balances remain untouched.
  *
  * Idempotent: if the booking is already DEPOSIT_PAID (or any state that does not
  * permit DEPOSIT_CONFIRMED), the duplicate event is skipped silently. Mirrors
@@ -77,25 +76,42 @@ export class DepositPaidEventHandler {
               role: 'system',
               isSuperAdmin: false,
             });
-            await this.rlsTransaction.withTransaction((tx) =>
-              Promise.all([
-                updateBookingAtomically(tx, {
+            const zoomEvent = booking.deliveryType === DeliveryType.ONLINE && !booking.zoomMeetingId
+              ? new BookingZoomCreateRequestedEvent({ organizationId: DEFAULT_ORG_ID, bookingId })
+              : null;
+            await this.rlsTransaction.withTransaction(async (tx) => {
+              await updateBookingAtomically(tx, {
+                bookingId,
+                currentStatus: booking.status,
+                actionLabel: 'deposit paid',
+                data: { status: nextStatus, confirmedAt: booking.confirmedAt ?? new Date() },
+              });
+              await tx.bookingStatusLog.create({
+                data: {
                   bookingId,
-                  currentStatus: booking.status,
-                  actionLabel: 'deposit paid',
-                  data: { status: nextStatus },
-                }),
-                tx.bookingStatusLog.create({
-                  data: {
-                    bookingId,
-                    fromStatus: booking.status,
-                    toStatus: nextStatus,
-                    changedBy: 'system',
-                    reason: `deposit:${paymentId}`,
+                  fromStatus: booking.status,
+                  toStatus: nextStatus,
+                  changedBy: 'system',
+                  reason: `deposit:${paymentId}`,
+                },
+              });
+              if (zoomEvent) {
+                // The event's booking-derived identity also covers later full
+                // settlement. Never reset an already-published request on replay.
+                await tx.outboxEvent.upsert({
+                  where: { id: zoomEvent.eventId },
+                  update: {},
+                  create: {
+                    id: zoomEvent.eventId,
+                    aggregateId: bookingId,
+                    eventType: zoomEvent.eventName,
+                    status: 'PENDING_V2',
+                    deliveryLane: 'PENDING_V2',
+                    payload: zoomEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
                   },
-                }),
-              ]),
-            );
+                });
+              }
+            });
           });
         } catch (err) {
           this.logger.error(`Failed to mark booking ${bookingId} DEPOSIT_PAID after deposit`, err);

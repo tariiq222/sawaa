@@ -220,6 +220,8 @@ export const arMisc: Record<string, string> = {
 
   // — Notifications —
   "notifications.title": "الإشعارات",
+  "notifications.loadError": "تعذّر تحميل الإشعارات. حاول مرة أخرى.",
+  "notifications.retry": "إعادة المحاولة",
   "notifications.description": "ابقَ على اطلاع بنشاط العيادة",
   "notifications.markAllRead": "تحديد الكل كمقروء",
   "notifications.unread": "غير مقروءة",

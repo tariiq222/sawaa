@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { BookingStatus, CancellationReason, RefundType } from "@prisma/client";
 import {
 	PrismaService,
@@ -38,42 +38,38 @@ export class ExpireBookingHandler {
 			[
 				BookingStatus.PENDING,
 				BookingStatus.AWAITING_PAYMENT,
-				BookingStatus.DEPOSIT_PAID,
 			],
 			"expired",
 		);
+		const now = new Date();
+		if (!booking.expiresAt || booking.expiresAt >= now) {
+			throw new BadRequestException("Booking has no elapsed expiry deadline");
+		}
 		const nextStatus = assertTransition(booking.status, "EXPIRE");
 
-		// MONEY-SAFETY (P1): a booking can be expired after a deposit has been
-		// collected (invoice PARTIALLY_PAID). Mirror the cancel-booking refund
-		// path so the captured payment is refunded in FULL instead of being
-		// silently forfeited.
-		// Read only after the booking CAS inside the transaction so a payment
-		// committed while expiry was waiting cannot be missed.
+		// Read payments after the expiry CAS so a payment committed while expiry
+		// was waiting cannot be missed. Deposit-confirmed bookings cannot expire.
 		let refundRequestId: string | null = null;
 		let idempotencyKey: string | null = null;
 
 		const { updated, completedPayment } = await this.rlsTransaction.withTransaction(async (tx) => {
-			const [expiredBooking] = await Promise.all([
-				// Guarded status write: updateMany where status=currentStatus +
-				// assert count===1, so a concurrent PAYMENT_CONFIRMED/expire race
-				// cannot double-write or expire an already-confirmed booking (and
-				// double-refund). Mirrors complete-/no-show-booking.handler.
-				updateBookingAtomically(tx, {
+			// Recheck the deadline, historical flag and selected status in the same
+			// write so stale cron selections cannot expire a changed booking.
+			const expiredBooking = await updateBookingAtomically(tx, {
+				bookingId: cmd.bookingId,
+				currentStatus: booking.status,
+				actionLabel: "expired",
+				extraWhere: { isHistoricalImport: false, expiresAt: { lt: now } },
+				data: { status: nextStatus, expiresAt: now },
+			});
+			await tx.bookingStatusLog.create({
+				data: {
 					bookingId: cmd.bookingId,
-					currentStatus: booking.status,
-					actionLabel: "expired",
-					data: { status: nextStatus, expiresAt: new Date() },
-				}),
-				tx.bookingStatusLog.create({
-					data: {
-						bookingId: cmd.bookingId,
-						fromStatus: booking.status,
-						toStatus: nextStatus,
-						changedBy: cmd.changedBy,
-					},
-				}),
-			]);
+					fromStatus: booking.status,
+					toStatus: nextStatus,
+					changedBy: cmd.changedBy,
+				},
+			});
 			const completedPayment = await tx.payment.findFirst({
 				where: { invoice: { bookingId: booking.id }, status: "COMPLETED" },
 				select: { id: true, amount: true, refundedAmount: true },

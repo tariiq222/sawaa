@@ -1,3 +1,4 @@
+import { ClientCancellationPreviewHandler } from '../../modules/bookings/client/client-cancellation-preview.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -22,12 +23,14 @@ describe('PublicMeController (e2e)', () => {
   const mockCancel = { execute: jest.fn() };
   const mockReschedule = { execute: jest.fn() };
   const mockGetClientBooking = { execute: jest.fn() };
+  const mockPreview = { execute: jest.fn() };
   const mockGetInvoice = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicMeController],
       providers: [
+        { provide: ClientCancellationPreviewHandler, useValue: mockPreview },
         { provide: GetMeHandler, useValue: mockGetMe },
         { provide: UpdateClientProfileHandler, useValue: mockUpdateProfile },
         { provide: ListClientInvoicesHandler, useValue: mockListInvoices },
@@ -60,6 +63,13 @@ describe('PublicMeController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('passes authenticated ownership to the cancellation preview', async () => {
+    mockPreview.execute.mockResolvedValue({ policyEnabled: true, canCancel: true });
+    const id = '11111111-1111-4111-8111-111111111111';
+    await request(app.getHttpServer()).get(`/public/me/bookings/${id}/cancellation-preview`).expect(200);
+    expect(mockPreview.execute).toHaveBeenCalledWith(id, 'client-1');
   });
 
   describe('GET /public/me', () => {
@@ -158,6 +168,12 @@ describe('PublicMeController (e2e)', () => {
   });
 
   describe('GET /public/me/bookings', () => {
+    it('validates and forwards the selected tab with the authenticated client', async () => {
+      mockListBookings.execute.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+      await request(app.getHttpServer()).get('/public/me/bookings?pageSize=50&tab=upcoming').expect(200);
+      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 50, 'upcoming');
+      await request(app.getHttpServer()).get('/public/me/bookings?tab=invalid').expect(400);
+    });
     it('returns 200 with paginated bookings', async () => {
       mockListBookings.execute.mockResolvedValue({
         data: [{ id: 'b-1', status: 'CONFIRMED' }],
@@ -172,7 +188,7 @@ describe('PublicMeController (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toHaveLength(1);
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 10);
+      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 10, undefined);
     });
 
     it('passes page and pageSize query params', async () => {
@@ -183,7 +199,7 @@ describe('PublicMeController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 2, 5);
+      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 2, 5, undefined);
     });
   });
 

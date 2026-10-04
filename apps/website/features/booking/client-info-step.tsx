@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useState, useId, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { AvailableSlot, Service, EmployeeWithUser } from '@sawaa/shared';
+import type { PublicPaymentMethods } from '@/features/booking/booking.api';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { normalizeSaudiPhone } from '@/features/auth/auth.schema';
-import { setClient as setAuthClient } from '@/features/auth/auth-store';
-import { useCurrentClient } from '@/features/auth/use-current-client';
+import { getAuthGeneration, setClient as setAuthClient } from '@/features/auth/auth-store';
+import { CURRENT_CLIENT_QUERY_KEY, useCurrentClient } from '@/features/auth/use-current-client';
 import { RegisterForm } from '@/features/auth/register-form';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { therapistDisplayName } from './therapist-name';
@@ -16,7 +18,7 @@ interface ClientInfoStepProps {
   service: Service;
   employee: EmployeeWithUser;
   /**
-   * Fractional org VAT rate (0.15 = 15%). Display-only: the total is shown
+   * Fractional org VAT rate (a fraction of 1, 0 when VAT is off). Display-only: the total is shown
    * VAT-inclusive when > 0; the backend computes the real invoice.
    */
   vatRate?: number;
@@ -29,6 +31,15 @@ interface ClientInfoStepProps {
   selectedPriceHalalas?: number;
   /** @deprecated back is handled by the wizard header — kept for compatibility */
   onBack?: () => void;
+  /**
+   * Payment capabilities for this deployment. `undefined` while the lookup is
+   * still in flight or after it failed: a paid booking is never submitted on a
+   * guess, because the backend rejects a disabled method outright (400) and the
+   * whole booking is lost.
+   */
+  paymentMethods: PublicPaymentMethods | undefined;
+  /** True only while the capability lookup is in flight (drives the copy). */
+  paymentMethodsLoading: boolean;
   /** Confirm the booking using the selected collection path. */
   onSubmitInfo: (payAtClinic: boolean) => void;
   isSubmitting: boolean;
@@ -42,7 +53,7 @@ const fieldLabelStyle = {
 };
 
 const baseInputClass =
-  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 placeholder:opacity-40';
+  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-[var(--surface)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 placeholder:opacity-40';
 
 function inputStyle(invalid: boolean): React.CSSProperties {
   return {
@@ -66,17 +77,21 @@ function FieldIcon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedPriceHalalas, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
+export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedPriceHalalas, onSubmitInfo, isSubmitting, paymentMethods, paymentMethodsLoading }: ClientInfoStepProps) {
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
+  const queryClient = useQueryClient();
   const { client, isLoading: clientLoading, refetch } = useCurrentClient();
 
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<WebsitePaymentMethod>('ONLINE');
+  // Only the methods the backend can actually accept are offered: the dashboard
+  // can disable online payment (or the center can disable pay-at-clinic), and
+  // submitting a disabled one makes the backend reject the whole booking.
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<WebsitePaymentMethod | null>(null);
   // Inline registration: keep the user inside the booking wizard instead of
   // navigating to /register (which would unmount the wizard and lose the
   // selected service / therapist / slot). The RegisterForm handles its own
@@ -87,6 +102,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const passwordInputId = useId();
 
   const handleInlineLogin = async () => {
+    if (clientLoading || client || loginLoading) return;
     setLoginError(null);
     // Phone-first login — mirrors the standalone /login page. Registration on
     // the website is phone-first, so the inline booking login must accept a
@@ -103,9 +119,11 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
     setLoginLoading(true);
     try {
       await clientLoginApi({ phone: normalizedPhone, password: loginPassword });
+      const generation = getAuthGeneration();
       const me = await getMeApi();
+      if (generation !== getAuthGeneration()) return;
       setAuthClient(me);
-      await refetch();
+      queryClient.setQueryData(CURRENT_CLIENT_QUERY_KEY, me);
     } catch (err) {
       setLoginError(
         err instanceof Error
@@ -148,7 +166,43 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   }).format(halalasToSarNumber(grossWithVat(effectivePrice, vatRate)));
   const vatPercent = Math.round(vatRate * 100);
   const isPaidBooking = effectivePrice > 0;
+  const enabledPaymentMethods = useMemo<WebsitePaymentMethod[]>(() => {
+    const methods: WebsitePaymentMethod[] = [];
+    if (paymentMethods?.moyasarEnabled) methods.push('ONLINE');
+    if (paymentMethods?.atClinicEnabled) methods.push('AT_CENTER');
+    return methods;
+  }, [paymentMethods]);
+  // The choices rendered are exactly the enabled ones — never a method the
+  // backend would reject.
+  const paymentMethodOptions = useMemo(
+    () =>
+      [
+        {
+          value: 'ONLINE' as const,
+          label: t('booking.paymentMethod.online'),
+          description: t('booking.paymentMethod.onlineDesc'),
+        },
+        {
+          value: 'AT_CENTER' as const,
+          label: t('booking.paymentMethod.atCenter'),
+          description: t('booking.paymentMethod.atCenterDesc'),
+        },
+      ].filter((option) => enabledPaymentMethods.includes(option.value)),
+    [enabledPaymentMethods, t],
+  );
+  // Online stays the default when it is available (unchanged behaviour for a
+  // fully-enabled center); otherwise the first enabled method wins. A selection
+  // that is no longer enabled (settings changed mid-session) is dropped instead
+  // of being submitted.
+  const paymentMethod: WebsitePaymentMethod | null =
+    selectedPaymentMethod && enabledPaymentMethods.includes(selectedPaymentMethod)
+      ? selectedPaymentMethod
+      : enabledPaymentMethods[0] ?? null;
   const payAtClinic = isPaidBooking && paymentMethod === 'AT_CENTER';
+  // A paid booking with no enabled method cannot be confirmed at all — the
+  // backend would reject it (and earlier it rejected it *after* the customer
+  // believed the booking went through).
+  const noPaymentMethodAvailable = isPaidBooking && enabledPaymentMethods.length === 0;
 
   const isAuthed = client !== null;
 
@@ -175,10 +229,11 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         </p>
       </header>
 
-      {/* === Loading the session === */}
+      {/* === Checking the session without hiding the sign-in form === */}
       {clientLoading && !isAuthed && (
         <div
-          className="flex items-center justify-center gap-2 py-8 text-sm"
+          role="status"
+          className="flex items-center justify-center gap-2 py-2 text-sm"
           style={{ color: 'var(--sw-body)' }}
         >
           <span
@@ -190,8 +245,9 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         </div>
       )}
 
-      {/* === NOT LOGGED IN: sign-in invitation + inline login === */}
-      {!clientLoading && !isAuthed && (
+      {/* Keep the sign-in form visible while the session check runs. The
+          submit action stays disabled until we know whether a session exists. */}
+      {!isAuthed && (
         <div className="flex flex-col gap-4">
           {/* Segmented control: switch between inline sign-in and inline
               registration without leaving the booking wizard. The two buttons
@@ -217,7 +273,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                 authMode === 'signin'
                   ? {
                       background: 'var(--primary)',
-                      color: '#FFFFFF',
+                      color: 'var(--on-primary)',
                       boxShadow: 'var(--sw-shadow-xs)',
                     }
                   : {
@@ -233,12 +289,13 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               role="tab"
               aria-selected={authMode === 'register'}
               onClick={() => setAuthMode('register')}
+              disabled={clientLoading}
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer"
               style={
                 authMode === 'register'
                   ? {
                       background: 'var(--primary)',
-                      color: '#FFFFFF',
+                      color: 'var(--on-primary)',
                       boxShadow: 'var(--sw-shadow-xs)',
                     }
                   : {
@@ -254,7 +311,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
           {authMode === 'signin' && (
             <form
               data-testid="inline-signin"
-              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
+              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-[var(--surface)]"
               style={{
                 border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                 boxShadow: 'var(--sw-shadow-sm)',
@@ -337,11 +394,11 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
 
               <button
                 type="submit"
-                disabled={loginLoading}
+                disabled={loginLoading || clientLoading}
                 className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99] enabled:cursor-pointer"
                 style={{
                   background: 'var(--primary)',
-                  color: '#FFFFFF',
+                  color: 'var(--on-primary)',
                   boxShadow: 'var(--sw-shadow-primary)',
                 }}
               >
@@ -349,6 +406,8 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   ? isAr
                     ? 'جاري الدخول…'
                     : 'Signing in…'
+                  : clientLoading
+                    ? isAr ? 'جارٍ التحقق من حسابك…' : 'Checking your account…'
                   : isAr
                     ? 'تسجيل الدخول'
                     : 'Sign in'}
@@ -366,10 +425,10 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
             </form>
           )}
 
-          {authMode === 'register' && (
+          {authMode === 'register' && !clientLoading && (
             <div
               data-testid="inline-register"
-              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
+              className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-[var(--surface)]"
               style={{
                 border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                 boxShadow: 'var(--sw-shadow-sm)',
@@ -386,7 +445,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         <>
           <section
             aria-label={isAr ? 'بيانات الحساب' : 'Account details'}
-            className="flex flex-col gap-3 p-4 rounded-[1.25rem] bg-white"
+            className="flex flex-col gap-3 p-4 rounded-[1.25rem] bg-[var(--surface)]"
             style={{
               border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
               boxShadow: 'var(--sw-shadow-xs)',
@@ -402,7 +461,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
             className="mt-1 flex flex-col gap-4 p-5 sm:p-6 rounded-[1.25rem]"
             style={{
               background:
-                'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, #FFFDF8) 0%, color-mix(in srgb, var(--accent) 14%, #FFFDF8) 100%)',
+                'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 14%, var(--surface)) 100%)',
               border: '1px solid color-mix(in srgb, var(--accent-dark) 28%, transparent)',
               boxShadow: 'var(--sw-shadow-sm)',
             }}
@@ -458,7 +517,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               </span>
             </div>
 
-            {isPaidBooking && (
+            {isPaidBooking && paymentMethodOptions.length > 0 && (
               <fieldset className="flex flex-col gap-2.5 pt-1">
                 <legend
                   className="mb-2 text-xs font-extrabold"
@@ -467,25 +526,12 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   {t('booking.paymentMethod.title')}
                 </legend>
 
-                {(
-                  [
-                    {
-                      value: 'ONLINE' as const,
-                      label: t('booking.paymentMethod.online'),
-                      description: t('booking.paymentMethod.onlineDesc'),
-                    },
-                    {
-                      value: 'AT_CENTER' as const,
-                      label: t('booking.paymentMethod.atCenter'),
-                      description: t('booking.paymentMethod.atCenterDesc'),
-                    },
-                  ]
-                ).map((option) => {
+                {paymentMethodOptions.map((option) => {
                   const selected = paymentMethod === option.value;
                   return (
                     <label
                       key={option.value}
-                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3.5 transition-all"
+                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-[var(--surface)] p-3.5 transition-all"
                       style={{
                         border: selected
                           ? '1.5px solid var(--primary)'
@@ -498,7 +544,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                         name="booking-payment-method"
                         value={option.value}
                         checked={selected}
-                        onChange={() => setPaymentMethod(option.value)}
+                        onChange={() => setSelectedPaymentMethod(option.value)}
                         disabled={isSubmitting}
                         className="h-4 w-4 shrink-0 accent-[var(--primary)]"
                       />
@@ -516,16 +562,31 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
               </fieldset>
             )}
 
+            {noPaymentMethodAvailable && (
+              <p
+                role="status"
+                className="rounded-xl px-3.5 py-3 text-xs font-medium leading-relaxed"
+                style={{
+                  background: 'color-mix(in srgb, var(--error) 8%, transparent)',
+                  color: 'var(--error)',
+                }}
+              >
+                {paymentMethodsLoading
+                  ? t('booking.paymentMethod.checking')
+                  : t('booking.paymentMethod.unavailable')}
+              </p>
+            )}
+
             <button
               type="button"
               onClick={() => onSubmitInfo(payAtClinic)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || noPaymentMethodAvailable}
               className="mt-1 inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
               style={{
                 background: 'var(--primary)',
-                color: '#FFFFFF',
-                boxShadow: isSubmitting ? 'none' : 'var(--sw-shadow-primary)',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                color: 'var(--on-primary)',
+                boxShadow: isSubmitting || noPaymentMethodAvailable ? 'none' : 'var(--sw-shadow-primary)',
+                cursor: isSubmitting || noPaymentMethodAvailable ? 'not-allowed' : 'pointer',
               }}
             >
               {isSubmitting ? (
@@ -545,15 +606,15 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   {payAtClinic || !isPaidBooking
                     ? t('booking.confirmBooking')
                     : t('booking.confirmAndPay')}
-                  <svg viewBox="0 0 16 16" className="h-4 w-4 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 4l4 4-4 4" />
-                    <path d="M2 8h12" />
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                    <path d="M7 3v4M17 3v4M3 10h18m-12 6 2 2 4-4" />
                   </svg>
                 </>
               )}
             </button>
 
-            {!payAtClinic && isPaidBooking && (
+            {!noPaymentMethodAvailable && !payAtClinic && isPaidBooking && (
               <p
                 className="flex items-center justify-center gap-1.5 text-[0.6875rem] font-medium"
                 style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 48%, transparent)' }}
@@ -563,6 +624,14 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
                   <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
                 </svg>
                 {t('booking.paymentMethod.secureMoyasar')}
+              </p>
+            )}
+            {!noPaymentMethodAvailable && !payAtClinic && isPaidBooking && (
+              <p
+                className="text-center text-[0.6875rem]"
+                style={{ color: 'var(--sw-neutral-500)' }}
+              >
+                {t('booking.paymentMethod.redirectNote')}
               </p>
             )}
           </section>

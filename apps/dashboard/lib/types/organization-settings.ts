@@ -1,3 +1,5 @@
+import type { BankTransferAccount } from "@sawaa/shared"
+
 /**
  * Organization Settings Types — Sawaa Dashboard
  */
@@ -30,6 +32,8 @@ export interface OrganizationSettings {
   weekStartDay: string
   dateFormat: string
   timeFormat: string
+  paymentBankTransferEnabled?: boolean
+  bankTransferAccounts?: BankTransferAccount[]
   emailHeaderShowLogo: boolean
   emailHeaderShowName: boolean
   emailFooterPhone: string | null
@@ -49,4 +53,3 @@ export interface OrganizationSettings {
 export type UpdateOrganizationSettingsPayload = Partial<
   Omit<OrganizationSettings, "id" | "createdAt" | "updatedAt">
 >
-

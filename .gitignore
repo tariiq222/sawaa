@@ -107,6 +107,10 @@ docs/*
 !docs/performance/
 docs/performance/*
 !docs/performance/capacity-runbook.md
+!docs/audits/
+!docs/audits/**
+# Contains a QA login in clear text — keep local only
+docs/audits/2026-06-29-website-integration-audit.md
 .superpowers/
 _archived_dashboard/
 
@@ -124,6 +128,8 @@ graphify-out/
 .worktrees/
 testsprite_tests/
 test-results/
+.dsh-auto/
+.scannerwork/
 
 # ─── Sawaa Orchestrator runtime state (local-only) ────────────
 .kilo/orchestrator/tasks/
@@ -146,11 +152,9 @@ secrets/
 credentials.local.md
 sawaa-prod-secrets.md
 
-# Tariq AI Orchestration
+# Local data ops — backups, comparison reports, backfill scripts (contains real client data)
 .tariq/memory/
 .tariq/memory/store.db
-
-# Local data ops — backups, comparison reports, backfill scripts (contains real client data)
 .sawaa-data/
 
 # Ad-hoc review/migration artifacts — SQL dumps + reports with real client data
@@ -162,3 +166,12 @@ outputs/
 # Local package cache and agent runtime records
 .pnpm-store/
 .agent-teams/
+
+# Mobile release documentation and approved public screenshots
+!docs/mobile-app/
+
+# Canonical clinic/service developer contract
+!docs/architecture/
+docs/architecture/*
+!docs/architecture/clinic-service-booking-contract.md
+!docs/architecture/mobile-client-flow.md

@@ -1,3 +1,6 @@
+import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
+import { ClientCancelBookingHandler } from '../../../modules/bookings/client/client-cancel-booking.handler';
+import { ClientCancellationOutcomeHandler } from '../../../modules/bookings/client/client-cancellation-outcome.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -5,7 +8,8 @@ import { MobileClientBookingsController } from './bookings.controller';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
-import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { CancelApprovalRequiredException, CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
 import { CreateZoomMeetingHandler } from '../../../modules/bookings/create-zoom-meeting/create-zoom-meeting.handler';
@@ -16,10 +20,14 @@ import { ClientSessionGuard } from '../../../common/guards/client-session.guard'
 describe('MobileClientBookingsController (e2e)', () => {
   let app: INestApplication;
 
+  const mockPreview = { execute: jest.fn().mockResolvedValue({ policyEnabled: false }) };
+  const mockClientCancel = { execute: jest.fn() };
+  const mockOutcome = { execute: jest.fn() };
   const mockList = { execute: jest.fn() };
   const mockGet = { execute: jest.fn() };
   const mockCreate = { execute: jest.fn() };
   const mockCancel = { execute: jest.fn() };
+  const mockRequestCancel = { execute: jest.fn() };
   const mockReschedule = { execute: jest.fn() };
   const mockRate = { execute: jest.fn() };
   const mockZoom = { execute: jest.fn() };
@@ -29,10 +37,14 @@ describe('MobileClientBookingsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileClientBookingsController],
       providers: [
+        { provide: ClientCancellationPreviewHandler, useValue: mockPreview },
+        { provide: ClientCancelBookingHandler, useValue: mockClientCancel },
+        { provide: ClientCancellationOutcomeHandler, useValue: mockOutcome },
         { provide: ListBookingsHandler, useValue: mockList },
         { provide: GetBookingHandler, useValue: mockGet },
         { provide: CreateBookingHandler, useValue: mockCreate },
         { provide: CancelBookingHandler, useValue: mockCancel },
+        { provide: RequestCancelBookingHandler, useValue: mockRequestCancel },
         { provide: ClientRescheduleBookingHandler, useValue: mockReschedule },
         { provide: SubmitRatingHandler, useValue: mockRate },
         { provide: CreateZoomMeetingHandler, useValue: mockZoom },
@@ -62,6 +74,25 @@ describe('MobileClientBookingsController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    mockPreview.execute.mockResolvedValue({ policyEnabled: false });
+  });
+
+  it('includes the persisted refund outcome on lower-case mapped cancelled detail', async () => {
+    mockGet.execute.mockResolvedValue({ id: bookingId, status: 'cancelled' });
+    mockOutcome.execute.mockResolvedValue({ status: 'COMPLETED', completedAmount: 5000 });
+    const response = await request(app.getHttpServer()).get(`/mobile/client/bookings/${bookingId}`).expect(200);
+    expect(response.body.cancellationRefund).toEqual({ status: 'COMPLETED', completedAmount: 5000 });
+    expect(mockOutcome.execute).toHaveBeenCalledWith(bookingId, 'client-1');
+  });
+
+  it('uses the enabled shared policy and preserves old top-level booking fields', async () => {
+    mockPreview.execute.mockResolvedValue({ policyEnabled: true });
+    mockClientCancel.execute.mockResolvedValue({ status: 'CANCELLED', booking: { id: bookingId, status: 'CANCELLED' }, requiresApproval: false, refund: { status: 'PROCESSING' } });
+    const action = '11111111-1111-4111-8111-111111111111';
+    const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`).send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Changed plans', quoteToken: 'preview', sourceActionId: action }).expect(200);
+    expect(res.body).toMatchObject({ id: bookingId, status: 'CANCELLED', refund: { status: 'PROCESSING' } });
+    expect(mockClientCancel.execute).toHaveBeenCalledWith({ bookingId, clientId: 'client-1', reason: 'Changed plans', quoteToken: 'preview', sourceActionId: action });
+    expect(mockCancel.execute).not.toHaveBeenCalled();
   });
 
   const bookingId = '00000000-0000-4000-a000-000000000001';
@@ -101,6 +132,28 @@ describe('MobileClientBookingsController (e2e)', () => {
         .expect(400);
     });
 
+    it('forwards payAtClinic so a client can book and pay at the center', async () => {
+      mockCreate.execute.mockResolvedValue({ id: 'b-2', status: 'CONFIRMED', invoiceId: null });
+
+      await request(app.getHttpServer())
+        .post('/mobile/client/bookings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validBooking, payAtClinic: true })
+        .expect(201);
+
+      expect(mockCreate.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ payAtClinic: true, source: 'ONLINE' }),
+      );
+    });
+
+    it('rejects a non-boolean payAtClinic instead of coercing it', async () => {
+      return request(app.getHttpServer())
+        .post('/mobile/client/bookings')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validBooking, payAtClinic: 'true' })
+        .expect(400);
+    });
+
     it('returns 400 for unknown fields', async () => {
       return request(app.getHttpServer())
         .post('/mobile/client/bookings')
@@ -111,6 +164,16 @@ describe('MobileClientBookingsController (e2e)', () => {
   });
 
   describe('GET /mobile/client/bookings', () => {
+    it('passes a validated tab and pagination with the authenticated client scope', async () => {
+      mockList.execute.mockResolvedValue({ items: [], meta: { total: 0 } });
+      await request(app.getHttpServer()).get('/mobile/client/bookings?tab=upcoming&page=2&limit=50').expect(200);
+      expect(mockList.execute).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'client-1', clientTab: 'upcoming', page: 2, limit: 50 }));
+    });
+    it('rejects invalid tabs and caller-provided client identity', async () => {
+      await request(app.getHttpServer()).get('/mobile/client/bookings?tab=invalid').expect(400);
+      await request(app.getHttpServer()).get('/mobile/client/bookings?tab=past&clientId=other-client').expect(400);
+      expect(mockList.execute).not.toHaveBeenCalled();
+    });
     it('returns 200 with paginated bookings', async () => {
       mockList.execute.mockResolvedValue({ data: [{ id: 'b-1' }], total: 1, page: 1, limit: 20 });
 
@@ -167,6 +230,40 @@ describe('MobileClientBookingsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.status).toBe('CANCELLED');
+    });
+
+    it('turns the cancel into a cancellation request when the branch requires approval', async () => {
+      mockCancel.execute.mockRejectedValue(new CancelApprovalRequiredException());
+      mockBookingAction.executeForRate.mockResolvedValue({ id: bookingId, clientId: 'client-1', employeeId: 'emp-1' });
+      mockRequestCancel.execute.mockResolvedValue({ id: bookingId, status: 'CANCEL_REQUESTED' });
+
+      const res = await request(app.getHttpServer())
+        .patch(`/mobile/client/bookings/${bookingId}/cancel`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Change of plans' })
+        .expect(200);
+
+      expect(res.body.status).toBe('CANCEL_REQUESTED');
+      expect(mockBookingAction.executeForRate).toHaveBeenCalledWith(bookingId, 'client-1');
+      expect(mockRequestCancel.execute).toHaveBeenCalledWith({
+        bookingId,
+        reason: 'CLIENT_REQUESTED',
+        cancelNotes: 'Change of plans',
+        requestedBy: 'client-1',
+      });
+    });
+
+    it('does not request cancellation for a booking that belongs to another client', async () => {
+      mockCancel.execute.mockRejectedValue(new CancelApprovalRequiredException());
+      mockBookingAction.executeForRate.mockRejectedValue(new ForbiddenException('Not your booking'));
+
+      await request(app.getHttpServer())
+        .patch(`/mobile/client/bookings/${bookingId}/cancel`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ reason: 'CLIENT_REQUESTED' })
+        .expect(403);
+
+      expect(mockRequestCancel.execute).not.toHaveBeenCalled();
     });
 
     it('returns 400 for invalid reason', async () => {

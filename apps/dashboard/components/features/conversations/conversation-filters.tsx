@@ -3,6 +3,7 @@
 import { Input } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Search01Icon } from "@hugeicons/core-free-icons"
+import { DatePicker } from "@/components/ui/date-picker"
 import type { ConversationFilters, ConversationStatus } from "@/lib/types/conversations"
 
 const STATUSES: ConversationStatus[] = [
@@ -43,8 +44,14 @@ export function ConversationFilterControls(props: ConversationFilterControlsProp
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Input dir="ltr" type="date" value={dateValue(filters.from)} aria-label={t("conversations.filter.from")} onChange={(event) => update({ from: dateBoundary(event.target.value, false) })} />
-        <Input dir="ltr" type="date" value={dateValue(filters.to)} aria-label={t("conversations.filter.to")} onChange={(event) => update({ to: dateBoundary(event.target.value, true) })} />
+        <div>
+          <label htmlFor="conversation-from-date" className="sr-only">{t("conversations.filter.from")}</label>
+          <DatePicker id="conversation-from-date" dir="ltr" value={dateValue(filters.from)} onChange={(value) => update({ from: dateBoundary(value, false) })} />
+        </div>
+        <div>
+          <label htmlFor="conversation-to-date" className="sr-only">{t("conversations.filter.to")}</label>
+          <DatePicker id="conversation-to-date" dir="ltr" value={dateValue(filters.to)} onChange={(value) => update({ to: dateBoundary(value, true) })} />
+        </div>
       </div>
     </div>
   )

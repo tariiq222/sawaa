@@ -41,6 +41,7 @@ export interface Payment {
     }
   }
   receipts?: BankTransferReceipt[]
+  refundRequests?: PaymentRefundRequest[]
 }
 
 export interface BankTransferReceipt {
@@ -106,4 +107,13 @@ export interface VerifyBankTransferPayload {
 export interface ReviewReceiptPayload {
   approved: boolean
   adminNotes?: string
+}
+
+/** Refund request amounts are integer halalas. */
+export interface PaymentRefundRequest {
+  id: string
+  amount: number
+  status: "PENDING_REVIEW" | "PROCESSING" | "COMPLETED" | "FAILED" | "DENIED" | "MANUAL_REVIEW"
+  reason: string | null
+  createdAt: string
 }

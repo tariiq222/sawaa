@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 
@@ -14,36 +14,43 @@ jest.mock('@/hooks/useUnreadCount', () => ({ useUnreadCount: () => ({ count: 0 }
 jest.mock('@/hooks/useDir', () => ({
   useDir: () => ({ locale: 'en', isRTL: false }),
 }));
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => ({
-      'home.searchTherapists': 'Search therapists',
-      'nav.notifications': 'Notifications',
-      'nav.profile': 'Profile',
-    })[key] ?? key,
-  }),
-}));
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
-jest.mock('@/theme/sawaa', () => ({
-  sawaaColors: { teal: { 700: '#123456' }, accent: { rose: '#654321' } },
+jest.mock('@/theme/ThemeProvider', () => ({
+  useTheme: () => ({ scheme: 'light' }),
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/components/Glass', () => ({
   Glass: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Deliberately NOT mocking react-i18next: these labels must come from the real
+// locale files, so a key that exists only in a test double fails here instead of
+// silently shipping as a raw "some.key" accessibility label.
+import i18n from '@/i18n';
 import { HomeTopBar } from '../HomeTopBar';
 
 describe('HomeTopBar', () => {
   beforeEach(() => mockPush.mockClear());
 
-  it('opens the therapist directory from the search button', () => {
-    const { getByRole } = render(<HomeTopBar f600="System" />);
+  it.each([
+    ['en', 'Notifications'],
+    ['ar', 'الإشعارات'],
+  ])('shows the date, greeting and a labelled bell for clients in %s', async (language, notifications) => {
+    await act(async () => { await i18n.changeLanguage(language as string); });
+    const { getByRole, getByText } = render(<HomeTopBar f600="System" dateLabel="Wednesday 30 September" greeting="Good evening, Amal" />);
 
-    fireEvent.press(getByRole('button', { name: 'Search therapists' }));
+    expect(getByText('Wednesday 30 September')).toBeTruthy();
+    expect(getByText('Good evening, Amal')).toBeTruthy();
+    fireEvent.press(getByRole('button', { name: notifications as string }));
+    expect(mockPush).toHaveBeenCalledWith('/(client)/notifications');
+  });
 
-    expect(mockPush).toHaveBeenCalledWith('/(client)/therapists');
-    expect(getByRole('button', { name: 'Notifications' })).toBeTruthy();
-    expect(getByRole('button', { name: 'Profile' })).toBeTruthy();
+  it('shows the centre name and a sign-in button for guests', async () => {
+    await act(async () => { await i18n.changeLanguage('ar'); });
+    const { getByRole, getByText, queryByRole } = render(<HomeTopBar f600="System" isClient={false} />);
+    expect(getByText('مركز سواء للإرشاد الأسري')).toBeTruthy();
+    expect(queryByRole('button', { name: 'الإشعارات' })).toBeNull();
+    fireEvent.press(getByRole('button', { name: 'تسجيل الدخول' }));
+    expect(mockPush).toHaveBeenCalledWith('/(auth)/login');
   });
 });

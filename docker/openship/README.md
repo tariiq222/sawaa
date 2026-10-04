@@ -3,7 +3,11 @@
 This directory is the isolated OpenShip Compose contract for the Sawaa source
 checkout. It exposes backend 5100, dashboard 5103, and website 5105 through
 the pre-provisioned Docker network. It publishes no host ports; ingress or a
-tunnel is configured by the coordinator in OpenShip.
+tunnel is configured by the coordinator in OpenShip. For this internal network,
+configure each OpenShip ingress route with `routeStrategy=container-ip`; the
+ingress then targets the service's private container IP and refreshes it after
+redeploys. Keep the isolated internal network in place and do not add an
+egress bridge to make the ingress route work.
 
 The Compose files deliberately omit `network_mode`. They attach services to an
 external default network named by `RUNTIME_NETWORK` (default:
@@ -80,6 +84,8 @@ does not participate in routine deploys.
 4. A cloned database can contain pending jobs or provider configuration;
    network policy must deny backend egress to payment, SMS, email, Authentica,
    Zoom, AI, and messaging providers.
+   An owner-authorized test-phone exception for Authentica may use the isolated
+   relay below; never attach the backend itself to an outbound bridge.
 5. Keep the existing migration-history and checksum review as a separate
    provenance report. Never reset or rewrite checksums, and do not represent
    that report as a repair. Routine updates use Prisma's `migrate deploy`; its
@@ -115,7 +121,49 @@ The website receives the public `NEXT_PUBLIC_API_URL` at build time and
 public value reachable from the browser and do not use Docker service names in
 it.
 
+When staging has no public API hostname, set the website build values to
+`NEXT_PUBLIC_API_URL=https://staging.sawaa.sa/api/v1` and
+`WEBSITE_API_PROXY_URL=http://backend:5100/api/v1`. The optional target adds a
+same-origin rewrite only for `/api/v1/*`; it is empty by default and should
+remain empty when browsers can reach the public API directly. The proxy target
+is fixed at build time, must be an absolute HTTP(S) URL on the private service
+network, and does not accept a destination from the request. Keep the website
+origin in `CORS_ORIGINS` for other approved API clients.
+
 ## Side effects and OpenShip settings
+
+### Optional Authentica test-phone relay
+
+`compose.otp-relay.yml` runs a separate staging-only relay. The backend keeps its
+internal network, and the relay has its own outbound bridge. Its only upstream
+is `https://api.authentica.sa`: authenticated balance queries and SMS OTP requests
+to the exact Saudi E.164 numbers in `AUTHENTICA_TEST_PHONES`. Empty/invalid lists
+prevent startup. Other numbers, channels, fields, paths and redirects are
+rejected. The relay accepts template 1 and at most one send attempt per number
+per minute; provider failures fail closed. It logs no request bodies or secrets.
+
+Provision through a protected operator environment with `OTP_RELAY_IMAGE` pinned
+to the verified Node-capable backend image digest, `AUTHENTICA_API_KEY`, and
+`AUTHENTICA_TEST_PHONES`. Keep phone numbers and credentials outside Git. Deploy
+this file separately with a dedicated Compose project, for example
+`docker compose -p sawaa-staging-otp -f compose.otp-relay.yml up -d` from a protected
+directory containing the relay script. Do not add this service to production or
+the ordinary application Compose file. No host ports are published.
+
+After `Internal=true` is confirmed on `openship-sawaa-staging` and the relay's
+allow/deny checks pass, use OpenShip's backend **Environment** editor to set
+`AUTHENTICA_BASE_URL=http://authentica-otp-relay:8080`, retaining the backend-scoped
+key, then **Save** and **Apply environment changes**. Verify readiness and a
+normal registration/verification on an owner-controlled allowed phone. Recheck
+that a disallowed number is rejected and the backend cannot directly resolve or
+reach external providers. The relay persists across backend replacements via its
+stable internal DNS alias. Re-run these checks after updates.
+
+Rollback: restore the prior backend `AUTHENTICA_BASE_URL` through OpenShip and
+apply it, then stop only the dedicated relay Compose project. The original
+isolated backend will again be unable to send external OTPs. No databases or
+volumes need to be removed or restored. Local regression command:
+`node --test docker/openship/otp-relay.test.mjs`.
 
 There is no global cron disable switch in the current backend. The outbox flags
 are explicitly false in the example, but local cron workers still run booking

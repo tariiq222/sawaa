@@ -44,6 +44,7 @@ const fakeProfile = {
 };
 
 const fakeInvoices = {
+  outstandingBalance: 7500,
   items: [
     {
       id: 'inv_1',

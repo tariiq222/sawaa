@@ -1,3 +1,5 @@
+import { ProgramCancellationPreviewDto, ProgramCancellationResultDto } from '../../modules/bookings/cancel-program/program-cancellation.dto';
+import { UserId } from '../../common/auth/user-id.decorator';
 import {
   Body,
   Controller,
@@ -106,18 +108,29 @@ export class DashboardProgramsController {
     return this.scheduleProgram.execute(id, dto);
   }
 
+  @Get(':id/cancellation-preview')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @ApiOperation({ summary: 'Preview participant refunds for center cancellation' })
+  @ApiOkResponse({ type: ProgramCancellationPreviewDto })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  async cancellationPreview(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cancelProgram.preview(id);
+  }
+
   @Patch(':id/cancel')
+  @ApiOkResponse({ type: ProgramCancellationResultDto })
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({
     summary:
-      'Cancel a program (cascades to enrollments, no automatic refund)',
+      'Cancel a program and queue participant refunds from the confirmed preview',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CancelProgramDto,
+    @UserId() userId: string,
   ) {
-    return this.cancelProgram.execute(id, dto);
+    return this.cancelProgram.execute(id, dto, userId);
   }
 
   @Post(':id/enrollments')

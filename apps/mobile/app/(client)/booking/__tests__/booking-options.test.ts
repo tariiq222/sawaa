@@ -9,7 +9,7 @@ import api from '@/services/api';
 import {
   getPractitionerBookingOptions,
   toMobileDeliveryType,
-} from '../booking-options';
+} from '@/features/booking/booking-options';
 
 const mockedApi = api as unknown as { get: jest.Mock };
 

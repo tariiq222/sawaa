@@ -13,6 +13,7 @@ const STATIC_ROUTES: Array<{
 }> = [
   { path: '', changeFrequency: 'weekly', priority: 1.0 },
   { path: '/services', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/clinics', changeFrequency: 'weekly', priority: 0.9 },
   { path: '/therapists', changeFrequency: 'weekly', priority: 0.9 },
   { path: '/booking', changeFrequency: 'monthly', priority: 0.9 },
   { path: '/support-groups', changeFrequency: 'weekly', priority: 0.8 },
@@ -46,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  const therapists = await listPublicEmployees().catch(() => []);
+  const therapists = await listPublicEmployees(true).catch(() => []);
   for (const therapist of therapists) {
     if (!therapist.slug) continue;
     const url = `${BASE_URL}/therapists/${encodeURIComponent(therapist.slug)}`;

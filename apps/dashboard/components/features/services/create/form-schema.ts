@@ -26,6 +26,19 @@ export const createServiceSchema = z.object({
   calendarColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
 })
 
+// Preserve legacy missing categories and names, but require a replacement when
+// the saved English name was populated. Non-empty category IDs stay UUID-validated.
+export function createServiceEditSchema(savedNameEn?: string | null) {
+  const nameEnSchema = savedNameEn
+    ? z.string().min(1, "services.create.nameEnRequired")
+    : z.union([z.string().min(1, "services.create.nameEnRequired"), z.literal("")])
+
+  return createServiceSchema.extend({
+    nameEn: nameEnSchema,
+    categoryId: z.union([z.string().uuid("services.create.categoryRequired"), z.literal("")]).optional(),
+  })
+}
+
 export type CreateServiceFormData = z.infer<typeof createServiceSchema>
 
 /* ─── Default Values ─── */

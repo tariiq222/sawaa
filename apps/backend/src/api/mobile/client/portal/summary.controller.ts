@@ -22,9 +22,14 @@ export class MobileClientSummaryController {
     schema: {
       type: 'object',
       properties: {
-        totalBookings: { type: 'number', example: 8 },
+        totalBookings: { type: 'integer', minimum: 0, example: 8 },
         lastVisit: { type: 'string', format: 'date-time', nullable: true },
-        outstandingBalance: { type: 'number', example: 250 },
+        outstandingBalance: {
+          type: 'integer',
+          minimum: 0,
+          example: 25000,
+          description: 'Outstanding balance across all client invoices, in halalas',
+        },
       },
     },
   })

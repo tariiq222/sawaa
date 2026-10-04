@@ -1,3 +1,4 @@
+import { CancellationRefundIntentService } from './cancellation-refund/cancellation-refund-intent.service';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DashboardFinanceController } from '../../api/dashboard/finance.controller';
 import { RefundsController } from '../../api/dashboard/refunds.controller';
@@ -35,6 +36,7 @@ import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { MoyasarApiClient } from './moyasar-api/moyasar-api.client';
 
 import { InitClientPaymentHandler } from './payments/client/init-client-payment/init-client-payment.handler';
+import { GetPublicPaymentMethodsHandler } from './payments/public/get-public-payment-methods/get-public-payment-methods.handler';
 import { RequestRefundHandler } from './refund-payment/request-refund.handler';
 import { CreatePackagePurchaseHandler } from './package-purchases/create-package-purchase/create-package-purchase.handler';
 import { ListClientPackagePurchasesHandler } from './package-purchases/list-client-package-purchases/list-client-package-purchases.handler';
@@ -85,6 +87,7 @@ const handlers = [
   ManualRefundPaymentHandler,
   VerifyPaymentHandler,
   InitClientPaymentHandler,
+  GetPublicPaymentMethodsHandler,
   RequestRefundHandler,
   ApproveRefundHandler,
   DenyRefundHandler,
@@ -107,6 +110,7 @@ const handlers = [
     BookingConfirmedHandler,
     MoyasarApiClient,
     OnBookingCancelledRefundHandler,
+    CancellationRefundIntentService,
     OnBookingCancelApprovedRefundHandler,
     IssueInvoiceReceiptHandler,
     SendInvoiceReceiptHandler,

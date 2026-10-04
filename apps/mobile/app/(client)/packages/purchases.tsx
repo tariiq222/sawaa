@@ -1,18 +1,24 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Glass } from '@/theme/components/Glass';
-import { AquaBackground, sawaaColors, sawaaRadius, sawaaSemantic, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { usePackagePurchases } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/package-utils';
+import { purchaseChargedHalalas } from '@/lib/package-vat';
 import { PackageCreditCard } from '@/components/features/packages/PackageCreditCard';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function PackagePurchasesScreen() {
+  const colors = useSawaaColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
@@ -26,13 +32,16 @@ export default function PackagePurchasesScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <View style={[styles.header, { flexDirection: dir.row }]}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t('a11y.buttonBack')}>
-            <Text style={[styles.back, { fontFamily: f700 }]}>{dir.isRTL ? '‹' : '›'}</Text>
-          </Pressable>
+          <BackButton onPress={() => router.back()} />
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.balance')}</Text>
         </View>
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
-        {query.isError ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.error')}</Text> : null}
+        {!query.isLoading && query.isError ? (
+          <>
+            <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.error')}</Text>
+            <PrimaryButton label={t('common.retry')} fontFamily={f600} disabled={query.isFetching} onPress={() => { void query.refetch(); }} />
+          </>
+        ) : null}
         {(query.data ?? []).map((purchase) => (
           <Glass key={purchase.id} variant="strong" radius={sawaaRadius.lg} style={styles.purchase}>
             <Text style={[styles.purchaseName, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -42,7 +51,7 @@ export default function PackagePurchasesScreen() {
             </Text>
             <View style={[styles.purchaseMeta, { flexDirection: dir.row }]}>
               <Text style={[styles.metaText, { fontFamily: f400 }]}>{t(`packages.status.${purchase.status.toLowerCase()}`)}</Text>
-              <Text style={[styles.metaText, { fontFamily: f600 }]}>{formatHalalas(purchase.amountPaid, dir.locale)}</Text>
+              <Text style={[styles.metaText, { fontFamily: f600 }]}>{formatHalalas(purchaseChargedHalalas(purchase), dir.locale)}</Text>
             </View>
             {purchase.refundAmount > 0 ? (
               <Text style={[styles.refund, { fontFamily: f400 }]}>{t('packages.refund', { amount: formatHalalas(purchase.refundAmount, dir.locale) })}</Text>
@@ -75,15 +84,14 @@ export default function PackagePurchasesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
   header: { alignItems: 'center', gap: sawaaSpacing.md },
-  back: { color: sawaaColors.teal[700], fontSize: 34, lineHeight: 34 },
-  title: { flex: 1, color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  message: { color: sawaaColors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
+  title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   purchase: { padding: sawaaSpacing.lg, gap: sawaaSpacing.sm },
-  purchaseName: { color: sawaaColors.ink[900], fontSize: sawaaType.subheading.fontSize },
+  purchaseName: { color: colors.ink[900], fontSize: sawaaType.subheading.fontSize },
   purchaseMeta: { justifyContent: 'space-between' },
-  metaText: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
-  refund: { color: sawaaSemantic.warning, fontSize: sawaaType.caption.fontSize },
+  metaText: { color: colors.ink[500], fontSize: sawaaType.caption.fontSize },
+  refund: { color: colors.accent.amber, fontSize: sawaaType.caption.fontSize },
 });

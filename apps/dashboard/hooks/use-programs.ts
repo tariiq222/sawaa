@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cancelProgram,
+  fetchProgramCancellationPreview,
   createProgram,
   enrollClientInProgram,
   fetchProgram,
@@ -87,14 +88,20 @@ export function useScheduleProgram() {
   });
 }
 
+export function useProgramCancellationPreview(id: string, enabled: boolean) {
+  return useQuery({ queryKey: [...queryKeys.programs.detail(id), 'cancellation-preview'], queryFn: () => fetchProgramCancellationPreview(id), enabled, staleTime: 0, retry: false });
+}
+
 export function useCancelProgram() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: CancelProgramPayload }) =>
       cancelProgram(id, payload),
     onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.programs.all });
       qc.invalidateQueries({ queryKey: queryKeys.programs.lists() });
       qc.invalidateQueries({ queryKey: queryKeys.programs.detail(id) });
+      for (const key of ['bookings', 'clients', 'invoices', 'payments', 'refunds', 'finance', 'dashboard']) qc.invalidateQueries({ queryKey: [key] });
     },
   });
 }

@@ -1,7 +1,18 @@
 import * as Sentry from '@sentry/react-native';
 import { useEffect } from 'react';
 import { I18nManager } from 'react-native';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { fontAssets } from '@/theme/fonts';
+import { BrandLaunch } from '@/components/BrandLaunch';
+import { useStackDirectionOptions } from '@/hooks/useStackDirectionOptions';
+
+// Localized screens own row order and physical text alignment. Keep the native
+// layout basis stable rather than applying RTL twice on Arabic devices.
+I18nManager.allowRTL(false);
+I18nManager.forceRTL(false);
+void SplashScreen.preventAutoHideAsync();
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -34,25 +45,35 @@ function PushBootstrap() {
 
 function RootContent() {
   const { scheme } = useTheme();
+  const stackDirection = useStackDirectionOptions();
 
   return (
-    <SafeAreaProvider>
-      <Slot />
+    <SafeAreaProvider style={{ flex: 1, direction: 'ltr' }}>
+      <Stack screenOptions={{ headerShown: false, gestureEnabled: true, ...stackDirection }} />
+      <BrandLaunch />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaProvider>
   );
 }
 
 function RootLayout() {
-  useEffect(() => {
-    if (!I18nManager.isRTL) {
-      I18nManager.allowRTL(true);
-    }
-  }, []);
-
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const { language, ready } = useLanguagePreference();
 
-  if (!ready) return null;
+  useEffect(() => {
+    if (fontError) throw fontError;
+  }, [fontError]);
+
+  useEffect(() => {
+    if (!fontsLoaded || !ready) return;
+    // BrandLaunch normally hides native splash immediately. If its subtree
+    // fails before mounting, reveal the ErrorBoundary fallback instead of
+    // leaving the native splash over a retry action indefinitely.
+    const fallback = setTimeout(() => { void SplashScreen.hideAsync(); }, 3000);
+    return () => clearTimeout(fallback);
+  }, [fontsLoaded, ready]);
+
+  if (!ready || !fontsLoaded) return null;
 
   const dirState = buildDirState(language);
 

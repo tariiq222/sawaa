@@ -104,7 +104,7 @@ export function ServiceCard({ item, vatRate = 0, className = '' }: ServiceCardPr
 
   return (
     <article
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-white p-4 transition-all duration-300 hover:-translate-y-1 ${className}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-[var(--surface)] p-4 transition-all duration-300 hover:-translate-y-1 ${className}`}
       style={{
         border: '1px solid var(--sw-neutral-100)',
         boxShadow: 'var(--sw-shadow-xs)',
@@ -115,7 +115,7 @@ export function ServiceCard({ item, vatRate = 0, className = '' }: ServiceCardPr
         style={{
           background: image
             ? undefined
-            : `linear-gradient(135deg, color-mix(in srgb, ${accent} 14%, white), color-mix(in srgb, ${accent} 5%, white))`,
+            : `linear-gradient(135deg, color-mix(in srgb, ${accent} 14%, var(--surface)), color-mix(in srgb, ${accent} 5%, var(--surface)))`,
           boxShadow: `0 0 0 1px color-mix(in srgb, ${accent} 18%, transparent)`,
         }}
       >
@@ -131,7 +131,7 @@ export function ServiceCard({ item, vatRate = 0, className = '' }: ServiceCardPr
           <ServiceIcon iconName={iconName} name={name} accent={accent} />
         )}
         <span
-          className="absolute end-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[0.65rem] font-extrabold backdrop-blur"
+          className="absolute end-3 top-3 rounded-full bg-[var(--surface)] px-2.5 py-1 text-[0.65rem] font-extrabold backdrop-blur"
           style={{ color: 'var(--sw-primary-700)' }}
         >
           {t('services.cardBadge')}
@@ -155,7 +155,7 @@ export function ServiceCard({ item, vatRate = 0, className = '' }: ServiceCardPr
         <div
           className="mb-4 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl px-3 py-2.5 text-[0.7rem] font-semibold"
           style={{
-            background: 'color-mix(in srgb, var(--sw-primary-50) 65%, white)',
+            background: 'color-mix(in srgb, var(--sw-primary-50) 65%, var(--surface))',
             color: 'var(--sw-neutral-600)',
           }}
         >
@@ -179,7 +179,7 @@ export function ServiceCard({ item, vatRate = 0, className = '' }: ServiceCardPr
           href={`/booking?serviceId=${encodeURIComponent(service.id)}`}
           aria-label={`${t('services.bookAria')} ${name}`}
           className="mt-auto inline-flex items-center justify-between rounded-full px-4 py-2.5 text-[0.78rem] font-extrabold transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
-          style={{ background: 'var(--sw-primary-700)', color: '#fff' }}
+          style={{ background: 'var(--sw-primary-700)', color: 'var(--sw-primary-700-foreground)' }}
         >
           {t('services.bookCta')}
           <ArrowLeft aria-hidden className="h-3.5 w-3.5 rtl:rotate-180" />

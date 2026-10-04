@@ -43,7 +43,7 @@ import { DeleteCouponHandler } from '../../modules/finance/coupons/delete-coupon
 import { GetPaymentStatsHandler } from '../../modules/finance/get-payment-stats/get-payment-stats.handler';
 import { RefundPaymentHandler } from '../../modules/finance/refund-payment/refund-payment.handler';
 import { ManualRefundPaymentHandler } from '../../modules/finance/refund-payment/manual-refund-payment.handler';
-import { RefundPaymentDto } from '../../modules/finance/refund-payment/refund-payment.dto';
+import { RefundPaymentDto, ManualRefundPaymentDto } from '../../modules/finance/refund-payment/refund-payment.dto';
 import { VerifyPaymentHandler } from '../../modules/finance/verify-payment/verify-payment.handler';
 import { VerifyPaymentDto } from '../../modules/finance/verify-payment/verify-payment.dto';
 import {
@@ -421,7 +421,7 @@ export class DashboardFinanceController {
   manualRefundPaymentEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @UserId() userId: string,
-    @Body() body: RefundPaymentDto,
+    @Body() body: ManualRefundPaymentDto,
   ) {
     return this.manualRefundPayment.execute({ paymentId: id, performedBy: userId, ...body });
   }
@@ -553,7 +553,7 @@ export class DashboardFinanceController {
   @ApiOperation({ summary: 'Manually refund a session-package purchase (marks REFUNDED, voids credits, records the refund)' })
   @ApiParam({ name: 'purchaseId', description: 'Package purchase UUID', example: '00000000-0000-4000-a000-000000000007' })
   @ApiOkResponse({ description: 'Purchase marked REFUNDED, credits voided, refund recorded' })
-  @ApiResponse({ status: 400, description: 'Already refunded or refundAmount outside [0, amountPaid]', type: ApiErrorDto })
+  @ApiResponse({ status: 400, description: 'Already refunded or refundAmount outside [0, amount charged (invoice total)]', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Package purchase not found', type: ApiErrorDto })
   @HttpCode(HttpStatus.OK)
   refundPackagePurchaseEndpoint(

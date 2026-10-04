@@ -1,3 +1,5 @@
+import type { StaffCancellationIntent } from '../../finance/cancellation-refund/staff-cancellation-refund';
+import { centerCancellationBody } from './client-cancellation-copy';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { NotificationType, RecipientType } from '@prisma/client';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
@@ -11,6 +13,7 @@ import { NotificationOutboxConfig } from '../notification-outbox/notification-ou
 import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 
 interface BookingCancelledPayload {
+  centerCancellation?: StaffCancellationIntent;
   bookingId: string;
   bookingNumber?: number;
   clientId: string;
@@ -59,8 +62,8 @@ export class OnBookingCancelledStaffHandler {
             recipientId: target.userId,
             recipientType: RecipientType.EMPLOYEE,
             type: NotificationType.BOOKING_CANCELLED,
-            title: 'تم إلغاء حجز',
-            body: `تم إلغاء الحجز ${formatBookingRef(payload.bookingNumber, payload.bookingId)} — ${payload.reason}`,
+            title: payload.centerCancellation ? 'تم إلغاء البرنامج' : 'تم إلغاء حجز',
+            body: payload.centerCancellation ? centerCancellationBody(payload.centerCancellation) : `تم إلغاء الحجز ${formatBookingRef(payload.bookingNumber, payload.bookingId)} — ${payload.reason}`,
             channels: ['in-app'],
           }),
         ),
@@ -82,7 +85,7 @@ export class OnBookingCancelledStaffHandler {
     const intentId = await this.capture.execute({
       sourceKey, consumerKey, payloadVersion: NOTIFICATION_OUTBOX_PAYLOAD_VERSION,
       occurredAt: new Date(envelope.occurredAt),
-      payload: { kind: 'booking-cancelled-staff', bookingId: payload.bookingId, bookingNumber: payload.bookingNumber, employeeId: payload.employeeId, reason: payload.reason },
+      payload: { centerCancellation: payload.centerCancellation, kind: 'booking-cancelled-staff', bookingId: payload.bookingId, bookingNumber: payload.bookingNumber, employeeId: payload.employeeId, reason: payload.reason },
     });
     await this.materialize.execute(intentId);
     return true;

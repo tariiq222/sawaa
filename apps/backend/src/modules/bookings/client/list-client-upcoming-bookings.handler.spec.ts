@@ -11,7 +11,7 @@ describe('ListClientUpcomingBookingsHandler', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns pending and confirmed bookings from now, oldest first', async () => {
+  it('returns pending, confirmed and deposit-confirmed bookings from now, oldest first', async () => {
     prisma.booking.findMany.mockResolvedValue([{ id: 'b-1' }]);
     prisma.booking.count.mockResolvedValue(1);
 
@@ -24,7 +24,7 @@ describe('ListClientUpcomingBookingsHandler', () => {
       where: {
         clientId: 'client-1',
         scheduledAt: { gte: now },
-        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
       },
       orderBy: { scheduledAt: 'asc' },
       skip: 0,

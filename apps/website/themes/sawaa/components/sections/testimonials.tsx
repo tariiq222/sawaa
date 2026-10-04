@@ -47,7 +47,7 @@ export async function Testimonials({ intro, items }: Props) {
             return (
               <AnimatedSection key={t.id} delay={i * 80}>
                 <div
-                  className="sw-home-testimonial-card group relative h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1.5 flex flex-col"
+                  className="sw-home-testimonial-card group relative h-full bg-[var(--surface)] rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1.5 flex flex-col"
                 >
                   <div
                     className="sw-home-testimonial-quote absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity"
@@ -80,7 +80,7 @@ export async function Testimonials({ intro, items }: Props) {
                       style={{
                         background: tone.bg,
                         color: tone.text,
-                        boxShadow: '0 0 0 2px #fff, var(--sw-shadow-sm)',
+                        boxShadow: '0 0 0 2px var(--surface), var(--sw-shadow-sm)',
                       }}
                     >
                       {t.letter}

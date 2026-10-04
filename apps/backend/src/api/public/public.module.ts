@@ -37,9 +37,10 @@ import { TelemetryModule } from '../../infrastructure/telemetry/telemetry.module
 import { PublicMetricsController } from './metrics.controller';
 import { PublicChatController } from './public-chat.controller';
 import { MyChatController } from './my-chat.controller';
+import { PublicMobileHomeCardsController } from './mobile-home-cards.controller';
 
 @Module({
   imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, PlatformModule, OpsModule, TelemetryModule],
-  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicProgramsController, PublicIntakeFormsController, PublicPaymentsController, PublicPackagesController, PublicPackageFamiliesController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController, PublicChatController, MyChatController],
+  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicProgramsController, PublicIntakeFormsController, PublicPaymentsController, PublicPackagesController, PublicPackageFamiliesController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController, PublicChatController, MyChatController, PublicMobileHomeCardsController],
 })
 export class PublicModule {}

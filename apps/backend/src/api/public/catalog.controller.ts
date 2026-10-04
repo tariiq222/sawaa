@@ -1,6 +1,6 @@
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { GetPublicCatalogHandler } from '../../modules/org-experience/public-catalog/get-public-catalog.handler';
@@ -21,8 +21,9 @@ export class PublicCatalogController {
   @Get()
   @ApiOperation({ summary: 'Get public service catalog (departments, categories, services)' })
   @ApiOkResponse({ description: 'Active departments, categories, and services', type: PublicCatalogDto })
-  getCatalog() {
-    return this.getPublicCatalog.execute();
+  @ApiQuery({ name: 'includeDirectClinics', required: false, type: Boolean, description: 'Include internal booking services for direct clinics' })
+  getCatalog(@Query('includeDirectClinics') includeDirectClinics?: string) {
+    return this.getPublicCatalog.execute({ includeDirectClinics: includeDirectClinics === 'true' });
   }
 
   @Public()

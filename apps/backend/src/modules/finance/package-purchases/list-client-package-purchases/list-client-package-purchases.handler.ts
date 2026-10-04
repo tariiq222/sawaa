@@ -89,6 +89,10 @@ export interface ClientPackagePurchaseRow {
   discountSnapshot: number;
   /** Integer halalas (1 SAR = 100). */
   amountPaid: number;
+  /** VAT on the purchase invoice (halalas). 0 when VAT is not enabled. */
+  vatAmount: number;
+  /** What the client was charged: the invoice total, VAT-inclusive (halalas). */
+  totalCharged: number;
   /** Integer halalas (1 SAR = 100). */
   refundAmount: number;
   paidAt: string;
@@ -311,8 +315,19 @@ export class ListClientPackagePurchasesHandler {
       }
     }));
 
+    // amountPaid is the NET package price; the invoice holds what was charged
+    // (VAT-inclusive when VAT is enabled).
+    const invoices = purchases.length
+      ? await this.prisma.invoice.findMany({
+          where: { packagePurchaseId: { in: purchases.map((purchase) => purchase.id) } },
+          select: { packagePurchaseId: true, vatAmt: true, total: true },
+        })
+      : [];
+    const invoiceByPurchase = new Map(invoices.map((invoice) => [invoice.packagePurchaseId, invoice]));
+
     return purchases.map((purchase) => {
       const pkg = packageMap.get(purchase.packageId);
+      const invoice = invoiceByPurchase.get(purchase.id);
       const offerSnapshot = parsePackageOfferSnapshot(purchase.offerSnapshot);
       return {
         id: purchase.id,
@@ -330,6 +345,8 @@ export class ListClientPackagePurchasesHandler {
         subtotalSnapshot: Number(purchase.subtotalSnapshot),
         discountSnapshot: Number(purchase.discountSnapshot),
         amountPaid: Number(purchase.amountPaid),
+        vatAmount: invoice ? Number(invoice.vatAmt) : 0,
+        totalCharged: invoice ? Number(invoice.total) : Number(purchase.amountPaid),
         refundAmount: Number(purchase.refundAmount),
         paidAt: purchase.paidAt.toISOString(),
         refundedAt: purchase.refundedAt?.toISOString() ?? null,

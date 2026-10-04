@@ -1,10 +1,11 @@
+import { getClientCancellationPreview, cancelClientBooking } from './booking-cancellation';
+import type { CancellationQuoteInput, CancellationRefund, PersistedCancellationRefund } from '../../../../packages/api-client/src/types/cancellation';
+export type { CancellationPreview, CancellationQuoteInput, CancellationRefund, PersistedCancellationRefund } from '../../../../packages/api-client/src/types/cancellation';
 import api from '../api';
-import type {
-  BookingStatus,
-  BookingType,
-  DeliveryType,
-  LegacyBookingType,
-} from '@/types/booking-enums';
+import type { BookingStatus, BookingType, DeliveryType, LegacyBookingType } from '@/types/booking-enums';
+import { listLegacyTab, rejectsUnknownTab, type BookingListParams } from './booking-tab';
+
+export { bookingTabForStatus } from './booking-tab';
 
 export type { BookingStatus, BookingType, DeliveryType };
 
@@ -12,6 +13,7 @@ export interface ClientBookingRow {
   id: string;
   invoiceId: string | null;
   invoiceStatus?: string | null;
+  cancellationRefund?: PersistedCancellationRefund;
   paymentStatus?: string | null;
   price?: number | string;
   currency?: string;
@@ -24,6 +26,10 @@ export interface ClientBookingRow {
   scheduledAt: string;
   durationMins: number;
   status: BookingStatus;
+  /** Server-backed rating existence for this booking. */
+  hasRated?: boolean;
+  /** True only after this running app session confirmed a rating submission. */
+  ratingSubmittedLocally?: boolean;
   /** Appointment/category type. Legacy payloads may still send delivery here. */
   bookingType?: LegacyBookingType;
   /** Legacy alias used by dashboard mapper shapes. */
@@ -53,6 +59,12 @@ export interface ClientBookingRow {
   zoomStartUrl: string | null;
   zoomLink?: string | null;
   zoomMeetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
+}
+
+const ratedBookingIdsThisSession = new Set<string>();
+
+export function wasRatedInCurrentSession(bookingId: string): boolean {
+  return ratedBookingIdsThisSession.has(bookingId);
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -107,11 +119,19 @@ function normalizeMeetingStatus(value: unknown): ClientBookingRow['zoomMeetingSt
  */
 export function normalizeClientBooking(raw: unknown): ClientBookingRow {
   const row = asRecord(raw) ?? {};
-  // Older mobile endpoints already returned the app's canonical row. Keep
-  // that object shape and identity untouched while adapting mapper rows below.
+  // Older mobile endpoints already returned a flat row. Preserve its fields
+  // while normalizing enum casing and retaining the server rating flag.
   if (stringValue(row.scheduledAt) && !stringValue(row.scheduledAt)?.startsWith('2999-')
     && !('date' in row) && !('invoice' in row) && !('payment' in row)) {
-    return raw as ClientBookingRow;
+    const bookingType = stringValue(row.bookingType);
+    const type = stringValue(row.type);
+    return {
+      ...(raw as ClientBookingRow),
+      status: normalizeStatus(row.status),
+      ...(bookingType ? { bookingType: bookingType.toLowerCase() as LegacyBookingType } : {}),
+      ...(type ? { type: type.toLowerCase() as LegacyBookingType } : {}),
+      ...(typeof row.hasRated === 'boolean' ? { hasRated: row.hasRated } : {}),
+    };
   }
   const invoice = asRecord(row.invoice);
   const payment = asRecord(row.payment);
@@ -139,6 +159,7 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     id: stringValue(row.id) ?? '',
     invoiceId,
     invoiceStatus,
+    cancellationRefund: row.cancellationRefund as PersistedCancellationRefund | undefined,
     paymentStatus,
     price: price ?? undefined,
     currency: stringValue(row.currency) ?? 'SAR',
@@ -151,8 +172,9 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     scheduledAt: normalizeScheduledAt(row),
     durationMins,
     status: normalizeStatus(row.status),
-    bookingType: stringValue(row.bookingType) as LegacyBookingType | undefined,
-    type: stringValue(row.type) as LegacyBookingType | undefined,
+    bookingType: stringValue(row.bookingType)?.toLowerCase() as LegacyBookingType | undefined,
+    type: stringValue(row.type)?.toLowerCase() as LegacyBookingType | undefined,
+    hasRated: row.hasRated === true,
     deliveryType: stringValue(row.deliveryType) as DeliveryType | null | undefined,
     employeeId: stringValue(row.employeeId) ?? stringValue(employee?.id) ?? '',
     employee: employee
@@ -202,12 +224,13 @@ interface CreateBookingData {
   scheduledAt: string;
   durationOptionId?: string;
   notes?: string;
-}
-
-interface ListParams {
-  status?: string | string[];
-  page?: number;
-  limit?: number;
+  /** Session channel is sent as the uppercase Prisma `DeliveryType` enum. */
+  deliveryType?: DeliveryType;
+  /**
+   * Client chose to pay at the center: the booking is confirmed without an
+   * online invoice and reception collects later. Omitted means online payment.
+   */
+  payAtClinic?: boolean;
 }
 
 /**
@@ -230,14 +253,19 @@ interface RateData {
 }
 
 export const clientBookingsService = {
-  async list(params?: ListParams) {
+  async list(params?: BookingListParams): Promise<BookingsListResponse> {
     const outgoing = params?.status !== undefined
       ? { ...params, status: upperStatus(params.status) }
       : params;
-    const response = await api.get<unknown>(
-      '/mobile/client/bookings',
-      { params: outgoing },
-    );
+    let response;
+    try {
+      response = await api.get<unknown>('/mobile/client/bookings', { params: outgoing });
+    } catch (error) {
+      if (params?.tab && rejectsUnknownTab(error)) {
+        return listLegacyTab(params, params.tab, (legacyParams) => clientBookingsService.list(legacyParams));
+      }
+      throw error;
+    }
     const body = asRecord(response.data) ?? {};
     const meta = asRecord(body.meta) ?? {};
     const items = Array.isArray(body.items) ? body.items.map(normalizeClientBooking) : [];
@@ -257,25 +285,34 @@ export const clientBookingsService = {
 
   async getById(id: string) {
     const response = await api.get<unknown>(`/mobile/client/bookings/${id}`);
-    return normalizeClientBooking(response.data);
+    return {
+      ...normalizeClientBooking(response.data),
+      ratingSubmittedLocally: wasRatedInCurrentSession(id),
+    };
   },
 
   async create(data: CreateBookingData) {
-    const response = await api.post<unknown>('/mobile/client/bookings', data);
+    // The app models delivery in lowercase; the backend `MobileCreateBookingDto`
+    // validates the Prisma enum, so convert at the request boundary. Omitting it
+    // entirely would make the server default the session to IN_PERSON and drop
+    // the ONLINE choice the client made.
+    const payload = data.deliveryType === undefined
+      ? data
+      : { ...data, deliveryType: data.deliveryType.toUpperCase() };
+    const response = await api.post<unknown>('/mobile/client/bookings', payload);
     return normalizeClientBooking(response.data);
   },
 
-  async cancel(id: string, cancelNotes?: string) {
-    const response = await api.patch<unknown>(
-      `/mobile/client/bookings/${id}/cancel`,
-      {
-        reason: 'CLIENT_REQUESTED',
-        ...(cancelNotes ? { cancelNotes } : {}),
-      },
-    );
-    return normalizeClientBooking(response.data);
+  cancellationPreview: getClientCancellationPreview,
+  async cancel(id: string, cancelNotes?: string, quote?: CancellationQuoteInput): Promise<ClientBookingRow & { refund?: CancellationRefund; requiresApproval?: boolean }> {
+    const result = asRecord(await cancelClientBooking(id, cancelNotes, quote)) ?? {};
+    return {
+      ...normalizeClientBooking(result.booking ?? result),
+      ...(typeof result.status === 'string' ? { status: normalizeStatus(result.status) } : {}),
+      ...(result.refund ? { refund: result.refund as CancellationRefund } : {}),
+      ...(typeof result.requiresApproval === 'boolean' ? { requiresApproval: result.requiresApproval } : {}),
+    };
   },
-
   async reschedule(id: string, newScheduledAt: string) {
     const response = await api.patch<unknown>(
       `/mobile/client/bookings/${id}/reschedule`,
@@ -285,11 +322,23 @@ export const clientBookingsService = {
   },
 
   async rate(id: string, data: RateData) {
-    const response = await api.post(
-      `/mobile/client/bookings/${id}/rate`,
-      data,
-    );
-    return response.data;
+    try {
+      const response = await api.post(
+        `/mobile/client/bookings/${id}/rate`,
+        data,
+      );
+      ratedBookingIdsThisSession.add(id);
+      return response.data;
+    } catch (error) {
+      const responseData = (error as { response?: { data?: { message?: unknown } } })?.response?.data;
+      const message = Array.isArray(responseData?.message)
+        ? responseData.message.join(' ')
+        : responseData?.message;
+      if (typeof message === 'string' && message.toLowerCase().includes('rating already submitted')) {
+        ratedBookingIdsThisSession.add(id);
+      }
+      throw error;
+    }
   },
 
   async getJoinUrl(id: string) {

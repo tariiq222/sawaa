@@ -79,15 +79,15 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
                   aria-checked={isSelected}
                   tabIndex={i === focusIndex ? 0 : -1}
                   onClick={() => onSelect(emp)}
-                  className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-white transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+                  className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-[var(--surface)] transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                   style={{
                     border: isSelected
                       ? '1.5px solid var(--primary)'
                       : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
                     boxShadow: isSelected ? 'var(--sw-shadow-md)' : 'var(--sw-shadow-xs)',
                     background: isSelected
-                      ? 'color-mix(in srgb, var(--primary) 5%, #FFFFFF)'
-                      : '#FFFFFF',
+                      ? 'color-mix(in srgb, var(--primary) 5%, var(--surface))'
+                      : 'var(--surface)',
                   }}
                   onMouseEnter={(e) => {
                     if (isSelected) return;
@@ -153,12 +153,12 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
 
                     <span
                       aria-hidden="true"
-                      className="grid place-items-center h-8 w-8 shrink-0 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-white"
+                      className="grid place-items-center h-8 w-8 shrink-0 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)]"
                       style={{
                         background: isSelected
                           ? 'var(--primary)'
                           : 'color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
-                        color: isSelected ? '#FFFFFF' : 'var(--sw-secondary-700)',
+                        color: isSelected ? 'var(--on-primary)' : 'var(--sw-secondary-700)',
                       }}
                     >
                       {isSelected ? (
@@ -203,7 +203,7 @@ function Avatar({
         className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full object-cover"
         style={{
           background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
-          boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 3.5px color-mix(in srgb, var(--primary) 30%, transparent)',
+          boxShadow: '0 0 0 2px var(--surface), 0 0 0 3.5px color-mix(in srgb, var(--primary) 30%, transparent)',
         }}
         onError={(e) => {
           e.currentTarget.style.display = 'none';
@@ -217,9 +217,9 @@ function Avatar({
       className="grid place-items-center h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full font-bold text-base sm:text-lg"
       style={{
         background:
-          'linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, #FFFFFF), color-mix(in srgb, var(--primary) 7%, #FFFFFF))',
+          'linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, var(--surface)), color-mix(in srgb, var(--primary) 7%, var(--surface)))',
         color: 'var(--primary-dark)',
-        boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 3.5px color-mix(in srgb, var(--primary) 25%, transparent)',
+        boxShadow: '0 0 0 2px var(--surface), 0 0 0 3.5px color-mix(in srgb, var(--primary) 25%, transparent)',
       }}
       title={name}
     >
@@ -257,7 +257,7 @@ function TherapistEmptyState({ isAr }: { isAr: boolean }) {
     <div
       className="flex flex-col items-center text-center gap-3 px-6 py-12 rounded-2xl"
       style={{
-        background: 'color-mix(in srgb, var(--primary) 4%, #FFFFFF)',
+        background: 'color-mix(in srgb, var(--primary) 4%, var(--surface))',
         border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 16%, transparent)',
       }}
     >
@@ -301,7 +301,7 @@ function TherapistEmptyState({ isAr }: { isAr: boolean }) {
         className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold transition-all hover:scale-[1.02] active:scale-[0.99]"
         style={{
           background: 'var(--primary)',
-          color: '#FFFFFF',
+          color: 'var(--on-primary)',
           boxShadow: 'var(--sw-shadow-primary)',
         }}
       >

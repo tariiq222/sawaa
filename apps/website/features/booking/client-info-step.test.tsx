@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
@@ -11,11 +11,13 @@ const useCurrentClientMock = vi.fn();
 const clientLoginApiMock = vi.fn();
 const getMeApiMock = vi.fn();
 const setClientMock = vi.fn();
+let authGeneration = 0;
 // Captured so individual tests can fire onSuccess() to exercise the
 // inline-registration completion path without rendering the real 3-step form.
 const registerFormProps: { onSuccess?: () => void } = {};
 
 vi.mock('@/features/auth/use-current-client', () => ({
+  CURRENT_CLIENT_QUERY_KEY: ['client', 'me'],
   useCurrentClient: () => useCurrentClientMock(),
 }));
 vi.mock('@/features/auth/auth.api', () => ({
@@ -23,6 +25,7 @@ vi.mock('@/features/auth/auth.api', () => ({
   getMeApi: (...args: unknown[]) => getMeApiMock(...args),
 }));
 vi.mock('@/features/auth/auth-store', () => ({
+  getAuthGeneration: () => authGeneration,
   setClient: (...args: unknown[]) => setClientMock(...args),
 }));
 vi.mock('@/features/auth/register-form', () => ({
@@ -110,8 +113,7 @@ const employee: EmployeeWithUser = {
   },
 };
 
-function withLocale(children: ReactNode, locale: 'ar' | 'en' = 'en') {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function withLocale(children: ReactNode, locale: 'ar' | 'en' = 'en', qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return (
     <QueryClientProvider client={qc}>
       <LocaleProvider locale={locale}>{children}</LocaleProvider>
@@ -119,7 +121,34 @@ function withLocale(children: ReactNode, locale: 'ar' | 'en' = 'en') {
   );
 }
 
+/** Both collection paths enabled — the behaviour these cases assert. */
+const ALL_PAYMENT_METHODS = { moyasarEnabled: true, atClinicEnabled: true };
+
+/**
+ * Renders the step with every payment method available (the historical
+ * behaviour). The payment-gating cases render `ClientInfoStep` directly so they
+ * control `paymentMethods` explicitly.
+ */
+function Step({
+  paymentMethods = ALL_PAYMENT_METHODS,
+  paymentMethodsLoading = false,
+  ...props
+}: Omit<ComponentProps<typeof ClientInfoStep>, 'paymentMethods' | 'paymentMethodsLoading'> & {
+  paymentMethods?: ComponentProps<typeof ClientInfoStep>['paymentMethods'];
+  paymentMethodsLoading?: boolean;
+}) {
+  return (
+    <ClientInfoStep
+      {...props}
+      paymentMethods={paymentMethods}
+      paymentMethodsLoading={paymentMethodsLoading}
+    />
+  );
+}
+
 beforeEach(() => {
+  vi.clearAllMocks();
+  authGeneration = 0;
   // Clear the captured onSuccess between tests so each new render gets a
   // fresh stub instance and there is no cross-test leakage of the previous
   // booking step's callback.
@@ -136,7 +165,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -145,7 +174,16 @@ describe('ClientInfoStep', () => {
         />,
       ),
     );
-    expect(screen.getByText(/Checking your account/i)).toBeTruthy();
+    expect(screen.getByRole('status')).toHaveTextContent(/Checking your account/i);
+    expect(screen.getByPlaceholderText('05XXXXXXXX')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Checking your account/i })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.submit(screen.getByTestId('inline-signin'));
+    expect(clientLoginApiMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('tab', { name: /Create an account/i }));
+    expect(screen.queryByTestId('register-form-stub')).not.toBeInTheDocument();
   });
 
   it('shows the inline login form when the client is not signed in', () => {
@@ -157,7 +195,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -180,7 +218,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -212,7 +250,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -237,7 +275,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -259,7 +297,7 @@ describe('ClientInfoStep', () => {
     expect(clientLoginApiMock).not.toHaveBeenCalled();
   });
 
-  it('calls clientLoginApi with a normalized phone then getMeApi then refetch on successful inline login', async () => {
+  it('loads the profile once after login and does not refetch it again', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     useCurrentClientMock.mockReturnValue({
       client: null,
@@ -271,7 +309,7 @@ describe('ClientInfoStep', () => {
     getMeApiMock.mockResolvedValueOnce(fakeClient);
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -293,7 +331,63 @@ describe('ClientInfoStep', () => {
     }));
     await waitFor(() => expect(getMeApiMock).toHaveBeenCalled());
     await waitFor(() => expect(setClientMock).toHaveBeenCalledWith(fakeClient));
-    await waitFor(() => expect(refetch).toHaveBeenCalled());
+    expect(getMeApiMock).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('accepts a successful login after an earlier guest auth check failed', async () => {
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockResolvedValueOnce(fakeClient);
+    render(withLocale(<Step slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    await waitFor(() => expect(getMeApiMock).toHaveBeenCalledOnce());
+    await waitFor(() => expect(setClientMock).toHaveBeenCalledWith(fakeClient));
+  });
+
+  it('replaces an earlier unauthenticated query result with the verified profile', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(['client', 'me'], null);
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockResolvedValueOnce(fakeClient);
+    render(withLocale(<Step slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />, 'en', qc));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    await waitFor(() => expect(qc.getQueryData(['client', 'me'])).toEqual(fakeClient));
+  });
+
+  it('does not put an outdated profile back into the cache if logout races the login profile read', async () => {
+    let finishProfile!: (value: typeof fakeClient) => void;
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockImplementationOnce(() => new Promise((resolve) => { finishProfile = resolve; }));
+    render(withLocale(<Step slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />, 'en', qc));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    await waitFor(() => expect(getMeApiMock).toHaveBeenCalledTimes(1));
+    authGeneration += 1; // A logout happened before the pending /me response.
+    finishProfile(fakeClient);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Sign in/i })).toBeEnabled());
+    expect(setClientMock).not.toHaveBeenCalled();
+    expect(qc.getQueryData(['client', 'me'])).toBeUndefined();
+  });
+
+  it('keeps profile loading errors visible and does not cache a missing profile', async () => {
+    useCurrentClientMock.mockReturnValue({ client: null, isLoading: false, error: null, refetch: vi.fn() });
+    clientLoginApiMock.mockResolvedValueOnce({ clientId: 'c1' });
+    getMeApiMock.mockRejectedValueOnce(new Error('Profile unavailable'));
+    render(withLocale(<Step slot={slot} service={service} employee={employee} onSubmitInfo={vi.fn()} isSubmitting={false} />));
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), { target: { value: '0500000000' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    expect(await screen.findByText('Profile unavailable')).toBeInTheDocument();
+    expect(setClientMock).not.toHaveBeenCalled();
   });
 
   it('surfaces the error message from a failed login', async () => {
@@ -306,7 +400,7 @@ describe('ClientInfoStep', () => {
     clientLoginApiMock.mockRejectedValueOnce(new Error('Invalid credentials'));
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -335,7 +429,7 @@ describe('ClientInfoStep', () => {
     const onSubmitInfo = vi.fn();
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -362,7 +456,7 @@ describe('ClientInfoStep', () => {
     const onSubmitInfo = vi.fn();
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -388,7 +482,7 @@ describe('ClientInfoStep', () => {
     const onSubmitInfo = vi.fn();
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -402,7 +496,7 @@ describe('ClientInfoStep', () => {
     fireEvent.click(screen.getByRole('radio', { name: /الدفع في المركز/i }));
     expect(screen.getByRole('radio', { name: /الدفع في المركز/i })).toBeChecked();
     expect(screen.queryByText(/دفع آمن ومشفّر عبر ميسر/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /تأكيد الحجز/i }));
+    fireEvent.click(screen.getByRole('button', { name: /تأكيد الموعد/i }));
 
     expect(onSubmitInfo).toHaveBeenCalledWith(true);
   });
@@ -416,7 +510,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -438,7 +532,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -470,7 +564,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -499,7 +593,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -538,7 +632,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -574,7 +668,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -608,7 +702,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -645,7 +739,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -675,7 +769,7 @@ describe('ClientInfoStep', () => {
     });
     render(
       withLocale(
-        <ClientInfoStep
+        <Step
           slot={slot}
           service={service}
           employee={employee}
@@ -691,5 +785,131 @@ describe('ClientInfoStep', () => {
       screen.queryByText(/Your data is private and never leaves the centre/i),
     ).toBeNull();
     expect(screen.queryByText(/بياناتك سرّية/i)).toBeNull();
+  });
+});
+
+describe('ClientInfoStep — payment method gating', () => {
+  const signIn = () =>
+    useCurrentClientMock.mockReturnValue({
+      client: fakeClient,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+  const stepProps = (onSubmitInfo: () => void) => ({
+    slot,
+    service,
+    employee,
+    onSubmitInfo,
+    isSubmitting: false,
+  });
+
+  it('offers only pay-at-center when online payment is disabled, and submits payAtClinic=true', () => {
+    signIn();
+    const onSubmitInfo = vi.fn();
+    render(
+      withLocale(
+        <Step
+          {...stepProps(onSubmitInfo)}
+          paymentMethods={{ moyasarEnabled: false, atClinicEnabled: true }}
+        />,
+      ),
+    );
+
+    expect(screen.queryByRole('radio', { name: /Online payment/i })).toBeNull();
+    expect(screen.getByRole('radio', { name: /Pay at the center/i })).toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm appointment/i }));
+    expect(onSubmitInfo).toHaveBeenCalledWith(true);
+  });
+
+  it('offers only online payment when pay-at-center is disabled, and submits payAtClinic=false', () => {
+    signIn();
+    const onSubmitInfo = vi.fn();
+    render(
+      withLocale(
+        <Step
+          {...stepProps(onSubmitInfo)}
+          paymentMethods={{ moyasarEnabled: true, atClinicEnabled: false }}
+        />,
+      ),
+    );
+
+    expect(screen.queryByRole('radio', { name: /Pay at the center/i })).toBeNull();
+    expect(screen.getByRole('radio', { name: /Online payment/i })).toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & Pay/i }));
+    expect(onSubmitInfo).toHaveBeenCalledWith(false);
+  });
+
+  it('blocks a paid booking and explains why when no payment method is enabled', () => {
+    signIn();
+    const onSubmitInfo = vi.fn();
+    render(
+      withLocale(
+        <Step
+          {...stepProps(onSubmitInfo)}
+          paymentMethods={{ moyasarEnabled: false, atClinicEnabled: false }}
+        />,
+      ),
+    );
+
+    expect(screen.queryByRole('radio')).toBeNull();
+    expect(screen.getByText(/No payment method is available/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Confirm & Pay/i })).toBeDisabled();
+    expect(onSubmitInfo).not.toHaveBeenCalled();
+  });
+
+  it('shows the pending copy and blocks submission while the capabilities are still loading', () => {
+    signIn();
+    const onSubmitInfo = vi.fn();
+    // Rendered directly: the `Step` helper defaults `paymentMethods` to
+    // "everything enabled", which is exactly the state this case is not.
+    render(
+      withLocale(
+        <ClientInfoStep
+          {...stepProps(onSubmitInfo)}
+          paymentMethods={undefined}
+          paymentMethodsLoading
+        />,
+      ),
+    );
+
+    expect(screen.getByText(/Checking the available payment methods/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Confirm & Pay/i })).toBeDisabled();
+  });
+
+  it('drops a selection that is no longer enabled instead of submitting it', () => {
+    signIn();
+    const onSubmitInfo = vi.fn();
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      withLocale(
+        <Step
+          {...stepProps(onSubmitInfo)}
+          paymentMethods={{ moyasarEnabled: true, atClinicEnabled: true }}
+        />,
+        'en',
+        qc,
+      ),
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /Pay at the center/i }));
+
+    // The center turns pay-at-center off while the client is on the step.
+    rerender(
+      withLocale(
+        <Step
+          {...stepProps(onSubmitInfo)}
+          paymentMethods={{ moyasarEnabled: true, atClinicEnabled: false }}
+        />,
+        'en',
+        qc,
+      ),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & Pay/i }));
+    expect(onSubmitInfo).toHaveBeenCalledWith(false);
   });
 });

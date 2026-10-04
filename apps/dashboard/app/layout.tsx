@@ -5,7 +5,7 @@ import "./globals.css"
 import "./toast.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@sawaa/ui"
-import { Toaster } from "@sawaa/ui"
+import { AppToaster } from "@/components/app-toaster"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { LocaleProvider } from "@/components/locale-provider"
@@ -53,8 +53,8 @@ export default function RootLayout({
                   </TooltipProvider>
                 </AuthProvider>
               </QueryProvider>
+              <AppToaster />
             </ThemeProvider>
-            <Toaster />
           </LocaleProvider>
       </body>
     </html>

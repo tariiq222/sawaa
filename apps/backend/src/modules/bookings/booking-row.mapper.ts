@@ -74,6 +74,12 @@ export interface MapBookingRowOptions {
    * already verified the caller is the meeting host.
    */
   includeHostUrls?: boolean;
+  /**
+   * Client-only rating state. This is loaded by the mobile detail path after
+   * ownership has been checked; keep it optional so dashboard reads do not
+   * pay for a rating query or expose client-specific state.
+   */
+  hasRated?: boolean;
 }
 
 export function mapBookingRow(b: Booking, relations: BookingRelations, opts: MapBookingRowOptions = {}) {
@@ -193,6 +199,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
       : null,
     intakeFormId: null,
     intakeFormAlreadySubmitted: false,
+    ...(opts.hasRated !== undefined ? { hasRated: opts.hasRated } : {}),
   };
 }
 
@@ -210,17 +217,22 @@ function mapTypeForUi(t: string): string {
 }
 
 /** DB enum → dashboard BookingStatus union.
- * awaiting_payment and pending_group_fill are treated as `pending` for UX simplicity.
- * deposit_paid is a distinct, standalone state (service deposit paid, slot reserved,
- * a balance is still outstanding) — it is NOT folded into any other status.
+ *
+ * Every status is emitted as its own value. `awaiting_payment` and
+ * `pending_group_fill` used to be folded into `pending`, which made the
+ * dashboard advertise confirm/cancel for statuses the backend state machine
+ * rejects (a hold can only leave its state through a completed payment, the
+ * expiry cron, or the client's own cancel). The dashboard renders both with
+ * their own badge and translation, so folding them bought nothing and cost
+ * a broken action menu.
+ *
+ * deposit_paid is likewise a distinct, standalone state (service deposit paid,
+ * slot reserved, a balance is still outstanding).
  */
 function mapStatusForUi(s: string): string {
   // `s` is non-nullable in the schema, but defend against any legacy/malformed
   // row so a single bad booking cannot 500 the entire dashboard list.
-  const lower = typeof s === 'string' ? s.toLowerCase() : '';
-  if (lower === 'deposit_paid') return 'deposit_paid';
-  if (lower === 'awaiting_payment' || lower === 'pending_group_fill') return 'pending';
-  return lower;
+  return typeof s === 'string' ? s.toLowerCase() : '';
 }
 
 /** Defensive Date validator: handles null/undefined/invalid Date instances. */

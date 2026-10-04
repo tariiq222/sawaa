@@ -1,3 +1,4 @@
+import type { CancellationPreview, CancellationQuoteInput, ClientCancellationResult } from '../types/cancellation';
 import type {
   ClientProfile,
   ClientBookingListResponse,
@@ -55,18 +56,23 @@ export async function getMyInvoices(
 export async function getMyBookings(
   page = 1,
   pageSize = 10,
+  tab?: 'upcoming' | 'past' | 'cancelled',
 ): Promise<ClientBookingListResponse> {
   return apiRequest<ClientBookingListResponse>(
-    `/public/me/bookings?page=${page}&pageSize=${pageSize}`,
+    `/public/me/bookings?page=${page}&pageSize=${pageSize}${tab ? `&tab=${tab}` : ''}`,
     { credentials: 'include' },
   );
 }
 
+export async function getMyCancellationPreview(bookingId: string): Promise<CancellationPreview> {
+  return apiRequest<CancellationPreview>(`/public/me/bookings/${encodeURIComponent(bookingId)}/cancellation-preview`, { credentials: 'include' });
+}
+
 export async function cancelMyBooking(
   bookingId: string,
-  payload?: CancelMyBookingPayload,
-): Promise<{ status: string; booking: unknown; requiresApproval: boolean }> {
-  return apiRequest<{ status: string; booking: unknown; requiresApproval: boolean }>(
+  payload?: CancelMyBookingPayload & CancellationQuoteInput,
+): Promise<ClientCancellationResult> {
+  return apiRequest<ClientCancellationResult>(
     `/public/me/bookings/${bookingId}/cancel`,
     {
       method: 'PATCH',

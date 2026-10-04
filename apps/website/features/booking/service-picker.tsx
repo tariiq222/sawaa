@@ -94,7 +94,7 @@ export function ServicePicker({
         <div
           className="flex items-center gap-3 p-3 rounded-2xl"
           style={{
-            background: 'color-mix(in srgb, var(--primary) 7%, #FFFFFF)',
+            background: 'color-mix(in srgb, var(--primary) 7%, var(--surface))',
             border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
           }}
           role="status"
@@ -162,7 +162,7 @@ export function ServicePicker({
         <div
           className="flex flex-col items-center text-center gap-3 px-6 py-10 rounded-2xl"
           style={{
-            background: 'color-mix(in srgb, var(--primary) 4%, #FFFFFF)',
+            background: 'color-mix(in srgb, var(--primary) 4%, var(--surface))',
             border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 16%, transparent)',
           }}
         >
@@ -202,7 +202,7 @@ export function ServicePicker({
           return (
             <li key={service.id}>
               <div
-                className="rounded-[1.25rem] bg-white transition-all duration-200"
+                className="rounded-[1.25rem] bg-[var(--surface)] transition-all duration-200"
                 style={{
                   border: isSelected
                     ? '1.5px solid var(--primary)'
@@ -253,7 +253,7 @@ export function ServicePicker({
 
                     <span
                       aria-hidden="true"
-                      className="grid place-items-center h-8 w-8 shrink-0 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-white"
+                      className="grid place-items-center h-8 w-8 shrink-0 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)]"
                       style={{
                         background: 'color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
                         color: 'var(--sw-secondary-700)',
@@ -283,8 +283,8 @@ function CategoryTab({ label, active, onClick }: { label: string; active: boolea
       onClick={onClick}
       className="shrink-0 px-4 py-2 text-[0.8125rem] rounded-full transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
       style={{
-        background: active ? 'var(--sw-secondary-700)' : '#FFFFFF',
-        color: active ? '#FFFFFF' : 'var(--sw-secondary-700)',
+        background: active ? 'var(--sw-secondary-700)' : 'var(--surface)',
+        color: active ? 'var(--sw-secondary-700-foreground)' : 'var(--sw-secondary-700)',
         fontWeight: active ? 700 : 600,
         border: active
           ? '1.5px solid var(--sw-secondary-700)'

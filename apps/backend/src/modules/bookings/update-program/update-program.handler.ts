@@ -69,6 +69,19 @@ export class UpdateProgramHandler {
           'minParticipants cannot exceed maxParticipants',
         );
       }
+      if (dto.maxParticipants !== undefined) {
+        // Same row lock enrollment takes before it increments enrolledCount,
+        // so a concurrent enrollment cannot slip past this check.
+        const [locked] = await tx.$queryRaw<Array<{ enrolledCount: number }>>(
+          Prisma.sql`SELECT "enrolledCount" FROM "Program" WHERE "id" = ${programId} FOR UPDATE`,
+        );
+        const enrolled = Number(locked?.enrolledCount ?? existing.enrolledCount ?? 0);
+        if (dto.maxParticipants < enrolled) {
+          throw new BadRequestException(
+            `maxParticipants cannot be below the ${enrolled} participants already enrolled`,
+          );
+        }
+      }
       if (
         merged.depositEnabled &&
         merged.depositAmount != null &&

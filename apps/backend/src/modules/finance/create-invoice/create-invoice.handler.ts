@@ -10,7 +10,20 @@ import { EventBusService } from '../../../infrastructure/events';
 import { CreateInvoiceDto } from './create-invoice.dto';
 import { computeVat } from '../money.helper';
 
-const DEFAULT_VAT_RATE = 0;
+/** Used when no OrganizationSettings row exists. The center is not VAT-registered. */
+export const DEFAULT_VAT_RATE = 0;
+
+export type VatSettingsReader = { organizationSettings: Pick<Prisma.TransactionClient['organizationSettings'], 'findFirst'> };
+
+/**
+ * The single source of the VAT rate for every invoice: OrganizationSettings.vatRate
+ * (a fraction of 1), falling back to DEFAULT_VAT_RATE.
+ */
+export async function resolveVatRate(db: VatSettingsReader): Promise<Prisma.Decimal> {
+  // Same row the settings screen edits (latest by createdAt).
+  const settings = await db.organizationSettings.findFirst({ where: {}, orderBy: { createdAt: 'desc' }, select: { vatRate: true } });
+  return new Prisma.Decimal(settings?.vatRate?.toString() ?? DEFAULT_VAT_RATE.toString());
+}
 
 export type CreateInvoiceCommand = Omit<CreateInvoiceDto, 'dueAt'> & {
   dueAt?: Date;
@@ -37,13 +50,17 @@ export class CreateInvoiceHandler {
 
     const subtotalDec = new Prisma.Decimal(dto.subtotal.toString());
     const discountAmtDec = new Prisma.Decimal((dto.discountAmt ?? 0).toString());
-    const vatRateDec = new Prisma.Decimal((dto.vatRate ?? DEFAULT_VAT_RATE).toString());
     // vatBase = subtotal minus discount (stays Decimal, no float conversion)
     const vatBaseDec = subtotalDec.minus(discountAmtDec);
-    // computeVat uses pure Decimal arithmetic — no .toNumber() on amounts
-    const { vatAmtHalalas, totalHalalas } = computeVat(vatBaseDec, vatRateDec);
 
     const create = async (db: Prisma.TransactionClient) => {
+      // An explicit rate wins; otherwise every invoice follows OrganizationSettings.
+      const vatRateDec = dto.vatRate !== undefined
+        ? new Prisma.Decimal(dto.vatRate.toString())
+        : await resolveVatRate(db);
+      // computeVat uses pure Decimal arithmetic — no .toNumber() on amounts
+      const { vatAmtHalalas, totalHalalas } = computeVat(vatBaseDec, vatRateDec);
+
       // Check for existing invoice by the non-null key.
       if (dto.bookingId) {
         const existing = await db.invoice.findUnique({

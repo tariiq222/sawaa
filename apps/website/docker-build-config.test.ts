@@ -28,14 +28,14 @@ describe("website web-chat build flag", () => {
 
   it("passes a closed-by-default build arg in website compose definitions", () => {
     const productionCompose = readRepositoryFile(
-      "docker/docker-compose.prod.yml",
+      "docker/openship/compose.yml",
     );
     const websiteCompose = readRepositoryFile(
       "docker/docker-compose.sawa-website.yml",
     );
 
     expect(productionCompose).toContain(
-      "NEXT_PUBLIC_WEB_CHAT_ENABLED=${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}",
+      "NEXT_PUBLIC_WEB_CHAT_ENABLED: ${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}",
     );
     expect(websiteCompose).toContain(
       'NEXT_PUBLIC_WEB_CHAT_ENABLED: "${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}"',

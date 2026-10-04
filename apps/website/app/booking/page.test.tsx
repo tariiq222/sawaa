@@ -154,6 +154,7 @@ vi.mock('@/features/booking/booking.api', () => ({
   }),
   createBooking: vi.fn(),
   initPayment: vi.fn(),
+  getPublicPaymentMethods: vi.fn().mockResolvedValue({ moyasarEnabled: true, atClinicEnabled: true }),
 }));
 
 vi.mock('@/features/booking/client-info-step', () => ({
@@ -180,6 +181,7 @@ vi.mock('@/features/payment/payment-redirect', () => ({
 }));
 
 import BookingWizardPage from './page';
+import * as dictionary from '@/features/locale/dictionary';
 import {
   createBooking,
   getPublicAvailabilityDays,
@@ -220,6 +222,26 @@ describe('/booking wizard — date-strip days probe context', () => {
     slotsMock.mockResolvedValue([]);
     createBookingMock.mockReset();
     initPaymentMock.mockReset();
+  });
+
+  it('reads online and in-person delivery guidance from the dictionary', async () => {
+    const original = dictionary.t;
+    const translated: Record<string, string> = {
+      'booking.delivery.onlineNote': 'Translated online guidance',
+      'booking.delivery.inPersonNote': 'Translated center guidance',
+    };
+    const translation = vi.spyOn(dictionary, 't').mockImplementation((locale, key) => translated[key] ?? original(locale, key));
+    practitionerOptionsMock.mockResolvedValue({ useCustomPricing: false, disabledDeliveryTypes: [], options: [OPTION, { ...OPTION, deliveryType: 'IN_PERSON' }] });
+    try {
+      render(<BookingWizardPage />);
+      fireEvent.click(await screen.findByRole('radio', { name: /جلسة فردية/ }));
+      fireEvent.click(await screen.findByRole('radio', { name: /سارة/ }));
+      expect(await screen.findByText('Translated online guidance')).toBeTruthy();
+      expect(screen.getByText('Translated center guidance')).toBeTruthy();
+    } finally {
+      translation.mockRestore();
+      practitionerOptionsMock.mockResolvedValue({ useCustomPricing: false, disabledDeliveryTypes: [], options: [OPTION] });
+    }
   });
 
   it('forwards the selected duration option + delivery type to the days probe (same context as slot fetch)', async () => {
@@ -360,7 +382,7 @@ describe('/booking wizard — date-strip days probe context', () => {
     expect(createBookingMock).toHaveBeenCalledTimes(1);
     await waitFor(() => {
       expect(
-        screen.getByRole('link', { name: /عرض الحجز الحالي|View Existing Booking/ }).getAttribute('href'),
+        screen.getByRole('link', { name: /عرض الموعد الحالي|View existing appointment/ }).getAttribute('href'),
       ).toBe('/account/bookings/booking-recover');
     });
     expect(screen.queryByRole('button', { name: /رجوع|Back/ })).toBeNull();

@@ -197,7 +197,7 @@ export function ProfileTab() {
       <button
         type="submit"
         disabled={saving}
-        className="self-start px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+        className="self-start px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--on-primary)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
       >
         {saving ? tt('account.profile.saving') : tt('account.profile.save')}
       </button>

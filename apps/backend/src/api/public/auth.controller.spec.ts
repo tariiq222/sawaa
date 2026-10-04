@@ -245,6 +245,7 @@ describe('AuthController (e2e)', () => {
         tokenHash,
         tokenSelector: 'raw-toke',
         userId: 'user-1',
+        source: 'DASHBOARD',
         revokedAt: null as Date | null,
         expiresAt: new Date(Date.now() + 86400000),
       };
@@ -293,6 +294,42 @@ describe('AuthController (e2e)', () => {
       await refreshApp.close();
     });
 
+    it.each([
+      { label: 'MOBILE', recordSource: { source: 'MOBILE' } },
+      { label: 'legacy NULL', recordSource: { source: null } },
+      { label: 'omitted source', recordSource: {} },
+      { label: 'explicit undefined', recordSource: { source: undefined } },
+    ])('refuses a $label refresh token without consuming it or issuing tokens/cookies', async ({ recordSource }) => {
+      const mockPrisma = buildMockPrisma();
+      mockPrisma.refreshToken.findMany.mockResolvedValue([{
+        id: 'rt-untrusted-source', tokenHash, tokenSelector: 'raw-toke', userId: 'user-1',
+        revokedAt: null, expiresAt: new Date(Date.now() + 86400000), ...recordSource,
+      }]);
+      // Make the old accepting branch viable so NULL/omitted regressions fail
+      // with HTTP 200, not an unrelated missing-user or mock error.
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1', isActive: true, isSuperAdmin: false, customRole: null });
+      mockTokens.issueTokenPair.mockResolvedValue({ accessToken: 'new-acc', refreshToken: 'new-ref' });
+      mockConfig.get.mockReturnValue('15m');
+      const refreshApp = await buildApp(mockPrisma, { canActivate: () => true });
+
+      try {
+        const response = await request(refreshApp.getHttpServer())
+          .post('/auth/refresh')
+          .set('Cookie', 'ck_refresh=raw-token')
+          .send({})
+          .expect(401);
+        expect(response.body.message).toBe('Invalid or expired refresh token');
+        expect(response.body).not.toHaveProperty('accessToken');
+        expect(response.body).not.toHaveProperty('refreshToken');
+        expect(response.headers['set-cookie']).toBeUndefined();
+        expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+        expect(mockPrisma.refreshToken.updateMany).not.toHaveBeenCalled();
+        expect(mockTokens.issueTokenPair).not.toHaveBeenCalled();
+      } finally {
+        await refreshApp.close();
+      }
+    });
+
     it('returns 401 when refreshToken cookie is missing', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/refresh')
@@ -311,6 +348,7 @@ describe('AuthController (e2e)', () => {
           tokenHash,
           tokenSelector: 'raw-toke',
           userId: 'user-1',
+          source: 'DASHBOARD',
           revokedAt: null,
           expiresAt: new Date(Date.now() + 86400000),
         },

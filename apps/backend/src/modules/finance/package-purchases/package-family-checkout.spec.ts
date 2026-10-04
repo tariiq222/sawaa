@@ -54,6 +54,7 @@ describe('package family checkout contracts', () => {
     ['hidden option family', FAMILY_ID],
   ])('rejects checkout when the selected option is %s', async (_label, packageFamilyId) => {
     const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
       packagePurchase: { findUnique: jest.fn().mockResolvedValue(null) },
       sessionPackage: {
         findFirst: jest.fn().mockResolvedValue({
@@ -88,11 +89,13 @@ describe('package family checkout contracts', () => {
 
   it('freezes family and option names on manual purchases', async () => {
     const tx = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
       packagePurchase: { create: jest.fn().mockResolvedValue({ id: 'purchase-1' }) },
       packageCredit: { create: jest.fn() },
       invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1' }) },
     };
     const prisma = {
+      organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0 }) },
       packagePurchase: { findUnique: jest.fn().mockResolvedValue(null) },
       sessionPackage: {
         findFirst: jest.fn().mockResolvedValue({

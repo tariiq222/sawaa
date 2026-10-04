@@ -31,7 +31,7 @@ export function PaymentRedirect({ redirectUrl, bookingId }: PaymentRedirectProps
         style={{
           padding: '0.5rem 1rem',
           background: 'var(--primary)',
-          color: 'white',
+          color: 'var(--on-primary)',
           border: 'none',
           borderRadius: 'var(--radius)',
           cursor: 'pointer',
