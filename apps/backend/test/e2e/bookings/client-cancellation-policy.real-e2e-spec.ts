@@ -72,7 +72,7 @@ describeReal('Client cancellation policy (real HTTP and DB)', () => {
   const cancel = (id: string, quoteToken: string, sourceActionId = randomUUID(), audience?: string) =>
     request(app.getHttpServer()).patch(`${url(id, audience)}/cancel`)
       .set('Authorization', `Bearer ${token}`).send({
-        quoteToken, sourceActionId,
+        acceptedRefundTerms: true, quoteToken, sourceActionId,
         ...(audience === 'mobile/client' ? { reason: 'CLIENT_REQUESTED' } : {}),
       });
 
@@ -230,9 +230,10 @@ describeReal('Client cancellation policy (real HTTP and DB)', () => {
 
   it('disabled policy preserves the existing approval path', async () => {
     const { booking } = await fixture({ enabled: false });
-    expect((await preview(booking.id).expect(200)).body.policyEnabled).toBe(false);
+    const quote = (await preview(booking.id).expect(200)).body;
+    expect(quote).toMatchObject({ policyEnabled: false, requiresApproval: true, refundDecision: 'AFTER_APPROVAL' });
     const result = await request(app.getHttpServer()).patch(`${url(booking.id)}/cancel`)
-      .set('Authorization', `Bearer ${token}`).send({ reason: 'Synthetic legacy path' }).expect(200);
+      .set('Authorization', `Bearer ${token}`).send({ reason: 'Synthetic legacy path', acceptedRefundTerms: true, quoteToken: quote.quoteToken }).expect(200);
     expect(result.body).toMatchObject({ status: 'CANCEL_REQUESTED', requiresApproval: true });
   });
 });

@@ -45,7 +45,7 @@ export function BookingCancellation({ bookingId, canCancel, persistedRefund }: {
   const mutation = useCancelBooking();
   const busy = mutation.isPending || quote.isFetching;
   const textStyle = { color: colors.ink[900], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign };
-  const eligible = quote.data && (!quote.data.policyEnabled || quote.data.canCancel);
+  const eligible = quote.data && quote.data.canCancel;
   const refund = persistedRefund ?? outcome?.refund;
   const button = (label: string, onPress: () => void, disabled = false) => (
     <Pressable accessibilityRole="button" accessibilityState={{ disabled, busy: disabled && busy }}
@@ -56,10 +56,10 @@ export function BookingCancellation({ bookingId, canCancel, persistedRefund }: {
   const confirm = async () => {
     if (!eligible || busy || quote.isError) return;
     setError(undefined);
-    if (quote.data.policyEnabled && !actionId.current) actionId.current = uuid.v4();
+    if (!actionId.current) actionId.current = uuid.v4();
     try {
       const result = await mutation.mutateAsync({ id: bookingId, reason: t('appointments.cancelReason'),
-        ...(quote.data.policyEnabled ? { quoteToken: quote.data.quoteToken, sourceActionId: actionId.current } : {}),
+        acceptedRefundTerms: true, quoteToken: quote.data.quoteToken, sourceActionId: actionId.current,
       });
       setOutcome({ status: result.status, refund: result.refund });
       setOpen(false);
@@ -83,9 +83,11 @@ export function BookingCancellation({ bookingId, canCancel, persistedRefund }: {
         <Text accessibilityLiveRegion="polite" style={textStyle}>{t('cancellation.loadError')}</Text>
         {button('cancellation.retry', () => { void quote.refetch(); }, !!busy)}
       </> : quote.data && <>
-        <Text style={textStyle}>{t(quote.data.policyEnabled ? `cancellation.${quote.data.reasonCode}` : 'cancellation.legacy')}</Text>
+        <Text style={textStyle}>{t(`cancellation.${quote.data.reasonCode}`)}</Text>
         {quote.data.policyEnabled && quote.data.cutoffAt && <Text style={textStyle}>{t('cancellation.cutoff')}: {new Date(quote.data.cutoffAt).toLocaleString(dir.locale, { timeZone: 'Asia/Riyadh' })}</Text>}
-        {quote.data.policyEnabled && quote.data.canCancel && <RefundSummary refund={quote.data.refund} preview />}
+        {quote.data.canCancel && (quote.data.refundDecision === 'AFTER_APPROVAL'
+          ? <Text style={textStyle}>{t('cancellation.approvalPreview')}</Text>
+          : <RefundSummary refund={quote.data.refund} preview />)}
         {eligible && button('cancellation.confirm', () => { void confirm(); }, !!busy)}
       </>}
       {error && <Text accessibilityRole="alert" style={textStyle}>{error}</Text>}

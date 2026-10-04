@@ -70,7 +70,7 @@ export async function getMyCancellationPreview(bookingId: string): Promise<Cance
 
 export async function cancelMyBooking(
   bookingId: string,
-  payload?: CancelMyBookingPayload & CancellationQuoteInput,
+  payload: CancelMyBookingPayload & CancellationQuoteInput,
 ): Promise<ClientCancellationResult> {
   return apiRequest<ClientCancellationResult>(
     `/public/me/bookings/${bookingId}/cancel`,

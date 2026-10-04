@@ -97,6 +97,7 @@ export async function cancelMyBookingApi(
   quote?: CancellationQuoteInput,
 ): Promise<Omit<ClientCancellationResult, 'booking'>> {
   ensureInitialised()
+  if (!quote) throw new Error('Cancellation preview consent is required')
   const result = await cancelMyBooking(bookingId, { reason, ...quote })
   return { status: result.status, requiresApproval: result.requiresApproval, ...(result.refund ? { refund: result.refund } : {}) }
 }

@@ -20,6 +20,13 @@ describe('client cancellation Zoom cleanup', () => {
     await handler.handle(event);
     expect(zoom.deleteMeetingStrict).not.toHaveBeenCalled();
   });
+  it('preserves legacy mobile cleanup without requiring a new financial intent', async () => {
+    const { handler, event, zoom } = setup();
+    delete event.payload.clientCancellation;
+    event.payload.legacyClientCancellation = true;
+    await handler.handle(event);
+    expect(zoom.deleteMeetingStrict).toHaveBeenCalledWith('org', 'z1');
+  });
   it('retains the identifier for retry when provider deletion fails', async () => {
     const { handler, event, zoom, prisma } = setup();
     zoom.deleteMeetingStrict.mockRejectedValueOnce(new Error('unavailable'));

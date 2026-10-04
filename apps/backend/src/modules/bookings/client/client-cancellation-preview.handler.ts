@@ -21,13 +21,13 @@ export async function readCancellationPayments(tx: Prisma.TransactionClient, boo
 export class ClientCancellationPreviewHandler {
   constructor(private readonly rls: RlsTransactionService, private readonly settings: GetBookingSettingsHandler) {}
 
-  async execute(bookingId: string, clientId: string): Promise<ClientCancellationPreview> {
+  async execute(bookingId: string, clientId: string, legacyChannel: 'PUBLIC' | 'MOBILE' = 'PUBLIC'): Promise<ClientCancellationPreview> {
     return this.rls.withTransaction(async tx => {
       const booking = await tx.booking.findFirst({ where: { id: bookingId, clientId } });
       if (!booking) throw new NotFoundException('Booking not found');
       const settings = await this.settings.execute({ branchId: booking.branchId, transaction: tx });
       const payments = await readCancellationPayments(tx, booking.id);
-      const { allocations: _allocations, ...preview } = calculateClientCancellation(booking, settings as ClientCancellationSettings, payments);
+      const { allocations: _allocations, ...preview } = calculateClientCancellation(booking, settings as ClientCancellationSettings, payments, new Date(), legacyChannel);
       return preview;
     }, { isolationLevel: 'Serializable' });
   }

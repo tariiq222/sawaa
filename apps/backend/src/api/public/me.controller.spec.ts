@@ -210,14 +210,14 @@ describe('PublicMeController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/cancel')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({ reason: 'changed my mind' })
+        .send({ reason: 'changed my mind', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) })
         .expect(200);
 
       expect(res.body.status).toBe('CANCELLED');
       expect(mockCancel.execute).toHaveBeenCalledWith({
         bookingId: '00000000-0000-4000-a000-000000000001',
         clientId: 'client-1',
-        reason: 'changed my mind',
+        reason: 'changed my mind', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64),
       });
     });
 
@@ -227,17 +227,22 @@ describe('PublicMeController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/cancel')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({})
+        .send({ acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) })
         .expect(200);
 
       expect(res.body.status).toBe('CANCELLED');
+    });
+
+    it.each([{}, { acceptedRefundTerms: false, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: null, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: true }, { acceptedRefundTerms: true, quoteToken: '' }, { acceptedRefundTerms: true, quoteToken: 'invalid' }])('rejects absent or malformed consent %p', async body => {
+      await request(app.getHttpServer()).patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/cancel').send(body).expect(400);
+      expect(mockCancel.execute).not.toHaveBeenCalled();
     });
 
     it('returns 400 for invalid UUID', async () => {
       return request(app.getHttpServer())
         .patch('/public/me/bookings/not-a-uuid/cancel')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({})
+        .send({ acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) })
         .expect(400);
     });
   });

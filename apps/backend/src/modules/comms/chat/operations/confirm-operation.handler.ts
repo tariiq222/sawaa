@@ -30,7 +30,6 @@ import { assertOperationOwnership, lockChatOperation } from './acknowledge-exist
 import {
   ChatBookingQuoteService,
   type PreparedBookingPayload,
-  type PreparedCancellationPayload,
   type PreparedReschedulePayload,
 } from './chat-booking-quote.service';
 
@@ -66,7 +65,7 @@ export class ConfirmOperationHandler {
     private readonly quote: ChatBookingQuoteService,
     private readonly createBooking: CreateBookingHandler,
     private readonly rescheduleBooking: ClientRescheduleBookingHandler,
-    private readonly cancelBooking: ClientCancelBookingHandler,
+    _cancelBooking: ClientCancelBookingHandler,
     private readonly audit: ChatAuditService,
   ) {}
 
@@ -296,39 +295,9 @@ export class ConfirmOperationHandler {
     }
 
     if (operation.type === ChatOperationType.CANCEL_BOOKING) {
-      const bookingId = this.string(payload, 'bookingId');
-      const recovered = await tx.bookingStatusLog.findUnique({
-        where: { sourceActionId: operation.id },
-        select: { id: true },
-      });
-      if (recovered) {
-        const result = await this.cancelBooking.execute({
-          bookingId,
-          clientId,
-          sourceActionId: operation.id,
-          transaction: tx,
-        });
-        return {
-          bookingId: result.booking.id,
-          outcome: result.status === 'CANCEL_REQUESTED'
-            ? 'CANCELLATION_REQUESTED'
-            : 'BOOKING_CANCELLED',
-        };
-      }
-      const fresh = await this.quote.quoteCancellation({ clientId, bookingId, transaction: tx });
-      this.assertUnchanged(operation.payload, fresh.payload as PreparedCancellationPayload);
-      const result = await this.cancelBooking.execute({
-        bookingId,
-        clientId,
-        sourceActionId: operation.id,
-        transaction: tx,
-      });
-      return {
-        bookingId: result.booking.id,
-        outcome: result.status === 'CANCEL_REQUESTED'
-          ? 'CANCELLATION_REQUESTED'
-          : 'BOOKING_CANCELLED',
-      };
+      // Chat confirmations do not display the current refund quote. Never invent
+      // consent on the client's behalf; the appointment screen owns this flow.
+      throw new OperationExecutionError('CANCELLATION_CONSENT_REQUIRED', 'Review cancellation terms on the appointment screen');
     }
 
     throw new OperationExecutionError('UNSUPPORTED_OPERATION', 'Operation cannot be confirmed');
@@ -349,7 +318,7 @@ export class ConfirmOperationHandler {
       const messageId = await this.writeResultMessage(tx, operation, {
         status: ChatOperationStatus.FAILED,
         bookingId: null,
-        outcome: 'OPERATION_FAILED',
+        outcome: errorCode === 'CANCELLATION_CONSENT_REQUIRED' ? errorCode : 'OPERATION_FAILED',
       });
       const failed = await tx.chatOperation.update({
         where: { id: operation.id },
@@ -561,6 +530,7 @@ export class ConfirmOperationHandler {
   }
 
   private resultBody(status: ChatOperationStatus, outcome: string, syncPending = false): string {
+    if (outcome === 'CANCELLATION_CONSENT_REQUIRED') return 'لإلغاء الموعد، افتح تفاصيل الموعد وراجع شروط الإلغاء والاسترداد ثم أكّد موافقتك.';
     if (status === ChatOperationStatus.FAILED) return 'تعذر تنفيذ الإجراء. يمكنك إعداد الطلب من جديد.';
     if (outcome === 'BOOKING_RESCHEDULED') {
       return syncPending

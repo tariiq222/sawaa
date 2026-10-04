@@ -11,9 +11,9 @@ export class ClientCancellationZoomHandler {
     this.bus.subscribe<BookingCancelledPayload>('bookings.booking.cancelled', 'bookings.client-cancel-zoom.v1', e => this.handle(e));
   }
   async handle(event: DomainEventEnvelope<BookingCancelledPayload>): Promise<void> {
-    const { clientCancellation, zoomMeetingId, bookingId, organizationId } = event.payload;
-    if (!clientCancellation || !zoomMeetingId) return;
-    if (event.version !== 1 || clientCancellation.version !== 1) throw new Error('Unsupported client cancellation event');
+    const { clientCancellation, legacyClientCancellation, zoomMeetingId, bookingId, organizationId } = event.payload;
+    if ((!clientCancellation && legacyClientCancellation !== true) || !zoomMeetingId) return;
+    if (event.version !== 1 || (clientCancellation && clientCancellation.version !== 1)) throw new Error('Unsupported client cancellation event');
     const booking = await this.prisma.booking.findUnique({ where: { id: bookingId }, select: { status: true, zoomMeetingId: true } });
     if (!booking || booking.status !== 'CANCELLED' || booking.zoomMeetingId !== zoomMeetingId) return;
     // Remote deletion is idempotent. Keep the identifier until success for retry.

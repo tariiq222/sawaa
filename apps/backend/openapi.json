@@ -2133,8 +2133,16 @@
       },
       "ClientCancelBookingDto": {
         "properties": {
+          "acceptedRefundTerms": {
+            "description": "Explicit acceptance of the displayed current cancellation and refund terms",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
           "quoteToken": {
-            "description": "Opaque cancellation preview token; refresh preview after conflict",
+            "description": "Current cancellation preview fingerprint; refresh and reconfirm after conflict",
+            "pattern": "^[a-f0-9]{64}$",
             "type": "string"
           },
           "reason": {
@@ -2147,6 +2155,10 @@
             "type": "string"
           }
         },
+        "required": [
+          "acceptedRefundTerms",
+          "quoteToken"
+        ],
         "type": "object"
       },
       "ClientCancelCutoffMode": {
@@ -2186,7 +2198,8 @@
               "ATTENDED",
               "FINAL_STATE",
               "HISTORICAL",
-              "GROUP_STAFF_ONLY"
+              "GROUP_STAFF_ONLY",
+              "REFUND_REVIEW_REQUIRED"
             ],
             "type": "string"
           },
@@ -2197,10 +2210,24 @@
               }
             ],
             "description": "Financial terms shown to the client before cancellation confirmation"
+          },
+          "refundDecision": {
+            "description": "Approval requests have no guaranteed refund amount until staff decides",
+            "enum": [
+              "QUOTED",
+              "AFTER_APPROVAL"
+            ],
+            "type": "string"
+          },
+          "requiresApproval": {
+            "description": "Whether this submits a request for staff approval instead of cancelling immediately",
+            "type": "boolean"
           }
         },
         "required": [
           "policyEnabled",
+          "requiresApproval",
+          "refundDecision",
           "canCancel",
           "reasonCode",
           "cutoffAt",
@@ -7398,13 +7425,21 @@
       },
       "MobileCancelBookingDto": {
         "properties": {
+          "acceptedRefundTerms": {
+            "description": "Explicit acceptance of the displayed current cancellation and refund terms",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
           "cancelNotes": {
             "description": "Free-text notes about the cancellation",
             "example": "Change of plans",
             "type": "string"
           },
           "quoteToken": {
-            "description": "Cancellation preview fingerprint",
+            "description": "Current cancellation preview fingerprint; refresh and reconfirm after conflict",
+            "pattern": "^[a-f0-9]{64}$",
             "type": "string"
           },
           "reason": {
@@ -7417,12 +7452,14 @@
             "example": "CLIENT_REQUESTED"
           },
           "sourceActionId": {
-            "description": "Stable UUID for this cancellation attempt",
+            "description": "Stable UUID for retrying the same cancellation",
             "format": "uuid",
             "type": "string"
           }
         },
         "required": [
+          "acceptedRefundTerms",
+          "quoteToken",
           "reason"
         ],
         "type": "object"

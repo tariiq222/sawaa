@@ -1,3 +1,5 @@
+import { ClientCancelBookingDto } from '../../../modules/bookings/client/client-cancel-booking.dto';
+import { PickType } from '@nestjs/swagger';
 import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
 import { ClientCancellationPreviewDto, PersistedCancellationRefundDto, CancellationRefundSummaryDto } from '../../../modules/bookings/client/client-cancellation-preview.dto';
 import { ClientCancelBookingHandler } from '../../../modules/bookings/client/client-cancel-booking.handler';
@@ -28,7 +30,7 @@ import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
-import { CancelApprovalRequiredException, CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { ClientRescheduleBookingDto } from '../../../modules/bookings/client/client-reschedule-booking.dto';
@@ -82,18 +84,14 @@ export class MobileCreateBookingDto {
   @IsOptional() @IsBoolean() payAtClinic?: boolean;
 }
 
-export class MobileCancelBookingDto {
+export class MobileCancelBookingDto extends PickType(ClientCancelBookingDto, ['acceptedRefundTerms', 'quoteToken', 'sourceActionId'] as const) {
   @ApiProperty({ description: 'Reason for cancellation', enum: CancellationReason, enumName: 'CancellationReason', example: CancellationReason.CLIENT_REQUESTED })
   @IsEnum(CancellationReason) reason!: CancellationReason;
 
   @ApiPropertyOptional({ description: 'Free-text notes about the cancellation', example: 'Change of plans' })
   @IsOptional() @IsString() cancelNotes?: string;
 
-  @ApiPropertyOptional({ description: 'Cancellation preview fingerprint' })
-  @IsOptional() @IsString() @MaxLength(128) quoteToken?: string;
 
-  @ApiPropertyOptional({ description: 'Stable UUID for this cancellation attempt', format: 'uuid' })
-  @IsOptional() @IsUUID() sourceActionId?: string;
 }
 
 export class MobileListBookingsDto {
@@ -199,7 +197,7 @@ export class MobileClientBookingsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: ClientCancellationPreviewDto })
   cancellationPreviewEndpoint(@ClientSession() user: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
-    return this.cancellationPreview.execute(id, user.id);
+    return this.cancellationPreview.execute(id, user.id, 'MOBILE');
   }
 
   @Patch(':id/cancel')
@@ -213,32 +211,12 @@ export class MobileClientBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MobileCancelBookingDto,
   ) {
-    const preview = await this.cancellationPreview.execute(id, user.id);
-    if (preview.policyEnabled || body.quoteToken) {
-      const result = await this.clientCancel.execute({ bookingId: id, clientId: user.id, reason: body.cancelNotes, quoteToken: body.quoteToken, sourceActionId: body.sourceActionId });
-      return { ...result.booking, ...result };
-    }
-    try {
-      return await this.cancel.execute({
-        bookingId: id,
-        reason: body.reason,
-        cancelNotes: body.cancelNotes,
-        changedBy: user.id,
-        source: 'client',
-        clientId: user.id,
-      });
-    } catch (error) {
-      if (!(error instanceof CancelApprovalRequiredException)) throw error;
-      // The branch requires the centre to approve cancellations: turn the
-      // client's cancel into a cancellation request instead of a dead end.
-      await this.bookingAction.executeForRate(id, user.id);
-      return this.requestCancel.execute({
-        bookingId: id,
-        reason: body.reason,
-        cancelNotes: body.cancelNotes,
-        requestedBy: user.id,
-      });
-    }
+    const result = await this.clientCancel.execute({
+      bookingId: id, clientId: user.id, reason: body.cancelNotes,
+      cancellationReason: body.reason, legacyChannel: 'MOBILE',
+      acceptedRefundTerms: body.acceptedRefundTerms, quoteToken: body.quoteToken, sourceActionId: body.sourceActionId,
+    });
+    return { ...result.booking, ...result };
   }
 
   @Get(':id/join')

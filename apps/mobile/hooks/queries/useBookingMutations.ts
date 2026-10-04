@@ -9,14 +9,15 @@ import { clientBookingsKeys } from './useClientBookings';
 interface CancelVars {
   id: string;
   reason: string;
-  quoteToken?: string;
+  acceptedRefundTerms: true;
+  quoteToken: string;
   sourceActionId?: string;
 }
 
 export function useCancelBooking() {
   const qc = useQueryClient();
   return useMutation<Awaited<ReturnType<typeof clientBookingsService.cancel>>, Error, CancelVars>({
-    mutationFn: ({ id, reason, quoteToken, sourceActionId }) => clientBookingsService.cancel(id, reason, { quoteToken, sourceActionId }),
+    mutationFn: ({ id, reason, acceptedRefundTerms, quoteToken, sourceActionId }) => clientBookingsService.cancel(id, reason, { acceptedRefundTerms, quoteToken, sourceActionId }),
     retry: false,
     // The cancellation screen localizes failures and refreshes stale quotes.
     onError: () => undefined,

@@ -16,9 +16,10 @@ let mockCanGoBack = true;
 const mockCancel = jest.fn();
 const mockPreview = jest.fn();
 const mockPreviewRefetch = jest.fn();
+const mockUuid = jest.fn(() => 'action-uuid');
 const refund = { status: 'PENDING_REVIEW', paidAmount: 10000, alreadyRefundedAmount: 0, pendingRefundAmount: 0, refundAmount: 5000, refundPercent: 50, currency: 'SAR', execution: 'REVIEW', window: 'LATE' };
-const preview = { policyEnabled: true, canCancel: true, reasonCode: 'ALLOWED', cutoffAt: '2099-01-01T00:00:00Z', quoteToken: 'quote-1', refund };
-jest.mock('expo-modules-core', () => ({ ...jest.requireActual('expo-modules-core'), uuid: { v4: () => 'action-uuid' } }));
+const preview = { policyEnabled: true, requiresApproval: false, refundDecision: 'QUOTED' as const, canCancel: true, reasonCode: 'ALLOWED', cutoffAt: '2099-01-01T00:00:00Z', quoteToken: 'quote-1', refund };
+jest.mock('expo-modules-core', () => ({ ...jest.requireActual('expo-modules-core'), uuid: { v4: () => mockUuid() } }));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'a1' }), useRouter: () => ({ back: mockBack, push: mockPush, replace: mockReplace, canGoBack: () => mockCanGoBack }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -165,7 +166,7 @@ describe('appointment detail truthful states', () => {
     expect(await screen.findByText(status === 'cancelled' ? 'cancellation.cancelled' : 'appointments.cancellationRequestedMessage')).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
-    expect(mockCancel).toHaveBeenCalledWith({ id: 'a1', reason: 'appointments.cancelReason' });
+    expect(mockCancel).toHaveBeenCalledWith({ id: 'a1', reason: 'appointments.cancelReason', acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: 'action-uuid' });
   });
 
   it('shows the quoted amount and sends the quote only after explicit confirmation', async () => {
@@ -179,7 +180,7 @@ describe('appointment detail truthful states', () => {
     expect(mockCancel).not.toHaveBeenCalled();
     fireEvent.press(screen.getByText('cancellation.confirm'));
     expect(await screen.findByText('cancellation.PENDING_REVIEW')).toBeTruthy();
-    expect(mockCancel).toHaveBeenCalledWith({ id: 'a1', reason: 'appointments.cancelReason', quoteToken: 'quote-1', sourceActionId: 'action-uuid' });
+    expect(mockCancel).toHaveBeenCalledWith({ id: 'a1', reason: 'appointments.cancelReason', acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: 'action-uuid' });
   });
 
   it.each(['CUTOFF_PASSED', 'ATTENDED', 'FINAL_STATE', 'HISTORICAL', 'GROUP_STAFF_ONLY'])('disables cancellation for server reason %s', (reasonCode) => {
@@ -204,6 +205,7 @@ describe('appointment detail truthful states', () => {
   });
 
   it('refreshes a stale quote and requires another confirmation', async () => {
+    mockUuid.mockReturnValueOnce('action-1').mockReturnValueOnce('action-2');
     mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
     mockPreview.mockReturnValue({ data: preview, refetch: mockPreviewRefetch });
     mockCancel.mockRejectedValueOnce({ response: { status: 409 } }).mockResolvedValue({ status: 'cancelled', refund });
@@ -219,7 +221,8 @@ describe('appointment detail truthful states', () => {
     expect(screen.getByText(/25.00 SAR/)).toBeTruthy();
     fireEvent.press(screen.getByText('cancellation.confirm'));
     await waitFor(() => expect(mockCancel).toHaveBeenCalledTimes(2));
-    expect(mockCancel.mock.calls[1][0].quoteToken).toBe('quote-2');
+    expect(mockCancel.mock.calls[1][0]).toMatchObject({ acceptedRefundTerms: true, quoteToken: 'quote-2', sourceActionId: 'action-2' });
+    expect(mockCancel.mock.calls[0][0].sourceActionId).toBe('action-1');
   });
 
   it.each(['NOT_APPLICABLE', 'NO_REFUND', 'PROCESSING', 'PENDING_REVIEW', 'CREDIT_RETURNED', 'COMPLETED', 'FAILED'])('retains persisted %s refund state after reopening', (status) => {
