@@ -644,7 +644,9 @@ describeRealE2e(
           api().get(`/api/v1/mobile/client/bookings/${clientABookingId}`),
         );
         expect(res.status).toBe(403);
-        expect(res.body.message ?? "").toMatch(/not your booking/i);
+        expect(res.body).not.toHaveProperty("id");
+        expect(res.body).not.toHaveProperty("clientId");
+        expect(res.body).not.toHaveProperty("scheduledAt");
       });
 
       it("returns 404 for a UUID that does not match any booking", async () => {
@@ -678,9 +680,11 @@ describeRealE2e(
         const bookingId = create.body.id as string;
         ctx.bookingIds.push(bookingId);
 
+        const quote = await withClient(ctx.clientAToken)(api().get(`/api/v1/mobile/client/bookings/${bookingId}/cancellation-preview`));
+        expect(quote.status).toBe(200);
         const res = await withClient(ctx.clientAToken)(
           api().patch(`/api/v1/mobile/client/bookings/${bookingId}/cancel`),
-        ).send({ reason: "CLIENT_REQUESTED", cancelNotes: "Plans changed" });
+        ).send({ reason: "CLIENT_REQUESTED", cancelNotes: "Plans changed", acceptedRefundTerms: true, quoteToken: quote.body.quoteToken });
 
         expect(res.status).toBe(200);
         expect(res.body.status).toBe("CANCELLED");
@@ -726,10 +730,10 @@ describeRealE2e(
 
         const res = await withClient(ctx.clientBToken)(
           api().patch(`/api/v1/mobile/client/bookings/${bookingId}/cancel`),
-        ).send({ reason: "CLIENT_REQUESTED" });
+        ).send({ reason: "CLIENT_REQUESTED", acceptedRefundTerms: true, quoteToken: "a".repeat(64) });
 
         expect(res.status).toBe(403);
-        expect(res.body.message ?? "").toMatch(/not your booking/i);
+        expect(res.body.message ?? "").toMatch(/own this booking/i);
 
         // The booking must NOT be cancelled by the rejected request.
         const after = await prisma.booking.findUnique({
@@ -748,15 +752,16 @@ describeRealE2e(
         const cancelledId = list.body.items[0]?.id as string | undefined;
         expect(cancelledId).toBeDefined();
 
+        const quote = await withClient(ctx.clientAToken)(api().get(`/api/v1/mobile/client/bookings/${cancelledId}/cancellation-preview`));
         const res = await withClient(ctx.clientAToken)(
           api().patch(`/api/v1/mobile/client/bookings/${cancelledId}/cancel`),
-        ).send({ reason: "CLIENT_REQUESTED" });
+        ).send({ reason: "CLIENT_REQUESTED", acceptedRefundTerms: true, quoteToken: quote.body.quoteToken });
 
         expect(res.status).toBe(400);
         // The mobile-client cancel endpoint routes through CancelBookingHandler,
         // which answers a rejected transition in Arabic for the operator
         // (HttpExceptionFilter passes the exception message through as-is).
-        expect(res.body.message ?? "").toMatch(/لا يمكن إلغاء هذا الحجز/);
+        expect(res.body.reasonCode).toBe("FINAL_STATE");
       });
     });
 

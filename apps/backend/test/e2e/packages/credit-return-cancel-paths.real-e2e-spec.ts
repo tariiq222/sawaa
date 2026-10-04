@@ -1,3 +1,4 @@
+import { ClientCancellationPreviewHandler } from '../../../src/modules/bookings/client/client-cancellation-preview.handler';
 /**
  * Credit return on cancel paths — Real-DB e2e spec
  * =================================================
@@ -486,7 +487,9 @@ describeRealE2e("Credit return on cancel paths (P1-1 fix)", () => {
         new Date(Date.now() + 48 * 3_600_000),
       );
 
+      const quote = await app.get(ClientCancellationPreviewHandler).execute(booking.id, ids.clientId);
       const result = await clientHandler.execute({
+        acceptedRefundTerms: true, quoteToken: quote.quoteToken,
         bookingId: booking.id,
         clientId: ids.clientId,
         reason: "test",
@@ -521,7 +524,9 @@ describeRealE2e("Credit return on cancel paths (P1-1 fix)", () => {
         new Date(Date.now() + 12 * 3_600_000),
       );
 
+      const quote = await app.get(ClientCancellationPreviewHandler).execute(booking.id, ids.clientId);
       const result = await clientHandler.execute({
+        acceptedRefundTerms: true, quoteToken: quote.quoteToken,
         bookingId: booking.id,
         clientId: ids.clientId,
       });

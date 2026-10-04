@@ -195,6 +195,27 @@ describe('CreateBookingHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it.each([[true, false], [false, true], [false, false]])('rejects ONLINE pay-at-clinic when org=%s client=%s without writes', async (orgEnabled, clientEnabled) => {
+    prisma.organizationSettings.findFirst.mockResolvedValue({ paymentAtClinicEnabled: orgEnabled } as never);
+    settingsHandler.execute.mockResolvedValue({ ...DEFAULT_BOOKING_SETTINGS, payAtClinicEnabled: clientEnabled });
+    await expect(handler.execute({ ...baseDto, source: 'ONLINE', payAtClinic: true })).rejects.toThrow(BadRequestException);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('reads authoritative client pay-at-clinic settings and permits both enabled flags', async () => {
+    settingsHandler.execute.mockResolvedValue({ ...DEFAULT_BOOKING_SETTINGS, payAtClinicEnabled: true });
+    await handler.execute({ ...baseDto, source: 'ONLINE', payAtClinic: true });
+    expect(settingsHandler.execute).toHaveBeenCalledWith({ branchId: baseDto.branchId, transaction: prisma });
+  });
+
+  it('keeps RECEPTION pay-at-clinic available when only the client option is disabled', async () => {
+    settingsHandler.execute.mockResolvedValue({ ...DEFAULT_BOOKING_SETTINGS, payAtClinicEnabled: false });
+    await handler.execute({ ...baseDto, source: 'RECEPTION', payAtClinic: true });
+    expect(prisma.booking.create).toHaveBeenCalled();
+  });
+
   it('throws BadRequestException when payAtClinic=true but org settings row is missing', async () => {
     prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue(null);
     await expect(
@@ -1030,6 +1051,7 @@ describe('CreateBookingHandler', () => {
   });
 
   it('creates ONLINE booking as CONFIRMED when payAtClinic=true (no payment needed)', async () => {
+    settingsHandler.execute.mockResolvedValue({ ...DEFAULT_BOOKING_SETTINGS, payAtClinicEnabled: true });
     prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ paymentAtClinicEnabled: true, vatRate: '0' });
     await handler.execute({ ...baseDto, source: 'ONLINE', payAtClinic: true });
 

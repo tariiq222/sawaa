@@ -1,3 +1,4 @@
+import { calculateClientCancellation } from '../client/client-cancellation-policy';
 /**
  * Booking Scenarios — End-to-End Reality Tests
  * =============================================
@@ -885,7 +886,12 @@ describe("Scenario 13 — Client cancels inside free window, direct cancel + aut
 			groupCapacity as never,
 		);
 
+		const cancellationBooking = await prisma.booking.findUnique({ where: { id: "book-13" } });
+		Object.assign(prisma.payment, { findMany: jest.fn().mockResolvedValue([]) });
+		prisma.$queryRaw.mockResolvedValue([]);
+		const quote = calculateClientCancellation(cancellationBooking as never, await settings.execute(), []);
 		const result = await handler.execute({
+			acceptedRefundTerms: true, quoteToken: quote.quoteToken,
 			bookingId: "book-13",
 			clientId: "client-lama",
 			reason: " plans changed",

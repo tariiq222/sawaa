@@ -20,6 +20,8 @@ export interface BookingCancelledPayload {
   refundRequestId?: string | null;
   idempotencyKey?: string | null;
   clientCancellation?: ClientCancellationIntent;
+  /** Legacy mobile cancellation keeps legacy finance and durable Zoom cleanup. */
+  legacyClientCancellation?: boolean;
   centerCancellation?: StaffCancellationIntent;
 }
 

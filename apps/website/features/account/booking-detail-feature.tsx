@@ -440,14 +440,14 @@ function CancelModal({
   const quote = useQuery({ queryKey: ['client', 'cancellation-preview', bookingId], queryFn: () => getMyCancellationPreviewApi(bookingId), retry: false, staleTime: 0 });
   const mutation = useMutation({ mutationFn: (input: { reason?: string; quote?: CancellationQuoteInput }) => cancelApi(input.reason, input.quote), retry: false });
   const isLoading = mutation.isPending;
-  const eligible = !!quote.data && (!quote.data.policyEnabled || quote.data.canCancel);
+  const eligible = !!quote.data && quote.data.canCancel;
 
   async function handleConfirm() {
-    if (!eligible || quote.isError || quote.isFetching || mutation.isPending) return;
+    if (!quote.data || !eligible || quote.isError || quote.isFetching || mutation.isPending) return;
     setError(null);
     try {
-      if (quote.data?.policyEnabled && !actionId.current) actionId.current = crypto.randomUUID();
-      const result = await mutation.mutateAsync({ reason: reason || undefined, quote: quote.data?.policyEnabled ? { quoteToken: quote.data.quoteToken, sourceActionId: actionId.current } : undefined });
+      if (!actionId.current) actionId.current = crypto.randomUUID();
+      const result = await mutation.mutateAsync({ reason: reason || undefined, quote: { acceptedRefundTerms: true, quoteToken: quote.data.quoteToken, sourceActionId: actionId.current } });
       onSuccess(result.status === 'CANCELLED' ? 'CANCELLED' : 'CANCEL_REQUESTED', result.refund);
     } catch (err) {
       if ((err as { status?: number })?.status === 409) {
@@ -476,11 +476,13 @@ function CancelModal({
 
       {quote.isFetching && <p role="status">{tt('cancellation.loading')}</p>}
       {quote.isError && <div role="alert"><p>{tt('cancellation.loadError')}</p><button onClick={() => void quote.refetch()}>{tt('cancellation.retry')}</button></div>}
-      {quote.data && !quote.isFetching && !quote.isError && (quote.data.policyEnabled ? <div>
+      {quote.data && !quote.isFetching && !quote.isError && <div>
         <p>{tt(`cancellation.${quote.data.reasonCode}` as never)}</p>
         {quote.data.cutoffAt && <p>{tt('cancellation.cutoff')}: {new Date(quote.data.cutoffAt).toLocaleString(locale, { timeZone: 'Asia/Riyadh' })}</p>}
-        {quote.data.canCancel && <CancellationRefundSummary refund={quote.data.refund} preview />}
-      </div> : <p>{tt('cancellation.legacy')}</p>)}
+        {quote.data.canCancel && (quote.data.refundDecision === 'AFTER_APPROVAL'
+          ? <p>{tt('cancellation.approvalPreview')}</p>
+          : <CancellationRefundSummary refund={quote.data.refund} preview />)}
+      </div>}
 
       <label
         htmlFor="cancel-reason"

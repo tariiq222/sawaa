@@ -21,7 +21,7 @@ import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
-import { computeRefundAmountHalalas, computeRefundType } from '../cancellation-policy';
+import { computeRefundAmountHalalas } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import {
   assertBookingIsMutable,
@@ -37,6 +37,9 @@ export type ClientCancelCommand = ClientCancelBookingDto & {
   clientId: string;
   sourceActionId?: string;
   transaction?: Prisma.TransactionClient;
+  /** Server-derived transport semantics; never accepted from a client DTO. */
+  legacyChannel?: 'PUBLIC' | 'MOBILE';
+  cancellationReason?: CancellationReason;
 };
 
 type CancelResult = {
@@ -58,6 +61,9 @@ export class ClientCancelBookingHandler {
   ) {}
 
   async execute(cmd: ClientCancelCommand): Promise<CancelResult> {
+    if (cmd.acceptedRefundTerms !== true || typeof cmd.quoteToken !== 'string' || !/^[a-f0-9]{64}$/.test(cmd.quoteToken)) {
+      throw new BadRequestException('Explicit acceptance and a current cancellation preview token are required');
+    }
     const actionHash = this.actionHash(cmd);
     const cancellationEventId = cmd.sourceActionId
       ? stableEventId(`booking:${cmd.bookingId}:client-cancel:${cmd.sourceActionId}`)
@@ -65,6 +71,7 @@ export class ClientCancelBookingHandler {
     const mutate = async (tx: Prisma.TransactionClient): Promise<CancelResult> => {
       // Cancellation needs no employee-slot lock. The client lock precedes the booking mutation.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hashToInt32('client_booking')}::int, ${hashToInt32(cmd.clientId)}::int)`;
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`);
       const booking = await tx.booking.findUnique({ where: { id: cmd.bookingId } });
       if (!booking) throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
       if (booking.clientId !== cmd.clientId) throw new ForbiddenException('You do not own this booking');
@@ -102,16 +109,21 @@ export class ClientCancelBookingHandler {
       if ((settings as ClientCancellationSettings).clientCancellationPolicyEnabled) {
         return this.cancelWithPolicy(tx, cmd, booking, settings as ClientCancellationSettings, cancellationEventId, actionHash);
       }
-      if (cmd.quoteToken) throw new ConflictException('Cancellation policy changed. Reload the cancellation preview.');
-      const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
-
-      if (settings.requireCancelApproval || hoursUntilBooking < settings.freeCancelBeforeHours) {
+      const payments = await readCancellationPayments(tx, booking.id, true);
+      const quote = calculateClientCancellation(booking, settings, payments, new Date(), cmd.legacyChannel);
+      if (cmd.quoteToken !== quote.quoteToken) throw new ConflictException('Cancellation terms changed. Reload the cancellation preview.');
+      if (!quote.canCancel) throw new BadRequestException({ message: 'Client cancellation is unavailable', reasonCode: quote.reasonCode });
+      // The money locks may have waited across the legacy free-window boundary.
+      if (calculateClientCancellation(booking, settings, payments, new Date(), cmd.legacyChannel).quoteToken !== quote.quoteToken) {
+        throw new ConflictException('Cancellation terms changed. Reload the cancellation preview.');
+      }
+      if (quote.requiresApproval) {
         const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
         const updated = await updateBookingAtomically(tx, {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
           actionLabel: 'cancel requested',
-          data: { status: nextStatus, cancelNotes: cmd.reason ?? null },
+          data: { status: nextStatus, cancelNotes: cmd.reason ?? null, ...(cmd.legacyChannel === 'MOBILE' ? { cancelReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED } : {}) },
           ...(booking.deliveryType === 'ONLINE' ? {
             extraWhere: {
               AND: [
@@ -154,12 +166,11 @@ export class ClientCancelBookingHandler {
       }
 
       const directCancelStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
-      const { refundType, refundPercent } = computeRefundType({
-        scheduledAt: booking.scheduledAt,
-        freeCancelBeforeHours: settings.freeCancelBeforeHours,
-        freeCancelRefundType: settings.freeCancelRefundType,
-        lateCancelRefundPercent: settings.lateCancelRefundPercent,
-      });
+      // Execute the accepted quote, including the legacy mobile hold's FULL
+      // entitlement. A later clock tick must not choose another refund tier.
+      const refundPercent = quote.refund.refundPercent;
+      const refundType = refundPercent === 100 ? RefundType.FULL
+        : refundPercent > 0 ? RefundType.PARTIAL : RefundType.NONE;
       let refundRequestId: string | null = null;
       let paymentId: string | null = null;
       let idempotencyKey: string | null = null;
@@ -170,9 +181,10 @@ export class ClientCancelBookingHandler {
         actionLabel: 'cancelled',
         data: {
           status: directCancelStatus,
-          cancelReason: 'CLIENT_REQUESTED',
+          cancelReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
           cancelNotes: cmd.reason ?? null,
           cancelledAt: new Date(),
+          ...(cmd.legacyChannel === 'MOBILE' && booking.zoomMeetingId ? { zoomMeetingStatus: 'CANCELLED' } : {}),
         },
         ...(booking.deliveryType === 'ONLINE' ? {
           extraWhere: {
@@ -197,7 +209,7 @@ export class ClientCancelBookingHandler {
           fromStatus: booking.status,
           toStatus: directCancelStatus,
           changedBy: cmd.clientId,
-          reason: cmd.reason ?? 'CLIENT_CANCEL',
+          reason: cmd.legacyChannel === 'MOBILE' ? cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED : cmd.reason ?? 'CLIENT_CANCEL',
           sourceActionId: cmd.sourceActionId,
           sourceActionHash: cmd.sourceActionId ? actionHash : undefined,
           sourceActionResult: cmd.sourceActionId
@@ -210,10 +222,8 @@ export class ClientCancelBookingHandler {
       });
 
       if (refundType !== RefundType.NONE) {
-        const completedPayment = await tx.payment.findFirst({
-          where: { invoice: { bookingId: cmd.bookingId }, status: 'COMPLETED' },
-          select: { id: true, amount: true },
-        });
+        // The preview and execution select the same capture deterministically.
+        const completedPayment = payments.find(payment => payment.status === 'COMPLETED');
         if (completedPayment) {
           const paidHalalas = Number(completedPayment.amount);
           const refundAmount = refundType === RefundType.FULL
@@ -233,6 +243,9 @@ export class ClientCancelBookingHandler {
           }
         }
       }
+      if (cmd.legacyChannel === 'MOBILE' && booking.couponCode) {
+        await tx.coupon.updateMany({ where: { code: booking.couponCode, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+      }
       if (booking.packageCreditId) await returnPackageCreditForBooking(tx, cmd.bookingId);
       if (booking.programId) {
         await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
@@ -246,7 +259,8 @@ export class ClientCancelBookingHandler {
         bookingNumber: booking.bookingNumber,
         clientId: booking.clientId,
         employeeId: booking.employeeId,
-        reason: CancellationReason.CLIENT_REQUESTED,
+        reason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
+        ...(cmd.legacyChannel === 'MOBILE' ? { zoomMeetingId: booking.zoomMeetingId, legacyClientCancellation: true } : {}),
         cancelNotes: cmd.reason ?? undefined,
         refundType,
         paymentId,
@@ -286,7 +300,7 @@ export class ClientCancelBookingHandler {
     await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${booking.id} FOR UPDATE`);
     const payments = await readCancellationPayments(tx, booking.id, true);
     const quote = calculateClientCancellation(booking, settings, payments);
-    if (cmd.quoteToken && cmd.quoteToken !== quote.quoteToken) {
+    if (cmd.quoteToken !== quote.quoteToken) {
       throw new ConflictException('Cancellation terms changed. Reload the cancellation preview.');
     }
     if (!quote.canCancel) throw new BadRequestException({ message: 'Client cancellation is unavailable', reasonCode: quote.reasonCode });
@@ -347,6 +361,10 @@ export class ClientCancelBookingHandler {
         bookingId: cmd.bookingId,
         clientId: cmd.clientId,
         reason: cmd.reason ?? null,
+        acceptedRefundTerms: cmd.acceptedRefundTerms,
+        quoteToken: cmd.quoteToken,
+        legacyChannel: cmd.legacyChannel ?? 'PUBLIC',
+        cancellationReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
       }))
       .digest('hex');
   }

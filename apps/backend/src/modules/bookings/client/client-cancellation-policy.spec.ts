@@ -50,3 +50,26 @@ describe('client cancellation policy', () => {
     expect(calc().quoteToken).not.toBe(calc({}, [payment], { ...settings, earlyCancelRefundPercent: 50 }).quoteToken);
   });
 });
+
+describe('legacy cancellation consent preview', () => {
+  const legacy = { ...settings, clientCancellationPolicyEnabled: false, requireCancelApproval: false };
+  it('shows actual legacy partial percent rather than the new policy percent or a fake zero', () => {
+    expect(calc({}, [payment], legacy)).toMatchObject({ canCancel: true, requiresApproval: false, refund: { refundAmount: 2500, refundPercent: 25, execution: 'AUTOMATIC' } });
+  });
+  it('shows approval with staff-decided refund when public late cancellation needs approval', () => {
+    expect(calc({}, [payment], legacy, new Date('2026-10-03T11:30:00Z'))).toMatchObject({ canCancel: true, requiresApproval: true, refundDecision: 'AFTER_APPROVAL', refund: { status: 'PENDING_REVIEW' } });
+  });
+  it('binds changes in approval requirement and payment state', () => {
+    const quote = calc({}, [payment], legacy);
+    expect(calc({}, [payment], { ...legacy, requireCancelApproval: true } as typeof legacy).quoteToken).not.toBe(quote.quoteToken);
+    expect(calc({}, [{ ...payment, amount: 20000 }], legacy).quoteToken).not.toBe(quote.quoteToken);
+  });
+});
+
+it('preserves mobile late direct and hold-full legacy terms and binds the channel', () => {
+  const legacy = { ...settings, clientCancellationPolicyEnabled: false, freeCancelBeforeHours: 24 };
+  const mobile = calculateClientCancellation(booking, legacy, [payment], now, 'MOBILE');
+  expect(mobile).toMatchObject({ requiresApproval: false, refund: { refundAmount: 2500, refundPercent: 25 } });
+  expect(calculateClientCancellation({ ...booking, status: 'AWAITING_PAYMENT' }, legacy, [payment], now, 'MOBILE').refund).toMatchObject({ refundAmount: 10000, refundPercent: 100 });
+  expect(calculateClientCancellation(booking, legacy, [payment], now, 'PUBLIC').quoteToken).not.toBe(mobile.quoteToken);
+});

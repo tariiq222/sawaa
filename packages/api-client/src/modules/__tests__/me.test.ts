@@ -200,13 +200,13 @@ describe('cancelMyBooking', () => {
       .mockResolvedValueOnce(csrfBootstrapResponse())
       .mockResolvedValueOnce(jsonResponse({ success: true, data: fakeResult }))
 
-    const result = await cancelMyBooking('booking_1', { reason: 'changed plans' })
+    const result = await cancelMyBooking('booking_1', { reason: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1' })
 
     expect(result).toEqual(fakeResult)
     const [url, init] = vi.mocked(fetch).mock.calls[1]!
     expect(url).toBe('http://api.test/api/v1/public/me/bookings/booking_1/cancel')
     expect(init?.method).toBe('PATCH')
-    expect(JSON.parse(init?.body as string)).toEqual({ reason: 'changed plans' })
+    expect(JSON.parse(init?.body as string)).toEqual({ reason: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1' })
   })
 })
 
@@ -236,7 +236,7 @@ describe('rescheduleMyBooking', () => {
 
 describe('cancellation policy contract', () => {
   it('reads the authenticated preview without mutating the booking', async () => {
-    const preview = { policyEnabled: true, canCancel: true, quoteToken: 'quote-1' }
+    const preview = { policyEnabled: true, canCancel: true, acceptedRefundTerms: true, quoteToken: 'quote-1' }
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ success: true, data: preview }))
     expect(await getMyCancellationPreview('booking_1')).toEqual(preview)
     expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('http://api.test/api/v1/public/me/bookings/booking_1/cancellation-preview')
@@ -244,8 +244,8 @@ describe('cancellation policy contract', () => {
   it('sends the accepted quote and stable action id and preserves refund outcome', async () => {
     const refund = { status: 'PROCESSING', refundAmount: 5000 }
     vi.mocked(fetch).mockResolvedValueOnce(csrfBootstrapResponse()).mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'CANCELLED', requiresApproval: false, refund } }))
-    const result = await cancelMyBooking('booking_1', { reason: 'changed plans', quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
-    expect(JSON.parse(vi.mocked(fetch).mock.calls[1]?.[1]?.body as string)).toMatchObject({ quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
+    const result = await cancelMyBooking('booking_1', { reason: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[1]?.[1]?.body as string)).toMatchObject({ acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
     expect(result.refund).toEqual(refund)
   })
 })

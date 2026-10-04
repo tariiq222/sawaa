@@ -17,13 +17,15 @@ export type PersistedCancellationRefund = Omit<CancellationRefund, 'status'> & {
 };
 export interface CancellationPreview {
   policyEnabled: boolean;
+  requiresApproval: boolean;
+  refundDecision: 'QUOTED' | 'AFTER_APPROVAL';
   canCancel: boolean;
-  reasonCode: 'ALLOWED' | 'POLICY_NOT_CONFIGURED' | 'CUTOFF_PASSED' | 'ATTENDED' | 'FINAL_STATE' | 'HISTORICAL' | 'GROUP_STAFF_ONLY';
+  reasonCode: 'ALLOWED' | 'POLICY_NOT_CONFIGURED' | 'CUTOFF_PASSED' | 'ATTENDED' | 'FINAL_STATE' | 'HISTORICAL' | 'GROUP_STAFF_ONLY' | 'REFUND_REVIEW_REQUIRED';
   cutoffAt: string | null;
   quoteToken: string;
   refund: CancellationRefund;
 }
-export interface CancellationQuoteInput { quoteToken?: string; sourceActionId?: string }
+export interface CancellationQuoteInput { acceptedRefundTerms: true; quoteToken: string; sourceActionId?: string }
 export interface ClientCancellationResult {
   status: string;
   booking: unknown;
