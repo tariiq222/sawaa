@@ -48,7 +48,16 @@ describe('IssueInvoiceReceiptHandler', () => {
     handler = new IssueInvoiceReceiptHandler(prisma, renderer, storage, eventBus, cls, rlsTransaction);
   });
 
-  it('skips when invoice not found', async () => {
+  it('generates an accessible late-entry PDF without queuing delivery', async () => {
+    prisma.invoice.findUnique.mockResolvedValue({id: 'inv-1', number: 42, status: 'PAID', pdfUrl: null, bookingId: 'b1', clientId: 'c1', subtotal: 15000, discountAmt: 0, vatAmt: 0, total: 15000, currency: 'SAR', issuedAt: new Date(), paidAt: new Date()});
+    prisma.booking.findFirst.mockResolvedValue({lateEntryRecordedAt: new Date(), serviceNameSnapshot: 'Session'});
+    await handler.handle({payload: {paymentId: 'p1', invoiceId: 'inv-1'}} as never);
+    expect(renderer.render).toHaveBeenCalled();
+    expect(prisma.invoice.updateMany).toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('skips when invoice not found' , async () => {
     prisma.invoice.findUnique.mockResolvedValue(null);
     await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'missing' } } as any);
     expect(renderer.render).not.toHaveBeenCalled();

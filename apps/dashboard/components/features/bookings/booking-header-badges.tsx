@@ -15,7 +15,7 @@ import type { Booking } from "@/lib/types/booking"
 export function BookingHeaderBadges({
   booking,
 }: {
-  booking: Pick<Booking, "type" | "deliveryType" | "status">
+  booking: Pick<Booking, "type" | "deliveryType" | "status" | "isLateEntry">
 }) {
   const { t } = useLocale()
   const delivery = normalizeDeliveryType(booking.deliveryType)
@@ -24,6 +24,7 @@ export function BookingHeaderBadges({
 
   return (
     <div className="flex items-center gap-2">
+      {booking.isLateEntry && <Badge variant="outline">{t("bookings.late.title")}</Badge>}
       {delivery && (
         <Badge variant="outline" className="font-semibold text-[11px]">
           {t(delivery === "ONLINE" ? "bookings.col.type.online" : "bookings.col.type.inPerson")}

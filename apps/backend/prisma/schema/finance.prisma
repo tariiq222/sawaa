@@ -117,6 +117,10 @@ model Payment {
   // leases alone are insufficient when two distinct requests target this row.
   refundProviderLeaseOwner     String?
   refundProviderLeaseExpiresAt DateTime?     @db.Timestamptz(3)
+  effectiveReceivedAt          DateTime?
+  receiptRecordedBy            String?
+  receiptEvidenceRef           String?
+  receiptEntryReason           String?
   processedAt                  DateTime?
   createdAt                    DateTime      @default(now())
   updatedAt                    DateTime      @updatedAt

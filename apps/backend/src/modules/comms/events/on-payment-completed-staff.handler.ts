@@ -1,3 +1,4 @@
+import { PrismaService } from '../../../infrastructure/database';
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType, RecipientType } from '@prisma/client';
 import { formatHalalas } from '@sawaa/shared/money';
@@ -21,6 +22,7 @@ export class OnPaymentCompletedStaffHandler {
   constructor(
     private readonly notify: SendNotificationHandler,
     private readonly staffTargets: GetStaffTargetsHandler,
+    private readonly prisma: PrismaService,
   ) {}
 
   register(eventBus: EventBusService): void {
@@ -35,6 +37,10 @@ export class OnPaymentCompletedStaffHandler {
     const { payload } = envelope;
     if (!payload.organizationId) return;
     try {
+      if (payload.bookingId) {
+        const booking = await this.prisma.booking.findUnique({where: {id: payload.bookingId}, select: {lateEntryRecordedAt: true}});
+        if (booking?.lateEntryRecordedAt) return;
+      }
       const targets = await this.staffTargets.execute({
         organizationId: payload.organizationId,
         roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],

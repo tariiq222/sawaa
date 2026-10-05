@@ -51,6 +51,13 @@ describe('ListServicesHandler', () => {
     };
   });
 
+  it('historical catalog admits archived inactive bound services', async () => {
+    await buildModule();
+    await handler.execute({historicalContext:true,isActive:true,includeHidden:true} as any);
+    expect(tx.service.findMany.mock.calls[0][0].where).not.toHaveProperty('archivedAt');
+    expect(tx.service.findMany.mock.calls[0][0].where).not.toHaveProperty('isActive');
+  });
+
   it('should be defined', async () => {
     await buildModule();
     expect(handler).toBeDefined();

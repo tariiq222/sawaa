@@ -57,6 +57,14 @@
   },
   {
     "method": "GET",
+    "path": "/api/v1/dashboard/bookings/late-entry/context"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/bookings/late-entry"
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/dashboard/bookings"
   },
   {

@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs';
 import { PaymentStatus } from '@prisma/client';
 import { buildRevenueExcel, buildActivityExcel } from './excel-export.builder';
 import type { RevenueReportResult } from './revenue-report.builder';
@@ -65,4 +66,12 @@ describe('excel-export builder', () => {
       expect(result.length).toBeGreaterThan(0);
     });
   });
+});
+it('exports collection and immutable recording dates separately', async () => {
+ const buffer = await buildRevenueExcel({...mockRevenueReport, recentPayments: [{id: 'p', date: '2026-09-01T21:00:00.000Z', recordedAt: '2026-10-05T10:00:00.000Z', clientName: 'Client', serviceName: 'Session', method: 'CASH', amount: 15000, status: PaymentStatus.COMPLETED, receiptEvidenceRef: 'R-123', receiptEntryReason: 'late recording'}]});
+ const workbook = new ExcelJS.Workbook();
+ await workbook.xlsx.load(buffer as never);
+ const sheet = workbook.getWorksheet('Recent Payments');
+ expect(sheet).toBeDefined();
+ expect(sheet!.getRow(2).values).toEqual(expect.arrayContaining(['2026-09-01T21:00:00.000Z', '2026-10-05T10:00:00.000Z', 'R-123', 'late recording']));
 });

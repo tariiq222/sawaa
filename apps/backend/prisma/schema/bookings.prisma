@@ -76,6 +76,8 @@ model Booking {
   // Historical Booknetic rows preserve their source status but must never be
   // processed by live autocomplete/no-show automation.
   isHistoricalImport       Boolean             @default(false)
+  lateEntryRecordedAt      DateTime?
+  lateEntryRecordedBy      String?
   scheduledAt              DateTime
   endsAt                   DateTime // scheduledAt + durationMins — stored for overlap index queries
   durationMins             Int

@@ -47,6 +47,24 @@ export async function buildRevenueExcel(report: RevenueReportResult): Promise<Bu
   byDay.addRows(report.byDay);
   styleHeaderRow(byDay);
 
+  const recent = wb.addWorksheet('Recent Payments');
+  recent.columns = [
+    { header: 'Payment ID', key: 'id', width: 38 },
+    { header: 'Collection Date', key: 'date', width: 26 },
+    { header: 'Recorded At', key: 'recordedAt', width: 26 },
+    { header: 'Processed At', key: 'processedAt', width: 26 },
+    { header: 'Client', key: 'clientName', width: 24 },
+    { header: 'Service', key: 'serviceName', width: 24 },
+    { header: 'Method', key: 'method', width: 18 },
+    { header: 'Amount (halalas)', key: 'amount', width: 18 },
+    { header: 'Status', key: 'status', width: 18 },
+    { header: 'Receipt Recorded By', key: 'receiptRecordedBy', width: 38 },
+    { header: 'Receipt Evidence', key: 'receiptEvidenceRef', width: 28 },
+    { header: 'Receipt Entry Reason', key: 'receiptEntryReason', width: 35 },
+  ];
+  recent.addRows(report.recentPayments);
+  styleHeaderRow(recent);
+
   return wb.xlsx.writeBuffer() as unknown as Promise<Buffer>;
 }
 

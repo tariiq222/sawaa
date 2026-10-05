@@ -45,6 +45,17 @@ export class SendInvoiceReceiptHandler {
   async handle(envelope: DomainEventEnvelope<InvoiceReceiptIssuedPayload>): Promise<void> {
     const { invoiceId, invoiceNumber, clientId, pdfUrl } = envelope.payload;
 
+    const invoice = await this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      return this.prisma.invoice.findUnique({where: {id: invoiceId}, select: {bookingId: true}});
+    });
+    if (!invoice) return;
+    const booking = invoice.bookingId ? await this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      return this.prisma.booking.findUnique({where: {id: invoice.bookingId!}, select: {lateEntryRecordedAt: true}});
+    }) : null;
+    if (booking?.lateEntryRecordedAt) return;
+
     const client = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.client.findUnique({

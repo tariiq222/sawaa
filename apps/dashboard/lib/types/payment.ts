@@ -26,6 +26,11 @@ export interface Payment {
   idempotencyKey: string | null
   receiptUrl: string | null
   failureReason: string | null
+  collectionDate?: string
+  effectiveReceivedAt?: string | null
+  receiptRecordedBy?: string | null
+  receiptEvidenceRef?: string | null
+  receiptEntryReason?: string | null
   processedAt: string | null
   createdAt: string
   updatedAt: string

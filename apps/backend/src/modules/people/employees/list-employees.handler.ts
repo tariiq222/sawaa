@@ -32,7 +32,7 @@ export class ListEmployeesHandler {
 
   async execute(query: ListEmployeesQuery) {
     const where = {
-      isActive: query.isActive,
+      isActive: query.historicalContext === true ? undefined : query.isActive,
       gender: query.gender,
       employmentType: query.employmentType,
       onboardingStatus: query.onboardingStatus,

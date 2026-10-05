@@ -41,6 +41,7 @@ interface BookingFilters {
   status: BookingStatus | "all"
   type: BookingType | "all"
   delivery: DeliveryType | "all"
+  isLateEntry: boolean | "all"
   isGuest: boolean | "all"
   dateFrom: string
   dateTo: string
@@ -52,6 +53,7 @@ const defaultFilters: BookingFilters = {
   status: "all",
   type: "all",
   delivery: "all",
+  isLateEntry: "all",
   isGuest: "all",
   dateFrom: "",
   dateTo: "",
@@ -84,6 +86,7 @@ export function useBookings() {
     filters.status !== "all" ||
     filters.type !== "all" ||
     filters.delivery !== "all" ||
+    filters.isLateEntry !== "all" ||
     filters.isGuest !== "all" ||
     filters.dateFrom !== today ||
     filters.dateTo !== today ||
@@ -92,6 +95,7 @@ export function useBookings() {
 
   const query: BookingListQuery = {
     page,
+    isLateEntry: filters.isLateEntry !== "all" ? filters.isLateEntry : undefined,
     limit: 20,
     status: filters.status !== "all" ? filters.status : undefined,
     type: filters.type !== "all" ? filters.type : undefined,

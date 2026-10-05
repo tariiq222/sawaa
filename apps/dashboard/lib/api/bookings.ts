@@ -61,6 +61,7 @@ export async function fetchBookings(
     toDate: query.dateTo,
     search: query.search,
     isGuest: query.isGuest,
+    isLateEntry: query.isLateEntry,
   })
 }
 
@@ -101,7 +102,7 @@ export interface BookingTimelineEntry {
   method: string | null
   paymentStatus: string | null
   refundStatus: string | null
-  meta: { fromScheduledAt?: string; toScheduledAt?: string } | null
+  meta: { fromScheduledAt?: string; toScheduledAt?: string; isLateEntry?: boolean; scheduledAt?: string; effectiveReceivedAt?: string; recordedAt?: string } | null
 }
 
 export async function fetchBookingTimeline(id: string): Promise<BookingTimelineEntry[]> {

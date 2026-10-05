@@ -106,3 +106,9 @@ describe('GetDashboardStatsHandler', () => {
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 });
+
+it('uses effective receipt date with PROCESSED fallback for revenue bounds', async () => {
+ const prisma = {$queryRaw: jest.fn().mockResolvedValue([]), booking: {groupBy: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0)}, client: {count: jest.fn().mockResolvedValue(0)}};
+ await new GetDashboardStatsHandler(prisma as never).execute({userId: 'u', role: 'OWNER', from: '2026-09-01', to: '2026-09-30'});
+ expect(prisma.$queryRaw.mock.calls[0][0].sql).toContain('COALESCE(p."effectiveReceivedAt", p."processedAt")');
+});

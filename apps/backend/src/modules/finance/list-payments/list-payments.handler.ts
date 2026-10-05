@@ -1,3 +1,4 @@
+import { paymentCollectionDate, paymentCollectionDateSql, paymentCollectionDateWhere } from '../payment-collection-date.helper';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
@@ -67,24 +68,41 @@ export class ListPaymentsHandler {
         ? { invoice: { clientId: query.clientId } }
         : {}),
       ...(query.fromDate || query.toDate
-        ? { createdAt: { gte: query.fromDate, lte: query.toDate } }
+        ? paymentCollectionDateWhere({gte: query.fromDate, lte: query.toDate}, 'CREATED')
         : {}),
       ...(searchInvoiceIds !== undefined && !query.invoiceId
         ? { invoiceId: { in: searchInvoiceIds } }
         : {}),
     };
 
-    const [items, total] = await Promise.all([
+    // Resolve a bounded page using the same collection date used by filtering.
+    // Prisma's field orderBy cannot express COALESCE; sorting after pagination
+    // would silently return the wrong historical receipts.
+    const pageIds = await this.prisma.$queryRaw<Array<{id: string}>>(Prisma.sql`
+      SELECT p."id" FROM "Payment" p JOIN "Invoice" i ON i."id" = p."invoiceId"
+      WHERE TRUE
+      ${query.invoiceId ? Prisma.sql`AND p."invoiceId" = ${query.invoiceId}` : Prisma.empty}
+      ${query.method ? Prisma.sql`AND p."method"::text = ${query.method}` : Prisma.empty}
+      ${query.status ? Prisma.sql`AND p."status"::text = ${query.status}` : Prisma.empty}
+      ${query.clientId ? Prisma.sql`AND i."clientId" = ${query.clientId}` : Prisma.empty}
+      ${query.fromDate ? Prisma.sql`AND ${paymentCollectionDateSql('CREATED')} >= ${query.fromDate}` : Prisma.empty}
+      ${query.toDate ? Prisma.sql`AND ${paymentCollectionDateSql('CREATED')} <= ${query.toDate}` : Prisma.empty}
+      ${searchInvoiceIds !== undefined && !query.invoiceId
+        ? searchInvoiceIds.length ? Prisma.sql`AND p."invoiceId" IN (${Prisma.join(searchInvoiceIds)})` : Prisma.sql`AND FALSE`
+        : Prisma.empty}
+      ORDER BY ${paymentCollectionDateSql('CREATED')} DESC, p."id" DESC
+      LIMIT ${limit} OFFSET ${(page - 1) * limit}
+    `);
+    const [pageItems, total] = await Promise.all([
       this.prisma.payment.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
+        where: {...where, id: {in: pageIds.map(({id}) => id)}},
         include: { invoice: { select: { bookingId: true, clientId: true, total: true } } },
       }),
       this.prisma.payment.count({ where }),
     ]);
 
+    const pageOrder = new Map(pageIds.map(({id}, index) => [id, index]));
+    const items = pageItems.sort((a, b) => pageOrder.get(a.id)! - pageOrder.get(b.id)!);
     const clientIds = Array.from(new Set(items.map((p) => p.invoice?.clientId).filter(Boolean)));
     const clients =
       clientIds.length > 0
@@ -97,6 +115,7 @@ export class ListPaymentsHandler {
     const clientById = new Map(clients.map((c) => [c.id, c]));
     const enrichedItems = items.map((p) => ({
       ...p,
+      collectionDate: paymentCollectionDate(p, 'CREATED').toISOString(),
       invoice: p.invoice
         ? {
             ...p.invoice,

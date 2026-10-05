@@ -1,3 +1,4 @@
+import { paymentCollectionDateWhere, paymentCollectionDay } from '../../finance/payment-collection-date.helper';
 import { PrismaService } from '../../../infrastructure/database';
 import { BookingStatus, PaymentStatus, Prisma } from '@prisma/client';
 
@@ -66,10 +67,10 @@ export async function buildOverviewReport(
     }),
     prisma.payment.findMany({
       where: {
-        createdAt: { gte: from, lte: to },
+        ...paymentCollectionDateWhere({gte: from, lte: to}, 'CREATED'),
         status: PaymentStatus.COMPLETED,
       },
-      select: { amount: true, createdAt: true, invoiceId: true },
+      select: { amount: true, createdAt: true, effectiveReceivedAt: true, invoiceId: true },
     }),
   ]);
 
@@ -99,7 +100,7 @@ export async function buildOverviewReport(
     trendMap.set(day, entry);
   }
   for (const p of payments) {
-    const day = p.createdAt.toISOString().slice(0, 10);
+    const day = paymentCollectionDay(p, 'CREATED');
     const entry = trendMap.get(day) ?? {
       revenue: new Prisma.Decimal(0),
       bookings: 0,

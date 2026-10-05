@@ -23,6 +23,7 @@ import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import type { Payment } from "@/lib/types/payment"
 import { PaymentRefundRequests } from "./payment-refund-requests"
 import { PaymentRefundStep } from "./payment-refund-step"
+import { PaymentReceiptAudit } from "./payment-receipt-audit"
 import { PaymentActions } from "./payment-actions"
 import { PaymentStatusBadge } from "@/components/features/status-badge"
 import { cn } from "@/lib/utils"
@@ -184,6 +185,8 @@ function PaymentDetailBody({
               <DetailRow label={t("detail.transactionRef")} value={payment.gatewayRef} numeric />
             )}
           </DetailSection>
+
+          <PaymentReceiptAudit payment={payment} />
 
           {/* Invoice */}
           <DetailSection title={t("detail.invoice.title")}>

@@ -58,6 +58,10 @@ export interface BookingListItem {
   checkedInAt: string | null
   notes: string | null
   adminNotes: string | null
+  isLateEntry?: boolean
+  lateEntryRecordedAt?: string | null
+  lateEntryRecordedBy?: string | null
+  lateEntryRecordedByName?: string | null
   createdAt: string
   client: {
     id: string
@@ -113,6 +117,7 @@ export interface BookingListQuery extends PaginationParams {
   toDate?: string
   /** Filter guest (online) vs walk-in bookings. */
   isGuest?: boolean
+  isLateEntry?: boolean
 }
 
 export interface CreateBookingPayload {
@@ -133,3 +138,51 @@ export interface CreateBookingPayload {
 }
 
 export type BookingListResponse = PaginatedResponse<BookingListItem>
+
+/** Staff-only command. All monetary numbers are integer halalas; timestamps are ISO 8601. */
+export interface RecordLateSessionPayload {
+  clientId: string
+  branchId: string
+  employeeId: string
+  serviceId: string
+  deliveryType: DeliveryType
+  scheduledAt: string
+  durationMins: number
+  status: 'COMPLETED' | 'CONFIRMED' | 'NO_SHOW' | 'CANCELLED'
+  amountHalalas: number
+  notes?: string
+  paymentMode: 'UNPAID' | 'PREVIOUSLY_RECEIVED' | 'COLLECT_NOW'
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'MADA' | 'TABBY'
+  paymentAmountHalalas?: number
+  receivedAt?: string
+  receiptEvidenceRef?: string
+  receiptEntryReason?: string
+  cancelledAt?: string
+  cancellationReason?: string
+  noShowAt?: string
+  creationIdempotencyKey: string
+}
+
+/** Financial amounts are integer halalas, without a client-side currency conversion. */
+export interface RecordLateSessionResponse {
+  booking: BookingListItem
+  invoice: { id: string; subtotal: number; vatRate: number; total: number; status: string } | null
+  payment: {
+    id: string; amount: number; method: string; status: string
+    createdAt: string; processedAt: string | null
+    effectiveReceivedAt: string | null
+    receiptRecordedBy: string | null
+    receiptEvidenceRef: string | null
+    receiptEntryReason: string | null
+  } | null
+  outstanding: number
+  isLateEntry: true
+  lateEntryRecordedAt: string
+  lateEntryRecordedBy: string
+}
+
+/** Current server financial settings for the staff late-entry form. */
+export interface LateSessionContext {
+  vatRate: number
+  paymentMethods: Array<'CASH' | 'BANK_TRANSFER' | 'MADA' | 'TABBY'>
+}

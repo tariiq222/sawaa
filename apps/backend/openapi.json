@@ -6234,6 +6234,37 @@
         ],
         "type": "object"
       },
+      "GetLateSessionContextResponseDto": {
+        "properties": {
+          "paymentMethods": {
+            "description": "Enabled methods permitted for manual receipt recording",
+            "example": [
+              "CASH",
+              "BANK_TRANSFER"
+            ],
+            "items": {
+              "enum": [
+                "CASH",
+                "BANK_TRANSFER",
+                "MADA",
+                "TABBY"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "vatRate": {
+            "description": "Current VAT rate as a fraction, using the existing center policy",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "vatRate",
+          "paymentMethods"
+        ],
+        "type": "object"
+      },
       "GlobalDiscountDto": {
         "properties": {
           "type": {
@@ -9243,6 +9274,137 @@
           "imageAltAr",
           "imageAltEn",
           "destination"
+        ],
+        "type": "object"
+      },
+      "RecordLateSessionDto": {
+        "properties": {
+          "amountHalalas": {
+            "description": "Actual net amount in integer halalas",
+            "example": 40000,
+            "type": "number"
+          },
+          "branchId": {
+            "description": "Existing branch ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "cancellationReason": {
+            "description": "Actual cancellation reason",
+            "type": "string"
+          },
+          "cancelledAt": {
+            "description": "Actual cancellation time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Existing client ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "creationIdempotencyKey": {
+            "description": "Stable operation key",
+            "example": "late-session-123",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Actual delivery channel",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Actual session duration in minutes",
+            "example": 60,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Existing practitioner ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "noShowAt": {
+            "description": "Actual no-show determination time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Session notes",
+            "type": "string"
+          },
+          "paymentAmountHalalas": {
+            "description": "Amount received in integer halalas",
+            "example": 15000,
+            "type": "number"
+          },
+          "paymentMethod": {
+            "description": "Manual collection method",
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER",
+              "MADA",
+              "TABBY"
+            ],
+            "type": "string"
+          },
+          "paymentMode": {
+            "description": "Financial recording mode",
+            "enum": [
+              "UNPAID",
+              "PREVIOUSLY_RECEIVED",
+              "COLLECT_NOW"
+            ],
+            "type": "string"
+          },
+          "receiptEntryReason": {
+            "description": "Reason for documenting a previous receipt",
+            "type": "string"
+          },
+          "receiptEvidenceRef": {
+            "description": "Previous receipt evidence reference",
+            "type": "string"
+          },
+          "receivedAt": {
+            "description": "Actual previous receipt time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Actual session start",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Existing bound service ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Recorded session status",
+            "enum": [
+              "COMPLETED",
+              "CONFIRMED",
+              "NO_SHOW",
+              "CANCELLED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "branchId",
+          "employeeId",
+          "serviceId",
+          "deliveryType",
+          "scheduledAt",
+          "durationMins",
+          "status",
+          "amountHalalas",
+          "paymentMode",
+          "creationIdempotencyKey"
         ],
         "type": "object"
       },
@@ -14104,6 +14266,16 @@
         "operationId": "DashboardBookingsController_listBookings_v1",
         "parameters": [
           {
+            "description": "Filter sessions entered through late recording",
+            "in": "query",
+            "name": "isLateEntry",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
             "description": "Filter by client",
             "in": "query",
             "name": "clientId",
@@ -16307,6 +16479,182 @@
           }
         ],
         "summary": "Book an appointment by consuming session-package credit",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/late-entry": {
+      "post": {
+        "operationId": "DashboardBookingsController_recordLateSession_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordLateSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "booking": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "invoice": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "isLateEntry": {
+                      "enum": [
+                        true
+                      ],
+                      "type": "boolean"
+                    },
+                    "lateEntryRecordedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lateEntryRecordedBy": {
+                      "type": "string"
+                    },
+                    "outstanding": {
+                      "type": "integer"
+                    },
+                    "payment": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Session and financial facts recorded atomically"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a previous session and its actual financial facts",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/late-entry/context": {
+      "get": {
+        "operationId": "DashboardBookingsController_getLateSessionContext_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetLateSessionContextResponseDto"
+                }
+              }
+            },
+            "description": "Current VAT rate and enabled manual payment methods only"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get permitted late session VAT and manual payment context",
         "tags": [
           "Dashboard / Bookings"
         ]
@@ -28528,6 +28876,16 @@
         "operationId": "DashboardOrganizationSettingsController_listServicesEndpoint_v1",
         "parameters": [
           {
+            "description": "Include historical inactive/archived references for staff recording",
+            "in": "query",
+            "name": "historicalContext",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
             "description": "Filter by active status",
             "in": "query",
             "name": "isActive",
@@ -30052,6 +30410,16 @@
       "get": {
         "operationId": "DashboardPeopleController_listEmployeesEndpoint_v1",
         "parameters": [
+          {
+            "description": "Include historical inactive/archived references for staff recording",
+            "in": "query",
+            "name": "historicalContext",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
           {
             "description": "Search by name, email, or phone",
             "in": "query",
@@ -38318,6 +38686,16 @@
       "get": {
         "operationId": "MobileEmployeeBookingsController_listMyBookings_v1",
         "parameters": [
+          {
+            "description": "Filter sessions entered through late recording",
+            "in": "query",
+            "name": "isLateEntry",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
           {
             "description": "Filter by client",
             "in": "query",
