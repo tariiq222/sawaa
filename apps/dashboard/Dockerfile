@@ -67,6 +67,8 @@ COPY --from=shared-build /app/node_modules ./node_modules
 COPY --from=shared-build /app/packages     ./packages
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/dashboard/ ./apps/dashboard/
+# Preserve workspace-local dependencies that cannot be hoisted.
+COPY --from=shared-build /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 
 # Native optional dependencies were installed for this Linux architecture from
 # the frozen lockfile in shared-build. Verify them without re-resolving versions.
