@@ -89,6 +89,9 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
 
           <div className="flex flex-1 flex-col gap-1 min-w-0">
             <TimelineHeadline entry={entry} t={t} locale={locale} />
+            {entry.meta?.scheduledAt && <span className="text-xs">{t("bookings.late.scheduledAt")}: {new Date(entry.meta.scheduledAt).toLocaleString(locale, { timeZone: "Asia/Riyadh" })}</span>}
+            {entry.meta?.isLateEntry && <span className="text-xs">{t("bookings.late.title")}</span>}
+            {entry.meta?.effectiveReceivedAt && <span className="text-xs">{t("bookings.late.receivedAt")}: {new Date(entry.meta.effectiveReceivedAt).toLocaleString(locale, { timeZone: "Asia/Riyadh" })}</span>}
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="tabular-nums">

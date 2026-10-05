@@ -4,6 +4,11 @@ import { test, expect, vi } from "vitest"
 import { DetailsBody } from "@/components/features/bookings/booking-details-body"
 import type { Booking } from "@/lib/types/booking"
 
+// Match the Arabic locale and identity translator supplied to DetailsBody below.
+vi.mock("@/components/locale-provider", () => ({
+  useLocale: () => ({ locale: "ar", t: (key: string) => key }),
+}))
+
 vi.mock("@sawaa/ui", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,

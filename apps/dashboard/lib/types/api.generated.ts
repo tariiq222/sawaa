@@ -640,6 +640,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/bookings/late-entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a previous session and its actual financial facts */
+        post: operations["DashboardBookingsController_recordLateSession_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/late-entry/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get permitted late session VAT and manual payment context */
+        get: operations["DashboardBookingsController_getLateSessionContext_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/bookings/matching-credits": {
         parameters: {
             query?: never;
@@ -9138,6 +9172,21 @@ export interface components {
              */
             type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES" | "OVERVIEW" | "CLIENTS" | "SERVICES" | "RATINGS";
         };
+        GetLateSessionContextResponseDto: {
+            /**
+             * @description Enabled methods permitted for manual receipt recording
+             * @example [
+             *       "CASH",
+             *       "BANK_TRANSFER"
+             *     ]
+             */
+            paymentMethods: ("CASH" | "BANK_TRANSFER" | "MADA" | "TABBY")[];
+            /**
+             * @description Current VAT rate as a fraction, using the existing center policy
+             * @example 0
+             */
+            vatRate: number;
+        };
         GlobalDiscountDto: {
             /**
              * @description Package-wide discount type
@@ -10854,6 +10903,96 @@ export interface components {
             titleAr: string;
             /** @description Card title in English. */
             titleEn: string | null;
+        };
+        RecordLateSessionDto: {
+            /**
+             * @description Actual net amount in integer halalas
+             * @example 40000
+             */
+            amountHalalas: number;
+            /**
+             * Format: uuid
+             * @description Existing branch ID
+             */
+            branchId: string;
+            /** @description Actual cancellation reason */
+            cancellationReason?: string;
+            /**
+             * Format: date-time
+             * @description Actual cancellation time
+             */
+            cancelledAt?: string;
+            /**
+             * Format: uuid
+             * @description Existing client ID
+             */
+            clientId: string;
+            /**
+             * @description Stable operation key
+             * @example late-session-123
+             */
+            creationIdempotencyKey: string;
+            /**
+             * @description Actual delivery channel
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Actual session duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * Format: uuid
+             * @description Existing practitioner ID
+             */
+            employeeId: string;
+            /**
+             * Format: date-time
+             * @description Actual no-show determination time
+             */
+            noShowAt?: string;
+            /** @description Session notes */
+            notes?: string;
+            /**
+             * @description Amount received in integer halalas
+             * @example 15000
+             */
+            paymentAmountHalalas?: number;
+            /**
+             * @description Manual collection method
+             * @enum {string}
+             */
+            paymentMethod?: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY";
+            /**
+             * @description Financial recording mode
+             * @enum {string}
+             */
+            paymentMode: "UNPAID" | "PREVIOUSLY_RECEIVED" | "COLLECT_NOW";
+            /** @description Reason for documenting a previous receipt */
+            receiptEntryReason?: string;
+            /** @description Previous receipt evidence reference */
+            receiptEvidenceRef?: string;
+            /**
+             * Format: date-time
+             * @description Actual previous receipt time
+             */
+            receivedAt?: string;
+            /**
+             * Format: date-time
+             * @description Actual session start
+             */
+            scheduledAt: string;
+            /**
+             * Format: uuid
+             * @description Existing bound service ID
+             */
+            serviceId: string;
+            /**
+             * @description Recorded session status
+             * @enum {string}
+             */
+            status: "COMPLETED" | "CONFIRMED" | "NO_SHOW" | "CANCELLED";
         };
         RefreshTokenDto: {
             /**
@@ -14210,6 +14349,8 @@ export interface operations {
     DashboardBookingsController_listBookings_v1: {
         parameters: {
             query?: {
+                /** @description Filter sessions entered through late recording */
+                isLateEntry?: boolean;
                 /** @description Filter by client */
                 clientId?: string;
                 /** @description Filter by employee */
@@ -15653,6 +15794,138 @@ export interface operations {
             };
             /** @description No remaining credit or slot conflict (concurrent over-draw rejected) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_recordLateSession_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordLateSessionDto"];
+            };
+        };
+        responses: {
+            /** @description Session and financial facts recorded atomically */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        booking?: {
+                            [key: string]: unknown;
+                        };
+                        invoice?: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** @enum {boolean} */
+                        isLateEntry?: true;
+                        /** Format: date-time */
+                        lateEntryRecordedAt?: string;
+                        lateEntryRecordedBy?: string;
+                        outstanding?: number;
+                        payment?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_getLateSessionContext_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current VAT rate and enabled manual payment methods only */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetLateSessionContextResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24811,6 +25084,8 @@ export interface operations {
     DashboardOrganizationSettingsController_listServicesEndpoint_v1: {
         parameters: {
             query?: {
+                /** @description Include historical inactive/archived references for staff recording */
+                historicalContext?: boolean;
                 /** @description Filter by active status */
                 isActive?: boolean;
                 /** @description Include hidden services */
@@ -26026,6 +26301,8 @@ export interface operations {
     DashboardPeopleController_listEmployeesEndpoint_v1: {
         parameters: {
             query?: {
+                /** @description Include historical inactive/archived references for staff recording */
+                historicalContext?: boolean;
                 /** @description Search by name, email, or phone */
                 search?: string;
                 /** @description Filter by active status */
@@ -32048,6 +32325,8 @@ export interface operations {
     MobileEmployeeBookingsController_listMyBookings_v1: {
         parameters: {
             query?: {
+                /** @description Filter sessions entered through late recording */
+                isLateEntry?: boolean;
                 /** @description Filter by client */
                 clientId?: string;
                 /** @description Filter by employee */

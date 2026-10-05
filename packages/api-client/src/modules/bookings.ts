@@ -5,6 +5,9 @@ import type {
   BookingListQuery,
   BookingListResponse,
   CreateBookingPayload,
+  LateSessionContext,
+  RecordLateSessionPayload,
+  RecordLateSessionResponse,
 } from '../types/booking'
 
 function buildQueryString(query: Record<string, unknown>): string {
@@ -36,6 +39,7 @@ export async function listBookings(
     toDate: query.toDate,
     search: query.search,
     isGuest: query.isGuest,
+    isLateEntry: query.isLateEntry,
   })
   return apiRequest<BookingListResponse>(`/dashboard/bookings${qs}`)
 }
@@ -73,4 +77,18 @@ export async function completeBooking(id: string): Promise<BookingWriteResult> {
   return apiRequest<BookingWriteResult>(`/dashboard/bookings/${id}/complete`, {
     method: 'PATCH',
   })
+}
+
+/** Record a past session through the staff-only endpoint. */
+export async function recordLateSession(
+  payload: RecordLateSessionPayload,
+): Promise<RecordLateSessionResponse> {
+  return apiRequest<RecordLateSessionResponse>('/dashboard/bookings/late-entry', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function getLateSessionContext(): Promise<LateSessionContext> {
+  return apiRequest<LateSessionContext>('/dashboard/bookings/late-entry/context')
 }

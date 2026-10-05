@@ -1,3 +1,4 @@
+import { paymentCollectionDateSql } from '../../finance/payment-collection-date.helper';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
@@ -45,8 +46,8 @@ export class GetTopPerformersHandler {
       LEFT JOIN "Invoice" i ON i."bookingId" = b.id
       LEFT JOIN "Payment" p ON p."invoiceId" = i.id
                            AND p.status = 'COMPLETED'
-                           AND p."processedAt" >= ${start}
-                           AND p."processedAt" <  ${end}
+                           AND ${paymentCollectionDateSql('PROCESSED')} >= ${start}
+                           AND ${paymentCollectionDateSql('PROCESSED')} <  ${end}
       GROUP BY e.id, e.name, e."avatarUrl", u.name, u."avatarUrl"
       ORDER BY "revenue" DESC NULLS LAST, "bookingsCount" DESC
       LIMIT 5

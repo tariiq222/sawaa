@@ -114,3 +114,18 @@ describe('buildOverviewReport', () => {
     expect(result.topPractitioners).toHaveLength(3);
   });
 });
+
+it('groups a historical receipt at Riyadh midnight instead of its entry date', async () => {
+ const prisma = makePrisma();
+ prisma.payment.findMany.mockResolvedValue([{amount: 15000, createdAt: new Date('2026-10-05'), effectiveReceivedAt: new Date('2026-09-01T21:00:00Z'), invoiceId: 'i'}]);
+ const report = await buildOverviewReport(prisma, {from: new Date('2026-09-01'), to: new Date('2026-09-30')});
+ expect(report.trend).toEqual([{date: '2026-09-02', revenue: 15000, bookings: 0}]);
+ expect(prisma.payment.findMany).toHaveBeenCalledWith(expect.objectContaining({where: expect.objectContaining({OR: expect.any(Array)})}));
+});
+
+it('groups ordinary receipts at Riyadh midnight with the CREATED fallback', async () => {
+ const prisma = makePrisma();
+ prisma.payment.findMany.mockResolvedValue([{amount: 10000, createdAt: new Date('2026-09-01T21:00:00Z'), effectiveReceivedAt: null, invoiceId: 'i'}]);
+ const report = await buildOverviewReport(prisma, {from: new Date('2026-09-01'), to: new Date('2026-09-30')});
+ expect(report.trend).toEqual([{date: '2026-09-02', revenue: 10000, bookings: 0}]);
+});

@@ -221,9 +221,10 @@ describe('NotificationDeliveryWorker', () => {
     );
   });
   it.each([
-    ['DEPOSIT_PAID', false, true], ['CONFIRMED', false, true],
-    ['CANCELLED', false, false], ['DEPOSIT_PAID', true, false],
-  ])('reminder status=%s rescheduled=%s sends=%s', async (status, rescheduled, sends) => {
+    ['DEPOSIT_PAID', false, true, false], ['CONFIRMED', false, true, false],
+    ['CANCELLED', false, false, false], ['DEPOSIT_PAID', true, false, false],
+    ['CONFIRMED', false, false, true],
+  ])('reminder status=%s rescheduled=%s sends=%s', async (status, rescheduled, sends, lateEntry) => {
     const scheduledAt = new Date(Date.now() + 3_600_000);
     tx.notificationDelivery.findFirst.mockResolvedValue({
       id: 'reminder', status: 'READY', attempts: 0, channel: 'EMAIL',
@@ -232,7 +233,7 @@ describe('NotificationDeliveryWorker', () => {
       expiresAt: scheduledAt,
       intent: { expiresAt: scheduledAt, consumerKey: 'comms.booking-reminder-client.v2', payload: { bookingId: 'book-1', scheduledAt: scheduledAt.toISOString() } },
     });
-    tx.booking.findUnique.mockResolvedValue({ status, scheduledAt: rescheduled ? new Date(scheduledAt.getTime() + 60_000) : scheduledAt });
+    tx.booking.findUnique.mockResolvedValue({ status, lateEntryRecordedAt: lateEntry ? new Date() : null, scheduledAt: rescheduled ? new Date(scheduledAt.getTime() + 60_000) : scheduledAt });
     sender.send.mockResolvedValue({ outcome: 'ACCEPTED' });
     await worker.process('reminder', 1);
     expect(sender.send).toHaveBeenCalledTimes(sends ? 1 : 0);

@@ -1,3 +1,4 @@
+import { paymentCollectionDate } from '../../finance/payment-collection-date.helper';
 import { PrismaService } from '../../../infrastructure/database';
 import { PaymentStatus, Prisma } from '@prisma/client';
 import { buildRevenueReportQuery, type RevenueReportParams } from './revenue-report-query.helper';
@@ -21,6 +22,11 @@ export interface RevenueReportResult {
   recentPayments: Array<{
     id: string;
     date: string;
+    recordedAt?: string;
+    processedAt?: string | null;
+    receiptRecordedBy?: string | null;
+    receiptEvidenceRef?: string | null;
+    receiptEntryReason?: string | null;
     clientName: string;
     serviceName: string;
     method: string;
@@ -53,9 +59,8 @@ export async function buildRevenueReport(
       prisma.$queryRaw<Array<{ couponId: string; uses: unknown; discount: unknown }>>(
         query.couponAggregate,
       ),
-      prisma.payment.findMany({
-        where: query.paymentWhere,
-        orderBy: { createdAt: 'desc' },
+      prisma.$queryRaw<Array<{id: string}>>(query.recentPaymentIds).then(ids => prisma.payment.findMany({
+        where: {...query.paymentWhere, id: {in: ids.map(({id}) => id)}},
         take: 10,
         select: {
           id: true,
@@ -63,6 +68,11 @@ export async function buildRevenueReport(
           method: true,
           status: true,
           createdAt: true,
+          effectiveReceivedAt: true,
+          processedAt: true,
+          receiptRecordedBy: true,
+          receiptEvidenceRef: true,
+          receiptEntryReason: true,
           invoice: {
             select: {
               clientId: true,
@@ -70,7 +80,7 @@ export async function buildRevenueReport(
             },
           },
         },
-      }),
+      })),
     ]);
 
   const asDecimal = (value: unknown) => new Prisma.Decimal(String(value ?? 0));
@@ -169,7 +179,7 @@ export async function buildRevenueReport(
   const bookingById = new Map(recentBookings.map((b) => [b.id, b]));
   const serviceById = new Map(recentServices.map((s) => [s.id, s]));
 
-  const recentPayments = recentPaymentsRaw.map((p) => {
+  const recentPayments = recentPaymentsRaw.sort((a, b) => paymentCollectionDate(b, 'CREATED').getTime() - paymentCollectionDate(a, 'CREATED').getTime() || b.id.localeCompare(a.id)).map((p) => {
     const c = p.invoice ? clientById.get(p.invoice.clientId) : undefined;
     const b = p.invoice?.bookingId
       ? bookingById.get(p.invoice.bookingId)
@@ -181,7 +191,12 @@ export async function buildRevenueReport(
         : c?.name ?? '';
     return {
       id: p.id,
-      date: p.createdAt.toISOString(),
+      date: paymentCollectionDate(p, 'CREATED').toISOString(),
+      recordedAt: p.createdAt.toISOString(),
+      processedAt: p.processedAt?.toISOString() ?? null,
+      receiptRecordedBy: p.receiptRecordedBy ?? null,
+      receiptEvidenceRef: p.receiptEvidenceRef ?? null,
+      receiptEntryReason: p.receiptEntryReason ?? null,
       clientName,
       serviceName: s?.nameAr ?? '',
       method: p.method,

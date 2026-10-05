@@ -1,3 +1,4 @@
+import { paymentCollectionDateSql, paymentCollectionDateWhere } from '../../finance/payment-collection-date.helper';
 import { Prisma, RefundStatus } from '@prisma/client';
 import { startOfDayInTz } from '../../../common/helpers/date-tz.helper';
 import { SETTLED_PAYMENT_STATUSES } from '../../finance/invoice-balance.helper';
@@ -10,6 +11,7 @@ export interface RevenueReportParams {
 }
 
 export interface RevenueReportQueries {
+  recentPaymentIds: Prisma.Sql;
   paymentStatusAggregate: Prisma.Sql;
   paymentMethodAggregate: Prisma.Sql;
   paymentDayAggregate: Prisma.Sql;
@@ -43,7 +45,7 @@ export function buildRevenueReportQuery(params: RevenueReportParams) {
   const hasInvoiceFilter = Boolean(branchId || employeeId);
   const invoiceRelation = hasInvoiceFilter ? { invoice: { is: invoiceWhere } } : {};
   const paymentWhere: Prisma.PaymentWhereInput = {
-    createdAt: { gte: from, lt: toExclusive }, ...invoiceRelation,
+    ...paymentCollectionDateWhere({ gte: from, lt: toExclusive }, 'CREATED'), ...invoiceRelation,
   };
   const refundWhere: Prisma.RefundRequestWhereInput = {
     createdAt: { gte: from, lt: toExclusive },
@@ -58,9 +60,13 @@ export function buildRevenueReportQuery(params: RevenueReportParams) {
   const paymentScope = Prisma.sql`
     FROM "Payment" p
     JOIN "Invoice" i ON i."id" = p."invoiceId"
-    WHERE p."createdAt" >= ${from} AND p."createdAt" < ${toExclusive}
+    WHERE ${paymentCollectionDateSql('CREATED')} >= ${from} AND ${paymentCollectionDateSql('CREATED')} < ${toExclusive}
       ${branchId ? Prisma.sql`AND i."branchId" = ${branchId}` : Prisma.empty}
       ${employeeId ? Prisma.sql`AND i."employeeId" = ${employeeId}` : Prisma.empty}
+  `;
+  const recentPaymentIds = Prisma.sql`
+    SELECT p."id" ${paymentScope}
+    ORDER BY ${paymentCollectionDateSql('CREATED')} DESC, p."id" DESC LIMIT 10
   `;
   const settledStatuses = Prisma.join(SETTLED_PAYMENT_STATUSES);
   const paymentStatusAggregate = Prisma.sql`
@@ -82,7 +88,7 @@ export function buildRevenueReportQuery(params: RevenueReportParams) {
   `;
   const paymentDayAggregate = Prisma.sql`
     SELECT TO_CHAR(
-      (p."createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')::date,
+      (${paymentCollectionDateSql('CREATED')} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')::date,
       'YYYY-MM-DD'
     ) AS "date",
       COALESCE(SUM(p."amount"), 0)::text AS "amount",
@@ -123,6 +129,7 @@ export function buildRevenueReportQuery(params: RevenueReportParams) {
   `;
   return {
     paymentWhere,
+    recentPaymentIds,
     refundWhere,
     bookingWhere,
     hasInvoiceFilter,

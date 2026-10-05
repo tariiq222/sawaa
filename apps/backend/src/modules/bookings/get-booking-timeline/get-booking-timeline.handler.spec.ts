@@ -19,6 +19,12 @@ describe('GetBookingTimelineHandler', () => {
     } as never;
   }
 
+  it('keeps audit timeline today while describing the previous session facts', async () => {
+    const prisma=makePrisma({booking:{findUnique:jest.fn().mockResolvedValue({id:bookingId,createdAt:new Date('2026-10-05T10:00:00Z'),lateEntryRecordedAt:new Date('2026-10-05T10:00:00Z'),lateEntryRecordedBy:'staff',scheduledAt:new Date('2026-09-01T10:00:00Z'),endsAt:new Date('2026-09-01T11:00:00Z')})}});
+    const out=await new GetBookingTimelineHandler(prisma).execute({bookingId});
+    expect(out[0]).toMatchObject({at:'2026-10-05T10:00:00.000Z',actor:'staff',meta:{isLateEntry:true,scheduledAt:'2026-09-01T10:00:00.000Z'}});
+  });
+
   it('throws when the booking does not exist', async () => {
     const prisma = makePrisma({
       booking: { findUnique: jest.fn().mockResolvedValue(null) },

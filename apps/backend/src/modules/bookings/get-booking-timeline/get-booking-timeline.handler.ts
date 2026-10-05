@@ -75,7 +75,7 @@ export class GetBookingTimelineHandler {
   ): Promise<BookingTimelineEntry[]> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: query.bookingId },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, lateEntryRecordedAt:true,lateEntryRecordedBy:true,scheduledAt:true,endsAt:true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
 
@@ -96,6 +96,7 @@ export class GetBookingTimelineHandler {
               status: true,
               createdAt: true,
               processedAt: true,
+              effectiveReceivedAt:true, receiptRecordedBy:true, receiptEvidenceRef:true, receiptEntryReason:true,
             },
           },
           refundRequests: {
@@ -143,6 +144,11 @@ export class GetBookingTimelineHandler {
       kind: 'CREATED',
       at: booking.createdAt.toISOString(),
       ...base(),
+      ...(booking.lateEntryRecordedAt ? {
+        actor: booking.lateEntryRecordedBy,
+        reason: 'Late session recording',
+        meta: { isLateEntry:true, recordedAt:booking.lateEntryRecordedAt.toISOString(), lateEntryRecordedAt:booking.lateEntryRecordedAt.toISOString(), scheduledAt:booking.scheduledAt.toISOString(), endsAt:booking.endsAt.toISOString() },
+      } : {}),
     });
 
     for (const log of statusLogs) {
@@ -181,6 +187,10 @@ export class GetBookingTimelineHandler {
           amount: Number(payment.amount),
           method: payment.method,
           paymentStatus: payment.status,
+          ...(payment.effectiveReceivedAt ? {
+            actor:payment.receiptRecordedBy,
+            meta:{effectiveReceivedAt:payment.effectiveReceivedAt.toISOString(),recordedAt:payment.createdAt.toISOString(),receiptEvidenceRef:payment.receiptEvidenceRef,receiptEntryReason:payment.receiptEntryReason},
+          }:{}),
         });
       }
       for (const refund of invoice.refundRequests) {

@@ -51,7 +51,7 @@ export class PaymentCompletedEventHandler {
             this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
             return this.prisma.booking.findFirst({ where: { id: bookingId } });
           });
-          if (!booking) return;
+          if (!booking || booking.lateEntryRecordedAt) return;
           // Use assertTransition to guard PAYMENT_CONFIRMED; skip silently if already in a
           // terminal or non-payment-pending state (idempotency for duplicate events).
           let nextStatus: BookingStatus;

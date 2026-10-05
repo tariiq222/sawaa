@@ -7,6 +7,12 @@ import {
 
 /** One representative payment per booking (latest). Amounts in halalat. */
 export interface BookingPaymentRelation {
+  effectiveReceivedAt?: Date | null;
+  createdAt?: Date;
+  processedAt?: Date | null;
+  receiptRecordedBy?: string | null;
+  receiptEvidenceRef?: string | null;
+  receiptEntryReason?: string | null;
   id: string;
   amount: number;       // halalas (Payment.amount is stored in halalas)
   refundedAmount: number; // halalat
@@ -129,6 +135,9 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     endTime,
     status: mapStatusForUi(b.status),
     isHistoricalImport: b.isHistoricalImport === true,
+    isLateEntry: b.lateEntryRecordedAt != null,
+    lateEntryRecordedAt: b.lateEntryRecordedAt?.toISOString() ?? null,
+    lateEntryRecordedBy: b.lateEntryRecordedBy ?? null,
     historicalPayment: historicalMetadata
       ? mapHistoricalPayment(historicalMetadata, b.status)
       : null,
@@ -140,13 +149,14 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     zoomStartUrl: opts.includeHostUrls ? (b.zoomStartUrl ?? null) : null,
     zoomMeetingStatus: b.zoomMeetingStatus ?? null,
     zoomMeetingError: b.zoomMeetingError ?? null,
-    cancellationReason: b.cancelReason ?? null,
+    cancellationReason: (b.lateEntryRecordedAt ? b.cancelNotes ?? b.cancelReason : b.cancelReason) ?? null,
     cancelledBy: null,
     suggestedRefundType: null,
     adminNotes: null,
     cancelledAt: b.cancelledAt?.toISOString() ?? null,
     confirmedAt: b.confirmedAt?.toISOString() ?? null,
     completedAt: b.completedAt?.toISOString() ?? null,
+    noShowAt: b.noShowAt?.toISOString() ?? null,
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
     client: client
@@ -185,6 +195,13 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
           method: mapPaymentMethodForUi(pay.method),
           status: mapPaymentStatusForUi(pay.status),
           totalAmount: pay.amount,
+          effectiveReceivedAt: pay.effectiveReceivedAt?.toISOString() ?? null,
+          createdAt: pay.createdAt?.toISOString() ?? null,
+          processedAt: pay.processedAt?.toISOString() ?? null,
+          collectionDate: (pay.effectiveReceivedAt ?? pay.createdAt)?.toISOString() ?? null,
+          receiptRecordedBy: pay.receiptRecordedBy ?? null,
+          receiptEvidenceRef: pay.receiptEvidenceRef ?? null,
+          receiptEntryReason: pay.receiptEntryReason ?? null,
         }
       : null,
     invoice: inv

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { LateSessionDetails } from "./late-session-details"
 import {
   User03Icon,
   Call02Icon,
@@ -129,6 +130,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
 
   return (
     <div className="flex flex-col gap-3">
+      <LateSessionDetails booking={booking} />
       <div className="grid grid-cols-2 gap-3">
         <div className={card}>
           <div className={cardHeader}><p className={cardTitle}>{t("detail.client")}</p></div>

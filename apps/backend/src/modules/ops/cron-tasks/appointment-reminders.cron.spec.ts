@@ -194,3 +194,9 @@ describe('AppointmentRemindersCron', () => {
     expect(eventBus.publish).toHaveBeenCalledTimes(2);
   });
 });
+
+it('excludes late entries even if their schedule is later edited', async () => {
+ const prisma = buildPrisma();
+ await new AppointmentRemindersCron(prisma as never, buildRedis().service as never, buildEventBus() as never).execute();
+ expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({where: expect.objectContaining({lateEntryRecordedAt: null})}));
+});

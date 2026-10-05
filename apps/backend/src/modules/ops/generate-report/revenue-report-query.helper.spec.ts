@@ -35,7 +35,10 @@ describe('revenue report query helper', () => {
     const query = buildRevenueReportQuery({ from, toExclusive, branchId: 'branch-1', employeeId: 'employee-1' });
 
     expect(query.paymentWhere).toEqual(expect.objectContaining({
-      createdAt: { gte: from, lt: toExclusive },
+      OR: [
+        { effectiveReceivedAt: { gte: from, lt: toExclusive } },
+        { effectiveReceivedAt: null, createdAt: { gte: from, lt: toExclusive } },
+      ],
       invoice: { is: { branchId: 'branch-1', employeeId: 'employee-1' } },
     }));
     expect(query.refundWhere).toEqual(expect.objectContaining({
@@ -76,4 +79,12 @@ describe('revenue report query helper', () => {
       'HOUR FROM (b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'UTC\')',
     );
   });
+});
+
+it('uses effective collection for SQL filtering and Riyadh grouping', () => {
+ const q = buildRevenueReportQuery({from: new Date('2026-01-01'), toExclusive: new Date('2026-02-01')});
+ for (const sql of [q.paymentStatusAggregate, q.paymentMethodAggregate, q.paymentDayAggregate]) {
+  expect(sql.sql).toContain('COALESCE(p."effectiveReceivedAt", p."createdAt")');
+ }
+ expect(q.paymentDayAggregate.sql).toContain(`(COALESCE(p."effectiveReceivedAt", p."createdAt") AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')`);
 });

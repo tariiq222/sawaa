@@ -19,7 +19,7 @@ export class CaptureReminderNotificationIntentsHandler {
     const dueThrough = new Date(now.getTime() + leadMinutes * 60_000);
     let cursor: string | undefined; let examined = 0; let changed = 0; let failed = 0;
     for (;;) {
-      const bookings = await this.prisma.booking.findMany({ where: { status: { in: ['CONFIRMED', 'DEPOSIT_PAID'] }, scheduledAt: { gt: now, lte: dueThrough } , ...(cursor ? { id: { gt: cursor } } : {}) }, orderBy: { id: 'asc' }, take: PAGE_SIZE, select: { id: true, clientId: true, scheduledAt: true, serviceNameSnapshot: true } });
+      const bookings = await this.prisma.booking.findMany({ where: { lateEntryRecordedAt: null, status: { in: ['CONFIRMED', 'DEPOSIT_PAID'] }, scheduledAt: { gt: now, lte: dueThrough } , ...(cursor ? { id: { gt: cursor } } : {}) }, orderBy: { id: 'asc' }, take: PAGE_SIZE, select: { id: true, clientId: true, scheduledAt: true, serviceNameSnapshot: true } });
       if (!bookings.length) break;
       const clients = await this.prisma.client.findMany({
         where: { id: { in: bookings.map((booking) => booking.clientId) }, isActive: true, deletedAt: null },

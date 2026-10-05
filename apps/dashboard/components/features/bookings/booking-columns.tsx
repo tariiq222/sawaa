@@ -125,6 +125,7 @@ export function getBookingColumns(
           <div className="flex flex-col items-start gap-1.5">
             <span className="text-[13px] font-medium font-numeric text-muted-foreground">
               #{row.original.bookingNumber.toString().padStart(4, "0")}
+              {row.original.isLateEntry && <span className="block text-xs text-muted-foreground">{t("bookings.late.title")}</span>}
             </span>
             <div className="flex items-center gap-1.5">
               {delivery && (

@@ -1,3 +1,5 @@
+import { GetLateSessionContextHandler } from "../../modules/bookings/get-late-session-context/get-late-session-context.handler";
+import { RecordLateSessionHandler } from '../../modules/bookings/record-late-session/record-late-session.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -55,6 +57,8 @@ describe('DashboardBookingsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [DashboardBookingsController],
       providers: [
+        { provide: GetLateSessionContextHandler, useValue: { execute: jest.fn() } },
+        { provide: RecordLateSessionHandler, useValue: { execute: jest.fn() } },
         { provide: CreateBookingHandler, useValue: mockCreateBooking },
         { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: BookingsStatsHandler, useValue: mockStats },

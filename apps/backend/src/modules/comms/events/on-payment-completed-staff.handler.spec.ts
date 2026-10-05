@@ -1,3 +1,4 @@
+import { PrismaService } from '../../../infrastructure/database';
 import { Test, TestingModule } from '@nestjs/testing';
 import { OnPaymentCompletedStaffHandler } from './on-payment-completed-staff.handler';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
@@ -6,11 +7,14 @@ import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handl
 describe('OnPaymentCompletedStaffHandler', () => {
   let handler: OnPaymentCompletedStaffHandler;
   let notify: SendNotificationHandler;
+  const prisma = { booking: { findUnique: jest.fn().mockResolvedValue(null) } };
 
   beforeEach(async () => {
+    prisma.booking.findUnique.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OnPaymentCompletedStaffHandler,
+        { provide: PrismaService, useValue: prisma },
         {
           provide: SendNotificationHandler,
           useValue: { execute: jest.fn() },
@@ -24,6 +28,12 @@ describe('OnPaymentCompletedStaffHandler', () => {
 
     handler = module.get<OnPaymentCompletedStaffHandler>(OnPaymentCompletedStaffHandler);
     notify = module.get<SendNotificationHandler>(SendNotificationHandler);
+  });
+
+  it('suppresses staff payment notices for late entries', async () => {
+    prisma.booking.findUnique.mockResolvedValue({lateEntryRecordedAt: new Date()});
+    await handler.handle({payload: {paymentId: 'p', invoiceId: 'i', bookingId: 'b', amount: 15000, currency: 'SAR', organizationId: 'o'}} as never);
+    expect(notify.execute).not.toHaveBeenCalled();
   });
 
   it('should register event handler', () => {

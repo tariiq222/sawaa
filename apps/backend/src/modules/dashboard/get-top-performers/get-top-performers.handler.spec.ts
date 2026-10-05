@@ -39,3 +39,9 @@ describe('GetTopPerformersHandler', () => {
     expect(result).toEqual([]);
   });
 });
+
+it('uses effective receipt date with PROCESSED fallback for revenue bounds', async () => {
+ const prisma = {$queryRaw: jest.fn().mockResolvedValue([]), booking: {groupBy: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0)}, client: {count: jest.fn().mockResolvedValue(0)}};
+ await new GetTopPerformersHandler(prisma as never).execute({period: 'month'});
+ expect(prisma.$queryRaw.mock.calls[0][0].sql).toContain('COALESCE(p."effectiveReceivedAt", p."processedAt")');
+});

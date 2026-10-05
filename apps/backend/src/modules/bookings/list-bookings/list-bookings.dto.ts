@@ -35,6 +35,9 @@ const mapBookingStatus = (v: unknown) => {
 };
 
 export class ListBookingsDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Filter sessions entered through late recording', example: true })
+  @IsOptional() @Transform(({ obj }) => obj.isLateEntry === 'true' ? true : obj.isLateEntry === 'false' ? false : obj.isLateEntry) @IsBoolean() isLateEntry?: boolean;
+
   @ApiPropertyOptional({ description: 'Filter by client', example: '00000000-0000-0000-0000-000000000000' })
   @IsOptional() @IsUUID() clientId?: string;
 

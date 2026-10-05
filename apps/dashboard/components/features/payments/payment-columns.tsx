@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import { PaymentStatusBadge } from "@/components/features/status-badge"
+import { paymentCollectionDate } from "./payment-dates"
 import type { Payment } from "@/lib/types/payment"
 import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
@@ -114,11 +115,12 @@ export function getPaymentColumns(
       },
     },
     {
-      accessorKey: "createdAt",
+      id: "collectionDate",
+      accessorFn: paymentCollectionDate,
       header: t("payments.col.date"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
-          {formatClinicDate(row.original.createdAt, dateFormat)}
+          {formatClinicDate(paymentCollectionDate(row.original), dateFormat)}
         </span>
       ),
     },

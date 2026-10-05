@@ -44,7 +44,7 @@ describe("getPaymentColumns — without callbacks", () => {
   it("returns 6 columns when no callbacks are provided (no actions column)", () => {
     expect(cols).toHaveLength(6)
     expect(cols.map((c) => c.id ?? (c as { accessorKey?: string }).accessorKey)).toEqual([
-      "number", "client", "amount", "method", "status", "createdAt",
+      "number", "client", "amount", "method", "status", "collectionDate",
     ])
   })
 
@@ -88,6 +88,18 @@ describe("column cells render correctly", () => {
   it("client cell shows em-dash when invoice has no client info", () => {
     const col = cols.find((c) => c.id === "client")!
     expect(cellContainer(col, makePayment()).textContent).not.toBe("")
+  })
+
+  it("collection cell renders server date, then legacy actual receipt, then ordinary creation date", () => {
+    const col = cols.find((c) => c.id === "collectionDate")!
+    expect(cellContainer(col, makePayment({
+      collectionDate: "2026-03-01T10:00:00Z",
+      effectiveReceivedAt: "2026-03-02T10:00:00Z",
+    })).textContent).toBe("2026-03-01")
+    expect(cellContainer(col, makePayment({
+      effectiveReceivedAt: "2026-03-02T10:00:00Z",
+    })).textContent).toBe("2026-03-02")
+    expect(cellContainer(col, makePayment({ effectiveReceivedAt: null })).textContent).toBe("2026-04-17")
   })
 
   it("amount cell shows amount with 2 decimals", () => {

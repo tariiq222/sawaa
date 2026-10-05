@@ -8,6 +8,9 @@ const EMPLOYEE_SORT_FIELDS = ['name', 'experience', 'isActive', 'createdAt'] as 
 export type EmployeeSortField = (typeof EMPLOYEE_SORT_FIELDS)[number];
 
 export class ListEmployeesDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Include historical inactive/archived references for staff recording', example: true })
+  @IsOptional() @Transform(({ obj }) => obj.historicalContext === 'true' ? true : obj.historicalContext === 'false' ? false : obj.historicalContext) @IsBoolean() historicalContext?: boolean;
+
   @ApiPropertyOptional({ description: 'Search by name, email, or phone', example: 'Khalid' })
   @IsOptional() @IsString() search?: string;
 

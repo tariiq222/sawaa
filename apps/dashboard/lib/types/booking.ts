@@ -3,21 +3,15 @@
  *
  * Matches the backend Prisma schema + API response shapes.
  */
-
 /**
  * Source of truth: shared/enums/booking.ts (TypeScript enums, UPPER_CASE)
  * Dashboard uses string union types (snake_case) for direct JSON compatibility.
  * Keep these in sync with the Prisma schema and shared/enums/booking.ts.
  */
-
 /* ─── Enums ─── */
-
 export type DeliveryType = "IN_PERSON" | "ONLINE"
-
 export type BookingType = "individual" | "group" | "walk_in"
-
 export type BookingSource = "RECEPTION" | "ONLINE"
-
 export type BookingStatus =
   | "pending"
   | "pending_group_fill"
@@ -29,9 +23,7 @@ export type BookingStatus =
   | "no_show"
   | "expired"
   | "cancel_requested"
-
 export type RefundType = "full" | "partial" | "none"
-
 export type CancelledBy = "client" | "employee" | "admin" | "system"
 
 /* ─── Entities ─── */
@@ -61,6 +53,13 @@ export interface BookingService {
 }
 
 export interface BookingPayment {
+  effectiveReceivedAt?: string | null
+  createdAt?: string
+  processedAt?: string | null
+  receiptEvidenceRef?: string | null
+  receiptEntryReason?: string | null
+  receiptRecordedBy?: string | null
+  collectionDate?: string
   id: string
   amount: number
   method: "moyasar" | "bank_transfer" | "cash" | "mada" | "tabby"
@@ -119,6 +118,10 @@ export interface Booking {
   startTime: string
   endTime: string
   status: BookingStatus
+  isLateEntry?: boolean
+  lateEntryRecordedAt?: string | null
+  lateEntryRecordedBy?: string | null
+  lateEntryRecordedByName?: string | null
   isHistoricalImport: boolean
   historicalPayment: HistoricalBookingPayment | null
   checkedInAt: string | null
@@ -169,6 +172,7 @@ export interface BookingListQuery {
   dateFrom?: string
   dateTo?: string
   search?: string
+  isLateEntry?: boolean
   isGuest?: boolean
 }
 

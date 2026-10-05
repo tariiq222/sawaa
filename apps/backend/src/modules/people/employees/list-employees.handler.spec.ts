@@ -34,6 +34,13 @@ describe('ListEmployeesHandler', () => {
     handler = module.get<ListEmployeesHandler>(ListEmployeesHandler);
   });
 
+  it('historical catalog admits inactive practitioners without dropping bindings', async () => {
+    prisma.employee.findMany.mockResolvedValue([]);prisma.employee.count.mockResolvedValue(0);
+    await handler.execute({page:1,limit:20,historicalContext:true,isActive:true} as any);
+    expect(prisma.employee.findMany.mock.calls[0][0].where.isActive).toBeUndefined();
+    expect(prisma.employee.findMany.mock.calls[0][0].include.services).toBe(true);
+  });
+
   it('should be defined', () => expect(handler).toBeDefined());
 
   it('should list employees with defaults', async () => {

@@ -235,3 +235,9 @@ describe('RefreshTokenCleanupCron', () => {
 });
 
 // AppointmentRemindersCron has full coverage in appointment-reminders.cron.spec.ts.
+
+it('excludes late entries from automatic completion', async () => {
+ const prisma = buildPrisma();
+ await new BookingAutocompleteCron(prisma as never, {execute: jest.fn()} as never).execute();
+ expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({where: expect.objectContaining({lateEntryRecordedAt: null})}));
+});
