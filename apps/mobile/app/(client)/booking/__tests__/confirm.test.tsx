@@ -1,3 +1,4 @@
+jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => ({ enabled: true, applePayAvailable: false, isLoading: false, isError: false, refetch: jest.fn() }) }), { virtual: true });
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 

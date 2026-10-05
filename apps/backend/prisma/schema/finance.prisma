@@ -111,12 +111,17 @@ model Payment {
   status                       PaymentStatus @default(PENDING)
   gatewayRef                   String?       @unique // Moyasar payment id
   idempotencyKey               String?       @unique // prevent duplicate webhook processing
+  nativeConfigFingerprint      String? // SHA-256 of public native checkout configuration
   receiptUrl                   String? // MinIO path for bank transfer receipt
   failureReason                String?
   // One external provider refund call at a time per payment. RefundRequest
   // leases alone are insufficient when two distinct requests target this row.
   refundProviderLeaseOwner     String?
   refundProviderLeaseExpiresAt DateTime?     @db.Timestamptz(3)
+  effectiveReceivedAt          DateTime?
+  receiptRecordedBy            String?
+  receiptEvidenceRef           String?
+  receiptEntryReason           String?
   processedAt                  DateTime?
   createdAt                    DateTime      @default(now())
   updatedAt                    DateTime      @updatedAt

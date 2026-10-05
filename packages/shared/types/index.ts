@@ -14,3 +14,4 @@ export type * from "./session-package-v2";
 
 export type * from "./package-family";
 export type * from "./client-package";
+export * from './native-payment';

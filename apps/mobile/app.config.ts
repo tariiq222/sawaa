@@ -9,11 +9,17 @@ resolveApiUrl({
   nodeEnv: process.env.NODE_ENV,
 });
 
+const applePayMerchantId = process.env.EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID || undefined;
+if (applePayMerchantId && !/^merchant\.[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*$/.test(applePayMerchantId)) {
+  throw new Error('Invalid EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID');
+}
+
 const config: ExpoConfig = {
   name: 'سواء للارشاد الاسري | sawaa',
   slug: 'sawa',
   owner: 'tariq222',
   extra: {
+    applePayMerchantId,
     eas: {
       projectId: 'f6349cef-8426-442c-b249-118a9b512cf1',
     },
@@ -30,6 +36,7 @@ const config: ExpoConfig = {
   },
   ios: {
     appleTeamId: '569M49FYA6',
+    ...(applePayMerchantId ? { entitlements: { 'com.apple.developer.in-app-payments': [applePayMerchantId] } } : {}),
     supportsTablet: true,
     bundleIdentifier: 'sa.sawa.app',
     ...(process.env.FIREBASE_IOS_GOOGLE_SERVICES_FILE

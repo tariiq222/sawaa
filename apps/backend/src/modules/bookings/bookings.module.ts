@@ -1,3 +1,5 @@
+import { GetLateSessionContextHandler } from "./get-late-session-context/get-late-session-context.handler";
+import { RecordLateSessionHandler } from './record-late-session/record-late-session.handler';
 import { ProgramCancelledResultHandler } from './cancel-program/program-cancelled-result.handler';
 import { ClientCancellationOutcomeHandler } from './client/client-cancellation-outcome.handler';
 import { ClientCancellationZoomHandler } from './client/client-cancellation-zoom.handler';
@@ -74,6 +76,8 @@ import { GetEmployeeMeetingStartHandler } from './get-employee-meeting-start/get
 import { EmployeeAvailabilityQueryHandler } from './employee-availability-query.handler';
 
 const handlers = [
+  GetLateSessionContextHandler,
+  RecordLateSessionHandler,
   ClientCancellationPreviewHandler,
   ClientCancellationOutcomeHandler,
   ClientCancellationZoomHandler,

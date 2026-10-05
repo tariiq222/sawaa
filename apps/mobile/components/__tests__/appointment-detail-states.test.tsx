@@ -112,6 +112,19 @@ describe('appointment detail truthful states', () => {
     expect(screen.queryByText('appointments.rate')).toBeNull();
   });
 
+  it('lets the client keep the appointment after reviewing cancellation terms', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    expect(screen.getByText('cancellation.confirm')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('cancellation.keepAppointment'));
+
+    expect(screen.queryByText('cancellation.confirm')).toBeNull();
+    expect(screen.getByText('appointments.cancelAppointment')).toBeTruthy();
+    expect(mockCancel).not.toHaveBeenCalled();
+  });
+
   it('places cancellation with the appointment content instead of pinning it below empty space', () => {
     mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' }, isLoading: false, isError: false, refetch: mockRefetch });
     const screen = render(<AppointmentDetail />);

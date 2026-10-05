@@ -10,6 +10,14 @@ This is the shared deployment policy for every AI tool and contributor working o
 
 ## Normal path
 
+### Local and remote branches — owner-approved 2026-10-04
+
+- `develop` is the primary local branch. Keep temporary task branches as needed; a local `main` branch is not required and may be removed after verifying its commits are preserved. Keep remote `main` as the production branch.
+- Integrate task branches through PRs into remote `develop`, then synchronize local `develop` from `origin/develop` with a fast-forward while preserving uncommitted work.
+- Validate the resulting revision on staging and obtain the owner's manual acceptance before promotion.
+- Promote the accepted release through a PR from remote `develop` to remote `main` only after explicit production authorization, then deploy and verify production under the rules below.
+- Approval of this workflow does not itself execute branch cleanup, commit, push, merge, or deployment.
+
 1. Start a task branch (Codex default: `codex/<task>`) from current `develop`; use an isolated worktree when needed to keep concurrent work separate. Preserve unrelated work.
 2. Implement and verify the scoped change. Use PRs; never push directly to `main`, force-push protected branches or bypass required checks.
 3. On a staging publication command, merge the reviewed task into `develop`, deploy staging and verify that the intended revision actually runs. Automated tests do not replace the owner's manual staging test.

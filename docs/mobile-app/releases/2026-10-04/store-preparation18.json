@@ -1,0 +1,93 @@
+{
+  "verifiedAt": "2026-10-04T14:28:02.691Z",
+  "appId": "6815632181",
+  "version": "1.0.0",
+  "state": "REJECTED",
+  "releaseType": "MANUAL",
+  "build": "18",
+  "buildId": "90c96a46-1034-43cd-b79b-680f57356049",
+  "processing": "VALID",
+  "nonExemptEncryption": false,
+  "physicalDeviceAcceptance": "Owner confirms login, booking, payment and cancellation on iPhone build18",
+  "contentRightsAcceptance": "Owner confirms rights or permission",
+  "reviewerAccess": {
+    "observedAt": "2026-10-04T12:07:49.187758+00:00",
+    "apiBase": "https://api.sawaa.sa/api/v1",
+    "reviewLoginStatus": 200,
+    "sessionKind": "client",
+    "jwtIdentity": {
+      "sub": "97e32394-5ec7-441c-a090-af4ffb187fb8",
+      "namespace": "client"
+    },
+    "profileStatus": 200,
+    "profileClientId": "97e32394-5ec7-441c-a090-af4ffb187fb8",
+    "syntheticEmailMatches": true,
+    "bookingsStatus": 200,
+    "bookingsCount": 0,
+    "healthReadyStatus": 200,
+    "startupMigrationLines": [
+      "111 migrations found in prisma/migrations",
+      "No pending migrations to apply."
+    ],
+    "successfulLoginRequests": 1,
+    "initialPythonProbe": "403 Cloudflare error1010, reproduced on GET health; verified using ordinary curl client",
+    "noClinicalOrFinancialDataWritten": true
+  },
+  "privacyDraftTypes": 13,
+  "privacyPublished": true,
+  "submissionValidation": "Submitted for review; verified Apple API and visible submission details",
+  "policyApproval": "Owner reports policy updated and requests continuation; live policy updated 4 October 2026, preliminary disclaimer removed. No independent legal-review attestation inferred.",
+  "screenshotsEvidence": "screenshots18/app-store-upload-evidence.json",
+  "priceAndAvailability": {
+    "verifiedAt": "2026-10-04T12:26:28.481Z",
+    "downloadPriceSAR": 0,
+    "availableRegions": [
+      "Saudi Arabia"
+    ],
+    "unavailableRegionsCount": 174,
+    "evidence": "Signed-in App Store Connect UI price table and availability tooltip"
+  },
+  "submission": {
+    "id": "657d6671-25c3-4ea4-a592-6270bcc5de7b",
+    "state": "UNRESOLVED_ISSUES",
+    "submittedDate": "2026-10-04T14:26:42.449Z",
+    "submittedDateRiyadh": "2026-10-04 17:26:42 +03:00"
+  },
+  "policyEvidence": {
+    "url": "https://sawaa.sa/privacy",
+    "httpStatus": 200,
+    "preliminaryNoticePresent": false,
+    "source": "Direct HTTP request because search crawler returned stale copy",
+    "htmlSha256": "deae3c988dae489e996545779a00dd7f83f133ba00dc8ebc4e77630e5e4bbe68"
+  },
+  "submissionScreenshot": "screenshots18/apple-submitted-build18.png",
+  "monitor": {
+    "checkedAt": "2026-10-05T16:50:10.177Z",
+    "checkedAtRiyadh": "2026-10-05 19:50:10 +03:00",
+    "versionState": "REJECTED",
+    "submissionState": "UNRESOLVED_ISSUES",
+    "build": "18",
+    "reasonVerified": true,
+    "reviewMessagesAccess": "Authentication required in Codex in-app browser and Chrome; latest message check unavailable",
+    "actionRequired": "Sign in to App Store Connect in Codex browser to restore review-message monitoring",
+    "lastNotifiedState": "REJECTED",
+    "requestChanged": false,
+    "resubmitted": false,
+    "messageReadAt": "2026-10-05T13:48:46.483Z",
+    "reviewGuideline": "2.1 - Information Needed - New App Submission",
+    "messageCount": 1,
+    "reason": "Developer account has limited App Review history; Apple requests evidence and information to understand the app",
+    "requirements": [
+      "Physical-device screen recording on latest OS showing launch and typical flows, account creation/login/deletion, UGC reporting/blocking and paid access where applicable",
+      "Purpose and target audience",
+      "Feature access/setup and reviewer credentials or sample files",
+      "External services used for core features",
+      "Regional feature/content differences or consistency confirmation",
+      "Applicable regulated-service credentials and protected-material permissions"
+    ],
+    "requestedDelivery": "Reply in App Store Connect and add same information to App Review Information Notes",
+    "lastNotifiedMessageCount": 1,
+    "messagesVerifiedThisCheck": false,
+    "lastNotifiedAccessIssue": "AUTHENTICATION_REQUIRED"
+  }
+}

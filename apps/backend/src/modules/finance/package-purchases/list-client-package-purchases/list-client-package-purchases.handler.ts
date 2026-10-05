@@ -70,6 +70,9 @@ export interface ClientPackageCreditRow {
 }
 
 export interface ClientPackagePurchaseRow {
+  invoiceId?: string | null;
+  branchId?: string;
+  packageFamilyId?: string | null;
   id: string;
   packageId: string;
   packageNameAr: string;
@@ -320,7 +323,7 @@ export class ListClientPackagePurchasesHandler {
     const invoices = purchases.length
       ? await this.prisma.invoice.findMany({
           where: { packagePurchaseId: { in: purchases.map((purchase) => purchase.id) } },
-          select: { packagePurchaseId: true, vatAmt: true, total: true },
+          select: { id: true, packagePurchaseId: true, vatAmt: true, total: true },
         })
       : [];
     const invoiceByPurchase = new Map(invoices.map((invoice) => [invoice.packagePurchaseId, invoice]));
@@ -331,6 +334,9 @@ export class ListClientPackagePurchasesHandler {
       const offerSnapshot = parsePackageOfferSnapshot(purchase.offerSnapshot);
       return {
         id: purchase.id,
+        invoiceId: invoice?.id ?? null,
+        branchId: purchase.branchId,
+        packageFamilyId: offerSnapshot?.familyId ?? null,
         packageId: purchase.packageId,
         packageNameAr: offerSnapshot?.familyNameAr ?? pkg?.nameAr ?? '',
         packageNameEn: offerSnapshot?.familyNameEn ?? pkg?.nameEn ?? null,

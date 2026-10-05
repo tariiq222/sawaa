@@ -239,3 +239,14 @@ describe('resolveConfirmedPhase', () => {
     expect(resolveConfirmedPhase('confirmed', true, false, 'CONFIRMED')).toBe('pending');
   });
 });
+
+it('keeps a native pending attempt pending after dismissal recheck window', async () => {
+  jest.useFakeTimers();
+  mockGetInvoice.mockResolvedValue({ status: 'DRAFT', payments: [{ status: 'PENDING', method: 'ONLINE_CARD' }] });
+  const { result, unmount } = renderHook(() => usePaymentStatus('inv-native', 'native'));
+  await act(async () => undefined);
+  await act(async () => { jest.advanceTimersByTime(12000); });
+  expect(result.current.phase).toBe('pending');
+  unmount();
+  jest.useRealTimers();
+});

@@ -11,8 +11,8 @@ import {
 } from '@/features/booking/existing-booking-checkout-state';
 
 export { resolveExistingBookingCheckout } from '@/features/booking/existing-booking-checkout-state';
-export { canResumeHostedPayment } from '@/features/booking/existing-booking-checkout-state';
-export { canStartHostedPayment } from '@/features/booking/existing-booking-checkout-state';
+export { canResumeHostedPayment, canResumeHostedPayment as canResumeOnlinePayment } from '@/features/booking/existing-booking-checkout-state';
+export { canStartHostedPayment, canStartHostedPayment as canStartOnlinePayment } from '@/features/booking/existing-booking-checkout-state';
 export type { ExistingBookingCheckoutInput, ExistingBookingCheckoutPhase } from '@/features/booking/existing-booking-checkout-state';
 
 export interface ExistingBookingCheckoutSnapshot {

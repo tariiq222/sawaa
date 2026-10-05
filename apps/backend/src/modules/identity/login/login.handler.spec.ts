@@ -81,9 +81,9 @@ describe('LoginHandler', () => {
     expect(redisClient.del).toHaveBeenCalledTimes(2);
   });
 
-  it('returns an opaque 2FA challenge and never issues tokens for a super-admin when enabled', async () => {
+  it.each([{ role: 'SUPER_ADMIN', isSuperAdmin: false }, { role: 'ADMIN', isSuperAdmin: true }])('returns a 2FA challenge for $role / $isSuperAdmin', async (authority) => {
     prisma.user.findUnique.mockResolvedValue({
-      id: 'u1', email: 'a@b.com', isActive: true, passwordHash: 'hash', failedLoginAttempts: 0, lockedUntil: null, isSuperAdmin: true, customRole: null,
+      id: 'u1', email: 'a@b.com', isActive: true, passwordHash: 'hash', failedLoginAttempts: 0, lockedUntil: null, ...authority, customRole: null,
     });
     password.verify.mockResolvedValue(true);
     settings.get.mockResolvedValue(true);

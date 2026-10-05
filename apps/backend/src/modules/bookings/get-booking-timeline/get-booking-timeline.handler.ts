@@ -6,8 +6,9 @@ import type {
   RefundStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { assertBookingReadAccess, type BookingReadRequester } from '../booking-read-access.helper';
 
-export interface GetBookingTimelineQuery {
+export interface GetBookingTimelineQuery extends BookingReadRequester {
   bookingId: string;
 }
 
@@ -75,9 +76,10 @@ export class GetBookingTimelineHandler {
   ): Promise<BookingTimelineEntry[]> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: query.bookingId },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, employeeId: true, lateEntryRecordedAt:true,lateEntryRecordedBy:true,scheduledAt:true,endsAt:true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
+    await assertBookingReadAccess(this.prisma, booking, query);
 
     const [statusLogs, invoices, activityLogs] = await Promise.all([
       this.prisma.bookingStatusLog.findMany({
@@ -96,6 +98,7 @@ export class GetBookingTimelineHandler {
               status: true,
               createdAt: true,
               processedAt: true,
+              effectiveReceivedAt:true, receiptRecordedBy:true, receiptEvidenceRef:true, receiptEntryReason:true,
             },
           },
           refundRequests: {
@@ -143,6 +146,11 @@ export class GetBookingTimelineHandler {
       kind: 'CREATED',
       at: booking.createdAt.toISOString(),
       ...base(),
+      ...(booking.lateEntryRecordedAt ? {
+        actor: booking.lateEntryRecordedBy,
+        reason: 'Late session recording',
+        meta: { isLateEntry:true, recordedAt:booking.lateEntryRecordedAt.toISOString(), lateEntryRecordedAt:booking.lateEntryRecordedAt.toISOString(), scheduledAt:booking.scheduledAt.toISOString(), endsAt:booking.endsAt.toISOString() },
+      } : {}),
     });
 
     for (const log of statusLogs) {
@@ -181,6 +189,10 @@ export class GetBookingTimelineHandler {
           amount: Number(payment.amount),
           method: payment.method,
           paymentStatus: payment.status,
+          ...(payment.effectiveReceivedAt ? {
+            actor:payment.receiptRecordedBy,
+            meta:{effectiveReceivedAt:payment.effectiveReceivedAt.toISOString(),recordedAt:payment.createdAt.toISOString(),receiptEvidenceRef:payment.receiptEvidenceRef,receiptEntryReason:payment.receiptEntryReason},
+          }:{}),
         });
       }
       for (const refund of invoice.refundRequests) {

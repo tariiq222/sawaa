@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpException, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import { HttpException, HttpStatus, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { OtpChannel } from '@prisma/client';
 import { RequestDashboardOtpHandler } from './request-dashboard-otp.handler';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
@@ -11,6 +11,8 @@ import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-chal
 describe('RequestDashboardOtpHandler', () => {
   let handler: RequestDashboardOtpHandler;
   let prismaMock: any;
+  let settings: { get: jest.Mock };
+  let challenges: { assertValid: jest.Mock };
   let channelRegistry: jest.Mocked<NotificationChannelRegistry>;
   let redisClient: { get: jest.Mock };
 
@@ -74,6 +76,27 @@ describe('RequestDashboardOtpHandler', () => {
 
     handler = module.get<RequestDashboardOtpHandler>(RequestDashboardOtpHandler);
     channelRegistry = module.get(NotificationChannelRegistry);
+    settings = module.get(PlatformSettingsService);
+    challenges = module.get(DashboardTwoFactorChallengeService);
+  });
+
+  it.each([{ role: 'SUPER_ADMIN', isSuperAdmin: false }, { role: 'ADMIN', isSuperAdmin: true }])('requires password proof before sending OTP for $role / $isSuperAdmin', async (authority) => {
+    settings.get.mockResolvedValue(true);
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'privileged', ...authority });
+    challenges.assertValid.mockRejectedValue(new UnauthorizedException('Password proof required'));
+    await expect(handler.execute({ identifier: 'User@Example.COM' })).rejects.toThrow(UnauthorizedException);
+    expect(challenges.assertValid).toHaveBeenCalledWith(undefined, 'privileged', 'user@example.com');
+    expect(mockChannelService.send).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ select: { id: true, role: true, isSuperAdmin: true } }));
+  });
+
+  it('allows ordinary staff OTP while second factor is configured for super-admins', async () => {
+    settings.get.mockResolvedValue(true);
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'staff', role: 'ADMIN', isSuperAdmin: false });
+    await expect(handler.execute({ identifier: 'user@example.com' })).resolves.toEqual({ success: true });
+    expect(challenges.assertValid).not.toHaveBeenCalled();
+    expect(mockChannelService.send).toHaveBeenCalled();
   });
 
   it('email identifier → normalizes to lowercase, uses EMAIL channel, creates OTP and calls send', async () => {

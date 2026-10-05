@@ -4,9 +4,10 @@ import { EventBusService } from '../../../infrastructure/events';
 
 import { EmployeeCreatedEvent } from '../events/employee-created.event';
 import { CreateEmployeeDto } from './create-employee.dto';
+import { assertCanManageEmployeeUser } from '../../identity/shared/assert-can-manage-employee-user';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
-export type CreateEmployeeCommand = CreateEmployeeDto;
+export type CreateEmployeeCommand = CreateEmployeeDto & { actorUserId?: string };
 
 @Injectable()
 export class CreateEmployeeHandler {
@@ -25,6 +26,7 @@ export class CreateEmployeeHandler {
     }
 
     const employee = await this.rlsTransaction.withTransaction(async (tx) => {
+      if (dto.userId) await assertCanManageEmployeeUser(tx, dto.actorUserId, dto.userId);
       const created = await tx.employee.create({
         data: {
           name: dto.name,

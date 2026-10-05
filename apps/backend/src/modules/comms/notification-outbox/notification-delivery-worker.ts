@@ -239,11 +239,11 @@ export class NotificationDeliveryWorker {
       }
       const booking = await tx.booking.findUnique({
         where: { id: payload.bookingId },
-        select: { status: true, scheduledAt: true },
+        select: { status: true, scheduledAt: true, lateEntryRecordedAt: true },
       });
       const scheduledAt = new Date(payload.scheduledAt);
       if (
-        !booking ||
+        !booking || Boolean(booking.lateEntryRecordedAt) ||
         !['CONFIRMED', 'DEPOSIT_PAID'].includes(booking.status) ||
         booking.scheduledAt.getTime() !== scheduledAt.getTime() ||
         scheduledAt.getTime() <= now.getTime()

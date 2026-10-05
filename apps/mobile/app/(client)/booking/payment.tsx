@@ -1,23 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { Apple, Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
+import { Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { APP_SCHEME } from '@/constants/config';
 import { clientBookingsService } from '@/services/client/bookings';
-import { clientPaymentsService } from '@/services/client/payments';
+import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
+import { useTranslation } from 'react-i18next';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
@@ -33,6 +32,9 @@ import {
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 export default function BookingPaymentScreen() {
   const colors = useSawaaColors();
+  const { t } = useTranslation();
+  const native = useNativePaymentCapabilities();
+  const inFlight = useRef(false);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const params = useLocalSearchParams<{
@@ -58,21 +60,30 @@ export default function BookingPaymentScreen() {
   const [method, setMethod] = useState<Method>('card');
   const [submitting, setSubmitting] = useState(false);
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const userRef = useRef(userId);
+  userRef.current = userId;
   const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
   const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const total = params.amount ? Number(params.amount) : 0;
   const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
-  const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
-    { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: colors.teal[600] },
-    { key: 'apple_pay', icon: <Apple size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },
+  const methods = useMemo<Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }>>(() => [
+    { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: t('nativePayment.cards'), labelEn: t('nativePayment.cards'), subAr: t('nativePayment.cardNetworks'), subEn: t('nativePayment.cardNetworks'), color: colors.teal[600] },
+    { key: 'apple_pay', icon: null, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },
     { key: 'bank_transfer', icon: <Banknote size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.teal[600] },
-  ];
-  const availableMethods = methods.filter(
-    (paymentMethod) => paymentMethod.key !== 'bank_transfer' ||
-      isClientBankTransferAvailable(bankTransferSettings),
-  );
+  ], [colors, t]);
+  const availableMethods = useMemo(() => methods.filter((paymentMethod) => {
+    if (paymentMethod.key === 'bank_transfer') return isClientBankTransferAvailable(bankTransferSettings);
+    if (paymentMethod.key === 'apple_pay') return native.enabled && native.applePayAvailable;
+    return native.enabled;
+  }), [methods, native.enabled, native.applePayAvailable, bankTransferSettings]);
+  useEffect(() => {
+    if (native.isLoading || native.isError) return;
+    if (!availableMethods.some((candidate) => candidate.key === method) && availableMethods.length) {
+      setMethod(availableMethods[0].key);
+    }
+  }, [availableMethods, method, native.isLoading, native.isError]);
   useEffect(() => {
     let active = true;
     setResumeState('loading');
@@ -102,9 +113,10 @@ export default function BookingPaymentScreen() {
   const canPay =
     resumeState === 'ready' &&
     (!!createdBooking || !!draft) &&
-    !submitting;
+    Boolean(userId) && availableMethods.some((candidate) => candidate.key === method) && !submitting;
   const handlePay = async () => {
-    if (!canPay) return;
+    if (!canPay || inFlight.current) return;
+    inFlight.current = true;
     setSubmitting(true);
     let resumeSafe = Boolean(createdBooking);
     try {
@@ -130,6 +142,7 @@ export default function BookingPaymentScreen() {
         }
         setCreatedBooking(booking);
       }
+      if (userRef.current !== userId) return;
       if (method === 'bank_transfer') {
         if (!booking.invoiceId) {
           router.replace({
@@ -155,29 +168,15 @@ export default function BookingPaymentScreen() {
         });
         return;
       }
-      const payment = await clientPaymentsService.initPayment(
-        booking.invoiceId,
-        method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
-      );
-      let webResult: WebBrowser.WebBrowserAuthSessionResult | null = null;
-      if (payment.redirectUrl) {
-        webResult = await WebBrowser.openAuthSessionAsync(
-          payment.redirectUrl,
-          `${APP_SCHEME}://booking/payment-callback`,
-        );
-      }
-
       router.replace({
-        pathname: '/(client)/booking/success',
+        pathname: '/(client)/payments/native-checkout',
         params: {
           bookingId: booking.bookingId,
           invoiceId: booking.invoiceId,
-          paymentId: payment.paymentId,
-          ...(params.amount ? { amount: String(total) } : {}),
-          ...(params.currency ? { currency: params.currency } : {}),
-          webResult: webResult?.type ?? 'success',
+          method: method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
         },
       });
+      await Promise.resolve();
     } catch (err) {
       if (!resumeSafe) setResumeState('invalid');
       const message =
@@ -185,6 +184,7 @@ export default function BookingPaymentScreen() {
         (dir.isRTL ? 'تعذّر إكمال الدفع. حاولي مرة أخرى.' : 'Could not continue payment. Try again.');
       Alert.alert(dir.isRTL ? 'خطأ' : 'Error', message);
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -208,6 +208,10 @@ export default function BookingPaymentScreen() {
           </Text>
         </Animated.View>
 
+        {native.isError ? <View accessibilityRole="alert" style={{ gap: sawaaSpacing.sm }}>
+          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('payment.methodsError')}</Text>
+          <Pressable accessibilityRole="button" onPress={native.refetch}><Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('common.retry')}</Text></Pressable>
+        </View> : null}
         {availableMethods.map((m, i) => {
           const isSelected = method === m.key;
           return (
@@ -229,7 +233,7 @@ export default function BookingPaymentScreen() {
                 ]}
               >
                 <View style={[styles.methodRow, { flexDirection: dir.row }]}>
-                  <View style={[styles.methodIcon, { backgroundColor: withAlpha(m.color, 0.12) }]}>{m.icon}</View>
+                  {m.icon ? <View style={[styles.methodIcon, { backgroundColor: withAlpha(m.color, 0.12) }]}>{m.icon}</View> : null}
                   <View style={styles.methodMid}>
                     <Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
                       {dir.isRTL ? m.labelAr : m.labelEn}

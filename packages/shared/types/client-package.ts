@@ -16,6 +16,9 @@ export interface ClientPackageCredit extends Omit<PackageCredit, 'serviceId' | '
   constraints: { dimension: string; mode: string; targetIds: string[] }[]
 }
 export interface ClientPackagePurchase {
+  invoiceId?: string | null
+  branchId?: string
+  packageFamilyId?: string | null
   id: string
   packageId: string
   packageNameAr: string

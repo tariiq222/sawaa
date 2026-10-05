@@ -22,7 +22,7 @@ import { FloatingCta } from '@/components/ui/FloatingCta';
 import { useDir } from '@/hooks/useDir';
 import { useTranslation } from 'react-i18next';
 import { useReduceMotion } from '@/hooks/useA11y';
-import { useBooking } from '@/hooks/queries';
+import { useBooking, useClientInvoice } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { resolveConfirmedPhase, usePaymentStatus, type PaymentPhase } from '@/features/booking/use-payment-status';
 
@@ -70,6 +70,7 @@ export default function BookingSuccessScreen() {
   const f700 = getFontName(dir.locale, '700');
 
   const bookingQuery = useBooking(bookingId);
+  const invoiceQuery = useClientInvoice(invoiceId);
   const booking = bookingQuery.data ?? null;
   const loading = Boolean(bookingId) && bookingQuery.isLoading;
 
@@ -79,6 +80,7 @@ export default function BookingSuccessScreen() {
   const checkPaymentAndBookingAgain = () => {
     checkAgain();
     if (bookingId) void bookingQuery.refetch();
+    if (invoiceId) void invoiceQuery.refetch();
   };
 
   // A paid invoice does not guarantee the booking itself has been confirmed yet
@@ -174,6 +176,16 @@ export default function BookingSuccessScreen() {
     label: dir.isRTL ? 'رقم الموعد' : 'Booking #',
     value: bookingId ? shortBookingRef(bookingId) : '—',
   });
+  if (invoiceId) {
+    const invoice = invoiceQuery.data;
+    const number = invoice?.id === invoiceId ? invoice.number : undefined;
+    infoRows.push({
+      icon: Hash,
+      label: t('booking.invoiceNumber'),
+      value: typeof number === 'number' && Number.isSafeInteger(number) && number > 0 ? `#${number}` : '—',
+    });
+  }
+
   if (paymentId) {
     infoRows.push({
       icon: Hash,

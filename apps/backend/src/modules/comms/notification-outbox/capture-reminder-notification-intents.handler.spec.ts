@@ -88,6 +88,7 @@ describe('CaptureReminderNotificationIntentsHandler', () => {
     await handler.execute();
 
     const query = prisma.booking.findMany.mock.calls[0][0];
+    expect(query.where.lateEntryRecordedAt).toBeNull();
     expect(query.where.status).toEqual({ in: ['CONFIRMED', 'DEPOSIT_PAID'] });
     expect(query.where.scheduledAt.gt).toEqual(new Date('2026-09-05T10:00:00.000Z'));
     expect(query.where.scheduledAt.lte).toEqual(new Date('2026-09-05T11:00:00.000Z'));

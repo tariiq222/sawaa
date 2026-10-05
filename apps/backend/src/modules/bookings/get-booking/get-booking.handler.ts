@@ -70,6 +70,7 @@ export class GetBookingHandler {
               id: true,
               amount: true,
               refundedAmount: true,
+                effectiveReceivedAt:true, createdAt:true, processedAt:true, receiptRecordedBy:true, receiptEvidenceRef:true, receiptEntryReason:true,
               method: true,
               status: true,
             },
@@ -152,6 +153,7 @@ export class GetBookingHandler {
       id: string;
       amount: number;
       refundedAmount: number;
+      effectiveReceivedAt?:Date|null; createdAt?:Date; processedAt?:Date|null; receiptRecordedBy?:string|null; receiptEvidenceRef?:string|null; receiptEntryReason?:string|null;
       method: string;
       status: string;
     }>();
@@ -163,6 +165,7 @@ export class GetBookingHandler {
         refundedAmount: Math.round(Number(p.refundedAmount)),
         method: p.method as string,
         status: p.status as string,
+            effectiveReceivedAt:p.effectiveReceivedAt, createdAt:p.createdAt, processedAt:p.processedAt, receiptRecordedBy:p.receiptRecordedBy, receiptEvidenceRef:p.receiptEvidenceRef, receiptEntryReason:p.receiptEntryReason,
       });
     }
 

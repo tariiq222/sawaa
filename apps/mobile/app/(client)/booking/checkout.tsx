@@ -1,24 +1,22 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { APP_SCHEME } from '@/constants/config';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useGroupSession } from '@/hooks/queries';
-import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
+import { type ClientInvoice } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
 import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { BackButton } from '@/components/ui/BackButton';
 import {
   useExistingBookingCheckout,
-  canResumeHostedPayment,
-  canStartHostedPayment,
+  canResumeOnlinePayment,
+  canStartOnlinePayment,
   type ExistingBookingCheckoutPhase,
 } from '@/features/booking/use-existing-booking-checkout';
 
@@ -75,8 +73,15 @@ export default function ExistingBookingCheckoutScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
   const brandingQuery = useBranding();
-  const programQuery = useGroupSession(programId);
   const checkout = useExistingBookingCheckout({ bookingId, invoiceId });
+  const { checkAgain } = checkout;
+  const isGroup = (checkout.booking?.bookingType ?? checkout.booking?.type)?.toLowerCase() === 'group';
+  const programQuery = useGroupSession(isGroup ? programId : undefined);
+  const serviceName = dir.isRTL
+    ? checkout.booking?.serviceNameAr ?? checkout.booking?.service?.nameAr ?? checkout.booking?.serviceName ?? checkout.booking?.service?.nameEn
+    : checkout.booking?.serviceName ?? checkout.booking?.service?.nameEn ?? checkout.booking?.serviceNameAr ?? checkout.booking?.service?.nameAr;
+  const bookingTitle = (isGroup ? programQuery.data?.title : undefined) ?? serviceName ?? t('checkout.appointment');
+  useFocusEffect(useCallback(() => { checkAgain(); }, [checkAgain]));
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const copy = phaseCopy(checkout.phase, t);
@@ -88,9 +93,9 @@ export default function ExistingBookingCheckoutScreen() {
         currency,
       })
     : t('checkout.amountUnavailable');
-  const canPay = Boolean(checkout.invoice?.id) && canStartHostedPayment(checkout.invoice) && !submitting && (
+  const canPay = Boolean(checkout.booking?.id && checkout.invoice?.id) && canStartOnlinePayment(checkout.invoice) && !submitting && (
     ['ready', 'failed', 'deposit_confirmed'].includes(checkout.phase) ||
-    (checkout.phase === 'pending' && canResumeHostedPayment(checkout.invoice))
+    (checkout.phase === 'pending' && canResumeOnlinePayment(checkout.invoice))
   );
 
   const openPayment = async () => {
@@ -99,17 +104,13 @@ export default function ExistingBookingCheckoutScreen() {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const payment = await clientPaymentsService.initPayment(checkout.invoice.id, 'ONLINE_CARD');
-      if (payment.redirectUrl) {
-        await WebBrowser.openAuthSessionAsync(
-          payment.redirectUrl,
-          `${APP_SCHEME}://booking/payment-callback`,
-        );
-      }
-      checkout.checkAgain();
+      router.replace({ pathname: '/(client)/payments/native-checkout', params: {
+        invoiceId: checkout.invoice.id, bookingId: checkout.booking!.id,
+      } });
+      await Promise.resolve();
     } catch (error) {
       const message = error instanceof Error ? error.message : t('checkout.loadError');
-      Alert.alert(t('groups.title'), message);
+      Alert.alert(t('checkout.title'), message);
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -140,10 +141,10 @@ export default function ExistingBookingCheckoutScreen() {
 
         <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
           <Text style={[styles.label, { fontFamily: f400, textAlign: dir.textAlign }]}>
-            {t('checkout.program')}
+            {t(isGroup ? 'checkout.program' : 'checkout.service')}
           </Text>
           <Text style={[styles.value, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {programQuery.data?.title ?? t('groups.title')}
+            {bookingTitle}
           </Text>
           {checkout.booking?.branchName || checkout.booking?.branchNameAr ? (
             <Text style={[styles.label, { fontFamily: f400, textAlign: dir.textAlign }]}>

@@ -33,6 +33,8 @@ export default function PackageFamilyDetailScreen() {
   const { t } = useTranslation();
   const user = useAppSelector((state) => state.auth.user);
   const query = usePackageFamily(id);
+  const userRef = useRef(user?.id);
+  userRef.current = user?.id;
   const initPurchase = useInitPackagePurchase();
   const [selectedId, setSelectedId] = useState<string>();
   const [branches, setBranches] = useState<PublicBranchSummary[]>([]);
@@ -75,10 +77,10 @@ export default function PackageFamilyDetailScreen() {
 
   const recoverPending = useCallback(async () => {
     if (checkoutInFlight.current) return;
-    const pending = await getPendingPackagePurchase();
-    // The return screen clears this record once a checkout fails, is abandoned,
-    // or stays unconfirmed, so recovery cannot loop the client away from Buy.
-    if (checkoutInFlight.current) return;
+    if (!user?.id) return;
+    const pending = await getPendingPackagePurchase(user.id);
+    // Ignore a previous account's asynchronous recovery read.
+    if (checkoutInFlight.current || userRef.current !== user?.id) return;
     if (pending && pending.clientId === user?.id && pending.packageId === option?.id) {
       router.replace({ pathname: '/(client)/packages/return', params: {
         purchaseId: pending.purchaseId,
@@ -86,6 +88,7 @@ export default function PackageFamilyDetailScreen() {
         packageId: pending.packageId,
         familyId: pending.familyId,
         branchId: pending.branchId,
+        ...(pending.invoiceId ? { origin: 'native' } : {}),
       } });
     }
   }, [option?.id, router, user?.id]);
@@ -109,9 +112,10 @@ export default function PackageFamilyDetailScreen() {
     try {
       const target = { clientId: user.id, packageId: option.id, familyId, branchId };
       const result = await runPackageCheckout(initPurchase.mutateAsync, target);
+      if (userRef.current !== target.clientId) return;
       router.replace({
-        pathname: '/(client)/packages/return',
-        params: { purchaseId: result.purchaseId, ...target, signal: result.signal },
+        pathname: '/(client)/payments/native-checkout',
+        params: { purchaseId: result.purchaseId, invoiceId: result.invoiceId },
       });
     } catch (error) {
       Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));

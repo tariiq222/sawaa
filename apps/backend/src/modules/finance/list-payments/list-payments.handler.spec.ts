@@ -6,6 +6,7 @@ const mockPayments = [
 ];
 
 const buildPrisma = () => ({
+  $queryRaw: jest.fn().mockResolvedValue([{id: 'pay-1'}]),
   payment: {
     findMany: jest.fn().mockResolvedValue(mockPayments),
     count: jest.fn().mockResolvedValue(1),
@@ -47,8 +48,33 @@ describe('ListPaymentsHandler', () => {
     await handler.execute({ fromDate, toDate, page: 1, limit: 10 });
     expect(prisma.payment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ createdAt: { gte: fromDate, lte: toDate } }),
+        where: expect.objectContaining({ OR: [
+          { effectiveReceivedAt: { gte: fromDate, lte: toDate } },
+          { effectiveReceivedAt: null, createdAt: { gte: fromDate, lte: toDate } },
+        ] }),
       }),
     );
   });
+});
+
+it('returns actual collection date and paginates by it instead of entry time', async () => {
+ const prisma = buildPrisma();
+ prisma.payment.findMany.mockResolvedValue([{...mockPayments[0], effectiveReceivedAt: new Date('2026-09-01'), receiptRecordedBy: 'actor', receiptEvidenceRef: 'receipt', receiptEntryReason: 'late'}] as never);
+ const result = await new ListPaymentsHandler(prisma as never).execute({page: 2, limit: 5});
+ expect(result.items[0]).toMatchObject({collectionDate: '2026-09-01T00:00:00.000Z', receiptRecordedBy: 'actor', receiptEvidenceRef: 'receipt'});
+ expect(prisma.$queryRaw.mock.calls[0][0].sql).toContain('ORDER BY COALESCE(p."effectiveReceivedAt", p."createdAt") DESC, p."id" DESC');
+ expect(prisma.$queryRaw.mock.calls[0][0].values).toEqual([5, 5]);
+});
+
+it('hydrates a collection-sorted page in SQL order and preserves ordinary CREATED dates', async () => {
+  const prisma = buildPrisma();
+  prisma.$queryRaw.mockResolvedValue([{id: 'ordinary'}, {id: 'historical'}]);
+  prisma.payment.findMany.mockResolvedValue([
+    {...mockPayments[0], id: 'historical', createdAt: new Date('2026-10-05'), effectiveReceivedAt: new Date('2026-09-01')},
+    {...mockPayments[0], id: 'ordinary', createdAt: new Date('2026-10-01'), processedAt: new Date('2026-10-06'), effectiveReceivedAt: null},
+  ] as never);
+  const result = await new ListPaymentsHandler(prisma as never).execute({page: 1, limit: 2});
+  expect(result.items.map(p => [p.id, p.collectionDate])).toEqual([
+    ['ordinary', '2026-10-01T00:00:00.000Z'], ['historical', '2026-09-01T00:00:00.000Z'],
+  ]);
 });

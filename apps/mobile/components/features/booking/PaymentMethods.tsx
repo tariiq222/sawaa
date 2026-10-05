@@ -1,7 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { Apple, Banknote, Building2, Check, CreditCard } from 'lucide-react-native';
+import { Banknote, Building2, Check, CreditCard } from 'lucide-react-native';
 
 import { Glass } from '@/theme/components/Glass';
 import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
@@ -27,7 +28,7 @@ const META: Record<BookingPaymentMethod, {
     subEn: 'Visa · Mada · Mastercard',
   },
   apple_pay: {
-    icon: <Apple size={20} color="currentColor" strokeWidth={1.75} />,
+    icon: null,
     labelAr: 'Apple Pay',
     labelEn: 'Apple Pay',
     subAr: 'ادفع بلمسة واحدة',
@@ -59,6 +60,7 @@ interface PaymentMethodsProps {
 /** Payment-method chooser for the new booking review step. */
 export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMethodsProps) {
   const colors = useSawaaColors();
+  const { t } = useTranslation();
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   const reduceMotion = useReduceMotion();
@@ -85,15 +87,15 @@ export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMeth
               style={[styles.methodCard, { borderWidth: 2, borderColor: isSelected ? roles.selection.fill : 'transparent' }]}
             >
               <View style={[styles.methodRow, { flexDirection: dir.row }]}>
-                <View style={[styles.methodIcon, { backgroundColor: withAlpha(colors.teal[600], 0.12) }]}>
+                {meta.icon ? <View style={[styles.methodIcon, { backgroundColor: withAlpha(colors.teal[600], 0.12) }]}>
                   {React.cloneElement(meta.icon as React.ReactElement<{ color?: string }>, { color: colors.teal[600] })}
-                </View>
+                </View> : null}
                 <View style={styles.methodMid}>
                   <Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? meta.labelAr : meta.labelEn}
+                    {key === 'card' ? t('nativePayment.cards') : dir.isRTL ? meta.labelAr : meta.labelEn}
                   </Text>
                   <Text style={[styles.methodSub, { fontFamily: f400, textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? meta.subAr : meta.subEn}
+                    {key === 'card' ? t('nativePayment.cardNetworks') : dir.isRTL ? meta.subAr : meta.subEn}
                   </Text>
                 </View>
                 <View

@@ -1,9 +1,12 @@
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
 
+let mockProgramId: string | undefined;
+const mockNativeReplace = jest.fn();
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ bookingId: 'booking-1', invoiceId: 'invoice-1' }),
-  useRouter: () => ({ back: jest.fn(), replace: jest.fn() }),
+  useLocalSearchParams: () => ({ bookingId: 'booking-1', invoiceId: 'invoice-1', programId: mockProgramId }),
+  useRouter: () => ({ back: jest.fn(), replace: mockNativeReplace }),
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn().mockResolvedValue({ type: 'dismiss' }) }));
@@ -12,7 +15,7 @@ let mockRTL = false;
 let mockPhase = 'ready';
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, textAlign: mockRTL ? 'right' : 'left' }) }));
 jest.mock('@/hooks/queries', () => ({
-  useGroupSession: () => ({ data: { title: 'Program' } }),
+  useGroupSession: (id?: string) => ({ data: id ? { title: 'Program' } : undefined }),
   useBranding: () => ({ data: { contactPhone: null } }),
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
@@ -27,18 +30,20 @@ jest.mock('@/features/booking/use-existing-booking-checkout', () => {
   const invoice: { id: string; total?: number | string; currency: string; status: string; payments?: { id: string; status: string; amount?: number | string }[] } = {
     id: 'invoice-1', total: 10000, currency: 'SAR', status: 'DRAFT', payments: [],
   };
+  const booking = { id: 'booking-1', invoiceId: 'invoice-1', status: 'pending', scheduledAt: '', bookingType: 'individual', serviceName: 'Counseling', serviceNameAr: 'جلسة إرشاد' };
   return {
+    __mockBooking: booking,
     __mockCheckAgain: checkAgain,
     __mockInvoice: invoice,
     useExistingBookingCheckout: () => ({
     phase: mockPhase,
     invoice,
-    booking: { id: 'booking-1', invoiceId: 'invoice-1', status: 'pending', scheduledAt: '' },
+    booking,
     isRefreshing: false,
       checkAgain,
     }),
-    canResumeHostedPayment: () => false,
-    canStartHostedPayment: () => true,
+    canResumeOnlinePayment: () => false,
+    canStartOnlinePayment: () => true,
   };
 });
 jest.mock('@/theme/components/Glass', () => ({
@@ -66,6 +71,7 @@ import ExistingBookingCheckoutScreen from '../checkout';
 
 const mockInitPayment = require('@/services/client/payments').clientPaymentsService.initPayment as jest.Mock;
 const mockCheckAgain = require('@/features/booking/use-existing-booking-checkout').__mockCheckAgain as jest.Mock;
+const mockBooking = require('@/features/booking/use-existing-booking-checkout').__mockBooking as { bookingType: string; serviceName: string; serviceNameAr: string };
 const mockInvoice = require('@/features/booking/use-existing-booking-checkout').__mockInvoice as {
   total?: number | string;
   payments?: { id: string; status: string; amount?: number | string }[];
@@ -76,6 +82,10 @@ describe('ExistingBookingCheckoutScreen', () => {
     jest.clearAllMocks();
     mockRTL = false;
     mockPhase = 'ready';
+    mockProgramId = undefined;
+    mockBooking.bookingType = 'individual';
+    mockBooking.serviceName = 'Counseling';
+    mockBooking.serviceNameAr = 'جلسة إرشاد';
     mockScheme = 'light';
     mockInvoice.total = 10000;
     mockInvoice.payments = [];
@@ -111,7 +121,7 @@ describe('ExistingBookingCheckoutScreen', () => {
     const payButton = screen.getAllByTestId('primary').find((button) => button.props.children === 'checkout.continue');
     expect(payButton).toBeDefined();
     await act(async () => { payButton!.props.onPress(); });
-    expect(mockInitPayment).toHaveBeenCalledWith('invoice-1', 'ONLINE_CARD');
+    expect(mockNativeReplace).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: { invoiceId: 'invoice-1', bookingId: 'booking-1' } });
   });
 
   it('ignores pending, failed and refunded payments when calculating the balance', () => {
@@ -163,7 +173,7 @@ describe('ExistingBookingCheckoutScreen', () => {
     expect(screen.queryByText(/NaN/)).toBeNull();
   });
 
-  it('starts one hosted payment when the button is tapped twice in the same frame', async () => {
+  it('opens one native payment when the button is tapped twice in the same frame', async () => {
     const screen = render(<ExistingBookingCheckoutScreen />);
     const button = screen.getAllByTestId('primary')[0];
 
@@ -172,17 +182,41 @@ describe('ExistingBookingCheckoutScreen', () => {
       button.props.onPress();
     });
 
-    await waitFor(() => expect(mockInitPayment).toHaveBeenCalledTimes(1));
-    expect(mockInitPayment).toHaveBeenCalledWith('invoice-1', 'ONLINE_CARD');
+    await waitFor(() => expect(mockNativeReplace).toHaveBeenCalledTimes(1));
+    expect(mockNativeReplace).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: { invoiceId: 'invoice-1', bookingId: 'booking-1' } });
+    expect(mockInitPayment).not.toHaveBeenCalled();
     expect(mockCheckAgain).toHaveBeenCalledTimes(1);
   });
   it.each([false, true])('aligns rendered details with the locale (RTL=%s)', (rtl) => {
     mockRTL = rtl;
     const { StyleSheet } = require('react-native') as typeof import('react-native');
     const screen = render(<ExistingBookingCheckoutScreen />);
-    for (const text of ['checkout.program', 'Program', 'checkout.remainingAmount', '10000 SAR']) {
+    for (const text of ['checkout.service', rtl ? 'جلسة إرشاد' : 'Counseling', 'checkout.remainingAmount', '10000 SAR']) {
       expect(StyleSheet.flatten(screen.getByText(text).props.style).textAlign).toBe(rtl ? 'right' : 'left');
     }
   });
 
+});
+
+it.each(['expired', 'cancelled', 'invoice_mismatch'])('does not offer payment for %s booking', (phase) => {
+  mockPhase = phase;
+  const screen = render(<ExistingBookingCheckoutScreen />);
+  expect(screen.queryByText('checkout.continue')).toBeNull();
+});
+
+it('uses the authenticated individual snapshot even if a program id is supplied', () => {
+  mockPhase = 'ready'; mockProgramId = 'program-1'; mockBooking.bookingType = 'individual'; mockRTL = false;
+  const screen = render(<ExistingBookingCheckoutScreen />);
+  expect(screen.getByText('checkout.service')).toBeTruthy();
+  expect(screen.getByText('Counseling')).toBeTruthy();
+  expect(screen.queryByText('checkout.program')).toBeNull();
+  expect(screen.queryByText('Program')).toBeNull();
+});
+
+it('uses program labels only for a group booking snapshot', () => {
+  mockPhase = 'ready'; mockProgramId = 'program-1'; mockBooking.bookingType = 'group'; mockRTL = false;
+  const screen = render(<ExistingBookingCheckoutScreen />);
+  expect(screen.getByText('checkout.program')).toBeTruthy();
+  expect(screen.getByText('Program')).toBeTruthy();
+  expect(screen.queryByText('checkout.service')).toBeNull();
 });

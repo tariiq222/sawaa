@@ -3,6 +3,13 @@ import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
 import { BookingStatus, DeliveryType } from '@prisma/client';
 
 describe('ListBookingsHandler', () => {
+  it.each([true,false])('filters late entry provenance (%s) in rows and count', async isLateEntry => {
+    const prisma=buildPrisma();
+    await new ListBookingsHandler(prisma as never).execute({page:1,limit:20,isLateEntry} as any);
+    const where={lateEntryRecordedAt:isLateEntry?{not:null}:null};
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({where}));
+    expect(prisma.booking.count).toHaveBeenCalledWith({where});
+  });
   it.each([
     ['middle name', 'Codex', 'middleName'],
     ['legacy full name', 'اختبار حجز Codex 6b135e40', 'name'],
@@ -373,6 +380,7 @@ describe('ListBookingsHandler', () => {
       'bookingNumber',
       'bookingType',
       'branchNameSnapshot',
+      'cancelNotes',
       'cancelReason',
       'cancelledAt',
       'categoryNameSnapshot',
@@ -387,6 +395,9 @@ describe('ListBookingsHandler', () => {
       'endsAt',
       'id',
       'isHistoricalImport',
+      'lateEntryRecordedAt',
+      'lateEntryRecordedBy',
+      'noShowAt',
       'notes',
       'packageCreditId',
       'priceSnapshot',

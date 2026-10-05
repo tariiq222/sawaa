@@ -252,3 +252,11 @@ describe('buildRevenueReport', () => {
     expect(result.byDay[1]).toEqual({ date: '2025-01-15', amount: 300, count: 2 });
   });
 });
+
+it('uses historical collection date for recent rows and selects the page in that order', async () => {
+ const prisma = makePrisma();
+ prisma.payment.findMany.mockResolvedValue([{...completed(15000, 'CASH', new Date('2026-10-05')), effectiveReceivedAt: new Date('2026-09-01')}]);
+ const report = await buildRevenueReport(prisma, {from: new Date('2026-09-01'), toExclusive: new Date('2026-10-01')});
+ expect(report.recentPayments[0].date).toBe('2026-09-01T00:00:00.000Z');
+ expect(prisma.$queryRaw.mock.calls[6][0].sql).toContain('ORDER BY COALESCE(p."effectiveReceivedAt", p."createdAt") DESC, p."id" DESC');
+});

@@ -183,7 +183,8 @@ export class DashboardPeopleController {
   @ApiOkResponse({ type: PaginatedClientsDto, description: 'Paginated list of clients' })
   listClientsEndpoint(
     @Query() query: ListClientsDto,
-    @Query('isActive') rawIsActive?: string,
+    @Query('isActive') rawIsActive: string | undefined,
+    @Request() req: { user: { sub: string; role?: string | null } },
   ) {
     // Global ValidationPipe has enableImplicitConversion: true, which runs
     // Boolean(string) against query params — making any non-empty string truthy
@@ -195,6 +196,8 @@ export class DashboardPeopleController {
       isActive,
       page: query.page ?? 1,
       limit: query.limit ?? 20,
+      requesterRole: req.user.role ?? null,
+      requesterUserId: req.user.sub,
     });
   }
 
@@ -204,8 +207,8 @@ export class DashboardPeopleController {
   @ApiParam({ name: 'id', description: 'Client UUID or reference (e.g. CL-1024)', example: 'CL-1024' })
   @ApiOkResponse({ type: ClientResponseDto, description: 'Client record' })
   @ApiNotFoundResponse({ description: 'Client not found' })
-  getClientEndpoint(@Param('id') id: string) {
-    return this.getClient.execute({ clientId: id });
+  getClientEndpoint(@Param('id') id: string, @Request() req: { user: { sub: string; role?: string | null } }) {
+    return this.getClient.execute({ clientId: id, requesterRole: req.user.role ?? null, requesterUserId: req.user.sub });
   }
 
   @Patch('clients/:id')
@@ -257,8 +260,8 @@ export class DashboardPeopleController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an employee' })
   @ApiCreatedResponse({ type: EmployeeResponseDto, description: 'Employee created' })
-  createEmployeeEndpoint(@Body() body: CreateEmployeeDto) {
-    return this.createEmployee.execute(body);
+  createEmployeeEndpoint(@Body() body: CreateEmployeeDto, @Request() req: { user: { sub: string } }) {
+    return this.createEmployee.execute({ ...body, actorUserId: req.user.sub });
   }
 
   @Post('employees/onboarding')
@@ -336,8 +339,9 @@ export class DashboardPeopleController {
   updateEmployeeEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateEmployeeDto,
+    @Request() req: { user: { sub: string } },
   ) {
-    return this.updateEmployee.execute({ employeeId: id, ...body });
+    return this.updateEmployee.execute({ ...body, employeeId: id, actorUserId: req.user.sub });
   }
 
   @Get('employees/:id/availability')

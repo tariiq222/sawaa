@@ -147,11 +147,11 @@ export class MaterializeNotificationIntentHandler {
     if (payload.kind !== 'booking-reminder-client') return false;
     const booking = await tx.booking.findUnique({
       where: { id: payload.bookingId },
-      select: { status: true, scheduledAt: true, clientId: true },
+      select: { status: true, scheduledAt: true, clientId: true, lateEntryRecordedAt: true },
     });
     const scheduledAt = new Date(payload.scheduledAt);
     return Boolean(
-      booking &&
+      booking && !booking.lateEntryRecordedAt &&
       ['CONFIRMED', 'DEPOSIT_PAID'].includes(booking.status) &&
       booking.clientId === payload.clientId &&
       booking.scheduledAt.getTime() === scheduledAt.getTime() &&

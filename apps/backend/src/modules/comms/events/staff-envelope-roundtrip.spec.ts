@@ -23,7 +23,7 @@ function deps() {
 describe('staff notification envelopes survive the event bus', () => {
   it('payment completed reaches staff with DEFAULT_ORG_ID', async () => {
     const { notify, staffTargets } = deps();
-    const handler = new OnPaymentCompletedStaffHandler(notify as never, staffTargets as never);
+    const handler = new OnPaymentCompletedStaffHandler(notify as never, staffTargets as never, {booking: {findUnique: jest.fn()}} as never);
     const envelope = new PaymentCompletedEvent({
       paymentId: 'p1', invoiceId: 'i1', bookingId: null, amount: 41_400, currency: 'SAR', organizationId: DEFAULT_ORG_ID,
     }).toEnvelope();
@@ -47,7 +47,7 @@ describe('staff notification envelopes survive the event bus', () => {
 
   it('a payload without organizationId notifies nobody (the failure mode this guards)', async () => {
     const { notify, staffTargets } = deps();
-    const handler = new OnPaymentCompletedStaffHandler(notify as never, staffTargets as never);
+    const handler = new OnPaymentCompletedStaffHandler(notify as never, staffTargets as never, {booking: {findUnique: jest.fn()}} as never);
     // The type now requires organizationId; this simulates a job queued by an
     // older build that omitted it.
     const legacyPayload = { paymentId: 'p1', invoiceId: 'i1', bookingId: null, amount: 1, currency: 'SAR' };

@@ -1,0 +1,96 @@
+{
+  "capturedAt": "2026-10-04T12:04:50.543188+00:00",
+  "buildNumber": 18,
+  "easBuildId": "ddd30558-b50a-43db-8efb-8babeefdd838",
+  "appleBuildId": "90c96a46-1034-43cd-b79b-680f57356049",
+  "sourceComparison": {
+    "baseCommit": "a25c3217e659768d953569acd7f89fef0ef65b19",
+    "manifestSha256": "9bc3e5f68864f7f5ba2e4d7fac314920b2f7bb63c260728874c5a17f78ca5bf4",
+    "checked": 626,
+    "mismatches": []
+  },
+  "apiUrl": "https://api.sawaa.sa/api/v1",
+  "metroBundleContainsProductionApi": true,
+  "metroBundleContainsRestoredWaveAssets": true,
+  "metroBundleSha256": "9a70d180bbd43d4f57fc93980afa863f03d15c8a2bf53f108674b1d48efa49b8",
+  "nativeShell": "sa.sawa.app 1.0.0 (1), existing development simulator shell; SDK iphonesimulator27.0",
+  "simulatorOs": "iOS 26.5",
+  "runtimeLogs": [
+    "sa.sawa.app_2026-10-04T11-59-46-448Z_helperpid23915_ownerpid61171_13c41af4.log",
+    "sa.sawa.app_2026-10-04T12-02-15-384Z_helperpid25452_ownerpid61171_013b8a6e.log"
+  ],
+  "oldScreenshotsMismatchRestoredBackground": true,
+  "visualReview": "All ten raw files viewed individually; Arabic/RTL/content/background/absence of banners and private data checked.",
+  "files": [
+    {
+      "file": "iphone-6.9-01-home.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "2de3fd9e0fc729ca583258adb1a00a56eb8b10e6c680ed0ff1c8086f5fd70fab",
+      "bytes": 1964183
+    },
+    {
+      "file": "iphone-6.9-02-specialists.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "c37693dd05a68e58604bd5c9bc25977e9e3fbac8f1dd238b8f1d84c031a3d150",
+      "bytes": 1022855
+    },
+    {
+      "file": "iphone-6.9-03-profile.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "238b69cd39a0cb1252d54495ac440e2b956854989428e4b319c02da707d48b6b",
+      "bytes": 2023136
+    },
+    {
+      "file": "iphone-6.9-04-booking.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "7d9963904b4cd2cb982e91916f54a10f35c187c63ff880f4a8d1bdc2f695f8e7",
+      "bytes": 2160966
+    },
+    {
+      "file": "iphone-6.9-05-login.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a6b93fb4ac92f7b457e3b1c7feafcd56d3b0f9ff88b68926a4dcddbf225e5a0f",
+      "bytes": 2592053
+    },
+    {
+      "file": "ipad-13-01-home.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "816f74854af6c787b10832da3173e9f70b3c89e56559cc7088e0459d4a501df6",
+      "bytes": 3012742
+    },
+    {
+      "file": "ipad-13-02-specialists.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "52f18950a5966957306f89211f9c04ed0a9a526fd24842bdcdc54e00662fa9e6",
+      "bytes": 961663
+    },
+    {
+      "file": "ipad-13-03-profile.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "72194f4e3b808c841406fa3b7c8de7fcb6080d2fae6874af0461a2b93773121f",
+      "bytes": 2542841
+    },
+    {
+      "file": "ipad-13-04-booking.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "88e1e8cd3a372fd674e59a14e5d0aff94278549024cca57f37eefa49255c7ecd",
+      "bytes": 2665438
+    },
+    {
+      "file": "ipad-13-05-login.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "0ce3a090229d0118f57dd12ea8d7132d5d20409206cedf1f87e9d25895c1fced",
+      "bytes": 2939054
+    }
+  ]
+}

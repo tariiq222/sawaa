@@ -1,3 +1,7 @@
+import { GetNativePaymentConfigHandler } from '../../../modules/finance/native-payments/get-native-payment-config/get-native-payment-config.handler';
+import { InitNativePaymentHandler } from '../../../modules/finance/native-payments/init-native-payment/init-native-payment.handler';
+import { ReconcileNativePaymentHandler } from '../../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
+import { InitNativePackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-native-package-purchase.handler';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -25,13 +29,13 @@ import { GetClientBankTransferSettingsHandler } from '../../../modules/org-exper
 // Real routing, production validation, CSRF policy and client JWT authentication.
 // Database reads and the purchase handler are isolated: this is HTTP contract
 // coverage, not a payment-provider or financial acceptance test.
-describe('Native package purchase init HTTP contract', () => {
+describe.each(['HOSTED','NATIVE'] as const)('Mobile package purchase init HTTP contract %s', (mode) => {
   let app: INestApplication;
   const clientId = '00000000-0000-4000-a000-000000000001';
   const secret = 'package-init-http-test-secret';
   const jwt = new JwtService({ secret });
   const token = jwt.sign({ sub: clientId, namespace: 'client', tokenVersion: 0 });
-  const route = '/api/v1/mobile/client/payments/package-purchases/init';
+  const route = `/api/v1/mobile/client/payments/package-purchases/${mode==='NATIVE'?'native/':''}init`;
   const browserRoute = '/api/v1/public/payments/package-purchases/init';
   const input = {
     packageId: '00000000-0000-4000-a000-000000000002',
@@ -43,7 +47,7 @@ describe('Native package purchase init HTTP contract', () => {
     purchaseId: '00000000-0000-4000-a000-000000000006',
     invoiceId: '00000000-0000-4000-a000-000000000007',
     paymentId: '00000000-0000-4000-a000-000000000008',
-    redirectUrl: 'https://checkout.example.test/payment',
+    ...(mode==='HOSTED'?{redirectUrl:'https://checkout.example.test/payment'}:{config:{givenId:'00000000-0000-4000-a000-000000000008',amount:230,currency:'SAR'}}),
   };
   const purchaseHandler = { execute: jest.fn() };
 
@@ -51,6 +55,7 @@ describe('Native package purchase init HTTP contract', () => {
     const module = await Test.createTestingModule({
       controllers: [MobileClientPaymentsController, PublicPaymentsController],
       providers: [
+        ...[GetNativePaymentConfigHandler,InitNativePaymentHandler,ReconcileNativePaymentHandler].map(provide=>({provide,useValue:{execute:jest.fn().mockResolvedValue({})}})),
         ClientSessionGuard,
         ClientJwtStrategy,
         { provide: ConfigService, useValue: new ConfigService({ JWT_CLIENT_ACCESS_SECRET: secret }) },
@@ -67,6 +72,7 @@ describe('Native package purchase init HTTP contract', () => {
           },
         },
         { provide: InitPackagePurchaseHandler, useValue: purchaseHandler },
+        { provide: InitNativePackagePurchaseHandler, useValue: purchaseHandler },
         ...[
           ListPaymentsHandler,
           GetInvoiceHandler,

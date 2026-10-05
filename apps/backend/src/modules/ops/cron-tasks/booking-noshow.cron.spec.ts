@@ -190,3 +190,9 @@ describe('BookingNoShowCron', () => {
     expect(handler.execute).toHaveBeenCalledWith({ bookingId: 'book-1', changedBy: CRON_ACTOR });
   });
 });
+
+it('excludes late entries from automatic no-show', async () => {
+ const prisma = buildPrisma();
+ await new BookingNoShowCron(prisma as never, buildNoShowHandler() as never).execute();
+ expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({where: expect.objectContaining({lateEntryRecordedAt: null})}));
+});

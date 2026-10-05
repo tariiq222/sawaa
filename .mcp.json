@@ -2,7 +2,10 @@
   "mcpServers": {
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"]
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
     },
     "postgres": {
       "command": "npx",
@@ -11,6 +14,17 @@
         "@modelcontextprotocol/server-postgres",
         "postgresql://deqah:deqah_dev_password@localhost:5999/deqah_dev"
       ]
+    },
+    "e2e": {
+      "command": "pnpm",
+      "args": [
+        "exec",
+        "e2e",
+        "mcp"
+      ],
+      "env": {
+        "E2E_TELEMETRY_DISABLED": "1"
+      }
     }
   }
 }

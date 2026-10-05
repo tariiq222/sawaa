@@ -60,6 +60,7 @@ export class AppointmentRemindersCron {
       const bookings = await this.prisma.booking.findMany({
         where: {
           status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
+          lateEntryRecordedAt: null,
           scheduledAt: { gte: windowStart, lt: windowEnd },
         },
         select: {

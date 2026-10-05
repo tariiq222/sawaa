@@ -1,3 +1,4 @@
+import { arBookingsLate } from "./ar.bookings-late"
 /**
  * Arabic translations — Sawaa Dashboard
  *
@@ -29,6 +30,7 @@ export const ar: Record<string, string> = {
   ...arNav,
   ...arDashboard,
   ...arBookings,
+  ...arBookingsLate,
   ...arClients,
   ...arEmployees,
   ...arServices,

@@ -5,6 +5,8 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 // bookingId + invoiceId. Paying again must reuse that booking's invoice: a new
 // create would hit the backend's overlapping-appointment conflict for the
 // same slot.
+let mockCapabilityError = false;
+const mockCapabilityRefetch = jest.fn();
 const mockReplace = jest.fn();
 const mockBookingCreate = jest.fn();
 const mockGetBooking = jest.fn();
@@ -70,6 +72,8 @@ jest.mock('@/hooks/use-redux', () => ({
   useAppSelector: (selector: (state: unknown) => unknown) => selector({ auth: { user: { id: 'user-1' } } }),
 }));
 jest.mock('@/hooks/queries', () => ({ useBankTransferSettings: () => ({ data: undefined }) }));
+jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => ({ enabled: !mockCapabilityError, applePayAvailable: false, isLoading: false, isError: mockCapabilityError, refetch: mockCapabilityRefetch }) }), { virtual: true });
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
@@ -117,17 +121,27 @@ describe('booking payment retry for an existing booking', () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());
     expect(mockBookingCreate).not.toHaveBeenCalled();
-    expect(mockInitPayment).toHaveBeenCalledWith('invoice-1', 'ONLINE_CARD');
+    expect(mockInitPayment).not.toHaveBeenCalled();
+    expect(mockOpenAuthSession).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith({
-      pathname: '/(client)/booking/success',
+      pathname: '/(client)/payments/native-checkout',
       params: {
         bookingId: 'booking-1',
         invoiceId: 'invoice-1',
-        paymentId: 'payment-1',
-        amount: '45000',
-        currency: 'SAR',
-        webResult: 'cancel',
+        method: 'ONLINE_CARD',
       },
     });
   });
+});
+
+it('offers an in-place capability retry for an online-only invoice', async () => {
+  mockCapabilityError = true;
+  const screen = render(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByText('payment.methodsError')).toBeTruthy());
+  fireEvent.press(screen.getByText('common.retry'));
+  expect(mockCapabilityRefetch).toHaveBeenCalled();
+  mockCapabilityError = false;
+  screen.rerender(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+  expect(screen.queryByText('payment.methodsError')).toBeNull();
 });

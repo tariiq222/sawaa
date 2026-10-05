@@ -43,3 +43,23 @@ describe('Expo app config resolution', () => {
     expect(config.slug).toBe('sawa');
   });
 });
+
+
+describe('Apple Pay build entitlement', () => {
+  const env = { NODE_ENV: 'development', EAS_BUILD_PROFILE: 'development', EXPO_PUBLIC_API_URL: 'https://example.com/api/v1' };
+  it('omits the entitlement when merchant id is missing', () => {
+    const result = resolveExpoConfig({ ...env, EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID: '' });
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout).ios.entitlements?.['com.apple.developer.in-app-payments']).toBeUndefined();
+  });
+  it('binds runtime capability to the built merchant entitlement', () => {
+    const result = resolveExpoConfig({ ...env, EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID: 'merchant.sa.sawa.app' });
+    expect(result.status).toBe(0);
+    const config = JSON.parse(result.stdout);
+    expect(config.extra.applePayMerchantId).toBe('merchant.sa.sawa.app');
+    expect(config.ios.entitlements['com.apple.developer.in-app-payments']).toEqual(['merchant.sa.sawa.app']);
+  });
+  it.each(['invalid/id', ' ', 'merchant.sa..sawa'])('rejects malformed merchant id %p before a native build', (merchantId) => {
+    expect(resolveExpoConfig({ ...env, EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID: merchantId }, false).status).not.toBe(0);
+  });
+});

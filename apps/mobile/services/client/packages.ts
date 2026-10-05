@@ -4,7 +4,7 @@ import type {
   BookMyPackageCreditInput,
   ClientPackagePurchase,
   InitPackagePurchaseInput,
-  InitPackagePurchaseResponse,
+  NativePackagePurchaseInitResponse,
 } from '@sawaa/shared/types';
 import type { PackageFamily } from '@sawaa/shared/types';
 
@@ -26,6 +26,7 @@ const ATTEMPT_STORAGE_PREFIX = 'sawaa.package-purchase.attempt';
 const PENDING_PURCHASE_STORAGE_KEY = 'sawaa.package-purchase.pending';
 
 export interface PendingPackagePurchase {
+  invoiceId?: string;
   purchaseId: string;
   clientId: string;
   packageId: string;
@@ -51,7 +52,7 @@ function newAttemptId(): string {
 }
 
 /**
- * Returns the same key after an uncertain hosted-payment retry. Keeping the
+ * Returns the same key after an uncertain payment retry. Keeping the
  * key scoped to the client, selected offer, family, and branch lets the API
  * safely replay an interrupted init request without creating a second sale.
  */
@@ -60,9 +61,11 @@ export async function getPackagePurchaseAttemptKey(
   packageId: string,
   packageFamilyId: string | undefined,
   branchId: string,
+  isCurrent: () => boolean = () => true,
 ): Promise<string> {
   const storageKey = packagePurchaseAttemptStorageKey(clientId, packageId, packageFamilyId, branchId);
   const existing = await AsyncStorage.getItem(storageKey);
+  if (!isCurrent()) throw new Error('Session changed during package checkout');
   if (existing) return existing;
   const attempt = newAttemptId();
   await AsyncStorage.setItem(storageKey, attempt);
@@ -78,21 +81,31 @@ export async function clearPackagePurchaseAttemptKey(
   await AsyncStorage.removeItem(packagePurchaseAttemptStorageKey(clientId, packageId, packageFamilyId, branchId));
 }
 
-export async function savePendingPackagePurchase(pending: PendingPackagePurchase): Promise<void> {
-  await AsyncStorage.setItem(PENDING_PURCHASE_STORAGE_KEY, JSON.stringify(pending));
+const pendingStorageKey = (clientId: string) => `${PENDING_PURCHASE_STORAGE_KEY}:${encodeURIComponent(clientId)}`;
+let pendingMutation: Promise<unknown> = Promise.resolve();
+function enqueuePendingMutation<T>(mutation: () => Promise<T>): Promise<T> {
+  const next = pendingMutation.then(mutation, mutation);
+  pendingMutation = next.catch(() => undefined);
+  return next;
 }
 
-export async function getPendingPackagePurchase(): Promise<PendingPackagePurchase | null> {
-  const value = await AsyncStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);
+export async function savePendingPackagePurchase(pending: PendingPackagePurchase): Promise<void> {
+  // A dispatched request may complete after logout. Preserve its original
+  // client's recovery identity without overwriting the new client's record.
+  await enqueuePendingMutation(() => AsyncStorage.setItem(pendingStorageKey(pending.clientId), JSON.stringify(pending)));
+}
+
+function parsePendingPurchase(value: string | null, clientId: string): PendingPackagePurchase | null {
   if (!value) return null;
   try {
     const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== 'object') return null;
     const candidate = parsed as Partial<PendingPackagePurchase>;
-    if (!candidate.purchaseId || !candidate.clientId || !candidate.packageId || !candidate.branchId) return null;
+    if (!candidate.purchaseId || candidate.clientId !== clientId || !candidate.packageId || !candidate.branchId) return null;
     return {
       purchaseId: candidate.purchaseId,
-      clientId: candidate.clientId,
+      ...(typeof candidate.invoiceId === 'string' ? { invoiceId: candidate.invoiceId } : {}),
+      clientId,
       packageId: candidate.packageId,
       familyId: candidate.familyId ?? '',
       branchId: candidate.branchId,
@@ -102,8 +115,22 @@ export async function getPendingPackagePurchase(): Promise<PendingPackagePurchas
   }
 }
 
-export async function clearPendingPackagePurchase(): Promise<void> {
-  await AsyncStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
+export async function getPendingPackagePurchase(clientId: string): Promise<PendingPackagePurchase | null> {
+  if (!clientId) return null;
+  const value = await AsyncStorage.getItem(pendingStorageKey(clientId));
+  // Read previous app versions' global record only for its matching account.
+  return parsePendingPurchase(value, clientId)
+    ?? parsePendingPurchase(await AsyncStorage.getItem(PENDING_PURCHASE_STORAGE_KEY), clientId);
+}
+
+export async function clearPendingPackagePurchase(expected: Pick<PendingPackagePurchase, 'clientId' | 'purchaseId'>): Promise<void> {
+  await enqueuePendingMutation(async () => {
+    const key = pendingStorageKey(expected.clientId);
+    const pending = parsePendingPurchase(await AsyncStorage.getItem(key), expected.clientId);
+    if (pending?.purchaseId === expected.purchaseId) await AsyncStorage.removeItem(key);
+    const legacy = parsePendingPurchase(await AsyncStorage.getItem(PENDING_PURCHASE_STORAGE_KEY), expected.clientId);
+    if (legacy?.purchaseId === expected.purchaseId) await AsyncStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
+  });
 }
 
 export const clientPackagesService = {
@@ -117,9 +144,9 @@ export const clientPackagesService = {
     return response.data;
   },
 
-  async initPurchase(input: InitPackagePurchaseInput): Promise<InitPackagePurchaseResponse> {
-    const response = await api.post<InitPackagePurchaseResponse>(
-      '/mobile/client/payments/package-purchases/init',
+  async initPurchase(input: InitPackagePurchaseInput): Promise<NativePackagePurchaseInitResponse> {
+    const response = await api.post<NativePackagePurchaseInitResponse>(
+      '/mobile/client/payments/package-purchases/native/init',
       input,
     );
     return response.data;

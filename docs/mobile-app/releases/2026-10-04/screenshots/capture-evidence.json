@@ -1,0 +1,86 @@
+{
+  "capturedAt": "2026-10-04T10:19:52.352944+00:00",
+  "sourceHead": "e4db299c66816eab810a9cc9d0cc8a19ea699a0a",
+  "apiUrl": "https://api.sawaa.sa/api/v1",
+  "metroBundleContainsProductionApi": true,
+  "metroBundleSha256": "1e0d8f520f7e9edcd5296f49b420e9f9ec819862649c9dc41039e704f00210ec",
+  "nativeShell": {
+    "CFBundleIdentifier": "sa.sawa.app",
+    "CFBundleShortVersionString": "1.0.0",
+    "CFBundleVersion": "1",
+    "DTSDKName": "iphonesimulator27.0"
+  },
+  "nativeExecutableSha256": "e71351f6b87b992022f84426c7bcc0a371c7d6109949fe71c83db6f1921810ba",
+  "files": [
+    {
+      "file": "iphone-6.9-01-home.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a01f2c627b0112e0b65978f9de90b5631e766e79289ca8b5e0503e74fa3a7219",
+      "bytes": 953720
+    },
+    {
+      "file": "iphone-6.9-02-specialists.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a81ad06e4a2ffe8d3735160c8ca19cf5f425a54b60ae678a891484847a86dddf",
+      "bytes": 272998
+    },
+    {
+      "file": "iphone-6.9-03-profile.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "cddb6155d97ab7c5bc820eae598414e57a931ca3f7fa17f2208db1062654cf2c",
+      "bytes": 489146
+    },
+    {
+      "file": "iphone-6.9-04-booking.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "ad859c564a0914e060026bb4a805d02a5720d81b5369400d6bab229361323030",
+      "bytes": 512375
+    },
+    {
+      "file": "iphone-6.9-05-login.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "66c3b066ca8c0ff884b8423c30f545d3f90a1f4d95c2c0bd14296cbb7c5df2c8",
+      "bytes": 398284
+    },
+    {
+      "file": "ipad-13-01-home.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "a2aaeedd04e80a6914fa24f812fb507085d18de84b1e1aeefd73aa5c5dcdf8f0",
+      "bytes": 1637180
+    },
+    {
+      "file": "ipad-13-02-specialists.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "73a8e7bea76e30cfb4ce852b2ef1b1bf7c8cd92d65f46f3590a0983669493c45",
+      "bytes": 346472
+    },
+    {
+      "file": "ipad-13-03-profile.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "9bc980e010057424d2b5bbb3c2d38acc9b7804a87848a15fcde68e09e291be6d",
+      "bytes": 481911
+    },
+    {
+      "file": "ipad-13-04-booking.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "9d70120cd1fb97eb12e18bc62249b2e31db1403675006cbba48935a52e6bad29",
+      "bytes": 501603
+    },
+    {
+      "file": "ipad-13-05-login.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "490e3e0075d6562e15fac5bcfe958531ed68956ec44e6f2eae0438d4c9f52ffc",
+      "bytes": 405550
+    }
+  ]
+}

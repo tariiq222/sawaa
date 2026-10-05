@@ -61,6 +61,7 @@ export type MoyasarPaymentStatus =
 	| "refunded";
 
 export interface MoyasarPaymentStatusResult {
+  metadata?: { invoiceId?: string };
 	id: string;
 	status: MoyasarPaymentStatus;
 	amount: number;
@@ -352,6 +353,7 @@ export class MoyasarApiClient {
 			refunded: number;
 			currency: string;
 			invoice_id?: string;
+      metadata?: { invoiceId?: string };
 		}>(organizationId, `/payments/${paymentId}`, { method: "GET" });
 
 		return {
@@ -361,6 +363,7 @@ export class MoyasarApiClient {
 			refunded: data.refunded ?? 0,
 			currency: data.currency,
 			...(data.invoice_id ? { invoiceId: data.invoice_id } : {}),
+      ...(data.metadata?.invoiceId ? {metadata:{invoiceId:data.metadata.invoiceId}} : {}),
 		};
 	}
 

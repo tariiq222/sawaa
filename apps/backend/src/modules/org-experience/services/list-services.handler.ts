@@ -37,14 +37,15 @@ export class ListServicesHandler {
       isActive: dto.isActive ?? null,
       includeHidden: dto.includeHidden ?? false,
       includeArchived: dto.includeArchived ?? false,
+      historicalContext: dto.historicalContext ?? false,
       categoryId: dto.categoryId ?? null,
       search: dto.search ?? null,
     });
 
     const response = await this.cache.getOrSet(`${SERVICES_CACHE_PREFIX}${keyParams}`, async () => {
       const where = {
-        ...(dto.includeArchived !== true && { archivedAt: null }),
-        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.historicalContext !== true && dto.includeArchived !== true && { archivedAt: null }),
+        ...(dto.historicalContext !== true && dto.isActive !== undefined && { isActive: dto.isActive }),
         // إخفاء الخدمات المخفية افتراضياً ما لم يُطلب تضمينها صراحةً
         ...(dto.includeHidden !== true && { isHidden: false }),
         ...(dto.categoryId && { categoryId: dto.categoryId }),
@@ -81,7 +82,7 @@ export class ListServicesHandler {
                 by: ['serviceId'],
                 where: {
                   serviceId: { in: serviceIds },
-                  employee: { isActive: true },
+                  ...(dto.historicalContext !== true ? { employee: { isActive: true } } : {}),
                 },
                 _count: { _all: true },
               })

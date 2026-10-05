@@ -1,0 +1,671 @@
+diff --git a/lib/module/helpers/debug_log.js b/lib/module/helpers/debug_log.js
+index b832c9c07752c45f6d6f09538b272318fe7cd59a..c3925d448ca6b0096910de77783e0c2250ec6d1f 100644
+--- a/lib/module/helpers/debug_log.js
++++ b/lib/module/helpers/debug_log.js
+@@ -1,14 +1,3 @@
+-"use strict";
+-
+-const isDebugLogsEnabled = false;
+-export function debugLog(message) {
+-  if (__DEV__ && isDebugLogsEnabled) {
+-    console.debug(message);
+-  }
+-}
+-export function errorLog(message) {
+-  if (__DEV__) {
+-    console.error(message);
+-  }
+-}
+-//# sourceMappingURL=debug_log.js.map
+\ No newline at end of file
++// Sawaa privacy boundary: provider data must never enter device logs.
++export function debugLog(_message) {}
++export function errorLog(_message) {}
+diff --git a/lib/module/localizations/i18n.js b/lib/module/localizations/i18n.js
+index e63d7c0a0f462092086c736c9d2459c00c536af8..ff9a1dc1562dd32d6b23e9c936c4bc2be1d136b6 100644
+--- a/lib/module/localizations/i18n.js
++++ b/lib/module/localizations/i18n.js
+@@ -1,7 +1,9 @@
+ "use strict";
+ 
+-import i18n from 'i18next';
+-import { initReactI18next } from 'react-i18next';
++import { createInstance } from 'i18next';
++
++// Sawaa local extension: the SDK owns its locale and never replaces the app instance.
++const i18n = createInstance();
+ import { I18nManager, NativeModules, Platform, Settings } from 'react-native';
+ import RTNDeviceLanguage from "../specs/NativeRTNDeviceLanguage.js";
+ import { errorLog } from "../helpers/debug_log.js";
+@@ -81,6 +83,7 @@ const resources = {
+ // App language is currently supported for new arch only, system language for the old arch
+ // TODO: Check 'https://www.npmjs.com/package/i18next-browser-languagedetector' when supporting web
+ export function getCurrentLang() {
++  if (i18n.isInitialized) return i18n.resolvedLanguage ?? i18n.language ?? 'en';
+   let lang;
+ 
+   // iOS old arch
+@@ -109,7 +112,10 @@ export function getCurrentLang() {
+ }
+ 
+ // TODO: Optimize and find a better way to handle localizations in an SDK + Make sure that localizations are ready before showing any view
+-export function getConfiguredLocalizations() {
++export function getConfiguredLocalizations(language) {
++  if (language && i18n.isInitialized && i18n.language !== language) {
++    void i18n.changeLanguage(language);
++  }
+   if (i18n.isInitialized) {
+     if (!i18n.hasResourceBundle('en', 'moyasarTranslation')) {
+       i18n.addResourceBundle('en', 'moyasarTranslation', resources.en.moyasarTranslation);
+@@ -118,10 +124,11 @@ export function getConfiguredLocalizations() {
+       i18n.addResourceBundle('ar', 'moyasarTranslation', resources.ar.moyasarTranslation);
+     }
+   } else {
+-    i18n.use(initReactI18next).init({
++    i18n.init({
++      initImmediate: false,
+       resources: resources,
+       compatibilityJSON: 'v3',
+-      lng: getCurrentLang(),
++      lng: language ?? getCurrentLang(),
+       ns: 'moyasarTranslation',
+       fallbackLng: ['en', 'ar']
+     });
+@@ -131,4 +138,3 @@ export function getConfiguredLocalizations() {
+ export function isArabicLang() {
+   return getCurrentLang() === 'ar';
+ }
+-//# sourceMappingURL=i18n.js.map
+\ No newline at end of file
+diff --git a/lib/module/react_native_apple_pay/NativeBridge/index.js b/lib/module/react_native_apple_pay/NativeBridge/index.js
+index 941dbe42d891bdc5019fc40fd278e0c81f90d4e3..fc651cb9097bc22469572cc09d11b5605b9fa581 100644
+--- a/lib/module/react_native_apple_pay/NativeBridge/index.js
++++ b/lib/module/react_native_apple_pay/NativeBridge/index.js
+@@ -65,7 +65,7 @@ const NativePayments = {
+     return new Promise((resolve, reject) => {
+       if (IS_ANDROID) {
+         ReactNativePayments.show(methodData, details, options, err => reject(err), (...args) => {
+-          console.log(args);
++          // Payment responses are intentionally excluded from device logs.
+           resolve(true);
+         });
+         return;
+diff --git a/lib/module/services/credit_card_payment_service.js b/lib/module/services/credit_card_payment_service.js
+index ae22414122ad6db7b5a2bcd40634114495bba0ea..f258fd3b3b0ca45f17f974024fcca0a0389a94e2 100644
+--- a/lib/module/services/credit_card_payment_service.js
++++ b/lib/module/services/credit_card_payment_service.js
+@@ -20,6 +20,14 @@ export class CreditCardPaymentService {
+   numberValidator = new CreditCardNumberValidator();
+   expiryValidator = new CreditCardExpiryValidator();
+   cvcValidator = new CreditCardCvcValidator();
++
++  /** Refresh translated validation messages without replacing an in-flight payment. */
++  refreshValidators() {
++    this.nameValidator = new CreditCardNameValidator();
++    this.numberValidator = new CreditCardNumberValidator();
++    this.expiryValidator = new CreditCardExpiryValidator();
++    this.cvcValidator = new CreditCardCvcValidator();
++  }
+   shouldShowNetworkLogo(number, network, supportedNetworks) {
+     const inferredNetwork = getCreditCardNetworkFromNumber(number);
+     if (!supportedNetworks.includes(network)) {
+@@ -117,4 +125,3 @@ export class CreditCardPaymentService {
+     return validations.every(validation => validation === null);
+   }
+ }
+-//# sourceMappingURL=credit_card_payment_service.js.map
+\ No newline at end of file
+diff --git a/lib/module/views/apple_pay.js b/lib/module/views/apple_pay.js
+index 679a4b3ac9657a508a1ca9c3fae8abec72777ed2..a2628c0b84a11bce797177f668a2297c5c77f08b 100644
+--- a/lib/module/views/apple_pay.js
++++ b/lib/module/views/apple_pay.js
+@@ -33,6 +33,9 @@ export async function onApplePayResponse(token, paymentConfig, onPaymentResult)
+   try {
+     const paymentResponse = await createPayment(paymentRequest, paymentConfig.publishableApiKey);
+     onPaymentResult(paymentResponse);
++    // Sawaa uses immediate capture; authorization or an SDK error is not paid.
++    return !isMoyasarError(paymentResponse) && paymentResponse.status === 'paid'
++      ? 'success' : 'failure';
+   } catch (error) {
+     errorLog(`Moyasar SDK: Failed to pay with Apple Pay, ${error}`);
+     if (isMoyasarError(error)) {
+@@ -40,6 +43,8 @@ export async function onApplePayResponse(token, paymentConfig, onPaymentResult)
+     } else {
+       onPaymentResult(new NetworkError('Moyasar SDK: An error occured error while processing an Apple Pay payment'));
+     }
++    // A transport failure is ambiguous; the app still reconciles the same UUID.
++    return 'failure';
+   }
+ }
+ export function ApplePay({
+@@ -90,10 +95,8 @@ export function ApplePay({
+         applePayPaymentRequest.show().then(async paymentResponse => {
+           debugLog('Moyasar SDK: Got Apple Pay response');
+           if (paymentResponse.details.paymentData) {
+-            await onApplePayResponse(paymentResponse.details.paymentData, paymentConfig, onPaymentResult);
+-
+-            // TODO: Better handle completion based on `onApplePayResponse` response
+-            paymentResponse.complete('success');
++            const completion = await onApplePayResponse(paymentResponse.details.paymentData, paymentConfig, onPaymentResult);
++            paymentResponse.complete(completion);
+           } else {
+             errorLog('Moyasar SDK: Apple Pay token is null, please use a physical device in order to test Apple Pay');
+             paymentResponse.complete('failure');
+diff --git a/lib/module/views/credit_card.js b/lib/module/views/credit_card.js
+index 3afc6248d3113b90eb69fe8e97704a8e7d1034ac..3aa2bec837ae41ba1b9c7e0f4c0150a816b8ba4a 100644
+--- a/lib/module/views/credit_card.js
++++ b/lib/module/views/credit_card.js
+@@ -14,29 +14,24 @@ import { mapArabicNumbers } from "../helpers/arabic_numbers_mapper.js";
+ import { debugLog } from "../helpers/debug_log.js";
+ import { readexMedium, readexRegular } from "../helpers/fonts.js";
+ 
+-// TODO: Modify to a better approach rather than global variable
+-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+-const paymentService = new CreditCardPaymentService();
+-let formattedAmount;
+-function getFormattedAmount(amount, currency) {
+-  if (!formattedAmount) {
+-    return formattedAmount = formatAmount(amount, currency);
+-  }
+-  return formattedAmount;
+-}
+-
+ // TODO: Test support against autofilling card details
++import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+ export function CreditCard({
++  language,
+   paymentConfig,
+   onPaymentResult,
+   style: customStyle
+ }) {
+   const [isWebviewVisible, setWebviewVisible] = useState(false);
++  const [paymentService] = useState(() => new CreditCardPaymentService());
++  useMemo(() => {
++    getConfiguredLocalizations(language);
++    paymentService.refreshValidators();
++  }, [language, paymentService]);
+   useEffect(() => {
+     debugLog('Moyasar SDK: CreditCard view mounted');
+     return () => {
+       debugLog('Moyasar SDK: CreditCard view unmounted');
+-      formattedAmount = null;
+     };
+   }, []);
+   return isWebviewVisible ? /*#__PURE__*/_jsx(WebviewPaymentAuth, {
+@@ -50,15 +45,17 @@ export function CreditCard({
+     },
+     style: customStyle
+   }) : /*#__PURE__*/_jsx(CreditCardView, {
++    paymentService: paymentService,
+     paymentConfig: paymentConfig,
+     onPaymentResult: onPaymentResult,
+     style: customStyle,
+     setWebviewVisible: setWebviewVisible
+-  });
++  }, language ?? 'device');
+ }
+ 
+ // TODO: Extract to a separate file
+ const CreditCardView = ({
++  paymentService,
+   paymentConfig,
+   onPaymentResult,
+   style: customStyle,
+@@ -67,6 +64,7 @@ const CreditCardView = ({
+   const {
+     t
+   } = getConfiguredLocalizations();
++  const defaultStyle = createDefaultStyle();
+   const isLightMode = useColorScheme() === 'light';
+   const [name, setName] = useState('');
+   const [number, setNumber] = useState('');
+@@ -264,7 +262,7 @@ const CreditCardView = ({
+               })]
+             }) : /*#__PURE__*/_jsxs(Text, {
+               style: [defaultStyle.buttonText, customStyle?.paymentButtonText],
+-              children: [t('moyasarTranslation:pay'), ' ', getFormattedAmount(paymentConfig.amount, paymentConfig.currency)]
++              children: [t('moyasarTranslation:pay'), ' ', formatAmount(paymentConfig.amount, paymentConfig.currency)]
+             })
+           })
+         }), /*#__PURE__*/_jsx(View, {
+@@ -277,7 +275,7 @@ const CreditCardView = ({
+     })
+   });
+ };
+-const defaultStyle = StyleSheet.create({
++const createDefaultStyle = () => StyleSheet.create({
+   scrollView: {
+     maxWidth: '100%',
+     flexGrow: 1,
+@@ -357,4 +355,3 @@ const defaultStyle = StyleSheet.create({
+     height: 40
+   }
+ });
+-//# sourceMappingURL=credit_card.js.map
+\ No newline at end of file
+diff --git a/lib/module/views/webview_payment_auth.js b/lib/module/views/webview_payment_auth.js
+index cc0a42499777a241419e9326d8fc03e58f29188e..fb1042b9d95d672af6153116318ec6b8c4cd8911 100644
+--- a/lib/module/views/webview_payment_auth.js
++++ b/lib/module/views/webview_payment_auth.js
+@@ -1,15 +1,10 @@
+ "use strict";
+ 
+-import { StyleSheet, Dimensions, View, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
++import { StyleSheet, useWindowDimensions, View, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+ import { WebView } from 'react-native-webview';
+ import { URL } from 'react-native-url-polyfill';
+ import { useState } from 'react';
+ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+-const {
+-  width,
+-  height
+-} = Dimensions.get('window');
+-
+ /**
+  * A webview component to handle 3DS payment verification.
+  * @param {string} transactionUrl - The URL to the payment verification page (3DS challenge).
+@@ -24,10 +19,16 @@ export const WebviewPaymentAuth = ({
+   style: customStyle
+ }) => {
+   const [loading, setLoading] = useState(true);
++  const {
++    height
++  } = useWindowDimensions();
+   return /*#__PURE__*/_jsx(KeyboardAvoidingView, {
+     behavior: Platform.OS === 'ios' ? undefined : 'padding',
++    style: styles.root,
+     children: /*#__PURE__*/_jsxs(View, {
+-      style: styles.container,
++      style: [styles.container, {
++        height
++      }],
+       children: [loading && /*#__PURE__*/_jsx(View, {
+         style: styles.loadingContainer,
+         children: /*#__PURE__*/_jsx(ActivityIndicator, {
+@@ -66,14 +67,15 @@ export const WebviewPaymentAuth = ({
+   });
+ };
+ const styles = StyleSheet.create({
++  root: {
++    width: '100%'
++  },
+   container: {
+-    height: height,
+-    width: width
++    width: '100%'
+   },
+   loadingContainer: {
+-    height: height,
+-    width: width,
++    ...StyleSheet.absoluteFillObject,
++    zIndex: 1,
+     justifyContent: 'center'
+   }
+ });
+-//# sourceMappingURL=webview_payment_auth.js.map
+\ No newline at end of file
+diff --git a/lib/typescript/src/localizations/i18n.d.ts b/lib/typescript/src/localizations/i18n.d.ts
+index 5172d0aeee6160824470c9410dc870d2d2421a1c..61ddcbcd4115e819ae6aff62ed73fabf8428b928 100644
+--- a/lib/typescript/src/localizations/i18n.d.ts
++++ b/lib/typescript/src/localizations/i18n.d.ts
+@@ -1,5 +1,5 @@
+ import i18n from 'i18next';
+ export declare function getCurrentLang(): string;
+-export declare function getConfiguredLocalizations(): typeof i18n;
++export declare function getConfiguredLocalizations(language?: 'ar' | 'en'): typeof i18n;
+ export declare function isArabicLang(): boolean;
+ //# sourceMappingURL=i18n.d.ts.map
+\ No newline at end of file
+diff --git a/lib/typescript/src/models/component_models/moyasar_props.d.ts b/lib/typescript/src/models/component_models/moyasar_props.d.ts
+index 25ab8d2a8b7d08368c9c606faa90268c9864865c..a76507417812bd380175d3877f919b607e44ce47 100644
+--- a/lib/typescript/src/models/component_models/moyasar_props.d.ts
++++ b/lib/typescript/src/models/component_models/moyasar_props.d.ts
+@@ -2,6 +2,9 @@ import type { ApplePayMoyasarStyle, CreditCardMoyasarStyle, StcPayMoyasarStyle,
+ import type { PaymentConfig } from '../payment_config';
+ import type { ResultCallback } from '../payment_result';
+ export interface CreditCardProps {
++    /** Sawaa pinned local extension; not an upstream SDK API. */
++    language?: 'ar' | 'en';
++    /** Sawaa local extension, not an upstream SDK API. */
+     paymentConfig: PaymentConfig;
+     onPaymentResult: ResultCallback;
+     style?: CreditCardMoyasarStyle;
+diff --git a/lib/typescript/src/services/credit_card_payment_service.d.ts b/lib/typescript/src/services/credit_card_payment_service.d.ts
+index 80ddd3b211ced784b74bf65de015a53f078a608b..fa0e2d44386b76bbab5b1533e8e8979aaeab4731 100644
+--- a/lib/typescript/src/services/credit_card_payment_service.d.ts
++++ b/lib/typescript/src/services/credit_card_payment_service.d.ts
+@@ -10,6 +10,7 @@ import { CreditCardNetwork } from '../models/credit_card_network';
+ import type { ResultCallback } from '../models/payment_result';
+ export declare class CreditCardPaymentService {
+     payment: PaymentResponse | null;
++    refreshValidators(): void;
+     nameValidator: CreditCardNameValidator;
+     numberValidator: CreditCardNumberValidator;
+     expiryValidator: CreditCardExpiryValidator;
+diff --git a/lib/typescript/src/views/apple_pay.d.ts b/lib/typescript/src/views/apple_pay.d.ts
+index 928b1f1f51536b0834cc94ae0f03ae04428557b1..a00a52b16fcb23594cff9cbf56a4732973ff4505 100644
+--- a/lib/typescript/src/views/apple_pay.d.ts
++++ b/lib/typescript/src/views/apple_pay.d.ts
+@@ -1,6 +1,6 @@
+ import type { ApplePayProps } from '../models/component_models/moyasar_props';
+ import type { PaymentConfig } from '../models/payment_config';
+ import type { ResultCallback } from '../models/payment_result';
+-export declare function onApplePayResponse(token: any, paymentConfig: PaymentConfig, onPaymentResult: ResultCallback): Promise<void>;
++export declare function onApplePayResponse(token: any, paymentConfig: PaymentConfig, onPaymentResult: ResultCallback): Promise<'success' | 'failure'>;
+ export declare function ApplePay({ paymentConfig, onPaymentResult, style, }: ApplePayProps): import("react/jsx-runtime").JSX.Element;
+ //# sourceMappingURL=apple_pay.d.ts.map
+\ No newline at end of file
+diff --git a/src/helpers/debug_log.ts b/src/helpers/debug_log.ts
+index f51743b30479bea6af19cff5ed3588b7f01d7fc1..8c045ad2c277a883c985e355fff5da768a694340 100644
+--- a/src/helpers/debug_log.ts
++++ b/src/helpers/debug_log.ts
+@@ -1,13 +1,3 @@
+-const isDebugLogsEnabled = false;
+-
+-export function debugLog(message: string): void {
+-  if (__DEV__ && isDebugLogsEnabled) {
+-    console.debug(message);
+-  }
+-}
+-
+-export function errorLog(message: string): void {
+-  if (__DEV__) {
+-    console.error(message);
+-  }
+-}
++// Sawaa privacy boundary: provider data must never enter device logs.
++export function debugLog(_message: string): void {}
++export function errorLog(_message: string): void {}
+diff --git a/src/localizations/i18n.ts b/src/localizations/i18n.ts
+index a5643a1281f4dc58abd1b8694fa1518ae58ac861..b9ad6266c92503f126f759b271932b94fdf02265 100644
+--- a/src/localizations/i18n.ts
++++ b/src/localizations/i18n.ts
+@@ -1,5 +1,7 @@
+-import i18n from 'i18next';
+-import { initReactI18next } from 'react-i18next';
++import { createInstance } from 'i18next';
++
++// Sawaa local extension: the SDK owns its locale and never replaces the app instance.
++const i18n = createInstance();
+ import { I18nManager, NativeModules, Platform, Settings } from 'react-native';
+ import RTNDeviceLanguage from '../specs/NativeRTNDeviceLanguage';
+ import { errorLog } from '../helpers/debug_log';
+@@ -82,6 +84,7 @@ const resources = {
+ // App language is currently supported for new arch only, system language for the old arch
+ // TODO: Check 'https://www.npmjs.com/package/i18next-browser-languagedetector' when supporting web
+ export function getCurrentLang(): string {
++  if (i18n.isInitialized) return i18n.resolvedLanguage ?? i18n.language ?? 'en';
+   let lang: string | null | undefined;
+ 
+   // iOS old arch
+@@ -119,7 +122,10 @@ export function getCurrentLang(): string {
+ }
+ 
+ // TODO: Optimize and find a better way to handle localizations in an SDK + Make sure that localizations are ready before showing any view
+-export function getConfiguredLocalizations(): typeof i18n {
++export function getConfiguredLocalizations(language?: 'ar' | 'en'): typeof i18n {
++  if (language && i18n.isInitialized && i18n.language !== language) {
++    void i18n.changeLanguage(language);
++  }
+   if (i18n.isInitialized) {
+     if (!i18n.hasResourceBundle('en', 'moyasarTranslation')) {
+       i18n.addResourceBundle(
+@@ -136,10 +142,11 @@ export function getConfiguredLocalizations(): typeof i18n {
+       );
+     }
+   } else {
+-    i18n.use(initReactI18next).init({
++    i18n.init({
++      initImmediate: false,
+       resources: resources,
+       compatibilityJSON: 'v3',
+-      lng: getCurrentLang(),
++      lng: language ?? getCurrentLang(),
+       ns: 'moyasarTranslation',
+       fallbackLng: ['en', 'ar'],
+     });
+diff --git a/src/models/component_models/moyasar_props.ts b/src/models/component_models/moyasar_props.ts
+index e430c1dafb7c59aaf594192149be8b44e92d74d9..6d03b72189992e3378eb4807be8f0608879979e9 100644
+--- a/src/models/component_models/moyasar_props.ts
++++ b/src/models/component_models/moyasar_props.ts
+@@ -8,6 +8,9 @@ import type { PaymentConfig } from '../payment_config';
+ import type { ResultCallback } from '../payment_result';
+ 
+ export interface CreditCardProps {
++  /** Sawaa pinned local extension; not an upstream SDK API. */
++  language?: 'ar' | 'en';
++  /** Sawaa local extension: narrowly capture the challenge before showing it; no card payload. */
+   paymentConfig: PaymentConfig;
+   onPaymentResult: ResultCallback;
+   style?: CreditCardMoyasarStyle;
+diff --git a/src/react_native_apple_pay/NativeBridge/index.js b/src/react_native_apple_pay/NativeBridge/index.js
+index 580fafd0f0db127b57be150fc6f3416e910b19bb..54c640a0b48a30887862945138f4749028d286a5 100644
+--- a/src/react_native_apple_pay/NativeBridge/index.js
++++ b/src/react_native_apple_pay/NativeBridge/index.js
+@@ -104,7 +104,7 @@ const NativePayments: {
+           details,
+           options,
+           (err) => reject(err),
+-          (...args) => { console.log(args); resolve(true) }
++          (...args) => { resolve(true) }
+         );
+ 
+         return;
+diff --git a/src/services/credit_card_payment_service.ts b/src/services/credit_card_payment_service.ts
+index 284123e9ba280b0f4b68e91b79edbe4c6b2b740a..f12391b459869b777fb5a7bb0320f44f3a9835b2 100644
+--- a/src/services/credit_card_payment_service.ts
++++ b/src/services/credit_card_payment_service.ts
+@@ -28,6 +28,15 @@ export class CreditCardPaymentService {
+   expiryValidator = new CreditCardExpiryValidator();
+   cvcValidator = new CreditCardCvcValidator();
+ 
++  /** Refresh translated validation messages without replacing an in-flight payment. */
++  refreshValidators(): void {
++    this.nameValidator = new CreditCardNameValidator();
++    this.numberValidator = new CreditCardNumberValidator();
++    this.expiryValidator = new CreditCardExpiryValidator();
++    this.cvcValidator = new CreditCardCvcValidator();
++  }
++
++
+   shouldShowNetworkLogo(
+     number: string,
+     network: CreditCardNetwork,
+diff --git a/src/views/apple_pay.tsx b/src/views/apple_pay.tsx
+index 034a7ba9e4bf9470430b631666da5a30d04e264c..1efb1c42a2be2182c0c5ab7c698f8b560af3e116 100644
+--- a/src/views/apple_pay.tsx
++++ b/src/views/apple_pay.tsx
+@@ -21,7 +21,7 @@ export async function onApplePayResponse(
+   token: any,
+   paymentConfig: PaymentConfig,
+   onPaymentResult: ResultCallback
+-) {
++): Promise<'success' | 'failure'> {
+   const source = new ApplePayRequestSource({
+     applePayToken: token,
+     manualPayment: paymentConfig.applePay?.manual,
+@@ -49,6 +49,9 @@ export async function onApplePayResponse(
+     );
+ 
+     onPaymentResult(paymentResponse);
++    // Sawaa uses immediate capture; authorization or an SDK error is not paid.
++    return !isMoyasarError(paymentResponse) && paymentResponse.status === 'paid'
++      ? 'success' : 'failure';
+   } catch (error) {
+     errorLog(`Moyasar SDK: Failed to pay with Apple Pay, ${error}`);
+ 
+@@ -61,6 +64,8 @@ export async function onApplePayResponse(
+         )
+       );
+     }
++    // A transport failure is ambiguous; the app still reconciles the same UUID.
++    return 'failure';
+   }
+ }
+ 
+@@ -133,14 +138,13 @@ export function ApplePay({
+               debugLog('Moyasar SDK: Got Apple Pay response');
+ 
+               if (paymentResponse.details.paymentData) {
+-                await onApplePayResponse(
++                const completion = await onApplePayResponse(
+                   paymentResponse.details.paymentData,
+                   paymentConfig,
+                   onPaymentResult
+                 );
+ 
+-                // TODO: Better handle completion based on `onApplePayResponse` response
+-                paymentResponse.complete('success');
++                paymentResponse.complete(completion);
+               } else {
+                 errorLog(
+                   'Moyasar SDK: Apple Pay token is null, please use a physical device in order to test Apple Pay'
+diff --git a/src/views/credit_card.tsx b/src/views/credit_card.tsx
+index 698e128871e4beacd91166ddb137405b005921ad..4adc09deab989bc143a503a012825473d427e394 100644
+--- a/src/views/credit_card.tsx
++++ b/src/views/credit_card.tsx
+@@ -43,31 +43,25 @@ import { mapArabicNumbers } from '../helpers/arabic_numbers_mapper';
+ import { debugLog } from '../helpers/debug_log';
+ import { readexMedium, readexRegular } from '../helpers/fonts';
+ 
+-// TODO: Modify to a better approach rather than global variable
+-const paymentService = new CreditCardPaymentService();
+-
+-let formattedAmount: string | null;
+-
+-function getFormattedAmount(amount: number, currency: string): string {
+-  if (!formattedAmount) {
+-    return (formattedAmount = formatAmount(amount, currency));
+-  }
+-  return formattedAmount;
+-}
+ 
+ // TODO: Test support against autofilling card details
+ export function CreditCard({
++  language,
+   paymentConfig,
+   onPaymentResult,
+   style: customStyle,
+ }: CreditCardProps) {
+   const [isWebviewVisible, setWebviewVisible] = useState(false);
++  const [paymentService] = useState(() => new CreditCardPaymentService());
++  useMemo(() => {
++    getConfiguredLocalizations(language);
++    paymentService.refreshValidators();
++  }, [language, paymentService]);
+ 
+   useEffect(() => {
+     debugLog('Moyasar SDK: CreditCard view mounted');
+     return () => {
+       debugLog('Moyasar SDK: CreditCard view unmounted');
+-      formattedAmount = null;
+     };
+   }, []);
+ 
+@@ -89,6 +83,8 @@ export function CreditCard({
+     />
+   ) : (
+     <CreditCardView
++      key={language ?? 'device'}
++      paymentService={paymentService}
+       paymentConfig={paymentConfig}
+       onPaymentResult={onPaymentResult}
+       style={customStyle}
+@@ -99,14 +95,17 @@ export function CreditCard({
+ 
+ // TODO: Extract to a separate file
+ const CreditCardView = ({
++  paymentService,
+   paymentConfig,
+   onPaymentResult,
+   style: customStyle,
+   setWebviewVisible,
+ }: CreditCardProps & {
++  paymentService: CreditCardPaymentService;
+   setWebviewVisible: React.Dispatch<React.SetStateAction<boolean>>;
+ }) => {
+   const { t } = getConfiguredLocalizations();
++  const defaultStyle = createDefaultStyle();
+   const isLightMode = useColorScheme() === 'light';
+ 
+   const [name, setName] = useState('');
+@@ -362,7 +361,6 @@ const CreditCardView = ({
+                   onPaymentResult
+                 );
+                 setIsPaymentInProgress(false);
+-
+                 setWebviewVisible(showAuthWebview);
+               }}
+               disabled={isButtonDisabled}
+@@ -419,7 +417,7 @@ const CreditCardView = ({
+                   ]}
+                 >
+                   {t('moyasarTranslation:pay')}{' '}
+-                  {getFormattedAmount(
++                  {formatAmount(
+                     paymentConfig.amount,
+                     paymentConfig.currency
+                   )}
+@@ -442,7 +440,7 @@ const CreditCardView = ({
+   );
+ };
+ 
+-const defaultStyle = StyleSheet.create({
++const createDefaultStyle = () => StyleSheet.create({
+   scrollView: {
+     maxWidth: '100%',
+     flexGrow: 1,
+diff --git a/src/views/webview_payment_auth.tsx b/src/views/webview_payment_auth.tsx
+index c98bad59205605067b93231ccf470a537156e8ee..7be047dae210cee1dcd69dd5740bd3180401e3c9 100644
+--- a/src/views/webview_payment_auth.tsx
++++ b/src/views/webview_payment_auth.tsx
+@@ -1,6 +1,6 @@
+ import {
+   StyleSheet,
+-  Dimensions,
++  useWindowDimensions,
+   View,
+   KeyboardAvoidingView,
+   Platform,
+@@ -12,7 +12,6 @@ import type { WebviewPaymentAuthResponse } from '../models/api/api_responses/web
+ import { useState } from 'react';
+ import type { CreditCardMoyasarStyle } from '../models/component_models/moyasar_style';
+ 
+-const { width, height } = Dimensions.get('window');
+ 
+ /**
+  * A webview component to handle 3DS payment verification.
+@@ -35,12 +34,14 @@ export const WebviewPaymentAuth = ({
+   style?: CreditCardMoyasarStyle;
+ }) => {
+   const [loading, setLoading] = useState(true);
++  const { height } = useWindowDimensions();
+ 
+   return (
+     <KeyboardAvoidingView
+       behavior={Platform.OS === 'ios' ? undefined : 'padding'}
++      style={styles.root}
+     >
+-      <View style={styles.container}>
++      <View style={[styles.container, { height }]}>
+         {loading && (
+           <View style={styles.loadingContainer}>
+             <ActivityIndicator
+@@ -78,13 +79,11 @@ export const WebviewPaymentAuth = ({
+ };
+ 
+ const styles = StyleSheet.create({
+-  container: {
+-    height: height,
+-    width: width,
+-  },
++  root: { width: '100%' },
++  container: { width: '100%' },
+   loadingContainer: {
+-    height: height,
+-    width: width,
++    ...StyleSheet.absoluteFillObject,
++    zIndex: 1,
+     justifyContent: 'center',
+   },
+ });

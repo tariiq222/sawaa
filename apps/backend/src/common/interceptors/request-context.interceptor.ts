@@ -27,7 +27,8 @@ export class RequestContextInterceptor implements NestInterceptor {
     const req = ctx.switchToHttp().getRequest<Request>();
     const requestId =
       (req.headers['x-request-id'] as string | undefined) || randomUUID();
-    const userId = (req.user as { sub?: string } | undefined)?.sub;
+    const principal = req.user as { sub?: string; id?: string } | undefined;
+    const userId = principal?.sub ?? principal?.id;
     const ip = req.ip ?? req.socket?.remoteAddress;
 
     return new Observable((subscriber) => {

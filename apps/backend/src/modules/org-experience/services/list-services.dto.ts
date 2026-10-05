@@ -10,6 +10,9 @@ const toBoolean = ({ value }: { value: unknown }) => {
 };
 
 export class ListServicesDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Include historical inactive/archived references for staff recording', example: true })
+  @IsOptional() @Transform(({ obj }) => obj.historicalContext === 'true' ? true : obj.historicalContext === 'false' ? false : obj.historicalContext) @IsBoolean() historicalContext?: boolean;
+
   @ApiPropertyOptional({ description: 'Filter by active status', example: true })
   @IsOptional() @Type(() => String) @Transform(toBoolean) @IsBoolean() isActive?: boolean;
 
