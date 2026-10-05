@@ -1,5 +1,5 @@
 import { RequestContextInterceptor } from './request-context.interceptor';
-import { of } from 'rxjs';
+import { of, lastValueFrom } from 'rxjs';
 import { RequestContextStorage } from '../http/request-context';
 
 describe('RequestContextInterceptor', () => {
@@ -7,6 +7,17 @@ describe('RequestContextInterceptor', () => {
 
   beforeEach(() => {
     interceptor = new RequestContextInterceptor();
+  });
+
+  it('retains the verified client id in downstream request context', async () => {
+    const req = { headers: {}, user: { id: 'client-1' }, socket: {} };
+    const context = { switchToHttp: () => ({ getRequest: () => req }) } as any;
+    let observed: string | undefined;
+    await lastValueFrom(interceptor.intercept(context, { handle: () => {
+      observed = RequestContextStorage.get()?.userId;
+      return of('ok');
+    } }));
+    expect(observed).toBe('client-1');
   });
 
   it('seeds context with x-request-id', (done) => {
