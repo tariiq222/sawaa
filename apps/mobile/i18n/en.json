@@ -210,6 +210,9 @@
     "fullContactHint": "Session is full — contact us about upcoming dates"
   },
   "cancellation": {
+    "keepAppointment": "Keep appointment",
+    "refundDetails": "Refund details",
+    "result": "Cancellation result",
     "loading": "Loading cancellation policy…",
     "loadError": "Could not load the cancellation policy. Try again.",
     "retry": "Try again",
