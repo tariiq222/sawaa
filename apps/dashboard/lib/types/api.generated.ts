@@ -10266,58 +10266,213 @@ export interface components {
             source?: string;
         };
         NativeApplePayConfigDto: {
-            /** @enum {string} */
+            /**
+             * @description Merchant country code used for Apple Pay
+             * @example SA
+             * @enum {string}
+             */
             countryCode: "SA";
+            /**
+             * @description Merchant display name shown on the Apple Pay payment sheet
+             * @example Example Counseling Center
+             */
             label: string;
+            /**
+             * @description Apple Pay merchant identifier that must match the app entitlement
+             * @example merchant.sa.example.app
+             */
             merchantId: string;
         };
         NativePackagePurchaseInitResponseDto: {
+            /**
+             * @description Server-owned SDK configuration for this reserved payment attempt
+             * @example {
+             *       "amount": 5000,
+             *       "applePay": null,
+             *       "currency": "SAR",
+             *       "description": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+             *       "enabled": true,
+             *       "givenId": "11111111-1111-4111-8111-111111111111",
+             *       "isLive": false,
+             *       "publishableKey": "pk_test_example000000000000000000000000",
+             *       "supportedNetworks": [
+             *         "mada",
+             *         "visa",
+             *         "mastercard"
+             *       ]
+             *     }
+             */
             config: components["schemas"]["NativePaymentConfigurationDto"];
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Owned invoice UUID associated with the reserved payment
+             * @example 22222222-2222-4222-8222-222222222222
+             */
             invoiceId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Reserved internal payment UUID used for native reconciliation
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             paymentId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Package purchase UUID associated with the invoice and native payment attempt
+             * @example 33333333-3333-4333-8333-333333333333
+             */
             purchaseId: string;
         };
         NativePaymentCapabilitiesDto: {
+            /**
+             * @description Server Apple Pay configuration, or null when unavailable; device capability is checked separately
+             * @example {
+             *       "countryCode": "SA",
+             *       "label": "Example Counseling Center",
+             *       "merchantId": "merchant.sa.example.app"
+             *     }
+             */
             applePay: components["schemas"]["NativeApplePayConfigDto"] | null;
+            /**
+             * @description Whether online payments are enabled and a valid native publishable key is configured
+             * @example true
+             */
             enabled: boolean;
+            /**
+             * @description Whether the configured Moyasar account uses live mode instead of test mode
+             * @example false
+             */
             isLive: boolean;
+            /**
+             * @description Card networks supported by native checkout
+             * @example [
+             *       "mada",
+             *       "visa",
+             *       "mastercard"
+             *     ]
+             */
             supportedNetworks: ("mada" | "visa" | "mastercard")[];
         };
         NativePaymentConfigurationDto: {
-            /** @description Server-owned integer halalas */
+            /**
+             * @description Server-owned payment amount in integer halalas
+             * @example 5000
+             */
             amount: number;
+            /**
+             * @description Server Apple Pay configuration, or null when unavailable; device capability is checked separately
+             * @example {
+             *       "countryCode": "SA",
+             *       "label": "Example Counseling Center",
+             *       "merchantId": "merchant.sa.example.app"
+             *     }
+             */
             applePay: components["schemas"]["NativeApplePayConfigDto"] | null;
+            /**
+             * @description Currency code from the invoice for the reserved payment
+             * @example SAR
+             */
             currency: string;
+            /**
+             * @description Server-generated payment description identifying the invoice
+             * @example Invoice payment - 22222222-2222-4222-8222-222222222222
+             */
             description: string;
+            /**
+             * @description Whether online payments are enabled and a valid native publishable key is configured
+             * @example true
+             */
             enabled: boolean;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Server-reserved payment UUID passed to Moyasar as the payment identity
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             givenId: string;
+            /**
+             * @description Whether the configured Moyasar account uses live mode instead of test mode
+             * @example false
+             */
             isLive: boolean;
+            /**
+             * @description Public Moyasar SDK key matching the configured live or test mode
+             * @example pk_test_example000000000000000000000000
+             */
             publishableKey: string;
+            /**
+             * @description Card networks supported by native checkout
+             * @example [
+             *       "mada",
+             *       "visa",
+             *       "mastercard"
+             *     ]
+             */
             supportedNetworks: ("mada" | "visa" | "mastercard")[];
         };
         NativePaymentInitResponseDto: {
+            /**
+             * @description Server-owned SDK configuration for this reserved payment attempt
+             * @example {
+             *       "amount": 5000,
+             *       "applePay": null,
+             *       "currency": "SAR",
+             *       "description": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+             *       "enabled": true,
+             *       "givenId": "11111111-1111-4111-8111-111111111111",
+             *       "isLive": false,
+             *       "publishableKey": "pk_test_example000000000000000000000000",
+             *       "supportedNetworks": [
+             *         "mada",
+             *         "visa",
+             *         "mastercard"
+             *       ]
+             *     }
+             */
             config: components["schemas"]["NativePaymentConfigurationDto"];
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Owned invoice UUID associated with the reserved payment
+             * @example 22222222-2222-4222-8222-222222222222
+             */
             invoiceId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Reserved internal payment UUID used for native reconciliation
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             paymentId: string;
         };
         NativePaymentReconcileResponseDto: {
-            /** @description True only after provider404 for a current payable native reservation */
+            /**
+             * @description True only after provider404 for a current payable native reservation
+             * @example true
+             */
             canCreatePayment?: boolean;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Invoice UUID associated with the reconciled payment
+             * @example 22222222-2222-4222-8222-222222222222
+             */
             invoiceId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Owned internal payment UUID whose provider state was reconciled
+             * @example 11111111-1111-4111-8111-111111111111
+             */
             paymentId: string;
+            /**
+             * @description Whether the payment requires center review before the client proceeds or retries
+             * @example false
+             */
             requiresReview: boolean;
-            /** @enum {string} */
+            /**
+             * @description Internal payment status after checking the authoritative provider state
+             * @example PENDING
+             * @enum {string}
+             */
             status: "PENDING" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
             /**
              * @description Why a pending reservation cannot be resumed after provider404
+             * @example BOOKING_EXPIRED
              * @enum {string}
              */
             unavailableReason?: "BOOKING_EXPIRED" | "BOOKING_CLOSED" | "INVOICE_CLOSED";

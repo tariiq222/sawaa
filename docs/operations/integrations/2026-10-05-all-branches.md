@@ -33,6 +33,8 @@ The Sandbox check fetched a previous mada payment of 5,000 halalas, reconciled i
 
 Initial failures were traced to development mode in the private test runner and shared fixture state. The runner now uses test mode; the late-entry SQL fixture reuses/restores the settings singleton and cleans only its owned graph. The full critical suite passed against a fresh database after correction. Product assertions were not weakened. An independent bounded source review found no confirmed blocker across the integrated financial, authorization and mobile boundaries.
 
+The first GitHub gate exposed 26 undocumented native-payment DTO fields. The earlier local coverage command had also failed but its result was misreported; it was rerun with an independently captured exit code. Meaningful descriptions and synthetic examples now cover all fields, the ratchet passes on 306 routes with zero new gaps, and regenerated artifacts preserve validation semantics (Swagger wraps documented references in equivalent single-member allOf). No coverage baseline or runtime behavior was changed.
+
 ## Release boundaries
 
 GitHub gate and critical-real-e2e must pass on the final candidate before remote merge. A merge does not establish a staging deployment. Owner acceptance of the combined staging release, physical-device Apple Pay, Android runtime and staged native webhook behavior remain unverified. A new native build is required for SDK/PassKit; Expo Go or a JavaScript update alone is insufficient.
