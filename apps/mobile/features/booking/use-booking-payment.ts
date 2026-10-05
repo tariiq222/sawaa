@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 
-import { APP_SCHEME } from '@/constants/config';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useBankTransferSettings, usePublicPaymentMethods } from '@/hooks/queries';
 import { clientBookingsService } from '@/services/client/bookings';
-import { clientPaymentsService } from '@/services/client/payments';
+import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
 import {
   bookingPaymentDraft,
@@ -48,36 +46,40 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const bankQuery = useBankTransferSettings(Boolean(userId));
   const methodsQuery = usePublicPaymentMethods();
+  const native = useNativePaymentCapabilities();
+  const userRef = useRef(userId);
+  userRef.current = userId;
   const bankTransferSettings = bankQuery.data;
   const paymentMethods = methodsQuery.data;
-  const methodsLoading = methodsQuery.isLoading || bankQuery.isLoading;
-  const methodsError = methodsQuery.isError || bankQuery.isError;
-  const retryMethods = () => { void methodsQuery.refetch(); void bankQuery.refetch(); };
+  const methodsLoading = methodsQuery.isLoading || bankQuery.isLoading || (Boolean(userId) && native.isLoading);
+  const methodsError = methodsQuery.isError || bankQuery.isError || (Boolean(userId) && native.isError);
+  const retryMethods = () => { void methodsQuery.refetch(); void bankQuery.refetch(); void native.refetch(); };
   const inFlight = useRef(false);
   const pending = useRef<{ key: string; checkout: PendingBookingCheckout } | null>(null);
   const [method, setMethod] = useState<BookingPaymentMethod>('card');
   const [submitting, setSubmitting] = useState(false);
 
-  const onlineEnabled = paymentMethods?.moyasarEnabled === true;
+  const onlineEnabled = paymentMethods?.moyasarEnabled === true && native.enabled;
   const atCenterEnabled = paymentMethods?.atClinicEnabled === true;
   const bankTransferAvailable = isClientBankTransferAvailable(bankTransferSettings);
 
   const availableMethods = useMemo<BookingPaymentMethod[]>(() => {
     const methods: BookingPaymentMethod[] = [];
-    if (onlineEnabled) methods.push('card', 'apple_pay');
+    if (onlineEnabled) methods.push('card');
+    if (onlineEnabled && native.applePayAvailable) methods.push('apple_pay');
     if (bankTransferAvailable) methods.push('bank_transfer');
     if (atCenterEnabled) methods.push('at_center');
     return methods;
-  }, [onlineEnabled, bankTransferAvailable, atCenterEnabled]);
+  }, [onlineEnabled, native.applePayAvailable, bankTransferAvailable, atCenterEnabled]);
 
   // Keep the selection valid when the offered methods change (for example a
   // deployment with online payment disabled must default to pay-at-center
   // instead of leaving an unselectable card method active).
   useEffect(() => {
-    if (availableMethods.length === 0) return;
+    if (methodsLoading || methodsError || availableMethods.length === 0) return;
     if (availableMethods.includes(method)) return;
     setMethod(availableMethods[0]);
-  }, [availableMethods, method]);
+  }, [availableMethods, method, methodsLoading, methodsError]);
 
   const draft = useMemo(
     () => bookingPaymentDraft({
@@ -108,6 +110,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
       const key = JSON.stringify([userId, draft]);
       const remembered = pending.current?.key === key ? pending.current.checkout : undefined;
       const resume = await resolvePendingBookingResume(userId, draft, remembered);
+      if (userRef.current !== userId) return;
       if (resume.kind === 'invalid') throw new Error('Invalid pending booking');
       let booking: PendingBookingCheckout;
       if (resume.kind === 'ready' || resume.kind === 'complete') {
@@ -142,6 +145,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         pending.current = { key, checkout: booking };
         await savePendingBookingCheckout(userId, draft, booking);
       }
+      if (userRef.current !== userId) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (method === 'at_center') {
@@ -172,26 +176,12 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         return;
       }
 
-      const payment = await clientPaymentsService.initPayment(
-        booking.invoiceId,
-        method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
-      );
-      let webResult: WebBrowser.WebBrowserAuthSessionResult | null = null;
-      if (payment.redirectUrl) {
-        webResult = await WebBrowser.openAuthSessionAsync(
-          payment.redirectUrl,
-          `${APP_SCHEME}://booking/payment-callback`,
-        );
-      }
       router.replace({
-        pathname: '/(client)/booking/success',
+        pathname: '/(client)/payments/native-checkout',
         params: {
           bookingId: booking.bookingId,
           invoiceId: booking.invoiceId,
-          paymentId: payment.paymentId,
-          ...(input.amount ? { amount: String(total) } : {}),
-          ...(input.currency ? { currency: input.currency } : {}),
-          webResult: webResult?.type ?? 'success',
+          method: method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
         },
       });
     } catch (err) {

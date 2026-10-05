@@ -307,8 +307,15 @@ export class DashboardBookingsController {
       },
     },
   })
-  getBookingStatusLog(@Param('id', ParseUUIDPipe) id: string) {
-    return this.statusLogHandler.execute({ bookingId: id });
+  getBookingStatusLog(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.statusLogHandler.execute({
+      bookingId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
+    });
   }
 
   @Get(':id/timeline')
@@ -342,8 +349,15 @@ export class DashboardBookingsController {
       },
     },
   })
-  getBookingTimeline(@Param('id', ParseUUIDPipe) id: string) {
-    return this.timelineHandler.execute({ bookingId: id });
+  getBookingTimeline(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.timelineHandler.execute({
+      bookingId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
+    });
   }
 
   @Get(':id')

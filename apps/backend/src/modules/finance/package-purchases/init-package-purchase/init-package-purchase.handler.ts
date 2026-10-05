@@ -1,4 +1,6 @@
-import { createHash } from "node:crypto";
+import type { NativePackagePurchaseInitResponse } from '@sawaa/shared/types';
+import { InitNativePaymentHandler } from '../../native-payments/init-native-payment/init-native-payment.handler';
+import { createHash, randomUUID } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -121,11 +123,15 @@ export class InitPackagePurchaseHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly pricing: ComputePackagePriceService,
     private readonly moyasar: MoyasarApiClient,
+    private readonly nativePayment: InitNativePaymentHandler = undefined!,
   ) {}
 
+  async execute(cmd: InitPackagePurchaseCommand): Promise<InitPackagePurchaseResult>;
+  async execute(cmd: InitPackagePurchaseCommand, native: {mode:'NATIVE';fingerprint:string}): Promise<NativePackagePurchaseInitResponse>;
   async execute(
     cmd: InitPackagePurchaseCommand,
-  ): Promise<InitPackagePurchaseResult> {
+    native?: {mode:'NATIVE';fingerprint:string},
+  ): Promise<InitPackagePurchaseResult | NativePackagePurchaseInitResponse> {
     const requestFingerprint = selfPurchaseFingerprint(cmd);
     const keyedPurchase = await this.prisma.packagePurchase.findUnique({
       where: { idempotencyKey: cmd.idempotencyKey },
@@ -148,6 +154,7 @@ export class InitPackagePurchaseHandler {
         );
       }
       if (keyedPurchase.status !== PackagePurchaseStatus.PENDING) {
+        if(native) throw new ConflictException({code:"PAYMENT_ALREADY_COMPLETED",message:"This purchase has already been paid",purchaseId:keyedPurchase.id});
         throw new BadRequestException("This purchase has already been paid");
       }
     }
@@ -285,7 +292,23 @@ export class InitPackagePurchaseHandler {
         creditSnapshot,
         requestFingerprint,
         offerSnapshot,
-      );
+        native,
+      ).catch((error: unknown) => {
+        // The payment may have settled before the activation outbox consumer.
+        // Native callers need the frozen purchase identity to refresh safely.
+        if(native && keyedPurchase && error instanceof BadRequestException && error.message.includes('already been paid')) {
+          throw new ConflictException({code:'PAYMENT_ALREADY_COMPLETED',message:'This purchase has already been paid',purchaseId:keyedPurchase.id});
+        }
+        throw error;
+      });
+
+    if (native) {
+      try { return {purchaseId,...await this.nativePayment.execute({clientId:cmd.clientId,invoiceId})}; }
+      catch(error) {
+        if(error instanceof ConflictException && (error.getResponse() as {code?:string}).code==='PAYMENT_ALREADY_COMPLETED') throw new ConflictException({...error.getResponse() as object,purchaseId,invoiceId});
+        throw error;
+      }
+    }
 
     if (checkout) {
       return {
@@ -358,6 +381,7 @@ export class InitPackagePurchaseHandler {
     creditSnapshot: PackageCreditSnapshotItem[] | GroupedPackagePurchaseSnapshot,
     requestFingerprint: string,
     offerSnapshot: ReturnType<typeof buildPackageOfferSnapshot>,
+    native?: {mode:'NATIVE';fingerprint:string},
   ): Promise<{
     purchaseId: string;
     invoiceId: string;
@@ -400,10 +424,13 @@ export class InitPackagePurchaseHandler {
           existing.id,
           invoice.id,
           idempotencyKey,
+          native,
         );
         if (!reservation.existing) return reservation.result;
 
         const { payment } = reservation;
+        if (native) return reservation.result;
+        if (payment.gatewayRef===payment.id) throw new ConflictException({code:'NATIVE_PAYMENT_IN_PROGRESS',message:'A native payment is already in progress'});
         if (payment.status === PaymentStatus.FAILED) {
           return replaceTerminalInFlightPayment(
             this.rlsTransaction,
@@ -415,6 +442,7 @@ export class InitPackagePurchaseHandler {
                 existing.id,
                 invoice.id,
                 idempotencyKey,
+                native,
               ).then((replacement) => replacement.result),
           );
         }
@@ -482,6 +510,7 @@ export class InitPackagePurchaseHandler {
                 existing.id,
                 invoice.id,
                 idempotencyKey,
+                native,
               ).then((replacement) => replacement.result),
           );
         }
@@ -536,8 +565,10 @@ export class InitPackagePurchaseHandler {
           select: { id: true },
         });
 
+        const nativeId = native ? randomUUID() : undefined;
         const payment = await tx.payment.create({
           data: {
+            ...(nativeId ? {id:nativeId,gatewayRef:nativeId,nativeConfigFingerprint:native!.fingerprint} : {}),
             invoiceId: invoice.id,
             amount: charge.total,
             currency: "SAR",
@@ -583,6 +614,7 @@ export class InitPackagePurchaseHandler {
         creditSnapshot,
         requestFingerprint,
         offerSnapshot,
+        native,
       );
     }
   }
@@ -591,6 +623,7 @@ export class InitPackagePurchaseHandler {
     purchaseId: string,
     invoiceId: string,
     idempotencyKey: string,
+    native?: {mode:'NATIVE';fingerprint:string},
   ) {
     return this.rlsTransaction.withTransaction(async (tx) => {
       await tx.$queryRaw(
@@ -601,6 +634,7 @@ export class InitPackagePurchaseHandler {
         purchaseId,
         invoiceId,
         idempotencyKey,
+        native,
       );
     });
   }
@@ -610,6 +644,7 @@ export class InitPackagePurchaseHandler {
     purchaseId: string,
     invoiceId: string,
     idempotencyKey: string,
+    native?: {mode:'NATIVE';fingerprint:string},
   ) {
     const invoice = await tx.invoice.findUnique({
       where: { id: invoiceId },
@@ -663,8 +698,10 @@ export class InitPackagePurchaseHandler {
       );
     }
 
+    const nativeId = native ? randomUUID() : undefined;
     const payment = await tx.payment.create({
       data: {
+        ...(nativeId ? {id:nativeId,gatewayRef:nativeId,nativeConfigFingerprint:native!.fingerprint} : {}),
         invoiceId,
         amount: invoice.total,
         currency: invoice.currency,

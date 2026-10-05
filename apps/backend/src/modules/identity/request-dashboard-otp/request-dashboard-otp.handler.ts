@@ -18,6 +18,7 @@ import {
 } from '../verify-dashboard-otp/verify-dashboard-otp.handler';
 import type { RequestDashboardOtpCommand } from './request-dashboard-otp.command';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isEffectiveSuperAdmin } from '../shared/effective-super-admin';
 import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 const OTP_EXPIRY_MINUTES = 5;
@@ -129,8 +130,8 @@ export class RequestDashboardOtpHandler {
     if (!await this.settings.get<boolean>('security.twoFactor.required')) return;
     const user = await this.prisma.user.findFirst({
       where: channel === 'EMAIL' ? { email: identifier } : { phone: identifier },
-      select: { id: true, isSuperAdmin: true },
+      select: { id: true, role: true, isSuperAdmin: true },
     });
-    if (user?.isSuperAdmin) await this.twoFactorChallenges.assertValid(challenge, user.id, identifier);
+    if (user && isEffectiveSuperAdmin(user)) await this.twoFactorChallenges.assertValid(challenge, user.id, identifier);
   }
 }

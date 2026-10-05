@@ -7944,6 +7944,216 @@
         },
         "type": "object"
       },
+      "NativeApplePayConfigDto": {
+        "properties": {
+          "countryCode": {
+            "enum": [
+              "SA"
+            ],
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "merchantId",
+          "label",
+          "countryCode"
+        ],
+        "type": "object"
+      },
+      "NativePackagePurchaseInitResponseDto": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/NativePaymentConfigurationDto"
+          },
+          "invoiceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "purchaseId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "invoiceId",
+          "config",
+          "purchaseId"
+        ],
+        "type": "object"
+      },
+      "NativePaymentCapabilitiesDto": {
+        "properties": {
+          "applePay": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NativeApplePayConfigDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "supportedNetworks": {
+            "items": {
+              "enum": [
+                "mada",
+                "visa",
+                "mastercard"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "isLive",
+          "supportedNetworks",
+          "applePay"
+        ],
+        "type": "object"
+      },
+      "NativePaymentConfigurationDto": {
+        "properties": {
+          "amount": {
+            "description": "Server-owned integer halalas",
+            "type": "number"
+          },
+          "applePay": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NativeApplePayConfigDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "givenId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "publishableKey": {
+            "type": "string"
+          },
+          "supportedNetworks": {
+            "items": {
+              "enum": [
+                "mada",
+                "visa",
+                "mastercard"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "isLive",
+          "supportedNetworks",
+          "applePay",
+          "publishableKey",
+          "givenId",
+          "amount",
+          "currency",
+          "description"
+        ],
+        "type": "object"
+      },
+      "NativePaymentInitResponseDto": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/NativePaymentConfigurationDto"
+          },
+          "invoiceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "invoiceId",
+          "config"
+        ],
+        "type": "object"
+      },
+      "NativePaymentReconcileResponseDto": {
+        "properties": {
+          "canCreatePayment": {
+            "description": "True only after provider404 for a current payable native reservation",
+            "type": "boolean"
+          },
+          "invoiceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "requiresReview": {
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "COMPLETED",
+              "FAILED",
+              "PARTIALLY_REFUNDED",
+              "REFUNDED"
+            ],
+            "type": "string"
+          },
+          "unavailableReason": {
+            "description": "Why a pending reservation cannot be resumed after provider404",
+            "enum": [
+              "BOOKING_EXPIRED",
+              "BOOKING_CLOSED",
+              "INVOICE_CLOSED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "invoiceId",
+          "status",
+          "requiresReview"
+        ],
+        "type": "object"
+      },
       "NativeSessionDto": {
         "properties": {
           "refreshToken": {
@@ -37937,6 +38147,228 @@
         ]
       }
     },
+    "/api/v1/mobile/client/payments/native/{paymentId}/reconcile": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_reconcileNativePayment_v1",
+        "parameters": [
+          {
+            "description": "Reserved native Payment UUID",
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentReconcileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reconcile an owned native payment with Moyasar",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/native/config": {
+      "get": {
+        "operationId": "MobileClientPaymentsController_getNativeConfig_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentCapabilitiesDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get native payment capabilities",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/native/init": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_initNativePayment_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitClientPaymentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentInitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve or resume a native invoice payment",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
     "/api/v1/mobile/client/payments/package-purchases/init": {
       "post": {
         "operationId": "MobileClientPaymentsController_initPackagePurchaseEndpoint_v1",
@@ -38033,6 +38465,83 @@
           }
         ],
         "summary": "Initialize a Moyasar payment to self-purchase a session package",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/package-purchases/native/init": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_initNativePackagePurchase_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePackagePurchaseInitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve or resume a native package purchase payment",
         "tags": [
           "Mobile Client / Payments"
         ]

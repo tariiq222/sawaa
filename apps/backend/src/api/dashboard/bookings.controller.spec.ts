@@ -500,3 +500,19 @@ describe('DashboardBookingsController (e2e)', () => {
     });
   });
 });
+
+
+describe('trusted privacy actor wiring', () => {
+  it('getBookingTimeline uses the authenticated actor', () => {
+    const execute = jest.fn();
+    const user = { sub: 'user-a', role: 'EMPLOYEE' };
+    (DashboardBookingsController.prototype.getBookingTimeline as any).apply({ timelineHandler: { execute } }, ['booking-1', user]);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
+  });
+  it('getBookingStatusLog uses the authenticated actor', () => {
+    const execute = jest.fn();
+    const user = { sub: 'user-a', role: 'EMPLOYEE' };
+    (DashboardBookingsController.prototype.getBookingStatusLog as any).apply({ statusLogHandler: { execute } }, ['booking-1', user]);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
+  });
+});

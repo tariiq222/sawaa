@@ -62,6 +62,7 @@ jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : '
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
+  useClientInvoice: () => ({ data: undefined, isError: false }),
   useBooking: () => ({ data: { id: 'booking-1', status: 'PENDING' }, isLoading: false, isError: false, refetch: jest.fn() }),
 }));
 jest.mock('@/services/client/payments', () => ({

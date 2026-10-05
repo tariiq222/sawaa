@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "commit": "c0c928764dc2575d12c436117776719248fea8c3",
+  "deploymentId": "dep_snbPWdqjxHbdXKn9",
+  "observedAt": "2026-10-04T08:47:11.717Z",
+  "recordedAt": "2026-10-04T08:47:11.857Z",
+  "status": "verified",
+  "evidenceSha256": "a33c889670f02f037338e247307b3243df295c1ea7a8f8528e23de8b05717853",
+  "verificationSource": "operator-attestation",
+  "verifiedBy": "codex",
+  "services": [
+    {
+      "name": "backend",
+      "health": "healthy",
+      "deploymentId": "dep_snbPWdqjxHbdXKn9"
+    },
+    {
+      "name": "dashboard",
+      "health": "healthy",
+      "deploymentId": "dep_snbPWdqjxHbdXKn9"
+    },
+    {
+      "name": "website",
+      "health": "healthy",
+      "deploymentId": "dep_snbPWdqjxHbdXKn9"
+    },
+    {
+      "name": "postgres",
+      "health": "healthy",
+      "deploymentId": "dep_snbPWdqjxHbdXKn9"
+    },
+    {
+      "name": "redis",
+      "health": "healthy",
+      "deploymentId": "dep_snbPWdqjxHbdXKn9"
+    },
+    {
+      "name": "minio",
+      "health": "healthy",
+      "deploymentId": "dep_snbPWdqjxHbdXKn9"
+    }
+  ],
+  "checks": [
+    {
+      "name": "backend",
+      "status": 200
+    },
+    {
+      "name": "dashboard",
+      "status": 200
+    },
+    {
+      "name": "website",
+      "status": 200
+    }
+  ]
+}

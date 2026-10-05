@@ -313,8 +313,11 @@ export class DashboardCommsController {
   @Get('chat/conversations')
   listConversationsEndpoint(
     @Query() query: ListConversationsDto,
+    @CurrentUser() user: JwtUser,
   ) {
     return this.listConversations.execute({
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
       clientId: query.clientId,
       employeeId: query.employeeId,
       page: query.page ?? 1,
@@ -330,9 +333,12 @@ export class DashboardCommsController {
   listMessagesEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: ListMessagesDto,
+    @CurrentUser() user: JwtUser,
   ) {
     return this.listMessages.execute({
       conversationId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
       cursor: query.cursor,
       limit: query.limit ?? 20,
     });

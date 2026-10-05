@@ -1,3 +1,4 @@
+import { MoyasarPaymentSettlementHandler } from '../moyasar-payment-settlement/moyasar-payment-settlement.handler';
 import { createHmac } from 'crypto';
 import { NotFoundException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -236,16 +237,32 @@ function makeHandler(overrides: HandlerOverrides = {}) {
 
   const handler = new MoyasarWebhookHandler(
     prisma as never,
-    rlsTransaction as never,
     cls as never,
     creds as never,
     moyasarApi as never,
-    appMetrics as never,
+    new MoyasarPaymentSettlementHandler(prisma as never, rlsTransaction as never, appMetrics as never),
   );
   return { handler, prisma, creds, cls, appMetrics, moyasarApi };
 }
 
 describe('MoyasarWebhookHandler', () => {
+  it('preserves capture and requests review when a program hold elapsed before the expiry worker',async()=>{
+    const prisma=buildPrisma();prisma.booking.findUnique.mockResolvedValue({status:BookingStatus.AWAITING_PAYMENT,programId:'program',expiresAt:new Date(0)});
+    const {handler}=makeHandler({prisma});await handler.execute(makeReq());
+    expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({status:'COMPLETED'})}));
+    expect(prisma.refundRequest.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({status:'PENDING_REVIEW',reason:expect.stringContaining('program hold deadline')})}));
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it.each(['COMPLETED', 'FAILED'])('does not repeat a %s transition under a different delivery claim', async status => {
+    const prisma = buildPrisma();
+    prisma.payment.findFirst.mockResolvedValue({id:'payment-existing',invoiceId:'inv-1',status,amount:230,currency:'SAR'});
+    const {handler}=makeHandler({prisma,fetchedPayment:{id:'moyasar-pay-1',status:status==='COMPLETED'?'paid':'failed',amount:230,currency:'SAR'}});
+    await handler.execute(makeReq());
+    expect(prisma.payment.update).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
   describe('verifySignature', () => {
     it('returns true for a valid signature', () => {
       const { handler } = makeHandler();

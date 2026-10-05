@@ -39,6 +39,7 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
       update: jest.fn().mockResolvedValue({}),
     },
     payment: {
+      findUnique: jest.fn().mockResolvedValue({ invoiceId: 'inv-1' }),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ ...basePaymentRow, ...paymentOverrides }),
       update: jest.fn().mockImplementation(({ data }) => ({ id: 'pay-1', status: data.status })),
     },
@@ -54,6 +55,24 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
 }
 
 describe('ManualRefundPaymentHandler', () => {
+  it('serializes direct manual accounting by locking the invoice before its payment', async () => {
+    const { handler, tx } = build();
+    await handler.execute({ paymentId: 'pay-1', reason: 'returned' });
+    const sql = tx.$queryRaw.mock.calls.map(([query]: any[]) =>
+      (Array.isArray(query) ? query : query.strings).join(' '));
+    expect(sql[0]).toMatch(/FROM "Invoice".*FOR UPDATE/s);
+    expect(sql[1]).toMatch(/FROM "Payment".*FOR UPDATE/s);
+  });
+
+  it('fully refunds one payment while other payments keep its invoice partially refunded', async () => {
+    const { handler, tx } = build({}, { total: dec(40000) });
+    const result = await handler.execute({ paymentId: 'pay-1', reason: 'returned' });
+    expect(result.status).toBe(PaymentStatus.REFUNDED);
+    expect(tx.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'PARTIALLY_REFUNDED', refundedAmount: 20000 }),
+    }));
+  });
+
   it('settles the exact reviewed request without creating a duplicate reservation or ledger record', async () => {
     const { handler, tx } = build();
     tx.refundRequest.findUnique.mockResolvedValue({ id: 'review-1', paymentId: 'pay-1', invoiceId: 'inv-1', amount: dec(5000), status: 'PENDING_REVIEW', sourceEventId: 'source-event', idempotencyKey: 'refund:review-1' });
@@ -83,7 +102,7 @@ describe('ManualRefundPaymentHandler', () => {
 
   it('throws when the payment is not found', async () => {
     const { handler, tx } = build();
-    tx.$queryRaw.mockResolvedValueOnce([]);
+    tx.payment.findUnique.mockResolvedValueOnce(null);
     await expect(handler.execute({ paymentId: 'x', reason: 'r' })).rejects.toBeInstanceOf(NotFoundException);
   });
 

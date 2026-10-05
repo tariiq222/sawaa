@@ -210,13 +210,15 @@ function buildHandler(
       fn(transactionClient),
     ),
   };
+  const native = {execute:jest.fn().mockResolvedValue({paymentId:PAYMENT_ID,invoiceId:INVOICE_ID,config:{givenId:PAYMENT_ID,amount:FINAL_PRICE}})};
   const handler = new InitPackagePurchaseHandler(
     prisma as never,
     rls as never,
     pricing as never,
     moyasar as never,
+    native as never,
   );
-  return { handler, prisma, pricing, moyasar, tx, rls };
+  return { handler, prisma, pricing, moyasar, tx, rls, native };
 }
 
 const cmd = () => ({
@@ -514,7 +516,7 @@ describe("InitPackagePurchaseHandler", () => {
       expect(moyasar.createCheckoutInvoice).toHaveBeenCalledTimes(1);
     });
 
-    it("retries from the frozen purchase snapshot even when the live package is no longer available", async () => {
+    it.each(["HOSTED","NATIVE"])("retries frozen purchase in %s mode without repricing live catalog", async (mode) => {
       const prisma = buildPrisma();
       const fingerprint = selfPurchaseFingerprint(cmd());
       prisma.packagePurchase.findUnique.mockResolvedValue({
@@ -559,11 +561,13 @@ describe("InitPackagePurchaseHandler", () => {
       const moyasar = buildMoyasar();
       const { handler } = buildHandler(prisma, pricing, moyasar);
 
-      await handler.execute(cmd());
+      if(mode==="NATIVE") await handler.execute(cmd(),{mode:"NATIVE",fingerprint:"config-hash"});
+      else await handler.execute(cmd());
 
       expect(prisma.sessionPackage.findFirst).not.toHaveBeenCalled();
       expect(pricing.compute).not.toHaveBeenCalled();
-      expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
+      if(mode==="NATIVE") expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+      else expect(moyasar.createCheckoutInvoice).toHaveBeenCalledWith(
         DEFAULT_ORG_ID,
         expect.objectContaining({ amountHalalas: FINAL_PRICE }),
       );
@@ -951,4 +955,29 @@ describe("InitPackagePurchaseHandler", () => {
       expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
     });
   });
+});
+
+
+describe('native package initialization',()=>{
+  it('binds the givenId before returning without creating a hosted checkout',async()=>{
+    const {handler,prisma,moyasar,native}=buildHandler();
+    const result=await handler.execute(cmd(),{mode:'NATIVE',fingerprint:'config-hash'});
+    expect(result).not.toHaveProperty('redirectUrl');expect(result.purchaseId).toBe(PURCHASE_ID);
+    const data=prisma.payment.create.mock.calls[0][0].data;
+    expect(data.id).toBe(data.gatewayRef);expect(data.id).toMatch(/^[a-f0-9-]{36}$/);expect(data.nativeConfigFingerprint).toBe('config-hash');
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();expect(native.execute).toHaveBeenCalledWith({clientId:CLIENT_ID,invoiceId:INVOICE_ID});
+  });
+  it('returns typed already-completed identity for a paid purchase key',async()=>{
+    const {handler,prisma}=buildHandler();prisma.packagePurchase.findUnique.mockResolvedValue({id:PURCHASE_ID,status:'ACTIVE',requestFingerprint:selfPurchaseFingerprint(cmd())});
+    try {await handler.execute(cmd(),{mode:'NATIVE',fingerprint:'config-hash'});throw new Error('expected rejection');}
+    catch(error:any){expect(error.getResponse()).toMatchObject({code:'PAYMENT_ALREADY_COMPLETED',purchaseId:PURCHASE_ID});}
+  });
+  it('returns native paid identity while package activation is still pending',async()=>{
+    const {handler,prisma}=buildHandler();
+    prisma.packagePurchase.findUnique.mockResolvedValue({id:PURCHASE_ID,requestFingerprint:selfPurchaseFingerprint(cmd()),status:'PENDING',subtotalSnapshot:40000,discountSnapshot:4000,amountPaid:FINAL_PRICE,creditSnapshot:[{serviceId:SERVICE_ID,employeeId:EMPLOYEE_ID,durationOptionId:DURATION_OPTION_ID,unitPriceSnapshot:10000,totalQuantity:5,constraints:[]}]});
+    prisma.packagePurchase.findFirst.mockResolvedValue({id:PURCHASE_ID,idempotencyKey:cmd().idempotencyKey,requestFingerprint:selfPurchaseFingerprint(cmd())});
+    prisma.invoice.findFirst.mockResolvedValue({id:INVOICE_ID});prisma.invoice.findUnique.mockResolvedValue({id:INVOICE_ID,status:'PAID'});
+    await expect(handler.execute(cmd(),{mode:'NATIVE',fingerprint:'config-hash'})).rejects.toMatchObject({response:expect.objectContaining({code:'PAYMENT_ALREADY_COMPLETED',purchaseId:PURCHASE_ID})});
+  });
+
 });

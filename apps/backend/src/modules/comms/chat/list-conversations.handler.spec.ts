@@ -123,3 +123,29 @@ describe('ListConversationsHandler', () => {
     ]);
   });
 });
+
+
+describe('legacy conversation list ownership', () => {
+  const actor = { requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' };
+  function setup() {
+    const prisma = { employee: { findFirst: jest.fn().mockResolvedValue({ id: 'employee-a' }) }, chatConversation: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) }, client: { findMany: jest.fn().mockResolvedValue([]) } };
+    return { prisma, handler: new ListConversationsHandler(prisma as any) };
+  }
+  it('scopes both list and count to Employee.id', async () => {
+    const { prisma, handler } = setup();
+    await handler.execute({ page: 1, limit: 10, ...actor } as any);
+    expect(prisma.chatConversation.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { employeeId: 'employee-a' } }));
+    expect(prisma.chatConversation.count).toHaveBeenCalledWith({ where: { employeeId: 'employee-a' } });
+  });
+  it('rejects a caller filter targeting another employee', async () => {
+    const { prisma, handler } = setup();
+    await expect(handler.execute({ page: 1, limit: 10, employeeId: 'employee-b', ...actor } as any)).rejects.toThrow();
+    expect(prisma.chatConversation.findMany).not.toHaveBeenCalled();
+  });
+  it.each([undefined, 'unlinked-user'])('denies absent or unlinked actor %s', async (userId) => {
+    const { prisma, handler } = setup();
+    prisma.employee.findFirst.mockResolvedValue(null as any);
+    await expect(handler.execute({ page: 1, limit: 10, ...actor, requesterUserId: userId } as any)).rejects.toThrow();
+    expect(prisma.chatConversation.findMany).not.toHaveBeenCalled();
+  });
+});

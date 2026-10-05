@@ -3741,6 +3741,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/client/payments/native/{paymentId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reconcile an owned native payment with Moyasar */
+        post: operations["MobileClientPaymentsController_reconcileNativePayment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/native/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get native payment capabilities */
+        get: operations["MobileClientPaymentsController_getNativeConfig_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/native/init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve or resume a native invoice payment */
+        post: operations["MobileClientPaymentsController_initNativePayment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/client/payments/package-purchases/init": {
         parameters: {
             query?: never;
@@ -3752,6 +3803,23 @@ export interface paths {
         put?: never;
         /** Initialize a Moyasar payment to self-purchase a session package */
         post: operations["MobileClientPaymentsController_initPackagePurchaseEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/package-purchases/native/init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve or resume a native package purchase payment */
+        post: operations["MobileClientPaymentsController_initNativePackagePurchase_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10196,6 +10264,63 @@ export interface components {
              * @example public-booking
              */
             source?: string;
+        };
+        NativeApplePayConfigDto: {
+            /** @enum {string} */
+            countryCode: "SA";
+            label: string;
+            merchantId: string;
+        };
+        NativePackagePurchaseInitResponseDto: {
+            config: components["schemas"]["NativePaymentConfigurationDto"];
+            /** Format: uuid */
+            invoiceId: string;
+            /** Format: uuid */
+            paymentId: string;
+            /** Format: uuid */
+            purchaseId: string;
+        };
+        NativePaymentCapabilitiesDto: {
+            applePay: components["schemas"]["NativeApplePayConfigDto"] | null;
+            enabled: boolean;
+            isLive: boolean;
+            supportedNetworks: ("mada" | "visa" | "mastercard")[];
+        };
+        NativePaymentConfigurationDto: {
+            /** @description Server-owned integer halalas */
+            amount: number;
+            applePay: components["schemas"]["NativeApplePayConfigDto"] | null;
+            currency: string;
+            description: string;
+            enabled: boolean;
+            /** Format: uuid */
+            givenId: string;
+            isLive: boolean;
+            publishableKey: string;
+            supportedNetworks: ("mada" | "visa" | "mastercard")[];
+        };
+        NativePaymentInitResponseDto: {
+            config: components["schemas"]["NativePaymentConfigurationDto"];
+            /** Format: uuid */
+            invoiceId: string;
+            /** Format: uuid */
+            paymentId: string;
+        };
+        NativePaymentReconcileResponseDto: {
+            /** @description True only after provider404 for a current payable native reservation */
+            canCreatePayment?: boolean;
+            /** Format: uuid */
+            invoiceId: string;
+            /** Format: uuid */
+            paymentId: string;
+            requiresReview: boolean;
+            /** @enum {string} */
+            status: "PENDING" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+            /**
+             * @description Why a pending reservation cannot be resumed after provider404
+             * @enum {string}
+             */
+            unavailableReason?: "BOOKING_EXPIRED" | "BOOKING_CLOSED" | "INVOICE_CLOSED";
         };
         NativeSessionDto: {
             /**
@@ -31791,6 +31916,178 @@ export interface operations {
             };
         };
     };
+    MobileClientPaymentsController_reconcileNativePayment_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Reserved native Payment UUID */
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePaymentReconcileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPaymentsController_getNativeConfig_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePaymentCapabilitiesDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPaymentsController_initNativePayment_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitClientPaymentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePaymentInitResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientPaymentsController_initPackagePurchaseEndpoint_v1: {
         parameters: {
             query?: never;
@@ -31820,6 +32117,65 @@ export interface operations {
                         /** @example https://checkout.moyasar.com/pay/payment-id */
                         redirectUrl: string;
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPaymentsController_initNativePackagePurchase_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitPackagePurchaseDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePackagePurchaseInitResponseDto"];
                 };
             };
             /** @description Validation failed */

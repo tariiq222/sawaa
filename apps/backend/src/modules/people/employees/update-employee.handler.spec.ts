@@ -36,6 +36,7 @@ describe('UpdateEmployeeHandler', () => {
         update: jest.fn(),
       },
       user: {
+        findUnique: jest.fn(async ({ where }) => ({ id: where.id, role: where.id === 'actor' ? 'ADMIN' : 'EMPLOYEE', isSuperAdmin: false })),
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
       },
@@ -137,7 +138,7 @@ describe('UpdateEmployeeHandler', () => {
     stubLoadedEmployee({ userId: null, email: 'old@example.com' });
     prisma.employee.update.mockResolvedValue({ id: 'e1', email: 'new@example.com' });
 
-    const result = await handler.execute({ employeeId: 'e1', email: '  New@Example.COM  ' } as any);
+    const result = await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: '  New@Example.COM  ' } as any);
 
     expect(result.email).toBe('new@example.com');
     expect(prisma.employee.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -152,7 +153,7 @@ describe('UpdateEmployeeHandler', () => {
     prisma.employee.update.mockResolvedValue({ id: 'e1', email: 'new@example.com' });
     prisma.user.update.mockResolvedValue({ id: 'u1', email: 'new@example.com' });
 
-    await handler.execute({ employeeId: 'e1', email: 'New@Example.COM' } as any);
+    await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: 'New@Example.COM' } as any);
 
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(prisma.employee.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -174,7 +175,7 @@ describe('UpdateEmployeeHandler', () => {
     prisma.user.update.mockResolvedValue({ id: 'u1', email: 'same@example.com' });
 
     await expect(
-      handler.execute({ employeeId: 'e1', email: '  SAME@example.com  ' } as any),
+      handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: '  SAME@example.com  ' } as any),
     ).resolves.toEqual(expect.objectContaining({ id: 'e1' }));
 
     expect(prisma.employee.update).toHaveBeenCalled();
@@ -199,7 +200,7 @@ describe('UpdateEmployeeHandler', () => {
   it('rejects an employee email collision with 409 and no owner leak or mutation', async () => {
     stubLoadedEmployee({ userId: 'u1', email: 'old@example.com' }, { employee: { id: 'other-emp' } });
 
-    const err = await handler.execute({ employeeId: 'e1', email: 'taken@example.com' } as any).catch((e) => e);
+    const err = await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: 'taken@example.com' } as any).catch((e) => e);
     const body = conflictResponse(err);
     expect(body.message).toBe('This email is already in use');
     expect(body.messageAr).toBe('هذا البريد الإلكتروني مستخدم بالفعل');
@@ -213,7 +214,7 @@ describe('UpdateEmployeeHandler', () => {
   it('rejects a user email collision with 409 and no owner leak or mutation', async () => {
     stubLoadedEmployee({ userId: 'u1', email: 'old@example.com' }, { user: { id: 'other-user' } });
 
-    const err = await handler.execute({ employeeId: 'e1', email: 'owner@hidden.com' } as any).catch((e) => e);
+    const err = await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: 'owner@hidden.com' } as any).catch((e) => e);
     const body = conflictResponse(err);
     expect(body.code).toBe('EMAIL_ALREADY_IN_USE');
     expect(JSON.stringify(body)).not.toContain('other-user');
@@ -225,7 +226,7 @@ describe('UpdateEmployeeHandler', () => {
   it('rejects a mixed-case employee email collision with 409 and no mutation', async () => {
     stubLoadedEmployee({ userId: 'u1', email: 'old@example.com' }, { employee: { id: 'other-emp' } });
 
-    const err = await handler.execute({ employeeId: 'e1', email: '  Taken@Example.COM  ' } as any).catch((e) => e);
+    const err = await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: '  Taken@Example.COM  ' } as any).catch((e) => e);
     const body = conflictResponse(err);
     expect(body.message).toBe('This email is already in use');
     expect(body.messageAr).toBe('هذا البريد الإلكتروني مستخدم بالفعل');
@@ -246,7 +247,7 @@ describe('UpdateEmployeeHandler', () => {
   it('rejects a mixed-case user email collision with 409 and no mutation', async () => {
     stubLoadedEmployee({ userId: 'u1', email: 'old@example.com' }, { user: { id: 'other-user' } });
 
-    const err = await handler.execute({ employeeId: 'e1', email: 'Owner@Hidden.COM' } as any).catch((e) => e);
+    const err = await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: 'Owner@Hidden.COM' } as any).catch((e) => e);
     const body = conflictResponse(err);
     expect(body.code).toBe('EMAIL_ALREADY_IN_USE');
     expect(JSON.stringify(body)).not.toContain('other-user');
@@ -279,7 +280,7 @@ describe('UpdateEmployeeHandler', () => {
     prisma.user.update.mockRejectedValue(new Error('write failed'));
 
     await expect(
-      handler.execute({ employeeId: 'e1', email: 'new@example.com' } as any),
+      handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: 'new@example.com' } as any),
     ).rejects.toThrow('write failed');
     expect(committed).toBe(false);
     expect(prisma.employee.update).toHaveBeenCalled();
@@ -296,7 +297,7 @@ describe('UpdateEmployeeHandler', () => {
       }),
     );
 
-    const err = await handler.execute({ employeeId: 'e1', email: 'race@example.com' } as any).catch((e) => e);
+    const err = await handler.execute({ employeeId: 'e1', actorUserId: 'actor', email: 'race@example.com' } as any).catch((e) => e);
     const body = conflictResponse(err);
     expect(body.code).toBe('EMAIL_ALREADY_IN_USE');
     expect(prisma.user.update).not.toHaveBeenCalled();

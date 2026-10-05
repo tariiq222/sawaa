@@ -1,5 +1,10 @@
 import { PreviousReceiptRecordedAuditHandler } from './events/previous-receipt-recorded-audit.handler';
 import { RecordPreviousReceiptHandler } from './record-previous-receipt/record-previous-receipt.handler';
+import { GetNativePaymentConfigHandler } from './native-payments/get-native-payment-config/get-native-payment-config.handler';
+import { InitNativePaymentHandler } from './native-payments/init-native-payment/init-native-payment.handler';
+import { ReconcileNativePaymentHandler } from './native-payments/reconcile-native-payment/reconcile-native-payment.handler';
+import { InitNativePackagePurchaseHandler } from './package-purchases/init-package-purchase/init-native-package-purchase.handler';
+import { MoyasarPaymentSettlementHandler } from './moyasar-payment-settlement/moyasar-payment-settlement.handler';
 import { CancellationRefundIntentService } from './cancellation-refund/cancellation-refund-intent.service';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DashboardFinanceController } from '../../api/dashboard/finance.controller';
@@ -63,6 +68,7 @@ import { CollectBookingPaymentHandler } from './collect-booking-payment/collect-
 
 const handlers = [
   RecordPreviousReceiptHandler,
+  GetNativePaymentConfigHandler, InitNativePaymentHandler, ReconcileNativePaymentHandler, InitNativePackagePurchaseHandler, MoyasarPaymentSettlementHandler,
   CreateInvoiceHandler,
   EnsureBookingInvoiceHandler,
   CollectBookingPaymentHandler,

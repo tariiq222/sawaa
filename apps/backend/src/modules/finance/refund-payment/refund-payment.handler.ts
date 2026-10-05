@@ -125,13 +125,24 @@ export class RefundPaymentHandler {
     gatewayRef: string,
   ): Promise<void> {
     await this.rlsTransaction.withTransaction(async (tx) => {
+      const identity = await tx.refundRequest.findUniqueOrThrow({
+        where: { id: refundRequestId },
+        select: { invoiceId: true, paymentId: true },
+      });
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${identity.invoiceId} FOR UPDATE`);
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Payment" WHERE "id" = ${identity.paymentId} FOR UPDATE`);
+      const refundReq = await tx.refundRequest.findUniqueOrThrow({
+        where: { id: refundRequestId },
+        select: { paymentId: true, amount: true, invoiceId: true, status: true },
+      });
+      if (refundReq.status === RefundStatus.COMPLETED) return;
+      const currentPayment = await tx.payment.findUniqueOrThrow({
+        where: { id: refundReq.paymentId },
+        select: { amount: true, refundedAmount: true },
+      });
       await tx.refundRequest.update({
         where: { id: refundRequestId },
         data: { status: RefundStatus.COMPLETED, gatewayRef },
-      });
-      const refundReq = await tx.refundRequest.findUniqueOrThrow({
-        where: { id: refundRequestId },
-        select: { paymentId: true, amount: true, invoiceId: true },
       });
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
         where: { id: refundReq.invoiceId },
@@ -145,10 +156,9 @@ export class RefundPaymentHandler {
         alreadyRefundedVatAmt: currentInvoice.refundedVatAmt,
         thisRefundAmount: refundAmount,
       });
-      // Mirror the invoice's REFUNDED / PARTIALLY_REFUNDED outcome onto the
-      // payment so a payment with an outstanding balance can be refunded again.
+      // A payment may be fully refunded while other invoice payments remain paid.
       const paymentStatus =
-        accounting.newInvoiceStatus === 'REFUNDED'
+        decimalToHalalas(currentPayment.refundedAmount ?? 0) + refundAmount >= decimalToHalalas(currentPayment.amount)
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED;
       await tx.payment.update({
@@ -176,7 +186,7 @@ export class RefundPaymentHandler {
    * passes the transaction client `tx` directly.
    *
    * Steps:
-   *   1. SELECT FOR UPDATE on Payment to prevent concurrent double-refunds
+   *   1. SELECT FOR UPDATE on Invoice then Payment to serialize accounting
    *   2. Guard against existing in-flight RefundRequest
    *   3. Fetch Invoice for org/client/booking context
    *   4. Build idempotency key: `refund:{paymentId}:{amount.toFixed(2)}`
@@ -326,7 +336,7 @@ export class RefundPaymentHandler {
         select: { id: true },
       });
       const paymentStatus =
-        accounting.newInvoiceStatus === 'REFUNDED'
+        refundAmount === outstanding
           ? PaymentStatus.REFUNDED
           : PaymentStatus.PARTIALLY_REFUNDED;
       await tx.payment.update({
@@ -796,6 +806,14 @@ export class RefundPaymentHandler {
     refundAmount: number;
   }): Promise<void> {
     await this.rlsTransaction.withTransaction(async (tx) => {
+      // Acquire the aggregate lock before request or payment mutations. Different
+      // payments on one invoice must observe each other's committed refunds.
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${input.refundReq.invoiceId} FOR UPDATE`);
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Payment" WHERE "id" = ${input.refundReq.paymentId} FOR UPDATE`);
+      const currentPayment = await tx.payment.findUniqueOrThrow({
+        where: { id: input.refundReq.paymentId },
+        select: { amount: true, refundedAmount: true },
+      });
       const { count } = await tx.refundRequest.updateMany({
         where: {
           id: input.refundRequestId,
@@ -835,7 +853,7 @@ export class RefundPaymentHandler {
         alreadyRefundedVatAmt: currentInvoice.refundedVatAmt,
         thisRefundAmount: input.refundAmount,
       });
-      const paymentStatus = accounting.newInvoiceStatus === 'REFUNDED'
+      const paymentStatus = decimalToHalalas(currentPayment.refundedAmount ?? 0) + input.refundAmount >= decimalToHalalas(currentPayment.amount)
         ? PaymentStatus.REFUNDED
         : PaymentStatus.PARTIALLY_REFUNDED;
       await tx.payment.update({
@@ -909,6 +927,11 @@ export class RefundPaymentHandler {
     // Payment.status=COMPLETED and proceeding to issue a double-refund.
     const { refundRequestId, idempotencyKey } =
       await this.rlsTransaction.withTransaction(async (tx) => {
+        const identity = await tx.payment.findUnique({
+          where: { id: cmd.paymentId }, select: { invoiceId: true },
+        });
+        if (!identity) throw new NotFoundException('Payment not found');
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${identity.invoiceId} FOR UPDATE`);
         // Lock the payment row for the duration of this transaction.
         const rows = await tx.$queryRaw<
           Array<{

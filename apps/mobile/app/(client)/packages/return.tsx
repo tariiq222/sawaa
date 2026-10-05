@@ -37,6 +37,7 @@ export default function PackagePaymentReturnScreen() {
     branchId?: string;
     /** In-app checkout signal set by the purchase screen. */
     signal?: string;
+    origin?: string;
     /** Moyasar redirect parameters, when the gateway redirect reaches the app. */
     status?: string;
     message?: string;
@@ -47,19 +48,26 @@ export default function PackagePaymentReturnScreen() {
   const { t } = useTranslation();
   const userId = useAppSelector((state) => state.auth.user?.id);
   const initPurchase = useInitPackagePurchase();
-  const [purchaseId, setPurchaseId] = useState(params.purchaseId);
-  const [signal, setSignal] = useState<PackageCheckoutSignal>(() => initialSignal(params.signal, params.status));
+  const userRef = useRef(userId);
+  userRef.current = userId;
+  const purchaseId = params.purchaseId;
+  const belongsToUser = Boolean(userId && (!params.clientId || params.clientId === userId));
+  const tryingAgainRef = useRef(false);
+  const [signal] = useState<PackageCheckoutSignal>(() => initialSignal(params.signal, params.status));
   const [pendingPolls, setPendingPolls] = useState(0);
   const [tryingAgain, setTryingAgain] = useState(false);
   const lastCountedUpdate = useRef(0);
   const [polling, setPolling] = useState(true);
-  const query = usePackagePurchase(purchaseId, { poll: polling });
+  const query = usePackagePurchase(belongsToUser ? purchaseId : undefined, { poll: belongsToUser && polling });
   const { refetch } = query;
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const paymentState = packagePaymentState(query.data?.status, query.isLoading, { signal, pendingPolls });
-  const paymentError = !purchaseId || (query.isError && paymentState !== 'failed');
+  const paymentState = packagePaymentState(belongsToUser ? query.data?.status : undefined, query.isLoading, { signal, pendingPolls });
+  const paymentError = !belongsToUser || !purchaseId || (query.isError && paymentState !== 'failed');
+  const targetMatches = Boolean(query.data && query.data.id === purchaseId
+    && query.data.packageId === params.packageId && query.data.branchId === params.branchId
+    && (query.data.packageFamilyId ?? '') === (params.familyId ?? ''));
   const paid = !paymentError && paymentState === 'success';
   const stopped = !paymentError && (paymentState === 'failed' || paymentState === 'unconfirmed');
 
@@ -77,45 +85,50 @@ export default function PackagePaymentReturnScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refetch();
-    }, [refetch]),
+      if (belongsToUser) void refetch();
+    }, [belongsToUser, refetch]),
   );
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refetch();
+      if (state === 'active' && belongsToUser) void refetch();
     });
     return () => subscription.remove();
-  }, [refetch]);
+  }, [belongsToUser, refetch]);
 
   useEffect(() => {
-    if (!paid || !params.clientId || !params.packageId || !params.branchId) return;
+    if (!paid || !belongsToUser || !params.clientId || !params.packageId || !params.branchId
+      || query.data?.id !== purchaseId || query.data.packageId !== params.packageId
+      || query.data.branchId !== params.branchId || (query.data.packageFamilyId ?? '') !== (params.familyId ?? '')) return;
     void clearPackagePurchaseAttemptKey(
       params.clientId,
       params.packageId,
       params.familyId || undefined,
       params.branchId,
     );
-    void clearPendingPackagePurchase();
-  }, [paid, params.branchId, params.clientId, params.familyId, params.packageId]);
+    void clearPendingPackagePurchase({ clientId: params.clientId, purchaseId: purchaseId! });
+  }, [belongsToUser, paid, params.branchId, params.clientId, params.familyId, params.packageId, purchaseId, query.data]);
 
   // A declined, abandoned, or unconfirmed checkout must not keep sending the
   // client back here from the package screen. The attempt key is kept so a
   // retry resumes the same purchase instead of being rejected as a duplicate.
   useEffect(() => {
-    if (stopped) void clearPendingPackagePurchase();
-  }, [stopped]);
+    if (stopped && belongsToUser && userId && purchaseId && params.origin !== 'native') {
+      void clearPendingPackagePurchase({ clientId: userId, purchaseId });
+    }
+  }, [belongsToUser, params.origin, purchaseId, stopped, userId]);
 
   const checkAgain = useCallback(() => {
     lastCountedUpdate.current = 0;
     setPendingPolls(0);
-    void refetch();
-  }, [refetch]);
+    if (belongsToUser) void refetch();
+  }, [belongsToUser, refetch]);
 
-  const canRetryPayment = Boolean(params.clientId && params.packageId && params.branchId && params.clientId === userId);
+  const canRetryPayment = Boolean(targetMatches && params.clientId && params.packageId && params.branchId && params.clientId === userId);
 
   const tryAgain = useCallback(async () => {
-    if (!params.clientId || !params.packageId || !params.branchId || tryingAgain) return;
+    if (!canRetryPayment || !params.clientId || !params.packageId || !params.branchId || tryingAgainRef.current) return;
+    tryingAgainRef.current = true;
     setTryingAgain(true);
     try {
       const result = await runPackageCheckout(initPurchase.mutateAsync, {
@@ -124,17 +137,17 @@ export default function PackagePaymentReturnScreen() {
         familyId: params.familyId ?? '',
         branchId: params.branchId,
       });
-      lastCountedUpdate.current = 0;
-      setPendingPolls(0);
-      setSignal(result.signal);
-      setPurchaseId(result.purchaseId);
-      if (result.purchaseId === purchaseId) void refetch();
+      if (userRef.current !== params.clientId) return;
+      router.replace({ pathname: '/(client)/payments/native-checkout', params: {
+        purchaseId: result.purchaseId, invoiceId: result.invoiceId,
+      } });
     } catch (error) {
       Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
     } finally {
+      tryingAgainRef.current = false;
       setTryingAgain(false);
     }
-  }, [initPurchase.mutateAsync, params.branchId, params.clientId, params.familyId, params.packageId, purchaseId, refetch, t, tryingAgain]);
+  }, [canRetryPayment, initPurchase.mutateAsync, params.branchId, params.clientId, params.familyId, params.packageId, router, t]);
 
   return (
     <AquaBackground>
@@ -143,7 +156,7 @@ export default function PackagePaymentReturnScreen() {
           state={paymentState}
           error={paymentError}
           onBack={() => router.replace('/(client)/packages/purchases')}
-          onRetry={purchaseId ? checkAgain : undefined}
+          onRetry={belongsToUser && purchaseId ? checkAgain : undefined}
           onTryAgain={canRetryPayment ? () => { void tryAgain(); } : undefined}
           tryingAgain={tryingAgain}
           dir={dir}

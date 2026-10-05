@@ -57,10 +57,12 @@ jest.mock('@/components/ui/Skeleton', () => {
   return { Skeleton: NativeView };
 });
 let mockRTL = false;
+let mockInvoice: { id: string; number: number } | undefined;
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, textAlign: mockRTL ? 'right' : 'left', writingDirection: 'ltr' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
+  useClientInvoice: () => ({ data: mockInvoice, isError: false, refetch: jest.fn() }),
   useBooking: () => ({ data: mockBooking, isLoading: false, isError: mockBookingError, refetch: mockRefetchBooking }),
 }));
 jest.mock('@/features/booking/use-payment-status', () => {
@@ -74,6 +76,7 @@ describe('booking success verification', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRTL = false;
+    mockInvoice = { id: 'invoice-1', number: 1042 };
     mockBooking = { id: 'booking-1', status: 'PENDING' };
     mockBookingError = false;
     mockPhase = 'confirmed';
@@ -135,4 +138,16 @@ describe('booking success verification', () => {
     }
   });
 
+});
+
+it('displays the full server invoice number rather than shortening the invoice UUID', () => {
+  const screen = render(<BookingSuccessScreen />);
+  expect(screen.getByText('booking.invoiceNumber')).toBeTruthy();
+  expect(screen.getByText('#1042')).toBeTruthy();
+  expect(screen.queryByText('#INVOICE-')).toBeNull();
+});
+it('does not display a number belonging to a different invoice', () => {
+  mockInvoice = { id: 'other-invoice', number: 9000 };
+  const screen = render(<BookingSuccessScreen />);
+  expect(screen.queryByText('#9000')).toBeNull();
 });

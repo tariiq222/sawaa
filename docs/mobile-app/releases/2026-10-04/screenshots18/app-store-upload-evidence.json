@@ -1,0 +1,99 @@
+{
+  "verifiedAt": "2026-10-04T12:13:00.346Z",
+  "sets": [
+    {
+      "setId": "afe3cb70-7b42-457e-98e6-434e43a56ed3",
+      "displayType": "APP_IPHONE_67",
+      "screens": [
+        {
+          "id": "c6c00019-63e4-8b35-802d-a169a3bb9475",
+          "fileName": "iphone-6.9-01-home.png",
+          "state": "COMPLETE",
+          "checksum": "3125fdf0c4c05a0a76b93d7cc08f4703",
+          "width": 1320,
+          "height": 2868
+        },
+        {
+          "id": "c6800019-63e4-8b35-800d-26eca2f1a54c",
+          "fileName": "iphone-6.9-02-specialists.png",
+          "state": "COMPLETE",
+          "checksum": "a94937ea410dbac33df8a8025f6bc5ca",
+          "width": 1320,
+          "height": 2868
+        },
+        {
+          "id": "3ec00019-63e4-8b35-8030-3a6050e972d8",
+          "fileName": "iphone-6.9-03-profile.png",
+          "state": "COMPLETE",
+          "checksum": "7c35130d8c7db818d7fda0562b987618",
+          "width": 1320,
+          "height": 2868
+        },
+        {
+          "id": "88000019-63e4-8b35-8008-c41f8639e397",
+          "fileName": "iphone-6.9-04-booking.png",
+          "state": "COMPLETE",
+          "checksum": "7ba03009b776fbdf003defc1e28859f1",
+          "width": 1320,
+          "height": 2868
+        },
+        {
+          "id": "b8000019-63e4-8b35-8027-0ea9bc850efe",
+          "fileName": "iphone-6.9-05-login.png",
+          "state": "COMPLETE",
+          "checksum": "1c273038fee5bdde026ff4741d0b567f",
+          "width": 1320,
+          "height": 2868
+        }
+      ],
+      "orderVerified": true
+    },
+    {
+      "setId": "2769715c-e465-4c82-b009-4e1dccf0839f",
+      "displayType": "APP_IPAD_PRO_3GEN_129",
+      "screens": [
+        {
+          "id": "73c00019-63e4-8b35-8021-052241f33b22",
+          "fileName": "ipad-13-01-home.png",
+          "state": "COMPLETE",
+          "checksum": "61294bbb49f342a1ac51d70c8a55347c",
+          "width": 2064,
+          "height": 2752
+        },
+        {
+          "id": "f1400019-63e4-8b35-802b-814902b9142f",
+          "fileName": "ipad-13-02-specialists.png",
+          "state": "COMPLETE",
+          "checksum": "610c17e15b3ac6d5fbc359c20a9a07a2",
+          "width": 2064,
+          "height": 2752
+        },
+        {
+          "id": "b6800019-63e4-8b35-8027-f40cd6c127f5",
+          "fileName": "ipad-13-03-profile.png",
+          "state": "COMPLETE",
+          "checksum": "d90145635e0f45a4c8e156da50fd3d2a",
+          "width": 2064,
+          "height": 2752
+        },
+        {
+          "id": "90800019-63e4-8b35-8017-9bc9a13a96f4",
+          "fileName": "ipad-13-04-booking.png",
+          "state": "COMPLETE",
+          "checksum": "60d896a9fa63470df45309e13585d37e",
+          "width": 2064,
+          "height": 2752
+        },
+        {
+          "id": "e3400019-63e4-8b35-8025-c7b777a19d31",
+          "fileName": "ipad-13-05-login.png",
+          "state": "COMPLETE",
+          "checksum": "517a05b1cb9be5c33176b1b295bd9acb",
+          "width": 2064,
+          "height": 2752
+        }
+      ],
+      "orderVerified": true
+    }
+  ]
+}

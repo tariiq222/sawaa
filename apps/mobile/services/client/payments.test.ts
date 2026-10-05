@@ -102,3 +102,23 @@ describe('receipt upload metadata', () => {
     expect(mockedApi.post.mock.calls[0][0]).toBe('/mobile/client/payments/bank-transfer');
   });
 });
+
+
+describe('native payment API boundaries', () => {
+  it('loads native capabilities without making a payable attempt', async () => {
+    jest.mocked(api.get).mockResolvedValueOnce({ data: { enabled: true } });
+    expect(await clientPaymentsService.getNativeConfig()).toEqual({ enabled: true });
+    expect(api.get).toHaveBeenCalledWith('/mobile/client/payments/native/config');
+    expect(api.post).not.toHaveBeenCalled();
+  });
+  it('initializes using only the invoice and chosen method', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { paymentId: 'payment' } });
+    await clientPaymentsService.initNativePayment('invoice', 'ONLINE_CARD');
+    expect(api.post).toHaveBeenCalledWith('/mobile/client/payments/native/init', { invoiceId: 'invoice', method: 'ONLINE_CARD' });
+  });
+  it('reconciles identity only without SDK result or amount', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { status: 'PENDING' } });
+    expect(await clientPaymentsService.reconcileNativePayment('payment')).toEqual({ status: 'PENDING' });
+    expect(api.post).toHaveBeenCalledWith('/mobile/client/payments/native/payment/reconcile');
+  });
+});

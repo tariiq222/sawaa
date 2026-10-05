@@ -6,8 +6,9 @@ import type {
   RefundStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { assertBookingReadAccess, type BookingReadRequester } from '../booking-read-access.helper';
 
-export interface GetBookingTimelineQuery {
+export interface GetBookingTimelineQuery extends BookingReadRequester {
   bookingId: string;
 }
 
@@ -75,9 +76,10 @@ export class GetBookingTimelineHandler {
   ): Promise<BookingTimelineEntry[]> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: query.bookingId },
-      select: { id: true, createdAt: true, lateEntryRecordedAt:true,lateEntryRecordedBy:true,scheduledAt:true,endsAt:true },
+      select: { id: true, createdAt: true, employeeId: true, lateEntryRecordedAt:true,lateEntryRecordedBy:true,scheduledAt:true,endsAt:true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
+    await assertBookingReadAccess(this.prisma, booking, query);
 
     const [statusLogs, invoices, activityLogs] = await Promise.all([
       this.prisma.bookingStatusLog.findMany({

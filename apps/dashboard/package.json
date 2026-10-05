@@ -15,12 +15,12 @@
     "test:report": "py ../../data/test-reports/scripts/generate_html_report.py",
     "i18n:verify": "node scripts/verify-translation-parity.mjs",
     "openapi:generate": "NODE_OPTIONS=--require=./scripts/js-yaml-redocly-compat.cjs openapi-typescript ../../apps/backend/openapi.json -o lib/types/api.generated.ts",
-    "e2e": "playwright test --project=flows",
-    "e2e:smoke": "playwright test --project=smoke",
-    "e2e:flows": "playwright test --project=flows",
-    "e2e:ui": "playwright test --ui",
-    "e2e:report": "playwright show-report",
-    "e2e:install": "playwright install --with-deps chromium"
+    "e2e": "node ../../scripts/run-playwright.cjs test --project=flows",
+    "e2e:smoke": "node ../../scripts/run-playwright.cjs test --project=smoke",
+    "e2e:flows": "node ../../scripts/run-playwright.cjs test --project=flows",
+    "e2e:ui": "node ../../scripts/run-playwright.cjs test --ui",
+    "e2e:report": "node ../../scripts/run-playwright.cjs show-report",
+    "e2e:install": "node ../../scripts/run-playwright.cjs install --with-deps chromium"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

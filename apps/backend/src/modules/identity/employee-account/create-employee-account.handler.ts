@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PasswordService } from '../shared/password.service';
-import { assertCanAssignRole } from '../shared/role-rank';
+import { assertCanAssignRole, assertCanManageUser } from '../shared/role-rank';
 import { CreateEmployeeAccountDto } from './create-employee-account.dto';
 
 // actorUserId is injected from the authenticated principal (req.user.id), never the body.
@@ -25,12 +25,13 @@ export class CreateEmployeeAccountHandler {
   ) {}
 
   async execute(cmd: CreateEmployeeAccountCommand) {
+    if (!cmd.actorUserId) throw new ForbiddenException('Actor not found');
     // Rank gate: an actor may not grant a system role at or above their own rank
     // (and only a super admin may grant SUPER_ADMIN) when creating/linking an
     // employee login account.
     const actor = await this.prisma.user.findUnique({
       where: { id: cmd.actorUserId },
-      select: { role: true, isSuperAdmin: true },
+      select: { id: true, role: true, isSuperAdmin: true },
     });
     if (!actor) throw new ForbiddenException('Actor not found');
     assertCanAssignRole(actor, cmd.role);
@@ -56,6 +57,8 @@ export class CreateEmployeeAccountHandler {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: employeeEmail },
     });
+
+    if (existingUser) assertCanManageUser(actor, existingUser);
 
     return this.rlsTransaction.withTransaction(async (tx) => {
       let userId: string;

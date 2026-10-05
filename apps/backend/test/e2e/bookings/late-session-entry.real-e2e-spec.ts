@@ -5,6 +5,7 @@ import { ProcessPaymentHandler } from "../../../src/modules/finance/process-paym
 import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { randomUUID } from "node:crypto";
+import type { OrganizationSettings } from "@prisma/client";
 import { PrismaService } from "../../../src/infrastructure/database";
 import { createRealE2eApp, request } from "../../helpers/create-real-e2e-app";
 import { RecordLateSessionDto } from "../../../src/modules/bookings/record-late-session/record-late-session.dto";
@@ -24,6 +25,18 @@ describeReal(
       noCreateToken: string,
       adminId: string,
       settingsId: string;
+    let originalSettings: Pick<
+      OrganizationSettings,
+      "vatRate" | "payMethodCashEnabled" | "payMethodMadaEnabled"
+    > | undefined;
+    let createdSettings = false;
+    const branchIds: string[] = [];
+    const clientIds: string[] = [];
+    const employeeIds: string[] = [];
+    const serviceIds: string[] = [];
+    const userIds: string[] = [];
+    const customRoleIds: string[] = [];
+    const explicitBookingIds: string[] = [];
     const suffix = randomUUID();
     const route = "/api/v1/dashboard/bookings/late-entry";
     beforeAll(async () => {
@@ -38,6 +51,7 @@ describeReal(
         },
       });
       adminId = admin.id;
+      userIds.push(admin.id);
       adminToken = jwt.sign({
         sub: admin.id,
         role: admin.role,
@@ -49,6 +63,7 @@ describeReal(
           permissions: { create: [{ action: "create", subject: "Booking" }] },
         },
       });
+      customRoleIds.push(role.id);
       const restricted = await prisma.user.create({
         data: {
           email: `late-limited-${suffix}@sawaa.test`,
@@ -57,6 +72,7 @@ describeReal(
           customRoleId: role.id,
         },
       });
+      userIds.push(restricted.id);
       restrictedToken = jwt.sign({
         sub: restricted.id,
         role: restricted.role,
@@ -69,6 +85,7 @@ describeReal(
           role: "RECEPTIONIST",
         },
       });
+      userIds.push(receptionist.id);
       receptionistToken = jwt.sign({
         sub: receptionist.id,
         role: receptionist.role,
@@ -81,36 +98,134 @@ describeReal(
           role: "EMPLOYEE",
         },
       });
+      userIds.push(noCreate.id);
       noCreateToken = jwt.sign({
         sub: noCreate.id,
         role: noCreate.role,
         tokenVersion: 0,
       });
-      settingsId = (
-        await prisma.organizationSettings.create({
+      const existingSettings = await prisma.organizationSettings.findFirst({
+        select: {
+          id: true,
+          vatRate: true,
+          payMethodCashEnabled: true,
+          payMethodMadaEnabled: true,
+        },
+      });
+      const fixtureSettings = {
+        vatRate: 0,
+        payMethodCashEnabled: true,
+        payMethodMadaEnabled: false,
+      };
+      if (existingSettings) {
+        const { id, ...settings } = existingSettings;
+        settingsId = id;
+        originalSettings = settings;
+        await prisma.organizationSettings.update({
+          where: { id: settingsId },
+          data: fixtureSettings,
+        });
+      } else {
+        settingsId = (await prisma.organizationSettings.create({
           data: {
             companyNameAr: `late-test-${suffix}`,
-            vatRate: 0,
-            payMethodCashEnabled: true,
-            payMethodMadaEnabled: false,
+            ...fixtureSettings,
           },
-        })
-      ).id;
+        })).id;
+        createdSettings = true;
+      }
     });
     afterAll(async () => {
-      if (app) await app.close();
+      try {
+        if (prisma) await cleanupFixtures();
+      } finally {
+        try {
+          if (prisma && settingsId) {
+            if (originalSettings) {
+              await prisma.organizationSettings.update({
+                where: { id: settingsId },
+                data: originalSettings,
+              });
+            } else if (createdSettings) {
+              await prisma.organizationSettings.delete({
+                where: { id: settingsId },
+              });
+            }
+          }
+        } finally {
+          if (app) await app.close();
+        }
+      }
     });
+
+    async function cleanupFixtures(): Promise<void> {
+      await prisma.$transaction(async (tx) => {
+        // Unique owned branches also identify writes committed before an HTTP
+        // assertion failed, including concurrent requests and imported rows.
+        const bookings = await tx.booking.findMany({
+          where: {
+            OR: [
+              { branchId: { in: branchIds } },
+              { id: { in: explicitBookingIds } },
+            ],
+          },
+          select: { id: true },
+        });
+        const bookingIds = bookings.map(({ id }) => id);
+        const invoices = await tx.invoice.findMany({
+          where: { branchId: { in: branchIds } },
+          select: { id: true },
+        });
+        const invoiceIds = invoices.map(({ id }) => id);
+        const payments = await tx.payment.findMany({
+          where: { invoiceId: { in: invoiceIds } },
+          select: { id: true },
+        });
+        const paymentIds = payments.map(({ id }) => id);
+        const refunds = await tx.refundRequest.findMany({
+          where: { invoiceId: { in: invoiceIds } },
+          select: { id: true },
+        });
+        await tx.outboxEvent.deleteMany({
+          where: {
+            aggregateId: {
+              in: [...bookingIds, ...invoiceIds, ...paymentIds, ...refunds.map(({ id }) => id)],
+            },
+          },
+        });
+        await tx.activityLog.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.paymentCollectionIdempotency.deleteMany({
+          where: { invoiceId: { in: invoiceIds } },
+        });
+        await tx.refundRequest.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+        await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
+        await tx.invoice.deleteMany({ where: { id: { in: invoiceIds } } });
+        await tx.bookingStatusLog.deleteMany({ where: { bookingId: { in: bookingIds } } });
+        await tx.booking.deleteMany({ where: { id: { in: bookingIds } } });
+        await tx.employeeService.deleteMany({ where: { employeeId: { in: employeeIds } } });
+        await tx.employeeBranch.deleteMany({ where: { employeeId: { in: employeeIds } } });
+        await tx.service.deleteMany({ where: { id: { in: serviceIds } } });
+        await tx.employee.deleteMany({ where: { id: { in: employeeIds } } });
+        await tx.client.deleteMany({ where: { id: { in: clientIds } } });
+        await tx.branch.deleteMany({ where: { id: { in: branchIds } } });
+        await tx.user.deleteMany({ where: { id: { in: userIds } } });
+        await tx.customRole.deleteMany({ where: { id: { in: customRoleIds } } });
+      });
+    }
 
     async function fixture(): Promise<RecordLateSessionDto> {
       const branch = await prisma.branch.create({
         data: { nameAr: `late-branch-${randomUUID()}`, isActive: false },
       });
+      branchIds.push(branch.id);
       const client = await prisma.client.create({
         data: { name: "Late entry client" },
       });
+      clientIds.push(client.id);
       const employee = await prisma.employee.create({
         data: { name: "Archived practitioner", isActive: false },
       });
+      employeeIds.push(employee.id);
       const service = await prisma.service.create({
         data: {
           nameAr: "Archived session",
@@ -123,6 +238,7 @@ describeReal(
           depositAmount: 20000,
         },
       });
+      serviceIds.push(service.id);
       await prisma.employeeBranch.create({
         data: { employeeId: employee.id, branchId: branch.id },
       });
@@ -456,6 +572,7 @@ describeReal(
           },
         });
       });
+      explicitBookingIds.push(row.id);
       const conflict = await post(imported).expect(409);
       expect(conflict.body).toMatchObject({
         code: "ALREADY_RECORDED_SESSION",
@@ -477,6 +594,7 @@ describeReal(
       const otherClient = await prisma.client.create({
         data: { name: "Concurrent session client" },
       });
+      clientIds.push(otherClient.id);
       const responses = await Promise.all([
         post(dto),
         post({

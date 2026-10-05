@@ -1,5 +1,5 @@
 import type { Client } from '@prisma/client';
-import { serializeClient } from './client.serializer';
+import { serializeClient, serializeEmployeeClient } from './client.serializer';
 
 // Full Client row including the sensitive auth columns that must never leak.
 function buildFullClientRow(): Client {
@@ -81,5 +81,24 @@ describe('serializeClient', () => {
 
     expect(result.lastBooking).toEqual(lastBooking);
     expect(result.nextBooking).toEqual(nextBooking);
+  });
+});
+
+
+describe('serializeEmployeeClient', () => {
+  it('uses an allowlist even when handed a full client row', () => {
+    const client = buildFullClientRow();
+    client.nationalId = '1234567890';
+    client.notes = 'private case notes';
+    client.allergies = 'private health history';
+    const result = serializeEmployeeClient(client);
+
+    expect(Object.keys(result).sort()).toEqual([
+      'id', 'ref', 'name', 'firstName', 'lastName', 'phone', 'email',
+      'gender', 'dateOfBirth', 'avatarUrl', 'isActive', 'createdAt',
+      'updatedAt', 'accountType', 'lastBooking', 'nextBooking',
+    ].sort());
+    expect(result.gender).toBe('female');
+    expect(result.accountType).toBe('full');
   });
 });

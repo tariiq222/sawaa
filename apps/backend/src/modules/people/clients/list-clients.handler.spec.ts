@@ -229,3 +229,33 @@ describe('ListClientsHandler', () => {
     expect(result.meta.hasNextPage).toBe(true);
   });
 });
+
+
+describe('ListClientsHandler employee privacy', () => {
+  function setup() {
+    const prisma = {
+      employee: { findFirst: jest.fn().mockResolvedValue({ id: 'employee-a' }) },
+      booking: { findMany: jest.fn().mockResolvedValueOnce([{ clientId: 'client-a', scheduledAt: new Date(), id: 'booking-a', status: 'COMPLETED' }]).mockResolvedValue([]) },
+      client: { findMany: jest.fn().mockResolvedValue([{ id: 'client-a', name: 'Allowed', accountType: 'FULL', nationalId: 'secret', notes: 'private', passwordHash: 'hash' }]), count: jest.fn().mockResolvedValue(1) },
+    };
+    return { prisma, handler: new ListClientsHandler(prisma as any) };
+  }
+  it('scopes rows, count and booking summaries to the resolved employee and strips private fields', async () => {
+    const { prisma, handler } = setup();
+    const out = await handler.execute({ page: 1, limit: 10, search: 'Allowed', requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' } as any);
+    expect(prisma.employee.findFirst).toHaveBeenCalledWith({ where: { userId: 'user-a' }, select: { id: true } });
+    expect(prisma.client.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { in: ['client-a'] } }) }));
+    expect(prisma.client.count).toHaveBeenCalledWith({ where: (prisma.client.findMany as jest.Mock).mock.calls[0][0].where });
+    for (const [args] of prisma.booking.findMany.mock.calls as any) expect(args.where.employeeId).toBe('employee-a');
+    expect(out.items[0]).toMatchObject({ id: 'client-a', name: 'Allowed', accountType: 'full' });
+    expect(out.items[0]).not.toHaveProperty('nationalId');
+    expect(out.items[0]).not.toHaveProperty('notes');
+    expect(out.items[0]).not.toHaveProperty('passwordHash');
+  });
+  it.each([undefined, 'unlinked-user'])('fails closed for missing employee identity %s', async (userId) => {
+    const { prisma, handler } = setup();
+    prisma.employee.findFirst.mockResolvedValue(null as any);
+    await expect(handler.execute({ page: 1, limit: 10, requesterRole: 'EMPLOYEE', requesterUserId: userId } as any)).rejects.toThrow();
+    expect(prisma.client.findMany).not.toHaveBeenCalled();
+  });
+});

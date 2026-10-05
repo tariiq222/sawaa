@@ -702,3 +702,19 @@ describe('DashboardCommsController (e2e)', () => {
     });
   });
 });
+
+
+describe('trusted privacy actor wiring', () => {
+  it('listConversationsEndpoint uses the authenticated actor', () => {
+    const execute = jest.fn();
+    const user = { sub: 'user-a', role: 'EMPLOYEE' };
+    (DashboardCommsController.prototype.listConversationsEndpoint as any).apply({ listConversations: { execute } }, [{ requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
+  });
+  it('listMessagesEndpoint uses the authenticated actor', () => {
+    const execute = jest.fn();
+    const user = { sub: 'user-a', role: 'EMPLOYEE' };
+    (DashboardCommsController.prototype.listMessagesEndpoint as any).apply({ listMessages: { execute } }, ['conv-1', { requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
+  });
+});
