@@ -13,6 +13,7 @@ const buildPrisma = () => ({
     .mockResolvedValue([]),
   $executeRaw: jest.fn().mockResolvedValue(1),
   chatConversation: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  mobileEmailFlow: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
   otpCode: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   activityLog: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
   notification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
@@ -160,4 +161,18 @@ describe('DataRetentionCron', () => {
     expect(prisma.$queryRaw).toHaveBeenCalled();
     expect(prisma.$executeRaw).toHaveBeenCalled();
   });
+});
+
+it('deletes at most 500 flow ids with every final expiry older than the grace period', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2026-10-06T12:00:00Z'));
+  try {
+    const mobileEmailFlow = { findMany: jest.fn().mockResolvedValue([{ id: 'old' }]), deleteMany: jest.fn().mockResolvedValue({ count: 1 }) };
+    const cron = new DataRetentionCron({ ...buildPrisma(), mobileEmailFlow } as never, buildConfig() as never);
+    await cron.execute();
+    expect(mobileEmailFlow.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 500, where: { emailExpiresAt: { lt: new Date('2026-10-05T12:00:00Z') }, AND: [
+      { OR: [{ continuationExpiresAt: null }, { continuationExpiresAt: { lt: new Date('2026-10-05T12:00:00Z') } }] },
+      { OR: [{ phoneExpiresAt: null }, { phoneExpiresAt: { lt: new Date('2026-10-05T12:00:00Z') } }] },
+    ] } }));
+    expect(mobileEmailFlow.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['old'] } } });
+  } finally { jest.useRealTimers(); }
 });

@@ -188,3 +188,50 @@ model Permission {
 
   @@unique([customRoleId, action, subject])
 }
+
+// Isolated, short-lived mobile email ownership proof. No public OTP grant.
+enum MobileEmailFlowState {
+  EMAIL_SENDING
+  EMAIL_PENDING
+  DETAILS_PENDING
+  PHONE_SENDING
+  PHONE_PENDING
+  CONSUMED
+  FAILED
+}
+
+enum MobileEmailFlowMode {
+  REGISTER
+  LINK_PHONE
+}
+
+model MobileEmailFlow {
+  id                    String @id @default(uuid())
+  email                 String
+  state                 MobileEmailFlowState
+  emailCodeHash         String?
+  emailExpiresAt        DateTime
+  emailAttempts         Int @default(0)
+  continuationHash      String? @unique
+  continuationExpiresAt DateTime?
+  mode                  MobileEmailFlowMode?
+  boundUserId           String?
+  boundClientId         String?
+  identitySnapshot      Json?
+  phone                 String?
+  firstName             String?
+  lastName              String?
+  privacyAcceptedAt     DateTime?
+  phoneMatchAttempts    Int @default(0)
+  phoneChallengeId      String? @unique
+  phoneCodeHash         String?
+  phoneExpiresAt        DateTime?
+  phoneAttempts         Int @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  consumedAt            DateTime?
+
+  @@index([email, createdAt])
+  @@index([emailExpiresAt])
+  @@index([continuationExpiresAt, consumedAt])
+}

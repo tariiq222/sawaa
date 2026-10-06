@@ -29,6 +29,10 @@ const buildOtpHtml = (code: string) => `
     <p style="font-size:14px;color:#888;">This code expires in ${OTP_EXPIRY_MINUTES} minutes</p>
   </div>`;
 
+export class EmailChannelNotConfiguredError extends ServiceUnavailableException {
+  constructor() { super('Email provider not configured. Configure one in Settings → Email.'); }
+}
+
 @Injectable()
 export class EmailChannelAdapter implements NotificationChannel {
   private readonly logger = new Logger(EmailChannelAdapter.name);
@@ -44,18 +48,16 @@ export class EmailChannelAdapter implements NotificationChannel {
 
     if (!adapter.isAvailable()) {
       this.logger.error(
-        `Cannot send OTP to ${identifier}: no email provider configured`,
+        'Cannot send OTP: no email provider configured',
       );
-      throw new ServiceUnavailableException(
-        'Email provider not configured. Configure one in Settings → Email.',
-      );
+      throw new EmailChannelNotConfiguredError();
     }
 
     try {
       await adapter.sendMail({ to: identifier, subject: OTP_SUBJECT, html });
-      this.logger.debug(`OTP email sent to ${identifier} via ${adapter.name}`);
+      this.logger.debug('OTP email accepted by provider');
     } catch (err) {
-      this.logger.error(`Failed to send OTP to ${identifier} via ${adapter.name}`, err);
+      this.logger.error('OTP email provider failure');
       throw err;
     }
   }

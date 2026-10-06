@@ -58,6 +58,20 @@ export class DataRetentionCron {
 
       const tasks: Array<{ table: string; run: () => Promise<{ count: number }> }> = [
         {
+          table: 'MobileEmailFlow',
+          run: async () => {
+            const cutoff = new Date(now - DAY_MS);
+            const expired = await this.prisma.mobileEmailFlow.findMany({
+              where: { emailExpiresAt: { lt: cutoff }, AND: [
+                { OR: [{ continuationExpiresAt: null }, { continuationExpiresAt: { lt: cutoff } }] },
+                { OR: [{ phoneExpiresAt: null }, { phoneExpiresAt: { lt: cutoff } }] },
+              ] },
+              select: { id: true }, orderBy: { emailExpiresAt: 'asc' }, take: 500,
+            });
+            return this.prisma.mobileEmailFlow.deleteMany({ where: { id: { in: expired.map(row => row.id) } } });
+          },
+        },
+        {
           table: 'ChatConversation',
           run: () => {
             const cutoff = new Date(now - this.days('RETENTION_CHAT_DAYS', DEFAULTS.chatDays) * DAY_MS);

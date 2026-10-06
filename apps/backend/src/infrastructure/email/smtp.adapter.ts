@@ -46,7 +46,7 @@ export class SmtpEmailAdapter implements EmailProvider {
       html: payload.html,
     });
 
-    this.logger.debug(`SMTP sent to ${payload.to}: ${String(info.messageId)}`);
+    this.logger.debug('Email accepted by provider');
     return { messageId: String(info.messageId) };
   }
 }

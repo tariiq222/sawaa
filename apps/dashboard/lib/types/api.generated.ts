@@ -3294,6 +3294,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/email-entry/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a mobile email ownership code */
+        post: operations["MobileEmailEntryController_requestEmail_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/request-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bind details and send a phone ownership code */
+        post: operations["MobileEmailEntryController_requestPhoneCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/resend-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace a mobile phone ownership challenge */
+        post: operations["MobileEmailEntryController_resendPhoneCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify email ownership and determine the next step */
+        post: operations["MobileEmailEntryController_verifyEmail_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/verify-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify phone ownership and issue a client session */
+        post: operations["MobileEmailEntryController_verifyPhoneCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/logout": {
         parameters: {
             query?: never;
@@ -8797,6 +8882,123 @@ export interface components {
              */
             sortOrder?: number;
         };
+        EmailEntryChallengeDto: {
+            /**
+             * Format: uuid
+             * @description Opaque identifier of the delivered email ownership challenge
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Email challenge lifetime in seconds
+             * @example 300
+             * @enum {number}
+             */
+            expiresIn: 300;
+            /**
+             * @description Masked destination for the email ownership code
+             * @example p***@example.test
+             */
+            maskedEmail: string;
+            /**
+             * @description Minimum number of seconds before requesting another email code
+             * @example 60
+             * @enum {number}
+             */
+            retryAfterSeconds: 60;
+        };
+        EmailEntryContinueDto: {
+            /**
+             * @description Opaque continuation secret held only in memory; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Normalized email whose ownership has been proven
+             * @example person@example.test
+             */
+            email: string;
+            /**
+             * @description Maximum continuation lifetime in seconds; subsequent sends never extend it
+             * @example 600
+             * @enum {number}
+             */
+            expiresIn: 600;
+            /**
+             * @description Required next step after successful email ownership proof (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "EmailEntryContinueDto";
+        };
+        EmailEntryPhoneChallengeDto: {
+            /**
+             * @description Rotated continuation secret replacing the previous value after accepted delivery
+             * @example yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+             */
+            continuationToken: string;
+            /**
+             * @description Remaining phone challenge lifetime in seconds, capped by the original continuation expiry
+             * @example 299
+             */
+            expiresIn: number;
+            /**
+             * @description Masked destination of the phone ownership code
+             * @example +966***78
+             */
+            maskedPhone: string;
+            /**
+             * Format: uuid
+             * @description Opaque identifier of the current delivered phone challenge
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            phoneChallengeId: string;
+            /**
+             * @description Minimum number of seconds before requesting another phone code
+             * @example 60
+             * @enum {number}
+             */
+            retryAfterSeconds: 60;
+        };
+        EmailEntrySessionDto: {
+            /**
+             * @description Authenticated outcome discriminator (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "EmailEntrySessionDto";
+            /**
+             * @description Session namespace used to select the matching profile and app navigation
+             * @example client
+             * @enum {string}
+             */
+            sessionKind: "client" | "staff";
+            /**
+             * @description Native access and refresh token pair
+             * @example {
+             *       "accessToken": "synthetic-access-token",
+             *       "refreshToken": "synthetic-refresh-token"
+             *     }
+             */
+            tokens: components["schemas"]["EmailEntryTokensDto"];
+        };
+        EmailEntryTokensDto: {
+            /**
+             * @description Native access token for the returned session namespace
+             * @example synthetic-access-token
+             */
+            accessToken: string;
+            /**
+             * @description Native refresh token to persist only after authenticated success
+             * @example synthetic-refresh-token
+             */
+            refreshToken: string;
+        };
+        EmailEntryUnavailableDto: {
+            /**
+             * @description Generic outcome when this identity cannot continue through email entry (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "EmailEntryUnavailableDto";
+        };
         EmployeeAvailabilityExceptionResponseDto: {
             /**
              * Format: date-time
@@ -11392,6 +11594,40 @@ export interface components {
              */
             twoFactorChallenge?: string;
         };
+        RequestEmailEntryDto: {
+            /**
+             * @description Email to prove ownership of
+             * @example person@example.test
+             */
+            email: string;
+        };
+        RequestEmailEntryPhoneDto: {
+            /**
+             * @description Opaque ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Required only for new registration
+             * @example Ali
+             */
+            firstName?: string;
+            /**
+             * @description Required only for new registration
+             * @example Saleh
+             */
+            lastName?: string;
+            /**
+             * @description Phone to verify
+             * @example +966512345678
+             */
+            phone: string;
+            /**
+             * @description Explicit privacy consent required only for new registration
+             * @example true
+             */
+            privacyAccepted?: boolean;
+        };
         RequestMobileLoginOtpDto: {
             /**
              * @description Phone (E.164) or email
@@ -11455,6 +11691,18 @@ export interface components {
              * @example re_...
              */
             apiKey: string;
+        };
+        ResendEmailEntryPhoneDto: {
+            /**
+             * @description Opaque ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Current phone challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            phoneChallengeId: string;
         };
         ResetPasswordDto: {
             /**
@@ -13100,6 +13348,35 @@ export interface components {
              * @description Short-lived password-step proof required only for super-admin 2FA
              */
             twoFactorChallenge?: string;
+        };
+        VerifyEmailEntryDto: {
+            /**
+             * @description Email challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit ownership code
+             * @example 123456
+             */
+            code: string;
+        };
+        VerifyEmailEntryPhoneDto: {
+            /**
+             * @description Six-digit phone ownership code
+             * @example 123456
+             */
+            code: string;
+            /**
+             * @description Opaque ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Current phone challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            phoneChallengeId: string;
         };
         VerifyMobileOtpDto: {
             /**
@@ -30320,6 +30597,301 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    MobileEmailEntryController_requestEmail_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestEmailEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntryChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_requestPhoneCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestEmailEntryPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntryPhoneChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_resendPhoneCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendEmailEntryPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntryPhoneChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_verifyEmail_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntrySessionDto"] | components["schemas"]["EmailEntryContinueDto"] | components["schemas"]["EmailEntryUnavailableDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_verifyPhoneCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailEntryPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntrySessionDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
         };
     };

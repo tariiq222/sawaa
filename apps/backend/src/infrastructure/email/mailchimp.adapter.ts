@@ -1,6 +1,7 @@
 // mailchimp-adapter — deployment-level transactional email via Mailchimp Transactional (Mandrill).
 
 import { Logger } from '@nestjs/common';
+import { emailHttpFailure, EmailProviderRejectedError } from './email-provider.interface';
 import type { EmailProvider, EmailSendPayload, EmailSendResult } from './email-provider.interface';
 import { fetchWithTimeout } from '../http';
 
@@ -43,19 +44,18 @@ export class MailchimpEmailAdapter implements EmailProvider {
     );
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Mailchimp Transactional API error ${res.status}: ${body}`);
+      throw emailHttpFailure('Mailchimp Transactional', res.status);
     }
 
     const data = (await res.json()) as Array<{ _id?: string; status?: string }>;
     const first = data[0];
     if (!first) throw new Error('Mailchimp returned empty response');
     if (first.status === 'rejected' || first.status === 'invalid') {
-      throw new Error(`Mailchimp rejected message: ${first.status}`);
+      throw new EmailProviderRejectedError(`Mailchimp rejected message: ${first.status}`);
     }
 
     const messageId = first._id ?? 'mailchimp-ok';
-    this.logger.debug(`Mailchimp sent to ${payload.to}: ${messageId}`);
+    this.logger.debug('Email accepted by provider');
     return { messageId };
   }
 }

@@ -69,6 +69,8 @@ jest.mock('@/hooks/queries', () => ({
   useRequestLoginOtp: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 
+jest.mock('../email-entry', () => ({ __esModule: true, default: () => null }));
+
 import LoginScreen from '../login';
 import { getStateFromPath } from 'expo-router/build/fork/getStateFromPath';
 

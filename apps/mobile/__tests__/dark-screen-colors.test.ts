@@ -12,10 +12,11 @@ function routeFiles(directory: string): string[] {
 const routes = routeFiles(appRoot);
 
 // Expo Router layout files configure navigation rather than painting a screen;
-// these routes redirect without presenting a screen of their own. The chat
-// route only redirects.
+// other exceptions redirect or reuse a screen checked separately by this scan.
+// The chat route only redirects.
 const backgroundExceptions = new Set([
   '(auth)/_layout.tsx',
+  '(auth)/register.tsx', // Re-exports email-entry.tsx, whose shared background is checked.
   '(client)/_layout.tsx',
   '(client)/(tabs)/_layout.tsx',
   '(employee)/_layout.tsx',

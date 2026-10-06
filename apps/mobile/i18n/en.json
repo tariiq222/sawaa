@@ -109,6 +109,32 @@
       "success": "Password reset successful. Please sign in.",
       "invalidCode": "Invalid or expired code",
       "weakPassword": "Password must be at least 8 characters"
+    },
+    "emailEntry": {
+      "title": "Continue with email",
+      "intro": "Verify your email to sign in or create an account.",
+      "sendEmail": "Send email code",
+      "code": "Six-digit verification code",
+      "sentTo": "Code sent to {{recipient}}",
+      "registrationDetails": "Complete your details to create an account.",
+      "existingPhone": "Enter your registered phone number",
+      "sendPhone": "Send phone code",
+      "consent": "I agree to the privacy policy",
+      "restart": "Edit email / start again",
+      "usePhone": "Use phone login",
+      "unavailable": "We cannot continue with this email. Use phone login or contact the center for help.",
+      "invalidEmail": "Enter a valid email address.",
+      "invalidCode": "The code is incorrect, expired, or has no attempts left. Request a new code.",
+      "expiredCode": "This code has expired. Request a new code.",
+      "expiredFlow": "Email verification has expired. Start again.",
+      "detailsUnavailable": "These details cannot be used. Check them, use phone login, or contact the center.",
+      "deliveryUnavailable": "We could not send the code. Wait before trying again.",
+      "rateLimited": "Too many requests. Wait before trying again.",
+      "networkError": "Unable to complete the request. Check your connection and retry; if a code was already used, start again.",
+      "privacyUnavailable": "Unable to open the privacy policy. Please try again.",
+      "invalidPhone": "Enter a valid phone number, including the country code for international numbers.",
+      "nameTooLong": "The name must be no longer than 100 characters.",
+      "invalidDetails": "Check the entered details and try again."
     }
   },
   "tabs": {
@@ -819,7 +845,7 @@
     "rateStars": "Rate {{count}} stars"
   },
   "guest": {
-    "loadError": "Unable to load the list. Please try again.",
+    "loadError": "Could not load this information. Please try later.",
     "chooseClinicOrService": "Choose a clinic or service",
     "visitorAccount": "Guest space",
     "accountIntro": "Explore clinics, specialists, and packages without signing in.",
@@ -838,7 +864,6 @@
     "chooseTherapist": "Choose a specialist to continue booking",
     "chooseService": "Choose a service to continue booking",
     "signInToBook": "Sign in or create an account to schedule an appointment.",
-    "loadError": "Could not load this information. Please try later.",
     "empty": "No services are available right now."
   },
   "welcome": {
