@@ -48,6 +48,7 @@ const BOOKING_LIST_SELECT = {
   bookingType: true,
   deliveryType: true,
   source: true,
+  payAtClinic: true,
   categoryNameSnapshot: true,
   branchNameSnapshot: true,
   durationMinutesSnapshot: true,

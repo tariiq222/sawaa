@@ -48,6 +48,8 @@ export type BookingResponseDeliveryType = 'in_person' | 'online'
 export type BookingSource = 'RECEPTION' | 'ONLINE'
 
 export interface BookingListItem {
+  /** Collection intent; never a substitute for financial payment status. */
+  payAtClinic?: boolean
   id: string
   date: string | null
   startTime: string | null

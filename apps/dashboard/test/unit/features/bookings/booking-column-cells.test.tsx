@@ -345,3 +345,19 @@ test("ActionsCell keeps delete enabled for a cancellable status", () => {
 
   expect(screen.getByRole("button", { name: "bookings.col.delete" })).toBeEnabled()
 })
+
+
+test.each([false, true])("pay-at-center intent (%s) remains separate from unpaid status and collection permissions", (payAtClinic) => {
+  mockUseAuth.mockReturnValue(authWith("payment:create", "invoice:create"))
+  render(<PaymentStatusCell booking={{ ...payableBooking, payAtClinic }} />)
+  expect(screen.getByText("bookings.col.paymentStatus.unpaid")).toBeInTheDocument()
+  expect(screen.queryByText("bookings.payAtCenter") !== null).toBe(payAtClinic)
+  expect(screen.getByRole("button", { name: "bookings.col.recordPayment" })).toBeInTheDocument()
+})
+
+test("pay-at-center intent remains visible after payment collection", () => {
+  mockUseAuth.mockReturnValue(authWith())
+  render(<PaymentStatusCell booking={{ ...refundableBooking, payAtClinic: true }} />)
+  expect(screen.getByText("bookings.col.paymentStatus.paid")).toBeInTheDocument()
+  expect(screen.getByText("bookings.payAtCenter")).toBeInTheDocument()
+})

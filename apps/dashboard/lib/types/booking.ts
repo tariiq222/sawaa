@@ -105,6 +105,8 @@ export interface RescheduledFrom {
 /* ─── Main Booking ─── */
 
 export interface Booking {
+  /** Collection intent; never a substitute for financial payment status. */
+  payAtClinic?: boolean
   id: string
   bookingNumber: number
   clientId: string | null

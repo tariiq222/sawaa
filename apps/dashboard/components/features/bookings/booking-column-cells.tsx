@@ -1,5 +1,7 @@
 "use client"
 
+import { BookingPaymentIntent } from "./booking-payment-intent"
+
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Tick01Icon,
@@ -321,6 +323,14 @@ export function isPartiallyPaid(booking: Booking): boolean {
 }
 
 export function PaymentStatusCell({ booking }: { booking: Booking }) {
+  if (booking.payAtClinic !== true) return <PaymentStatusContent booking={booking} />
+  return <div className="flex flex-col items-start gap-1">
+    <BookingPaymentIntent payAtClinic={booking.payAtClinic} />
+    <PaymentStatusContent booking={booking} />
+  </div>
+}
+
+function PaymentStatusContent({ booking }: { booking: Booking }) {
   const { t } = useLocale()
   const { canDo } = useAuth()
   const payment = booking.payment

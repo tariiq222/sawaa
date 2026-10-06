@@ -209,7 +209,9 @@ export default function BookingConfirmScreen() {
       <FloatingCta>
         {signedIn ? (
           <PrimaryButton
-            label={payment.submitting
+            label={payment.method === 'at_center'
+              ? t(payment.submitting ? 'booking.confirmingBooking' : 'booking.confirmAtCenter')
+              : payment.submitting
               ? (dir.isRTL ? 'جارٍ المعالجة…' : 'Processing…')
               : (dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`)}
             onPress={() => { void payment.pay(); }}

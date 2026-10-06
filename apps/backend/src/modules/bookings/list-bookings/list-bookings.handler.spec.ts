@@ -400,6 +400,7 @@ describe('ListBookingsHandler', () => {
       'noShowAt',
       'notes',
       'packageCreditId',
+      'payAtClinic',
       'priceSnapshot',
       'scheduledAt',
       'serviceId',

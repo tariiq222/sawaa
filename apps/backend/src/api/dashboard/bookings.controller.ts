@@ -135,10 +135,26 @@ export class DashboardBookingsController {
     schema: {
       type: 'object',
       properties: {
-        data: { type: 'array', items: { type: 'object' } },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        totalPages: { type: 'number' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              payAtClinic: { type: 'boolean', description: 'Client selected payment at the center; independent of financial payment status', example: true },
+            },
+          },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            page: { type: 'number' },
+            limit: { type: 'number' },
+            totalPages: { type: 'number' },
+            hasNextPage: { type: 'boolean' },
+            hasPreviousPage: { type: 'boolean' },
+          },
+        },
       },
     },
   })
@@ -370,6 +386,7 @@ export class DashboardBookingsController {
       type: 'object',
       properties: {
         id: { type: 'string', format: 'uuid' },
+        payAtClinic: { type: 'boolean', description: 'Client selected payment at the center; independent of financial payment status', example: true },
         status: { type: 'string' },
         scheduledAt: { type: 'string', format: 'date-time' },
         durationMins: { type: 'number' },

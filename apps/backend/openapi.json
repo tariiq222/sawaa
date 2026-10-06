@@ -14715,20 +14715,41 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "data": {
+                    "items": {
                       "items": {
+                        "properties": {
+                          "payAtClinic": {
+                            "description": "Client selected payment at the center; independent of financial payment status",
+                            "example": true,
+                            "type": "boolean"
+                          }
+                        },
                         "type": "object"
                       },
                       "type": "array"
                     },
-                    "page": {
-                      "type": "number"
-                    },
-                    "total": {
-                      "type": "number"
-                    },
-                    "totalPages": {
-                      "type": "number"
+                    "meta": {
+                      "properties": {
+                        "hasNextPage": {
+                          "type": "boolean"
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "type": "number"
+                        },
+                        "page": {
+                          "type": "number"
+                        },
+                        "total": {
+                          "type": "number"
+                        },
+                        "totalPages": {
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
                     }
                   },
                   "type": "object"
@@ -15008,6 +15029,11 @@
                     "id": {
                       "format": "uuid",
                       "type": "string"
+                    },
+                    "payAtClinic": {
+                      "description": "Client selected payment at the center; independent of financial payment status",
+                      "example": true,
+                      "type": "boolean"
                     },
                     "scheduledAt": {
                       "format": "date-time",

@@ -126,6 +126,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     type: mapTypeForUi(b.bookingType),
     deliveryType: mapDeliveryTypeForUi(b.deliveryType),
     source: b.source,
+    payAtClinic: b.payAtClinic === true,
     categoryNameSnapshot: b.categoryNameSnapshot ?? null,
     branchNameSnapshot: b.branchNameSnapshot ?? null,
     durationMinutesSnapshot: b.durationMinutesSnapshot ?? null,

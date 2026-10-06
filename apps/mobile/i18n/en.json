@@ -497,6 +497,8 @@
     "selectType": "Select Visit Type",
     "selectDate": "Select Date & Time",
     "confirmBooking": "Confirm Booking",
+    "confirmAtCenter": "Confirm booking",
+    "confirmingBooking": "Confirming booking…",
     "payment": "Payment",
     "inPerson": "Clinic Visit",
     "inPersonDesc": "In-person visit at the clinic",
