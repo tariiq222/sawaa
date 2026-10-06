@@ -27,3 +27,23 @@ export class EmailProviderNotConfiguredError extends Error {
     this.name = 'EmailProviderNotConfiguredError';
   }
 }
+
+/** Provider explicitly refused acceptance; never carries response bodies. */
+export class EmailProviderRejectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EmailProviderRejectedError';
+  }
+}
+
+/** HTTP timeouts/server failures can follow acceptance and remain ambiguous. */
+export function emailHttpFailure(provider: 'Resend' | 'SendGrid' | 'Mailchimp Transactional', status: number): Error {
+  // Keep the established prefix consumed by notification outbox retry logic.
+  // Never append the provider response body: it may contain recipient data.
+  const message = `${provider} API error ${status}: response body redacted`;
+  // 429 is a provider rate-limit refusal, not a queued message. Mandrill's
+  // accepted-but-delayed messages instead use a successful "queued" result.
+  return status >= 400 && status < 500 && status !== 408
+    ? new EmailProviderRejectedError(message)
+    : new Error(message);
+}

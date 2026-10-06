@@ -21,27 +21,13 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useAppDispatch } from '@/hooks/use-redux';
-import { setCredentials } from '@/stores/slices/auth-slice';
 import { useVerifyOtp, useRequestLoginOtp, useRegister } from '@/hooks/queries';
-import { authService, SessionSupersededError } from '@/services/auth';
+import { SessionSupersededError } from '@/services/auth';
+import { completeNativeSession } from '@/features/auth/complete-native-session';
 import { isSessionCurrent } from '@/services/native-session-state';
-import { decodeBookingReturn } from '@/features/booking/guest-booking-flow';
-import { decodeRedirect } from '@/lib/navigation';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
-
-function redirectMatchesSession(
-  value: string | string[] | undefined,
-  sessionKind: 'client' | 'staff',
-): boolean {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  const pathname = candidate?.split(/[?#]/, 1)[0] ?? '';
-  const routeGroup = pathname.split('/')[1];
-  return sessionKind === 'staff'
-    ? routeGroup === '(employee)'
-    : routeGroup !== '(employee)';
-}
 
 export default function OtpVerifyScreen() {
   const { t } = useTranslation();
@@ -108,42 +94,10 @@ export default function OtpVerifyScreen() {
       const result = await verifyOtp.mutateAsync({ identifier, code, purpose });
       verificationEpoch = result.sessionEpoch;
       if (!isSessionCurrent(verificationEpoch)) return;
-      // Older clients may omit sessionKind; those sessions have always used
-      // the client landing path, so keep that fallback explicit for routing.
-      const sessionKind = result.sessionKind ?? 'client';
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // Fetch the profile directly after verifyMobileOtp persisted the new
-      // namespace tokens. A useMe query can be enabled before persistence
-      // finishes and refetch may join an in-flight request made with the
-      // previous session's tokens.
-      const profileResult = await authService.getProfile(result.sessionKind);
-      if (!isSessionCurrent(verificationEpoch)) return;
-      const profile = profileResult.success && profileResult.data;
-      if (!profile) throw new Error('Authenticated profile unavailable');
-      dispatch(setCredentials({
-        accessToken: result.tokens.accessToken,
-        refreshToken: result.tokens.refreshToken,
-        user: profile,
-      }));
-
-      const bookingReturn = sessionKind === 'client' ? decodeBookingReturn(params.booking) : null;
-      if (bookingReturn) {
-        const { amount, ...selection } = bookingReturn;
-        router.replace({ pathname: '/(client)/booking/confirm', params: { ...selection, chargedPrice: amount } });
-        return;
-      }
-      if (redirectMatchesSession(params.redirect, sessionKind)) {
-        const redirect = decodeRedirect(params.redirect);
-        if (redirect) {
-          router.replace(redirect);
-          return;
-        }
-      }
-      const destination = sessionKind === 'staff'
-        ? '/(employee)/(tabs)/today'
-        : '/(client)/(tabs)/home';
-      router.replace(destination);
+      await completeNativeSession(result, {
+        dispatch, replace: router.replace, booking: params.booking, redirect: params.redirect,
+      });
     } catch (error) {
       if (error instanceof SessionSupersededError ||
         (verificationEpoch !== null && !isSessionCurrent(verificationEpoch))) {

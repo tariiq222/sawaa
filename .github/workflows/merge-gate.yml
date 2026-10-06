@@ -196,8 +196,8 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────
   # critical-real-e2e — backend real-database e2e lane (test:e2e:critical).
-  # Runs against a disposable pgvector Postgres service. Redis, MinIO,
-  # Zoom, Moyasar and other providers stay mocked by test/setup-e2e.ts.
+  # Runs against disposable Postgres and Redis services. Email-entry proof
+  # limits use real Redis; external delivery/payment providers remain mocked.
   # ─────────────────────────────────────────────────────────────────────
   critical-real-e2e:
     name: critical-real-e2e
@@ -207,6 +207,15 @@ jobs:
       contents: read
 
     services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
       postgres:
         image: pgvector/pgvector:pg16
         env:
@@ -224,6 +233,9 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
       REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_e2e_test?schema=public
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      REDIS_DB: '13'
       TZ: Asia/Riyadh
       # Hosted runners can default to a ~2 GiB heap; the 28-suite run needs more.
       NODE_OPTIONS: --max-old-space-size=4096

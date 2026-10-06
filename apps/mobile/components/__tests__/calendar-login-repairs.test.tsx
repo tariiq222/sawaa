@@ -42,6 +42,7 @@ jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ImpactFeedbackStyle: 
 
 import { shiftDateKey } from '../../lib/employee-schedule';
 import CalendarScreen from '../../app/(employee)/(tabs)/calendar';
+jest.mock('../../app/(auth)/email-entry', () => ({ __esModule: true, default: () => null }));
 import LoginScreen from '../../app/(auth)/login';
 
 beforeEach(() => {

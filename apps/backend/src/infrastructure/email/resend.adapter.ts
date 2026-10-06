@@ -1,6 +1,7 @@
 // resend-adapter — deployment-level email via Resend API.
 
 import { Logger } from '@nestjs/common';
+import { emailHttpFailure } from './email-provider.interface';
 import type { EmailProvider, EmailSendPayload, EmailSendResult } from './email-provider.interface';
 import { fetchWithTimeout } from '../http';
 
@@ -43,12 +44,11 @@ export class ResendEmailAdapter implements EmailProvider {
     );
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Resend API error ${res.status}: ${body}`);
+      throw emailHttpFailure('Resend', res.status);
     }
 
     const data = (await res.json()) as { id: string };
-    this.logger.debug(`Resend sent to ${payload.to}: ${data.id}`);
+    this.logger.debug('Email accepted by provider');
     return { messageId: data.id };
   }
 }

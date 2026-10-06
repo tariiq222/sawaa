@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import EmailEntryScreen from './email-entry';
 import {
   View,
   Text,
@@ -40,6 +41,7 @@ export default function LoginScreen() {
   const f700 = getFontName(dir.locale, '700');
 
   const [identifier, setIdentifier] = useState('');
+  const [emailEntry, setEmailEntry] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -58,6 +60,8 @@ export default function LoginScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
+
+    if (identifier.includes('@')) { setEmailEntry(true); return; }
 
     try {
       const result = await requestOtp.mutateAsync({ identifier: identifier.trim() });
@@ -78,6 +82,8 @@ export default function LoginScreen() {
   }, [identifier, requestOtp, router, t, booking, redirect]);
 
   const centered = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
+
+  if (emailEntry) return <EmailEntryScreen initialEmail={identifier.trim()} onExit={() => { setEmailEntry(false); setIdentifier(''); }} />;
 
   return (
     <AquaBackground>

@@ -50,3 +50,13 @@ describe('EmailChannelAdapter', () => {
     await expect(adapter.send('test@example.com', '123456')).rejects.toThrow('SMTP refused');
   });
 });
+
+it('does not log mailbox, code, or raw provider errors', async () => {
+  const { Logger } = await import('@nestjs/common');
+  const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+  try {
+    const adapter = new EmailChannelAdapter({ resolve: async () => ({ name: 'test', isAvailable: () => true, sendMail: async () => { throw Error('123456 person@example.test'); } }) } as never);
+    await expect(adapter.send('person@example.test', '123456')).rejects.toThrow();
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/123456|person@example.test/);
+  } finally { log.mockRestore(); }
+});

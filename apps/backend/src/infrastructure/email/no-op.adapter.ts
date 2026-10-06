@@ -13,9 +13,9 @@ export class NoOpEmailAdapter implements EmailProvider {
     return false;
   }
 
-  async sendMail(payload: EmailSendPayload): Promise<EmailSendResult> {
+  async sendMail(_payload: EmailSendPayload): Promise<EmailSendResult> {
     this.logger.warn(
-      `Email provider not configured — skipping send to ${payload.to}`,
+      `Email provider not configured — skipping send to [redacted]`,
     );
     return { messageId: 'noop' };
   }
