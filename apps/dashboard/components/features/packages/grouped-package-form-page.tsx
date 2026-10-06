@@ -19,7 +19,7 @@ import { uploadPackageImage } from "@/lib/api/packages"
 import { queryKeys } from "@/lib/query-keys"
 import { groupedPackageSchema } from "@/lib/schemas/package-groups.schema"
 import type { GroupedPackageFormData } from "@/lib/schemas/package-groups.schema"
-import { buildGroupedPackagePayload } from "@/lib/package-groups-form"
+import { buildGroupedPackagePayload, packageSubmitIssues } from "@/lib/package-groups-form"
 import { collectPackageErrorPaths, focusPackageError } from "@/lib/package-validation"
 import type { SessionPackage } from "@/lib/types/package"
 
@@ -85,6 +85,18 @@ export function GroupedPackageFormPage({ mode, packageId, initialPackage }: Prop
       queryClient.invalidateQueries({ queryKey: queryKeys.packages.all })
       router.push("/packages")
     } catch (error) {
+      const issues = packageSubmitIssues(error)
+      if (issues) {
+        state.form.clearErrors()
+        issues.forEach((issue) => { if (issue.path) state.form.setError(issue.path as never, { type: "manual", message: issue.message }) })
+        const firstPath = issues.map((issue) => issue.path).find(Boolean) ?? ""
+        if (firstPath) {
+          setStep(firstPath.startsWith("name") || firstPath.startsWith("description") ? 1 : firstPath.startsWith("globalDiscount") ? 3 : 2)
+          focusLater(firstPath)
+        }
+        toast.error(state.t("packages.errors.submitSummary"))
+        return
+      }
       const first = error instanceof Error ? error.message : ""
       toast.error(first || state.t(isEdit ? "packages.edit.error" : "packages.create.error"))
     }

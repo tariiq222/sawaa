@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dependencyOptions, formDiscountToPayload, groupedFormDefaults, groupedPricePreview, groupsToPayload } from "@/lib/package-groups-form"
+import { buildGroupedPackagePayload, dependencyOptions, formDiscountToPayload, groupedFormDefaults, groupedPricePreview, groupsToPayload, packageSubmitIssues } from "@/lib/package-groups-form"
 import type { SessionPackage } from "@/lib/types/package"
 import { groupedPackageSchema } from "@/lib/schemas/package-groups.schema"
 
@@ -69,5 +69,25 @@ describe("grouped package form helpers", () => {
     expect(v2.groups[0].sessions[0].key).toBe("session-id")
     expect(v2.groups[0].sessions[0].unitPriceSar).toBe(12.5)
     expect(groupedFormDefaults({ modelVersion: "LEGACY" } as never).groups).toHaveLength(1)
+  })
+
+  it("sends an empty dependency selection as null", () => {
+    const [group] = groupsToPayload([{ ...form.groups[0], dependsOnGroupKey: "" }])
+    expect(group.dependsOnGroupKey).toBeNull()
+  })
+
+  it("normalizes an empty dependency to null in the form schema", () => {
+    const result = groupedPackageSchema.safeParse({ ...form, groups: [{ ...form.groups[0], dependsOnGroupKey: "" }] })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.groups[0].dependsOnGroupKey).toBeNull()
+  })
+
+  it("maps payload validation errors to translated field errors instead of raw JSON", () => {
+    let thrown: unknown
+    try { buildGroupedPackagePayload({ ...form, groups: [{ ...form.groups[0], dependsOnGroupKey: "missing-group" }] }) } catch (error) { thrown = error }
+    const issues = packageSubmitIssues(thrown)
+    expect(issues).toContainEqual({ path: "groups.0.dependsOnGroupKey", message: "packages.grouped.errors.dependency" })
+    expect(issues?.every((issue) => issue.message.startsWith("packages."))).toBe(true)
+    expect(packageSubmitIssues(new Error("Network down"))).toBeNull()
   })
 })
