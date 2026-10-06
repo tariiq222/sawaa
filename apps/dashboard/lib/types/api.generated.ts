@@ -14669,10 +14669,21 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data?: Record<string, never>[];
-                        page?: number;
-                        total?: number;
-                        totalPages?: number;
+                        items?: {
+                            /**
+                             * @description Client selected payment at the center; independent of financial payment status
+                             * @example true
+                             */
+                            payAtClinic?: boolean;
+                        }[];
+                        meta?: {
+                            hasNextPage?: boolean;
+                            hasPreviousPage?: boolean;
+                            limit?: number;
+                            page?: number;
+                            total?: number;
+                            totalPages?: number;
+                        };
                     };
                 };
             };
@@ -14815,6 +14826,11 @@ export interface operations {
                         employeeId?: string;
                         /** Format: uuid */
                         id?: string;
+                        /**
+                         * @description Client selected payment at the center; independent of financial payment status
+                         * @example true
+                         */
+                        payAtClinic?: boolean;
                         /** Format: date-time */
                         scheduledAt?: string;
                         status?: string;

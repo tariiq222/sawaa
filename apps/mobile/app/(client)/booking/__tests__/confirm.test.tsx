@@ -61,7 +61,7 @@ jest.mock('lucide-react-native', () => {
 jest.mock('react-i18next', () => ({
   __esModule: true,
   initReactI18next: { type: '3rdParty', init: () => undefined },
-  useTranslation: () => ({ t: (key: string) => ({ 'payment.methodsLoading': 'Loading payment methods…', 'payment.methodsError': 'Could not load payment methods', 'payment.methodsUnavailable': 'No payment methods are currently available', 'common.retry': 'Retry' }[key] ?? key) }),
+  useTranslation: () => ({ t: (key: string) => ({ 'payment.methodsLoading': 'Loading payment methods…', 'payment.methodsError': 'Could not load payment methods', 'payment.methodsUnavailable': 'No payment methods are currently available', 'common.retry': 'Retry', 'booking.confirmAtCenter': 'Confirm booking', 'booking.confirmingBooking': 'Confirming booking…' }[key] ?? key) }),
 }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', writingDirection: 'ltr' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
@@ -176,8 +176,7 @@ describe('BookingConfirmScreen direct clinic service', () => {
 
     expect(screen.getByText('Pay at the center')).toBeTruthy();
     fireEvent.press(screen.getByText('Pay at the center'));
-    // The CTA carries the amount; method subtitles also start with "Pay".
-    fireEvent.press(screen.getAllByText(/Pay .*450/)[0]);
+    fireEvent.press(screen.getByText('Confirm booking'));
 
     await waitFor(() => expect(mockBookingCreate).toHaveBeenCalled());
     expect(mockBookingCreate.mock.calls[0][0]).toMatchObject({ payAtClinic: true });
@@ -185,6 +184,7 @@ describe('BookingConfirmScreen direct clinic service', () => {
     const destination = mockReplace.mock.calls[0][0] as { pathname: string; params: { bookingId: string } };
     expect(destination.pathname).toBe('/(client)/booking/success');
     expect(destination.params.bookingId).toBe('booking-1');
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('hides pay-at-center and online methods the deployment cannot complete', () => {
@@ -264,7 +264,7 @@ describe('BookingConfirmScreen direct clinic service', () => {
     mockBookingCreate.mockResolvedValue({ id: 'booking-after-auth', invoiceId: null });
     screen.rerender(<BookingConfirmScreen />);
     fireEvent.press(screen.getByText('Pay at the center'));
-    fireEvent.press(screen.getByText(/^Pay .*450/));
+    fireEvent.press(screen.getByText('Confirm booking'));
     await waitFor(() => expect(mockBookingCreate).toHaveBeenCalledWith(expect.objectContaining({ payAtClinic: true })));
   });
   it('shows the specialist and omits the clinic row when the service row already names the direct clinic', () => {

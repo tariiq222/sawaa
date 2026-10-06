@@ -83,6 +83,11 @@ describe('mapBookingRow', () => {
     expect(result.serviceId).toBe('svc-1');
   });
 
+  it.each([true, false])('preserves pay-at-center intent %s without inventing a payment', (payAtClinic) => {
+    const result = mapBookingRow({ ...mockBooking, payAtClinic }, relations);
+    expect(result).toMatchObject({ payAtClinic, payment: null });
+  });
+
   it('maps package funding when the booking was funded by a package credit', () => {
     const funding = {
       creditId: 'credit-1',

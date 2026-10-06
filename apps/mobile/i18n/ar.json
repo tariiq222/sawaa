@@ -497,6 +497,8 @@
     "selectType": "اختر نوع الزيارة",
     "selectDate": "اختر التاريخ والوقت",
     "confirmBooking": "تأكيد الموعد",
+    "confirmAtCenter": "تأكيد الحجز",
+    "confirmingBooking": "جارٍ تأكيد الحجز…",
     "payment": "الدفع",
     "inPerson": "موعد عيادة",
     "inPersonDesc": "زيارة شخصية في العيادة",
