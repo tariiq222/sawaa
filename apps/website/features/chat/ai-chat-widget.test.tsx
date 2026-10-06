@@ -311,16 +311,21 @@ describe('AiChatWidget', () => {
     mocks.authIdentity = 'client-1';
     mocks.isAuthenticated.mockReturnValue(true);
     let poll: (() => void) | null = null;
-    vi.spyOn(window, 'setInterval').mockImplementation((handler: TimerHandler) => {
+    const scheduleInterval = window.setInterval.bind(window);
+    vi.spyOn(window, 'setInterval').mockImplementation((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      if (timeout !== 5000) return scheduleInterval(handler, timeout, ...args) as unknown as ReturnType<typeof window.setInterval>;
       poll = handler as () => void;
-      return 1 as unknown as ReturnType<typeof setInterval>;
+      return -1 as unknown as ReturnType<typeof window.setInterval>;
     });
     renderWidget('en');
     fireEvent.click(screen.getByRole('button', { name: 'Open Sawaa Ai' }));
-    await waitFor(() => expect(mocks.listClient).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(mocks.listClient).toHaveBeenCalledTimes(1);
+      expect(poll).toBeTypeOf('function');
+    });
     mocks.listClient.mockRejectedValueOnce(new Error('network down'));
 
-    act(() => poll?.());
+    await act(async () => { poll!(); });
 
     expect(await screen.findByText('Conversation updates paused. Try again.')).toBeTruthy();
   });
