@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 
 import { useTheme } from '@/theme/useTheme';
 import { View, ScrollView, Linking, Alert } from 'react-native';
@@ -67,6 +68,8 @@ export default function DoctorAppointmentDetailScreen() {
   const startSession = useStartEmployeeBookingSession();
   const cancelBooking = useCancelEmployeeBooking();
   const requestCancelBooking = useRequestCancelEmployeeBooking();
+  const actionLock = useRef(false);
+  const actionPending = Boolean(markCompleted.isPending || startSession.isPending || cancelBooking.isPending || requestCancelBooking.isPending);
   const booking = bookingQuery.isError ? null : (bookingQuery.data ?? null);
   // Exact timing and the host link come from the dedicated start-meeting
   // endpoint; the detail payload carries neither. Skipped while video calls are
@@ -120,11 +123,14 @@ export default function DoctorAppointmentDetailScreen() {
   const TypeIcon = isOnline ? Video : Building2;
 
   const handleMarkComplete = () => {
+    if (actionPending || actionLock.current) return;
     Alert.alert(t('doctor.markCompleted'), '', [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.confirm'),
         onPress: async () => {
+          if (actionPending || actionLock.current) return;
+          actionLock.current = true;
           try {
             await markCompleted.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -132,6 +138,8 @@ export default function DoctorAppointmentDetailScreen() {
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
+          } finally {
+            actionLock.current = false;
           }
         },
       },
@@ -139,17 +147,22 @@ export default function DoctorAppointmentDetailScreen() {
   };
 
   const handleStartSession = () => {
+    if (actionPending || actionLock.current) return;
     Alert.alert(t('doctor.startSession'), '', [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.confirm'),
         onPress: async () => {
+          if (actionPending || actionLock.current) return;
+          actionLock.current = true;
           try {
             await startSession.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
+          } finally {
+            actionLock.current = false;
           }
         },
       },
@@ -157,12 +170,15 @@ export default function DoctorAppointmentDetailScreen() {
   };
 
   const handleEmployeeCancel = () => {
+    if (actionPending || actionLock.current) return;
     Alert.alert(t('doctor.cancelBooking'), t('doctor.cancelConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.confirm'),
         style: 'destructive',
         onPress: async () => {
+          if (actionPending || actionLock.current) return;
+          actionLock.current = true;
           try {
             await cancelBooking.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -170,6 +186,8 @@ export default function DoctorAppointmentDetailScreen() {
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
+          } finally {
+            actionLock.current = false;
           }
         },
       },
@@ -177,12 +195,15 @@ export default function DoctorAppointmentDetailScreen() {
   };
 
   const handleRequestCancel = () => {
+    if (actionPending || actionLock.current) return;
     Alert.alert(t('appointments.requestCancel'), t('doctor.requestCancelConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.confirm'),
         style: 'destructive',
         onPress: async () => {
+          if (actionPending || actionLock.current) return;
+          actionLock.current = true;
           try {
             await requestCancelBooking.mutateAsync(booking.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -194,6 +215,8 @@ export default function DoctorAppointmentDetailScreen() {
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t('common.error'), t('common.error'));
+          } finally {
+            actionLock.current = false;
           }
         },
       },
@@ -278,6 +301,8 @@ export default function DoctorAppointmentDetailScreen() {
           {canStartSession && (
             <PrimaryButton
               label={t('doctor.startSession')}
+              disabled={actionPending}
+              loading={startSession.isPending}
               onPress={handleStartSession}
               fontFamily={f600}
               icon={<Check size={16} color={theme.colors.primaryForeground} />}
@@ -286,6 +311,8 @@ export default function DoctorAppointmentDetailScreen() {
           {canComplete && (
             <PrimaryButton
               label={t('doctor.markCompleted')}
+              disabled={actionPending}
+              loading={markCompleted.isPending}
               onPress={handleMarkComplete}
               fontFamily={f600}
               icon={<Check size={16} color={theme.colors.primaryForeground} />}
@@ -293,6 +320,8 @@ export default function DoctorAppointmentDetailScreen() {
           )}
           {cancellationMode !== 'none' && (
             <OutlineButton
+              disabled={actionPending}
+              loading={cancelBooking.isPending || requestCancelBooking.isPending}
               tone="neutral"
               onPress={cancellationMode === 'direct_cancel' ? handleEmployeeCancel : handleRequestCancel}
               label={cancellationMode === 'direct_cancel' ? t('doctor.cancelBooking') : t('appointments.requestCancel')}

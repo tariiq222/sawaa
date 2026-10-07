@@ -230,7 +230,7 @@ it('prefills phone recovery and carries its identifier and booking continuation 
   mockParams = { identifier: '0501234567', redirect: '/(client)/(tabs)/appointments' };
   const ui = mount(<ForgotPasswordScreen />);
   expect(ui.getByLabelText('auth.login.identifier').props.value).toBe('0501234567');
-  fireEvent.press(ui.getByText('auth.forgotPassword.submit'));
+  await act(async () => { fireEvent.press(ui.getByText('auth.forgotPassword.submit')); });
   await waitFor(() => expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/reset-password', params: { identifier: '0501234567', redirect: '/(client)/(tabs)/appointments' } }));
   expect(authService.requestPasswordResetOtp).toHaveBeenCalledWith('0501234567');
 });
@@ -239,19 +239,19 @@ it('sets a password only after OTP verification and enforces the server password
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   const ui = mount(<ResetPasswordScreen />);
   fireEvent.changeText(ui.getByLabelText('auth.resetPassword.codeLabel'), '1234');
-  fireEvent.press(ui.getByRole('button', { name: 'auth.resetPassword.verifyCode' }));
+  await act(async () => { fireEvent.press(ui.getByRole('button', { name: 'auth.resetPassword.verifyCode' })); });
   await waitFor(() => expect(ui.getByLabelText('auth.resetPassword.newPasswordLabel')).toBeTruthy());
   expect(authService.verifyPasswordResetOtp).toHaveBeenCalledWith('0501234567', '1234');
   for (const value of ['longenough', 'Uppercase', 'lower123', 'A1' + 'a'.repeat(199)]) {
     fireEvent.changeText(ui.getByLabelText('auth.resetPassword.newPasswordLabel'), value);
     fireEvent.changeText(ui.getByLabelText('auth.confirmPassword'), value);
-    fireEvent.press(ui.getByText('auth.resetPassword.submit'));
+    await act(async () => { fireEvent.press(ui.getByText('auth.resetPassword.submit')); });
     expect(ui.getByText('auth.resetPassword.weakPassword')).toBeTruthy();
   }
   expect(authService.resetClientPassword).not.toHaveBeenCalled();
   fireEvent.changeText(ui.getByLabelText('auth.resetPassword.newPasswordLabel'), 'SafePassword1');
   fireEvent.changeText(ui.getByLabelText('auth.confirmPassword'), 'SafePassword1');
-  fireEvent.press(ui.getByText('auth.resetPassword.submit'));
+  await act(async () => { fireEvent.press(ui.getByText('auth.resetPassword.submit')); });
   await waitFor(() => expect(authService.resetClientPassword).toHaveBeenCalledWith('verified-proof', 'SafePassword1'));
   await waitFor(() => expect(alert).toHaveBeenCalled());
   alert.mock.calls.at(-1)?.[2]?.[0]?.onPress?.();
@@ -259,12 +259,12 @@ it('sets a password only after OTP verification and enforces the server password
   alert.mockRestore();
 });
 
-it.each(['123', '12345', '123456', '12a4'])('rejects invalid recovery code %s before verification', code => {
+it.each(['123', '12345', '123456', '12a4'])('rejects invalid recovery code %s before verification', async code => {
   mockParams = { identifier: '0501234567' };
   const ui = mount(<ResetPasswordScreen />);
   const input = ui.getByLabelText('auth.resetPassword.codeLabel');
   fireEvent.changeText(input, code);
-  fireEvent.press(ui.getByRole('button', { name: 'auth.resetPassword.verifyCode' }));
+  await act(async () => { fireEvent.press(ui.getByRole('button', { name: 'auth.resetPassword.verifyCode' })); });
   expect(ui.getByText('auth.resetPassword.invalidCode')).toBeTruthy();
   expect(authService.verifyPasswordResetOtp).not.toHaveBeenCalled();
 });

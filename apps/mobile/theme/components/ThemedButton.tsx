@@ -24,6 +24,7 @@ interface ThemedButtonProps {
   style?: ViewStyle;
 }
 
+/** @deprecated Prefer PrimaryButton, SecondaryButton or ActionButton for new actions. Retained for existing imports and arbitrary ReactNode labels. */
 export function ThemedButton({
   onPress,
   children,

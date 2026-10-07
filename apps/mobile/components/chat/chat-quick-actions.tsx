@@ -1,5 +1,4 @@
-import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { Pressable, StyleSheet, ScrollView } from 'react-native';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';

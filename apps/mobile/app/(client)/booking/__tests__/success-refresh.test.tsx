@@ -1,4 +1,5 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockRefetchBooking = jest.fn();
@@ -29,7 +30,7 @@ jest.mock('lucide-react-native', () => {
   return { Calendar: NativeView, Check: NativeView, CircleAlert: NativeView, Clock: NativeView, Hash: NativeView, User: NativeView };
 });
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
-jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string) => key === 'booking.backToHome' ? 'Back to home' : key }) }));
+jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string, options?: import('i18next').TOptions) => require('@/test-utils/translation').translatedTestMessage(key, mockRTL ? 'ar' : 'en', options) }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
@@ -71,6 +72,7 @@ jest.mock('@/features/booking/use-payment-status', () => {
 });
 
 import BookingSuccessScreen from '../success';
+beforeEach(() => { mockRTL = false; });
 
 describe('booking success verification', () => {
   beforeEach(() => {
@@ -142,7 +144,7 @@ describe('booking success verification', () => {
 
 it('displays the full server invoice number rather than shortening the invoice UUID', () => {
   const screen = render(<BookingSuccessScreen />);
-  expect(screen.getByText('booking.invoiceNumber')).toBeTruthy();
+  expect(screen.getByText('Invoice #')).toBeTruthy();
   expect(screen.getByText('#1042')).toBeTruthy();
   expect(screen.queryByText('#INVOICE-')).toBeNull();
 });
@@ -150,4 +152,9 @@ it('does not display a number belonging to a different invoice', () => {
   mockInvoice = { id: 'other-invoice', number: 9000 };
   const screen = render(<BookingSuccessScreen />);
   expect(screen.queryByText('#9000')).toBeNull();
+});
+
+it('keeps the status and details scrollable with large text', () => {
+  const screen = render(<BookingSuccessScreen />);
+  expect(screen.UNSAFE_getByType(ScrollView).props.testID).toBe('booking-success-scroll');
 });

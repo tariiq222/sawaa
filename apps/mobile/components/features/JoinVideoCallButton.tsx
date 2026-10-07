@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video } from 'lucide-react-native';
@@ -6,6 +6,8 @@ import { Video } from 'lucide-react-native';
 import { getSawaaRoles, sawaaRadius } from '@/theme/sawaa';
 import { useTheme } from '@/theme/useTheme';
 import { getFontName } from '@/theme/fonts';
+import { useTranslation } from 'react-i18next';
+import { videoJoinWindow } from '@/lib/video-join-window';
 import { FEATURE_FLAGS } from '@/constants/feature-flags';
 
 interface Props {
@@ -21,8 +23,6 @@ interface Props {
   fullWidth?: boolean;
 }
 
-const JOIN_WINDOW_MS_BEFORE = 15 * 60 * 1000;
-
 export function JoinVideoCallButton({
   url,
   scheduledAt,
@@ -34,43 +34,49 @@ export function JoinVideoCallButton({
 }: Props) {
   const { theme, scheme } = useTheme();
   const action = getSawaaRoles(scheme).action;
+  const { t } = useTranslation();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!FEATURE_FLAGS.videoCalls || status !== 'CREATED' || !url) return;
+    const current = Date.now();
+    const window = videoJoinWindow(scheduledAt, durationMins, current);
+    if (!window || current > window.endsAt) return;
+    const next = current < window.opensAt ? Math.min(current + 60_000, window.opensAt) : window.endsAt + 1;
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(1, next - current));
+    return () => clearTimeout(timer);
+  }, [now, scheduledAt, durationMins, status, url]);
   // Hooks must run unconditionally — feature-flag gating happens after.
   const f600 = getFontName(isRTL ? 'ar' : 'en', '600');
   const f700 = getFontName(isRTL ? 'ar' : 'en', '700');
 
-  const { withinWindow, label } = useMemo(() => {
+  const { withinWindow, label } = (() => {
     if (status === 'FAILED') {
-      return { withinWindow: false, label: isRTL ? 'تعذّر إنشاء الاجتماع' : 'Meeting unavailable' };
+      return { withinWindow: false, label: t('videoCall.meetingUnavailable') };
     }
     if (status !== 'CREATED' || !url) {
-      return { withinWindow: false, label: isRTL ? 'سيظهر الرابط قبل الموعد' : 'Link appears before session' };
+      return { withinWindow: false, label: t('videoCall.meetingNotReady') };
     }
-    const start = new Date(scheduledAt).getTime();
-    const end = start + durationMins * 60 * 1000;
-    const now = Date.now();
-    const opensAt = start - JOIN_WINDOW_MS_BEFORE;
-    if (now < opensAt) {
-      const minsUntilOpen = Math.max(1, Math.round((opensAt - now) / 60000));
-      return {
-        withinWindow: false,
-        label: isRTL ? `يفتح خلال ${minsUntilOpen} دقيقة` : `Opens in ${minsUntilOpen} min`,
-      };
+    const current = Date.now();
+    const window = videoJoinWindow(scheduledAt, durationMins, current);
+    if (!window) return { withinWindow: false, label: t('videoCall.meetingUnavailable') };
+    if (current < window.opensAt) {
+      return { withinWindow: false, label: t('videoCall.opensIn', { minutes: window.minutesUntilOpen }) };
     }
-    if (now > end) {
-      return { withinWindow: false, label: isRTL ? 'انتهت الجلسة' : 'Session ended' };
+    if (current > window.endsAt) {
+      return { withinWindow: false, label: t('videoCall.sessionEnded') };
     }
     return {
       withinWindow: true,
       label: variant === 'start'
-        ? (isRTL ? 'بدء الاجتماع' : 'Start meeting')
-        : (isRTL ? 'انضمام للجلسة' : 'Join session'),
+        ? t('doctor.startMeeting')
+        : t('videoCall.joinSession'),
     };
-  }, [status, url, scheduledAt, durationMins, isRTL, variant]);
+  })();
 
   if (!FEATURE_FLAGS.videoCalls) return null;
 
   const onPress = () => {
-    if (!withinWindow || !url) return;
+    if (!withinWindow || !url || !videoJoinWindow(scheduledAt, durationMins, Date.now())?.withinWindow) return;
     Linking.openURL(url).catch(() => undefined);
   };
 
@@ -79,6 +85,7 @@ export function JoinVideoCallButton({
       onPress={onPress}
       disabled={!withinWindow}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled: !withinWindow }}
       style={fullWidth ? styles.btnFull : styles.btn}
     >

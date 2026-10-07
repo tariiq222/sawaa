@@ -1,7 +1,9 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Alert, View } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 const mockBook = jest.fn();
 const mockBranches = jest.fn();
 const mockRefetch = jest.fn();
@@ -16,7 +18,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ creditId: 'credit-1', serviceId: 'service-1', employeeId: 'employee-1', durationOptionId: 'duration-1', deliveryType: 'IN_PERSON' }),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, options?: import('i18next').TOptions) => key.startsWith('booking.') || key === 'common.retry' ? require('@/test-utils/translation').translatedTestMessage(key, 'en', options) : key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', writingDirection: 'ltr' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => ({ ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: require('react-native').View }));
@@ -35,15 +37,19 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('@/components/ui/Skeleton', () => ({ Skeleton: () => null }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
-jest.mock('@/services/client', () => ({ publicBranchesService: { list: () => mockBranches() } }));
+jest.mock('@/services/client/branches', () => ({ publicBranchesService: { list: () => mockBranches() } }));
 jest.mock('@/hooks/queries', () => ({
+  usePublicBranches: (...args: unknown[]) => jest.requireActual('@/hooks/queries/usePublicBranches').usePublicBranches(...args),
   useBookPackageCredit: () => ({ mutateAsync: mockBook, isPending: false }),
   useSlots: ({ branchId }: { branchId?: string }) => ({ data: branchId === 'branch-b' ? [mockSlotB] : mockSlotsA, isLoading: false, isError: mockSlotsError, refetch: mockRefetch }),
 }));
 
 import PackageBookScreen from '../book';
 
+let queryClient: QueryClient;
+function wrapper({ children }: React.PropsWithChildren) { return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>; }
 beforeEach(() => {
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   jest.clearAllMocks();
   mockSlotsA = [mockSlotA];
   mockSlotsError = false;
@@ -55,10 +61,10 @@ beforeEach(() => {
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => { queryClient.clear(); jest.restoreAllMocks(); });
 
 it('clears the selected time when switching branches and submits only the newly selected time', async () => {
-  const screen = render(<PackageBookScreen />);
+  const screen = render(<PackageBookScreen />, { wrapper });
   await screen.findByText('Branch A');
   fireEvent.press(screen.getByLabelText('Time 9:00 AM'));
   expect(screen.getByRole('button', { name: 'packages.confirmBooking' })).toBeEnabled();
@@ -79,7 +85,7 @@ it('clears the selected time when switching branches and submits only the newly 
 });
 
 it('clears selection on day change', async () => {
-  const screen = render(<PackageBookScreen />);
+  const screen = render(<PackageBookScreen />, { wrapper });
   await screen.findByText('Branch A');
   fireEvent.press(screen.getByLabelText('Time 9:00 AM'));
   fireEvent.press(screen.getByText(new Date(Date.now() + 86400000).getDate().toString()));
@@ -88,7 +94,7 @@ it('clears selection on day change', async () => {
 });
 
 it('does not select a different time at the same index after slots refresh', async () => {
-  const screen = render(<PackageBookScreen />);
+  const screen = render(<PackageBookScreen />, { wrapper });
   await screen.findByText('Branch A');
   fireEvent.press(screen.getByLabelText('Time 9:00 AM'));
   mockSlotsA = [mockSlotB];
@@ -101,7 +107,7 @@ it('does not select a different time at the same index after slots refresh', asy
 });
 
 it('preserves the explicitly selected time when refreshed slots are reordered', async () => {
-  const screen = render(<PackageBookScreen />);
+  const screen = render(<PackageBookScreen />, { wrapper });
   await screen.findByText('Branch A');
   fireEvent.press(screen.getByLabelText('Time 9:00 AM'));
   mockSlotsA = [mockSlotB, { ...mockSlotA }];
@@ -114,7 +120,7 @@ it('preserves the explicitly selected time when refreshed slots are reordered', 
 
 it('preserves branch and slots retries and reports a failed booking', async () => {
   mockBranches.mockRejectedValueOnce(new Error('offline'));
-  const screen = render(<PackageBookScreen />);
+  const screen = render(<PackageBookScreen />, { wrapper });
   await screen.findByText('packages.branchError');
   fireEvent.press(screen.getByText('packages.retry'));
   await screen.findByText('Branch A');
@@ -137,7 +143,7 @@ it.each([
   { available: true, refreshedSlots: [mockSlotA] },
   { available: false, refreshedSlots: [mockSlotB] },
 ])('blocks cached slot booking during an error and recovers only an available identity ($available)', async ({ available, refreshedSlots }) => {
-  const screen = render(<PackageBookScreen />);
+  const screen = render(<PackageBookScreen />, { wrapper });
   await screen.findByText('Branch A');
   fireEvent.press(screen.getByLabelText('Time 9:00 AM'));
   expect(screen.getByRole('button', { name: 'packages.confirmBooking' })).toBeEnabled();
@@ -166,4 +172,10 @@ it.each([
     fireEvent.press(confirm);
     expect(mockBook).not.toHaveBeenCalled();
   }
+});
+
+it('omits slot entering callbacks when reduced motion is enabled', async () => {
+  const screen = render(<PackageBookScreen />, { wrapper });
+  await screen.findByText('Branch A');
+  expect(screen.UNSAFE_getAllByType(View).filter((view) => view.props.entering !== undefined)).toHaveLength(0);
 });

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarPlus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@/components/ui/ErrorState';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -29,6 +30,10 @@ interface TherapistProfileViewProps {
   loading: boolean;
   catalog: PublicCatalogRaw | undefined;
   catalogLoading: boolean;
+  employeeError?: boolean;
+  catalogError?: boolean;
+  onRetryEmployee?: () => void;
+  onRetryCatalog?: () => void;
   /** Scope carried from clinic discovery; never widened here (see the clinic/service contract). */
   clinicId?: string;
   serviceId?: string;
@@ -44,7 +49,7 @@ interface TherapistProfileViewProps {
  * data source here (slots need a service, branch and date), so it is omitted.
  */
 export function TherapistProfileView({
-  employee, loading, catalog, catalogLoading, clinicId, serviceId, onBack, onBook,
+  employee, loading, catalog, catalogLoading, employeeError = false, catalogError = false, onRetryEmployee, onRetryCatalog, clinicId, serviceId, onBack, onBook,
 }: TherapistProfileViewProps) {
   const { t } = useTranslation();
   const colors = useSawaaColors();
@@ -61,8 +66,8 @@ export function TherapistProfileView({
     ? (dir.isRTL ? employee.publicBioAr : employee.publicBioEn) ?? employee.publicBioEn ?? employee.publicBioAr
     : null;
   const services = useMemo<PublicService[]>(
-    () => (catalog && employee ? getProfileBookingServices(catalog, employee.serviceIds, clinicId, serviceId) : []),
-    [catalog, employee, clinicId, serviceId],
+    () => (!catalogError && catalog && employee ? getProfileBookingServices(catalog, employee.serviceIds, clinicId, serviceId) : []),
+    [catalog, employee, catalogError, clinicId, serviceId],
   );
   const { clinics, serviceGroups } = useMemo(
     () => (catalog ? getProfileBookingGroups(catalog, services) : { clinics: [], serviceGroups: [] }),
@@ -71,7 +76,7 @@ export function TherapistProfileView({
   const selectedServiceId = services.some((service) => service.id === chosenServiceId)
     ? chosenServiceId
     : services.length === 1 ? services[0].id : null;
-  const bookable = Boolean(employee?.isBookable) && services.length > 0;
+  const bookable = !employeeError && !catalogError && !loading && !catalogLoading && Boolean(employee?.isBookable) && services.length > 0;
   const needsChoice = bookable && !selectedServiceId;
   // Open on services when a choice is required (or there is no bio to read).
   const activeTab: ProfileTab = tab ?? (needsChoice || !bio ? 'services' : 'about');
@@ -163,7 +168,7 @@ export function TherapistProfileView({
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title={t('employeeProfile.profileTitle')} onBack={onBack} />
-        {employee && display ? (
+        {employeeError ? <ErrorState onRetry={onRetryEmployee} /> : employee && display ? (
           <>
             <ProfileHero
               name={display.name}
@@ -180,7 +185,7 @@ export function TherapistProfileView({
               value={activeTab}
               onChange={setTab}
             />
-            {activeTab === 'about' ? (
+            {catalogError ? <ErrorState onRetry={onRetryCatalog} /> : activeTab === 'about' ? (
               <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                 {bio ?? t('employeeProfile.noBio')}
               </Text>
@@ -192,7 +197,7 @@ export function TherapistProfileView({
           </Text>
         )}
       </ScrollView>
-      {employee ? (
+      {employee && !employeeError ? (
         <FloatingCta>
           {hint ? <Text style={[styles.hint, { color: colors.ink[700], fontFamily: f400 }]}>{hint}</Text> : null}
           <PrimaryButton

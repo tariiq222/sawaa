@@ -9,6 +9,7 @@ import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { ActionButton } from '@/theme/sawaa/ActionButton';
 
 /** Delete-account link that opens a confirmation bottom sheet. */
 export function DeleteAccountButton() {
@@ -74,14 +75,7 @@ export function DeleteAccountButton() {
             <Text style={[styles.body, { fontFamily: getFontName(dir.locale, '400'), writingDirection: dir.writingDirection }]}>
               {t('profile.deleteAccountBody')}
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('profile.deleteAccountAction')}
-              onPress={confirm}
-              style={styles.destructive}
-            >
-              <Text style={[styles.destructiveText, { fontFamily: f700 }]}>{t('profile.deleteAccountAction')}</Text>
-            </Pressable>
+            <ActionButton variant="destructive" label={t('profile.deleteAccountAction')} fontFamily={f700} loading={busy} onPress={confirm} style={styles.destructive} />
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('profile.deleteAccountCancel')}
@@ -127,9 +121,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     borderRadius: sawaaRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent.coral,
   },
-  destructiveText: { fontSize: 17, color: colors.ink[900] },
   cancel: {
     alignSelf: 'stretch',
     minHeight: 56,

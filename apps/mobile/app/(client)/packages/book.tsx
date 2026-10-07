@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,10 +7,9 @@ import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
-import { useBookPackageCredit, useSlots } from '@/hooks/queries';
+import { useReduceMotion } from '@/hooks/useA11y';
+import { useBookPackageCredit, usePublicBranches, useSlots } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
-import { publicBranchesService } from '@/services/client';
-import type { PublicBranchSummary } from '@/services/client';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
 import { PackageBookingAction } from '@/components/features/packages/PackageBookingAction';
 import { DaySelector } from '@/components/features/booking/DaySelector';
@@ -36,12 +35,14 @@ export default function PackageBookScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const { t } = useTranslation();
   const book = useBookPackageCredit();
-  const [branches, setBranches] = useState<PublicBranchSummary[]>([]);
+  const branchQuery = usePublicBranches();
+  const branches = branchQuery.data ?? [];
   const [branchId, setBranchId] = useState<string>();
-  const [branchLoading, setBranchLoading] = useState(true);
-  const [branchError, setBranchError] = useState(false);
+  const branchLoading = branchQuery.isFetching;
+  const branchError = branchQuery.isError;
   const [dayIdx, setDayIdx] = useState(0);
   const [selection, setSelection] = useState<{ slot: Slot; branchId?: string; date: string } | null>(null);
   const f400 = getFontName(dir.locale, '400');
@@ -64,21 +65,12 @@ export default function PackageBookScreen() {
     deliveryType,
   });
 
-  const loadBranches = useCallback(async () => {
-    setBranchLoading(true);
-    setBranchError(false);
-    try {
-      const loaded = await publicBranchesService.list();
-      setBranches(loaded);
-      setBranchId((current) => current && loaded.some((branch) => branch.id === current) ? current : loaded[0]?.id);
-    } catch {
-      setBranchError(true);
-    } finally {
-      setBranchLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadBranches(); }, [loadBranches]);
+  useEffect(() => {
+    const loaded = branchQuery.data;
+    if (!loaded) return;
+    setBranchId((current) => current && loaded.some((branch) => branch.id === current)
+      ? current : loaded[0]?.id);
+  }, [branchQuery.data]);
 
   const slots = (slotsQuery.data ?? []) as Slot[];
   const selectedDate = dateOnly(days[dayIdx]);
@@ -129,7 +121,7 @@ export default function PackageBookScreen() {
               loading={branchLoading}
               error={branchError}
               onSelect={(id) => { setBranchId(id); setSelection(null); }}
-              onRetry={() => { void loadBranches(); }}
+              onRetry={() => { void branchQuery.refetch(); }}
               dir={dir}
               f400={f400}
               f600={f600}
@@ -145,6 +137,7 @@ export default function PackageBookScreen() {
               dir={dir}
               f500={f600}
               f600={f600}
+              reduceMotion={reduceMotion}
               onRetry={() => { void slotsQuery.refetch(); }}
             />
             <PackageBookingAction enabled={Boolean(selectedSlot && branchId && !slotsQuery.isError)} pending={book.isPending} onPress={handleBook} fontFamily={f700} />

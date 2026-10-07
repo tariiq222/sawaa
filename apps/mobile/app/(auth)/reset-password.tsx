@@ -96,12 +96,12 @@ export default function ResetPasswordScreen() {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSessionToken(''); setNewPassword(''); setConfirmPassword('');
-      Alert.alert(t('common.success'), t('auth.resetPassword.success'), [
+      Alert.alert(t('common.saved'), t('auth.resetPassword.success'), [
         { text: t('auth.loginNow'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), t('auth.error.generic'));
+      Alert.alert(t('common.error'), t('auth.resetPassword.failed'));
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,8 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <PrimaryButton
-                    label={loading ? t('common.loading') : t('auth.resetPassword.verifyCode')}
+                    label={t('auth.resetPassword.verifyCode')}
+                    loading={loading}
                     onPress={handleVerifyOtp}
                     disabled={loading}
                     style={{ marginTop: 8 }}
@@ -194,7 +195,8 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <PrimaryButton
-                    label={loading ? t('common.loading') : t('auth.resetPassword.submit')}
+                    label={t('auth.resetPassword.submit')}
+                    loading={loading}
                     onPress={handleResetPassword}
                     disabled={loading}
                     style={{ marginTop: 8 }}
@@ -203,8 +205,11 @@ export default function ResetPasswordScreen() {
               )}
 
               <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
+                <Text style={styles.loginText}>{t('auth.rememberPassword')}</Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.loginNow')}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.replace(authLoginHref(booking, redirect));

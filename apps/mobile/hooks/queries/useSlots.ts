@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { publicEmployeesService } from '@/services/client';
+import { publicEmployeesService } from '@/services/client/employees';
 import type { BookingType, DeliveryType } from '@/types/booking-enums';
 
 import { therapistKeys } from './useTherapists';
@@ -19,9 +19,10 @@ interface SlotsParams {
 
 type SlotsResponse = Array<{ startTime: string; endTime: string }>;
 
-export function useSlots(params: SlotsParams) {
-  const enabled = Boolean(params.employeeId && params.branchId && params.date);
+export function useSlots(params: SlotsParams, options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled !== false && Boolean(params.employeeId && params.branchId && params.date);
   return useQuery<SlotsResponse>({
+    meta: { silentError: true },
     queryKey: therapistKeys.slots(params as Record<string, unknown>),
     queryFn: () =>
       publicEmployeesService.getSlots({

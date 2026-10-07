@@ -6,6 +6,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 // create would hit the backend's overlapping-appointment conflict for the
 // same slot.
 let mockCapabilityError = false;
+let mockCapabilityEnabled = true;
 const mockCapabilityRefetch = jest.fn();
 const mockReplace = jest.fn();
 const mockBookingCreate = jest.fn();
@@ -14,7 +15,7 @@ const mockInitPayment = jest.fn();
 const mockOpenAuthSession = jest.fn();
 // Stable identities: the screen's resume effect depends on router and params.
 const mockRouter = { replace: mockReplace, back: jest.fn() };
-const mockParams = { bookingId: 'booking-1', invoiceId: 'invoice-1', amount: '45000', currency: 'SAR' };
+const mockParams: Record<string, string> = { bookingId: 'booking-1', invoiceId: 'invoice-1', amount: '45000', currency: 'SAR' };
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
@@ -28,7 +29,7 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('lucide-react-native', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Apple: NativeView, Banknote: NativeView, Check: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, CreditCard: NativeView };
+  return { CircleAlert: NativeView, Apple: NativeView, Banknote: NativeView, Check: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, CreditCard: NativeView };
 });
 jest.mock('expo-linear-gradient', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
@@ -72,8 +73,8 @@ jest.mock('@/hooks/use-redux', () => ({
   useAppSelector: (selector: (state: unknown) => unknown) => selector({ auth: { user: { id: 'user-1' } } }),
 }));
 jest.mock('@/hooks/queries', () => ({ useBankTransferSettings: () => ({ data: undefined }) }));
-jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => ({ enabled: !mockCapabilityError, applePayAvailable: false, isLoading: false, isError: mockCapabilityError, refetch: mockCapabilityRefetch }) }), { virtual: true });
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => ({ enabled: mockCapabilityEnabled && !mockCapabilityError, applePayAvailable: false, isLoading: false, isError: mockCapabilityError, refetch: mockCapabilityRefetch }) }), { virtual: true });
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, options?: import('i18next').TOptions) => require('@/test-utils/translation').translatedTestMessage(key, 'en', options) }) }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
@@ -93,6 +94,15 @@ jest.mock('@/services/client/payments', () => ({
 }));
 
 import BookingPaymentScreen from '../payment';
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockCapabilityError = false;
+  mockCapabilityEnabled = true;
+  for (const key of Object.keys(mockParams)) delete mockParams[key];
+  Object.assign(mockParams, { bookingId: 'booking-1', invoiceId: 'invoice-1', amount: '45000', currency: 'SAR' });
+  mockGetBooking.mockReset().mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status: 'pending' });
+});
 
 describe('booking payment retry for an existing booking', () => {
   beforeEach(() => {
@@ -137,11 +147,45 @@ describe('booking payment retry for an existing booking', () => {
 it('offers an in-place capability retry for an online-only invoice', async () => {
   mockCapabilityError = true;
   const screen = render(<BookingPaymentScreen />);
-  await waitFor(() => expect(screen.getByText('payment.methodsError')).toBeTruthy());
-  fireEvent.press(screen.getByText('common.retry'));
+  await waitFor(() => expect(screen.getByText('Could not load payment methods')).toBeTruthy());
+  fireEvent.press(screen.getByText('Retry'));
   expect(mockCapabilityRefetch).toHaveBeenCalled();
   mockCapabilityError = false;
   screen.rerender(<BookingPaymentScreen />);
   await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
-  expect(screen.queryByText('payment.methodsError')).toBeNull();
+  expect(screen.queryByText('Could not load payment methods')).toBeNull();
+});
+
+it('explains invalid checkout and safely retries the same booking read without a purchase', async () => {
+  mockGetBooking.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status: 'pending' });
+  const screen = render(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByText('Cannot continue checkout')).toBeTruthy());
+  expect(screen.getByTestId('booking-payment-submit')).toBeDisabled();
+  fireEvent.press(screen.getByText('Try again'));
+  await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+  expect(mockBookingCreate).not.toHaveBeenCalled();
+  expect(mockInitPayment).not.toHaveBeenCalled();
+});
+
+it('explains when no payment methods are available', async () => {
+  mockCapabilityError = false;
+  // Capabilities are disabled independently from network failure.
+  mockCapabilityEnabled = false;
+  const screen = render(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByText('No payment methods are currently available')).toBeTruthy());
+  expect(screen.getByTestId('booking-payment-submit')).toBeDisabled();
+  mockCapabilityEnabled = true;
+});
+
+it('does not offer a read retry that could re-enable creation after a failed booking write', async () => {
+  for (const key of Object.keys(mockParams)) delete mockParams[key];
+  Object.assign(mockParams, { serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1', scheduledAt: '2026-10-01T10:00:00.000Z' });
+  mockBookingCreate.mockRejectedValueOnce(new Error('timeout'));
+  const screen = render(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+  await act(async () => fireEvent.press(screen.getByTestId('booking-payment-submit')));
+  expect(screen.getByText('Cannot continue checkout')).toBeTruthy();
+  expect(screen.queryByText('Try again')).toBeNull();
+  expect(screen.getByTestId('booking-payment-submit')).toBeDisabled();
+  expect(mockBookingCreate).toHaveBeenCalledTimes(1);
 });

@@ -120,15 +120,19 @@ export default function ForgotPasswordScreen() {
               />
 
               <PrimaryButton
-                label={loading ? t('common.loading') : t('auth.forgotPassword.submit')}
+                label={t('auth.forgotPassword.submit')}
+                loading={loading}
                 onPress={handleSubmit}
                 disabled={loading}
                 style={{ marginTop: 8 }}
               />
 
               <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
+                <Text style={styles.loginText}>{t('auth.rememberPassword')}</Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.loginNow')}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.back();

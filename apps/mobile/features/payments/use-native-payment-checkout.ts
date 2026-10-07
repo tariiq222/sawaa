@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
+import { invalidateClientBookingResources } from '@/hooks/queries/invalidateClientBookingResources';
 import type { NativePaymentConfiguration, NativePaymentMethod, NativePaymentReconcileResponse } from '@sawaa/shared';
 import { clientPaymentsService } from '@/services/client/payments';
 import { clientBookingsService } from '@/services/client/bookings';
@@ -94,8 +95,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           if (confirmed) {
             await AsyncStorage.removeItem(storageKey);
             update({ phase: 'completed', config: null, canResume: false });
-            void queryClient.invalidateQueries({ queryKey: ['bookings'] });
-            void queryClient.invalidateQueries({ queryKey: ['packages'] });
+            void invalidateClientBookingResources(queryClient);
           } else { update({ phase: 'pending' }); schedule(); }
         } else if (result.status === 'FAILED') {
           terminalFailure = true;

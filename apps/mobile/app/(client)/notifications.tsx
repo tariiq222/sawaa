@@ -14,6 +14,7 @@ import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Pill } from '@/components/ui/Pill';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { useNotifications } from '@/hooks/use-notifications';
 import { resolveNotificationHref } from '@/utils/notification-deeplink';
@@ -72,7 +73,7 @@ function relativeWhen(iso: string, locale: 'ar' | 'en', t: TFunction): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return t('notifications.daysAgo', { count: days });
   return new Date(iso).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-    day: 'numeric', month: 'short',
+    calendar: 'gregory', day: 'numeric', month: 'short',
   });
 }
 
@@ -89,6 +90,7 @@ export default function NotificationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const router = useRouter();
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
@@ -200,7 +202,7 @@ export default function NotificationsScreen() {
             return (
               <Animated.View
                 key={n.id}
-                entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(500).easing(Easing.out(Easing.cubic))}
+                entering={reduceMotion ? undefined : FadeInDown.delay(Math.min(i, 6) * 40).duration(500).easing(Easing.out(Easing.cubic))}
               >
                 <Glass
                   variant="strong"

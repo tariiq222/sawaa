@@ -13,6 +13,7 @@ const mockCancel = jest.fn().mockResolvedValue(undefined);
 const mockRequestCancel = jest.fn().mockResolvedValue(undefined);
 const mockComplete = jest.fn().mockResolvedValue(undefined);
 const mockRefetch = jest.fn();
+let mockPending = false;
 
 let mockAuthState: {
   user: {
@@ -56,10 +57,10 @@ jest.mock('@/hooks/queries', () => ({
     refetch: mockRefetch,
   }),
   useEmployeeMeetingStart: () => ({ data: undefined }),
-  useCancelEmployeeBooking: () => ({ mutateAsync: mockCancel }),
-  useRequestCancelEmployeeBooking: () => ({ mutateAsync: mockRequestCancel }),
-  useMarkEmployeeBookingCompleted: () => ({ mutateAsync: mockComplete }),
-  useStartEmployeeBookingSession: () => ({ mutateAsync: jest.fn() }),
+  useCancelEmployeeBooking: () => ({ mutateAsync: mockCancel, isPending: mockPending }),
+  useRequestCancelEmployeeBooking: () => ({ mutateAsync: mockRequestCancel, isPending: false }),
+  useMarkEmployeeBookingCompleted: () => ({ mutateAsync: mockComplete, isPending: false }),
+  useStartEmployeeBookingSession: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('react-native-reanimated', () => {
@@ -84,7 +85,7 @@ jest.mock('@/theme/sawaa', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
     ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: View,
-    PrimaryButton: ({ label, onPress }: { label: string; onPress: () => void }) => <Pressable onPress={onPress}><Text>{label}</Text></Pressable>,
+    PrimaryButton: ({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) => <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} accessibilityState={{ disabled }} onPress={onPress}><Text>{label}</Text></Pressable>,
   };
 });
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
@@ -111,6 +112,7 @@ const SENSITIVE_SENTINEL = 'September 27';
 describe('employee appointment detail states', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPending = false;
     mockAuthState = { user: { id: 'staff', role: 'EMPLOYEE', permissions: ['booking:update', 'booking:delete'], isSuperAdmin: false } };
     mockCanGoBack = false;
     mockIsLoading = false;
@@ -339,4 +341,12 @@ describe('employee appointment detail states', () => {
       expect(screen.getByText('doctor.markCompleted')).toBeTruthy();
     });
   });
+});
+
+it('disables both start and cancel while any appointment mutation is pending', () => {
+  mockData = { ...mockData, status: 'confirmed', checkedInAt: null };
+  mockPending = true;
+  const screen = render(<EmployeeAppointmentDetail />);
+  expect(screen.getByRole('button', { name: 'doctor.startSession' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'doctor.cancelBooking' })).toBeDisabled();
 });

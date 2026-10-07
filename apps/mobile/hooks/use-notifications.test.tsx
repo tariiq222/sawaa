@@ -7,8 +7,13 @@ jest.mock('@/services/notifications', () => ({
   },
 }));
 
+jest.mock('@/services/native-session-state', () => ({ getSessionEpoch: () => 1, isSessionCurrent: () => true }));
+jest.mock('expo-router', () => ({ useFocusEffect: (callback: () => void | (() => void)) => require('react').useEffect(callback, [callback]) }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ language: 'en' }) }));
 
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useUnreadCount } from './useUnreadCount';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { notificationsService } from '@/services/notifications';
 import { useNotifications } from './use-notifications';
@@ -33,6 +38,13 @@ function response(items: Notification[], page: number, totalPages: number) {
   return { items, meta: { totalPages, page, perPage: 20, total: totalPages * 20 } };
 }
 
+const clients: QueryClient[] = [];
+function setup() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
+  clients.push(client);
+  return ({ children }: React.PropsWithChildren) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+afterEach(() => clients.splice(0).forEach((client) => client.clear()));
 beforeEach(() => {
   getAll.mockReset();
   (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue({ count: 0 });
@@ -42,13 +54,13 @@ describe('useNotifications pagination', () => {
   it('loads older notifications beyond the first page', async () => {
     getAll.mockResolvedValueOnce(response(Array.from({ length: 20 }, (_, i) => notification(i)), 1, 2));
     getAll.mockResolvedValueOnce(response([notification(20)], 2, 2));
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHook(() => useNotifications(), { wrapper: setup() });
     await waitFor(() => expect(result.current.notifications).toHaveLength(20));
 
     await act(async () => result.current.loadMore());
 
     expect(getAll).toHaveBeenLastCalledWith({ page: 2, perPage: 20 });
-    expect(result.current.notifications).toHaveLength(21);
+    await waitFor(() => expect(result.current.notifications).toHaveLength(21));
     expect(result.current.hasMore).toBe(false);
   });
 
@@ -56,16 +68,16 @@ describe('useNotifications pagination', () => {
     getAll.mockResolvedValueOnce(response([notification(1)], 1, 2));
     getAll.mockRejectedValueOnce(new Error('temporary'));
     getAll.mockResolvedValueOnce(response([notification(2)], 2, 2));
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHook(() => useNotifications(), { wrapper: setup() });
     await waitFor(() => expect(result.current.notifications).toHaveLength(1));
 
     await act(async () => result.current.loadMore());
-    expect(result.current.loadError).toBe(true);
+    await waitFor(() => expect(result.current.loadError).toBe(true));
     expect(result.current.hasMore).toBe(true);
 
     await act(async () => result.current.loadMore());
     expect(getAll.mock.calls.map(([params]) => params.page)).toEqual([1, 2, 2]);
-    expect(result.current.notifications).toHaveLength(2);
+    await waitFor(() => expect(result.current.notifications).toHaveLength(2));
     expect(result.current.loadError).toBe(false);
   });
 
@@ -73,17 +85,17 @@ describe('useNotifications pagination', () => {
     getAll.mockResolvedValueOnce(response([notification(1)], 1, 1));
     getAll.mockRejectedValueOnce(new Error('temporary refresh failure'));
     getAll.mockResolvedValueOnce(response([notification(9)], 1, 1));
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHook(() => useNotifications(), { wrapper: setup() });
     await waitFor(() => expect(result.current.hasMore).toBe(false));
 
     await act(async () => result.current.refresh());
-    expect(result.current.loadError).toBe(true);
+    await waitFor(() => expect(result.current.loadError).toBe(true));
     expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-1']);
 
     await act(async () => result.current.loadMore());
 
     expect(getAll.mock.calls.map(([params]) => params.page)).toEqual([1, 1, 1]);
-    expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-9']);
+    await waitFor(() => expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-9']));
     expect(result.current.loadError).toBe(false);
     expect(result.current.hasMore).toBe(false);
   });
@@ -93,7 +105,7 @@ describe('useNotifications pagination', () => {
     let resolveOlder!: (value: ReturnType<typeof response>) => void;
     getAll.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
     getAll.mockResolvedValueOnce(response([notification(9)], 1, 1));
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHook(() => useNotifications(), { wrapper: setup() });
     await waitFor(() => expect(result.current.notifications).toHaveLength(1));
 
     let olderRequest!: Promise<void>;
@@ -103,13 +115,13 @@ describe('useNotifications pagination', () => {
     await act(async () => {
       await result.current.refresh();
     });
-    expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-9']);
+    await waitFor(() => expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-9']));
 
     await act(async () => {
       resolveOlder(response([notification(2)], 2, 3));
       await olderRequest;
     });
-    expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-9']);
+    await waitFor(() => expect(result.current.notifications.map(({ id }) => id)).toEqual(['notification-9']));
     expect(result.current.hasMore).toBe(false);
   });
 
@@ -117,7 +129,7 @@ describe('useNotifications pagination', () => {
     getAll.mockResolvedValueOnce(response([notification(1)], 1, 2));
     let resolveSecond!: (value: ReturnType<typeof response>) => void;
     getAll.mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHook(() => useNotifications(), { wrapper: setup() });
     await waitFor(() => expect(result.current.notifications).toHaveLength(1));
 
     let first!: Promise<void>;
@@ -131,6 +143,30 @@ describe('useNotifications pagination', () => {
       resolveSecond(response([notification(2)], 2, 2));
       await first;
     });
-    expect(result.current.notifications).toHaveLength(2);
+    await waitFor(() => expect(result.current.notifications).toHaveLength(2));
   });
+});
+
+it('updates the shared badge and paginated list after marking a notification read', async () => {
+  getAll.mockResolvedValue(response([notification(1)], 1, 1));
+  (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue({ count: 2 });
+  (notificationsService.markRead as jest.Mock).mockResolvedValue(undefined);
+  const { result } = renderHook(() => ({ feed: useNotifications(), badge: useUnreadCount() }), { wrapper: setup() });
+  await waitFor(() => expect(result.current.badge.count).toBe(2));
+  (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue({ count: 1 });
+  getAll.mockResolvedValue(response([{ ...notification(1), isRead: true }], 1, 1));
+  await act(async () => { await result.current.feed.markAsRead('notification-1'); });
+  await waitFor(() => expect(result.current.badge.count).toBe(1));
+  expect(result.current.feed.unreadCount).toBe(1);
+  expect(result.current.feed.notifications[0].isRead).toBe(true);
+});
+it('keeps shared list and badge unchanged when marking read fails', async () => {
+  getAll.mockResolvedValue(response([notification(1)], 1, 1));
+  (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue({ count: 2 });
+  (notificationsService.markRead as jest.Mock).mockRejectedValue(new Error('offline'));
+  const { result } = renderHook(() => ({ feed: useNotifications(), badge: useUnreadCount() }), { wrapper: setup() });
+  await waitFor(() => expect(result.current.badge.count).toBe(2));
+  await act(async () => { await result.current.feed.markAsRead('notification-1'); });
+  expect(result.current.badge.count).toBe(2);
+  expect(result.current.feed.notifications[0].isRead).toBe(false);
 });

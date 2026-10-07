@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateClientBookingResources } from '@/hooks/queries/invalidateClientBookingResources';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
@@ -42,6 +44,7 @@ export interface BookingPaymentInput {
  */
 export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const dir = useDir();
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const bankQuery = useBankTransferSettings(Boolean(userId));
@@ -116,6 +119,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
       if (resume.kind === 'ready' || resume.kind === 'complete') {
         booking = resume.checkout;
         if (resume.kind === 'complete') {
+          void invalidateClientBookingResources(queryClient);
           router.replace({ pathname: '/(client)/booking/success', params: {
             bookingId: booking.bookingId, ...(booking.invoiceId ? { invoiceId: booking.invoiceId } : {}),
           } });
@@ -140,6 +144,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
           deliveryType: input.deliveryType,
           ...(method === 'at_center' ? { payAtClinic: true } : {}),
         });
+        if (userRef.current === userId) void invalidateClientBookingResources(queryClient);
         booking = { bookingId: created.id, invoiceId: created.invoiceId ?? null, draft };
         // Retain identity even if persisting the resume record itself fails.
         pending.current = { key, checkout: booking };
@@ -193,7 +198,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
       inFlight.current = false;
       setSubmitting(false);
     }
-  }, [canPay, userId, draft, input.branchId, input.employeeId, input.serviceId, input.scheduledAt, input.durationOptionId, input.deliveryType, input.amount, input.currency, method, router, dir.isRTL, total]);
+  }, [canPay, userId, draft, input.deliveryType, input.amount, input.currency, method, router, queryClient, dir.isRTL, total]);
 
   return { method, setMethod, availableMethods, submitting, canPay, pay, total, methodsLoading, methodsError, retryMethods };
 }

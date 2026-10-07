@@ -16,6 +16,7 @@ import {
 import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { useBooking } from '@/hooks/queries';
 import { BookingCancellation } from '@/components/features/BookingCancellation';
@@ -39,6 +40,7 @@ export default function AppointmentDetailScreen() {
   const handleBack = () => goBackOrHome(router, '/(client)/(tabs)/appointments');
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
   const f700 = getFontName(dir.locale, '700');
@@ -124,7 +126,7 @@ export default function AppointmentDetailScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.summary}>
             <View style={{ alignItems: dir.alignEnd }}>
               <StatusPill
@@ -162,7 +164,7 @@ export default function AppointmentDetailScreen() {
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
           <InfoRows rows={rows} layout="stacked" />
           {isOnline ? (
             <Text style={[styles.hint, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>

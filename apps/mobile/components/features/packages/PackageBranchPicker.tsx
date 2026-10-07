@@ -32,7 +32,7 @@ export function PackageBranchPicker({ branches, branchId, loading, error, onSele
       {error ? (
         <View style={styles.errorRow}>
           <Text style={[styles.message, { fontFamily: f400 }]}>{t('packages.branchError')}</Text>
-          <Pressable onPress={onRetry} accessibilityRole="button">
+          <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel={t('packages.retry')} style={styles.retryAction}>
             <Text style={[styles.retry, { fontFamily: f600 }]}>{t('packages.retry')}</Text>
           </Pressable>
         </View>
@@ -42,7 +42,7 @@ export function PackageBranchPicker({ branches, branchId, loading, error, onSele
         {branches.map((branch) => {
           const selected = branch.id === branchId;
           return (
-            <Glass key={branch.id} radius={sawaaRadius.sm} variant={selected ? 'strong' : 'regular'} onPress={() => onSelect(branch.id)} style={[styles.branch, selected && styles.selected]}>
+            <Glass key={branch.id} radius={sawaaRadius.sm} variant={selected ? 'strong' : 'regular'} accessibilityRole="radio" accessibilityLabel={dir.isRTL ? branch.nameAr : branch.nameEn} accessibilityState={{ selected }} onPress={() => onSelect(branch.id)} style={[styles.branch, selected && styles.selected]}>
               <Text style={[styles.branchName, { fontFamily: f600, textAlign: dir.textAlign }]}>{dir.isRTL ? branch.nameAr : branch.nameEn}</Text>
               {branch.city ? <Text style={[styles.city, { fontFamily: f400, textAlign: dir.textAlign }]}>{branch.city}</Text> : null}
             </Glass>
@@ -58,9 +58,10 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
   title: { color: sawaaColors.ink[900], fontSize: sawaaType.subheading.fontSize },
   message: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
   errorRow: { alignItems: 'center', gap: sawaaSpacing.sm },
+  retryAction: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
   retry: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize },
   list: { gap: sawaaSpacing.sm },
-  branch: { padding: sawaaSpacing.md },
+  branch: { minHeight: 44, padding: sawaaSpacing.md },
   selected: { borderWidth: 1, borderColor: sawaaColors.teal[500] },
   branchName: { color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize },
   city: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize, marginTop: sawaaSpacing.xs },

@@ -23,21 +23,16 @@ import { AquaBackground, sawaaRadius, sawaaType, withAlpha } from '@/theme/sawaa
 import { Glass } from '@/theme/components/Glass';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 
-const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 function formatLastVisit(iso: string | null, isRTL: boolean): string {
   if (!iso) return '—';
-  const d = new Date(iso);
-  const month = isRTL ? MONTHS_AR[d.getMonth()] : MONTHS_EN[d.getMonth()];
-  const day = isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate();
-  return `${day} ${month}`;
+  return new Intl.DateTimeFormat(isRTL ? 'ar-SA' : 'en-US', { calendar: 'gregory', day: 'numeric', month: 'short' }).format(new Date(iso));
 }
 
 type Row = { key: string; icon: LucideIcon; label: string; hint?: string; onPress: () => void };
@@ -47,6 +42,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
   const f400 = getFontName(dir.locale, '400');
@@ -80,18 +76,18 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
       value: summary
         ? (dir.isRTL ? summary.totalBookings.toLocaleString('ar-SA') : String(summary.totalBookings))
         : '—',
-      label: dir.isRTL ? 'جلسة' : 'Sessions',
+      label: t('profile.sessions'),
     },
     {
       key: 'lastVisit',
       value: summary ? formatLastVisit(summary.lastVisit, dir.isRTL) : '—',
-      label: dir.isRTL ? 'آخر زيارة' : 'Last visit',
+      label: t('profile.lastVisit'),
     },
     {
       key: 'outstanding',
       // outstandingBalance is integer halalas.
       value: summary ? formatCurrencyAmount(summary.outstandingBalance, 'SAR', dir.isRTL) : '—',
-      label: dir.isRTL ? 'مبلغ مستحق' : 'Outstanding',
+      label: t('profile.outstanding'),
     },
   ];
 
@@ -145,7 +141,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
           <ScreenHeader title={t('profile.title')} onBack={() => router.back()} />
         )}
 
-        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.lg} style={styles.profileCard}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
               <View style={styles.avatar}>
@@ -159,7 +155,7 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
                   {secondary}
                 </Text>
               </View>
-              <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings-profile')} interactive style={styles.editBtn}>
+              <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings-profile')} interactive accessibilityRole="button" accessibilityLabel={t('profile.edit')} style={styles.editBtn}>
                 <Text style={[styles.editText, { fontFamily: f600 }]}>{t('profile.edit')}</Text>
               </Glass>
             </View>
@@ -175,10 +171,10 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))}>
           {renderGroup(careRows)}
         </Animated.View>
-        <Animated.View entering={FadeInDown.delay(140).duration(500).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(140).duration(500).easing(Easing.out(Easing.cubic))}>
           {renderGroup(appRows)}
         </Animated.View>
 
@@ -243,7 +239,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   // `flex: 1` wrapper from stretching the button to the profile row's height.
   editBtn: {
     alignSelf: 'center',
-    height: 32,
+    minHeight: 44,
     minWidth: 68,
     paddingHorizontal: 14,
     alignItems: 'center',

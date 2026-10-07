@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { publicEmployeesService } from '@/services/client/employees';
-import { branchesService } from '@/services/branches';
-import { useDir } from '@/hooks/useDir';
+import { usePublicBranches } from '@/hooks/queries/usePublicBranches';
+import { useAvailableDays, type AvailableDaysParams } from '@/hooks/queries/useAvailableDays';
+import { useSlots } from '@/hooks/queries/useSlots';
 import type { Slot } from '@/components/features/booking/TimeSlotsGrid';
 import type { DeliveryType } from '@/types/booking-enums';
-
-/**
- * Shared branch/day/slot state for the booking flow. Extracted from the
- * standalone schedule screen so the merged booking page (duration + time) and
- * the legacy schedule route use one implementation instead of two.
- */
 
 export function toLocalDateOnly(d: Date): string {
   const yyyy = d.getFullYear();
@@ -26,201 +21,102 @@ export interface BookingSlotContext {
   durationOptionId?: string;
   durationMins?: string;
   deliveryType?: DeliveryType;
-  /** When false the hook stays idle (used before the visitor picks an option). */
   enabled?: boolean;
 }
 
+/** Query cache owns server reads; only the visitor's selection stays local. */
 export function useBookingSlots(ctx: BookingSlotContext) {
-  const dir = useDir();
-  const days = useMemo(() => {
-    const out: Date[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = 0; i < 30; i += 1) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      out.push(d);
-    }
-    return out;
-  }, []);
+  const { t } = useTranslation();
+  const enabled = ctx.enabled !== false;
+  const days = useMemo(() => Array.from({ length: 30 }, (_, index) => {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() + index);
+    return day;
+  }), []);
+  const needsBranchDiscovery = !ctx.branchId;
+  const branches = usePublicBranches(enabled && needsBranchDiscovery);
+  const { refetch: refetchBranches } = branches;
+  const branchId = ctx.branchId ?? (branches.data?.find((branch) => branch.isMain) ?? branches.data?.[0])?.id ?? null;
+  const params: AvailableDaysParams = {
+    employeeId: ctx.employeeId,
+    branchId: branchId ?? undefined,
+    serviceId: ctx.serviceId,
+    startDate: toLocalDateOnly(days[0]),
+    days: days.length,
+    durationOptionId: ctx.durationOptionId,
+    durationMins: ctx.durationMins ? Number(ctx.durationMins) : undefined,
+    deliveryType: ctx.deliveryType ?? 'in_person',
+  };
+  const scope = JSON.stringify(params);
+  const availableDays = useAvailableDays(params, enabled);
+  const { refetch: refetchAvailableDays } = availableDays;
+  const [emptyDates, setEmptyDates] = useState<{ scope: string; dates: string[] }>({ scope, dates: [] });
+  const [daySelection, setDaySelection] = useState<{ scope: string; index: number | null } | null>(null);
+  const availabilityByDate = useMemo(() => {
+    if (!enabled || !availableDays.data) return null;
+    const empty = emptyDates.scope === scope ? emptyDates.dates : [];
+    return Object.fromEntries(availableDays.data.map(({ date, hasSlots }) => [date, hasSlots && !empty.includes(date)]));
+  }, [availableDays.data, emptyDates, enabled, scope]);
+  const firstAvailable = days.findIndex((day) => availabilityByDate?.[toLocalDateOnly(day)] === true);
+  const selectedIndex = daySelection?.scope === scope ? daySelection.index : firstAvailable >= 0 ? firstAvailable : null;
+  const dayIdx = selectedIndex != null && availabilityByDate?.[toLocalDateOnly(days[selectedIndex])] === true
+    ? selectedIndex : firstAvailable >= 0 ? firstAvailable : null;
+  const date = dayIdx == null ? undefined : toLocalDateOnly(days[dayIdx]);
+  const slotsQuery = useSlots({ ...params, date }, { enabled: enabled && dayIdx != null });
+  const { refetch: refetchSlots } = slotsQuery;
+  const slotScope = JSON.stringify([scope, date]);
+  const [slotSelection, setSlotSelection] = useState<{ scope: string; slot: Slot } | null>(null);
+  const slots: Slot[] = enabled && date ? slotsQuery.data ?? [] : [];
+  const selectedIndexInSlots = slotSelection?.scope === slotScope
+    ? slots.findIndex((slot) => slot.startTime === slotSelection.slot.startTime && slot.endTime === slotSelection.slot.endTime) : -1;
+  const slotIdx = selectedIndexInSlots >= 0 ? selectedIndexInSlots : null;
 
-  const [branchId, setBranchId] = useState<string | null>(ctx.branchId ?? null);
-  const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, boolean> | null>(null);
-  const [daysLoading, setDaysLoading] = useState(true);
-  const [daysError, setDaysError] = useState<string | null>(null);
-  const [daysReloadKey, setDaysReloadKey] = useState(0);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [slotIdx, setSlotIdx] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [dayIdx, setDayIdx] = useState<number | null>(null);
-
+  // A refreshed overview can reopen days whose slots were previously filled.
   useEffect(() => {
-    if (branchId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await branchesService.getAll();
-        if (cancelled) return;
-        const main = list.find((b) => b.isMain) ?? list[0];
-        if (main) setBranchId(main.id);
-        else {
-          setDaysLoading(false);
-          setDaysError(dir.isRTL ? 'لا توجد فروع متاحة' : 'No branches available');
-        }
-      } catch {
-        if (!cancelled) {
-          setDaysLoading(false);
-          setDaysError(dir.isRTL ? 'تعذّر تحميل الفرع' : 'Failed to load branch');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [branchId, dir.isRTL, reloadKey]);
+    setEmptyDates({ scope, dates: [] });
+  }, [scope, availableDays.dataUpdatedAt]);
 
+  // A day can fill after its overview was read. Skip it without broadening context.
   useEffect(() => {
-    if (ctx.enabled === false) {
-      setDaysLoading(false);
-      setDaysError(null);
-      setAvailabilityByDate(null);
-      setDayIdx(null);
-      setSlots([]);
-      setSlotIdx(null);
+    if (!enabled || !date || !slotsQuery.isSuccess || slotsQuery.isFetching || slotsQuery.data?.length) return;
+    // A cached empty page must be checked again before hiding a newly offered day.
+    if (!slotsQuery.isFetchedAfterMount) {
+      void refetchSlots();
       return;
     }
-    if (!ctx.employeeId) {
-      setDaysLoading(false);
-      setDaysError(dir.isRTL ? 'بيانات الحجز غير مكتملة' : 'Booking details are incomplete');
-      return;
-    }
-    if (!branchId) return;
-    let cancelled = false;
-    setDaysLoading(true);
-    setDaysError(null);
-    setAvailabilityByDate(null);
-    setDayIdx(null);
-    setSlots([]);
-    setSlotIdx(null);
-    (async () => {
-      try {
-        const availableDays = await publicEmployeesService.getAvailableDays({
-          employeeId: ctx.employeeId as string,
-          branchId,
-          serviceId: ctx.serviceId,
-          startDate: toLocalDateOnly(days[0]),
-          days: days.length,
-          durationOptionId: ctx.durationOptionId,
-          durationMins: ctx.durationMins ? Number(ctx.durationMins) : undefined,
-          deliveryType: ctx.deliveryType ?? 'in_person',
-        });
-        if (cancelled) return;
-        const availability = Object.fromEntries(availableDays.map(({ date, hasSlots }) => [date, hasSlots]));
-        setAvailabilityByDate(availability);
-        const firstAvailable = days.findIndex((day) => availability[toLocalDateOnly(day)] === true);
-        setDayIdx(firstAvailable >= 0 ? firstAvailable : null);
-      } catch {
-        if (!cancelled) setDaysError(dir.isRTL ? 'تعذّر التحقق من الأيام المتاحة' : 'Could not check available days');
-      } finally {
-        if (!cancelled) setDaysLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ctx.employeeId, ctx.serviceId, ctx.durationOptionId, ctx.durationMins, ctx.deliveryType, ctx.enabled, branchId, days, dir.isRTL, daysReloadKey]);
+    setEmptyDates((current) => ({ scope, dates: [...(current.scope === scope ? current.dates : []), date] }));
+  }, [date, enabled, scope, slotsQuery.data, slotsQuery.isFetchedAfterMount, slotsQuery.isFetching, slotsQuery.isSuccess, refetchSlots]);
 
   useEffect(() => {
-    if (ctx.enabled === false) return;
-    if (!ctx.employeeId || !branchId || dayIdx == null) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setSlotIdx(null);
-    (async () => {
-      try {
-        const selectedDeliveryType = ctx.deliveryType ?? 'in_person';
-        const data = await publicEmployeesService.getSlots({
-          employeeId: ctx.employeeId as string,
-          branchId,
-          date: toLocalDateOnly(days[dayIdx]),
-          serviceId: ctx.serviceId,
-          durationOptionId: ctx.durationOptionId,
-          durationMins: ctx.durationMins ? Number(ctx.durationMins) : undefined,
-          deliveryType: selectedDeliveryType,
-        });
-        if (cancelled) return;
-        if (!data?.length) {
-          const date = toLocalDateOnly(days[dayIdx]);
-          setAvailabilityByDate((current) => current ? { ...current, [date]: false } : current);
-          const nextAvailable = days.findIndex((day) => {
-            const candidate = toLocalDateOnly(day);
-            return candidate !== date && availabilityByDate?.[candidate] === true;
-          });
-          setDayIdx(nextAvailable >= 0 ? nextAvailable : null);
-          setSlots([]);
-        } else {
-          setSlots(data);
-        }
-      } catch {
-        if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الأوقات' : 'Failed to load times');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    ctx.employeeId,
-    branchId,
-    dayIdx,
-    days,
-    availabilityByDate,
-    ctx.serviceId,
-    ctx.durationOptionId,
-    ctx.durationMins,
-    ctx.deliveryType,
-    dir.isRTL,
-    reloadKey,
-  ]);
+    if (slotSelection?.scope === slotScope && slotsQuery.isSuccess && !slotsQuery.isFetching && selectedIndexInSlots < 0) setSlotSelection(null);
+  }, [selectedIndexInSlots, slotScope, slotSelection, slotsQuery.isFetching, slotsQuery.isSuccess]);
 
-  const handleRetry = useCallback(() => setReloadKey((k) => k + 1), []);
+  const handleRetry = useCallback(() => { void refetchSlots(); }, [refetchSlots]);
   const handleRetryDays = useCallback(() => {
-    setDaysLoading(true);
-    setDaysError(null);
-    if (!branchId) setReloadKey((k) => k + 1);
-    else setDaysReloadKey((k) => k + 1);
-  }, [branchId]);
-
-  const selectedSlot = slotIdx != null ? slots[slotIdx] : null;
-  const selectedDay = days[dayIdx ?? 0];
-
-  /** Reset day/slot selection (used when the visitor changes duration or visit type). */
+    setEmptyDates({ scope, dates: [] });
+    if (!branchId) void refetchBranches();
+    else void refetchAvailableDays();
+  }, [refetchAvailableDays, branchId, refetchBranches, scope]);
   const clearSelection = useCallback(() => {
-    setSlotIdx(null);
-    setDayIdx(null);
+    setSlotSelection(null);
+    setDaySelection(null);
   }, []);
+  const daysError = !enabled ? null : !ctx.employeeId || (needsBranchDiscovery && branches.isError) || availableDays.isError
+    ? t('common.errorDescription') : needsBranchDiscovery && branches.isSuccess && !branchId ? t('common.errorDescription') : null;
 
   return {
-    days,
-    branchId,
-    availabilityByDate,
-    daysLoading,
-    daysError,
-    dayIdx,
-    setDayIdx: (index: number) => setDayIdx(index),
+    days, branchId, availabilityByDate,
+    daysLoading: enabled && ((needsBranchDiscovery && branches.isFetching) || Boolean(branchId && ctx.employeeId && availableDays.isPending)),
+    daysError, dayIdx,
+    setDayIdx: (index: number) => { setDaySelection({ scope, index }); setSlotSelection(null); },
     slots,
-    loading,
-    error,
+    loading: enabled && Boolean(date) && slotsQuery.isFetching,
+    error: enabled && slotsQuery.isError ? t('common.errorDescription') : null,
     slotIdx,
-    setSlotIdx,
-    selectedSlot,
-    selectedDay,
-    handleRetry,
-    handleRetryDays,
-    clearSelection,
+    setSlotIdx: (index: number | null) => setSlotSelection(index != null && slots[index] ? { scope: slotScope, slot: slots[index] } : null),
+    selectedSlot: slotIdx != null && !slotsQuery.isFetching && !slotsQuery.isError ? slots[slotIdx] ?? null : null,
+    selectedDay: days[dayIdx ?? 0],
+    handleRetry, handleRetryDays, clearSelection,
   };
 }
