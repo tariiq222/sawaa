@@ -19,7 +19,7 @@ export const groupedGroupFormSchema = z.object({
   serviceId: z.string(),
   employeeId: z.string(),
   sequenceMode: z.enum(["ORDERED", "UNORDERED"]),
-  dependsOnGroupKey: z.string().nullable(),
+  dependsOnGroupKey: z.string().nullable().transform((value) => value?.trim() || null),
   sessionMode: z.enum(["SAME", "DETAIL"]),
   sameApplied: z.boolean().optional(),
   sessions: z.array(groupedSessionFormSchema).min(1, "packages.grouped.errors.sessionCount"),

@@ -6,7 +6,7 @@ import { useLocale } from "@/components/locale-provider"
 import { useAllServices, useServiceEmployees } from "@/hooks/use-services"
 import { serviceOptionLabel } from "./service-option-label"
 import { packageEmployeeLabel } from "@/lib/package-editor-labels"
-import { applyFirstSessionToAll, dependencyOptions, emptyGroup, emptySession } from "@/lib/package-groups-form"
+import { applyFirstSessionToAll, controlledSelectField, dependencyOptions, emptyGroup, emptySession } from "@/lib/package-groups-form"
 import type { GroupedPackageFormData } from "@/lib/schemas/package-groups.schema"
 import type { PractitionerDurationItem, Service } from "@/lib/types/service"
 
@@ -67,9 +67,9 @@ function GroupedPackageGroup({ form, index, services, groups, onRemove, translat
   const serviceTitle = selectedService ? serviceOptionLabel(selectedService, locale) : t("packages.grouped.groups.unnamed")
   const employee = employees.find((entry) => entry.employee.id === group?.employeeId)
   const durationChoices = (employee?.effectiveDurations ?? []).flatMap((durationGroup) => durationGroup.durations)
-  const serviceRegistration = form.register(`${path}.serviceId`)
-  const employeeRegistration = form.register(`${path}.employeeId`)
-  const dependencyRegistration = form.register(`${path}.dependsOnGroupKey`)
+  const serviceField = controlledSelectField(form.register(`${path}.serviceId`))
+  const employeeField = controlledSelectField(form.register(`${path}.employeeId`))
+  const dependencyField = controlledSelectField(form.register(`${path}.dependsOnGroupKey`))
   const resetSessions = () => sessions.replace((group?.sessions ?? []).map((session, position) => ({ ...emptySession(position), key: session.key })))
   const onServiceChange = (serviceId: string) => {
     form.setValue(`${path}.serviceId`, serviceId, { shouldDirty: true })
@@ -119,12 +119,12 @@ function GroupedPackageGroup({ form, index, services, groups, onRemove, translat
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label={t("packages.grouped.groups.label")} htmlFor={`${domPath}.label`}><Input id={`${domPath}.label`} {...form.register(`${path}.label`)} placeholder={t("packages.grouped.groups.labelPlaceholder")} /></Field>
         <Field label={t("packages.grouped.groups.service")} htmlFor={`${domPath}.serviceId`} error={translateError(error?.serviceId?.message)}>
-          <select {...serviceRegistration} id={`${domPath}.serviceId`} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={group?.serviceId ?? ""} onChange={(event) => { void serviceRegistration.onChange(event); onServiceChange(event.target.value) }} aria-label={t("packages.grouped.groups.service")}>
+          <select {...serviceField} id={`${domPath}.serviceId`} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={group?.serviceId ?? ""} onChange={(event) => onServiceChange(event.target.value)} aria-label={t("packages.grouped.groups.service")}>
             <option value="">{t("packages.items.servicePlaceholder")}</option>{services.map((service) => <option key={service.id} value={service.id}>{serviceOptionLabel(service, locale)}</option>)}
           </select>
         </Field>
         <Field label={t("packages.grouped.groups.practitioner")} htmlFor={`${domPath}.employeeId`} error={translateError(error?.employeeId?.message)}>
-          <select {...employeeRegistration} id={`${domPath}.employeeId`} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={group?.employeeId ?? ""} onChange={(event) => { void employeeRegistration.onChange(event); onEmployeeChange(event.target.value) }} disabled={!group?.serviceId || employeesLoading} aria-label={t("packages.grouped.groups.practitioner")}>
+          <select {...employeeField} id={`${domPath}.employeeId`} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={group?.employeeId ?? ""} onChange={(event) => onEmployeeChange(event.target.value)} disabled={!group?.serviceId || employeesLoading} aria-label={t("packages.grouped.groups.practitioner")}>
             <option value="">{employeesLoading ? t("packages.grouped.loading") : t("packages.items.employeePlaceholder")}</option>{employees.filter((entry) => entry.employee.isActive).map((entry) => <option key={entry.employee.id} value={entry.employee.id}>{packageEmployeeLabel(entry.employee, t("packages.review.unavailable"))}</option>)}
           </select>
         </Field>
@@ -133,7 +133,7 @@ function GroupedPackageGroup({ form, index, services, groups, onRemove, translat
           <p className="text-xs text-muted-foreground">{t(`packages.grouped.sequence.help.${group?.sequenceMode ?? "ORDERED"}`)}</p>
         </Field>
         <Field label={t("packages.grouped.groups.dependency")} htmlFor={`${domPath}.dependsOnGroupKey`} error={translateError(error?.dependsOnGroupKey?.message)}>
-          <select {...dependencyRegistration} id={`${domPath}.dependsOnGroupKey`} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={group?.dependsOnGroupKey ?? ""} onChange={(event) => { void dependencyRegistration.onChange(event); form.setValue(`${path}.dependsOnGroupKey`, event.target.value || null, { shouldDirty: true }); form.clearErrors(`${path}.dependsOnGroupKey`) }}>
+          <select {...dependencyField} id={`${domPath}.dependsOnGroupKey`} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={group?.dependsOnGroupKey ?? ""} onChange={(event) => { form.setValue(`${path}.dependsOnGroupKey`, event.target.value || null, { shouldDirty: true }); form.clearErrors(`${path}.dependsOnGroupKey`) }}>
             <option value="">{t("packages.grouped.groups.noDependency")}</option>{dependencyOptions(groups, group?.key ?? "").map((key) => { const candidate = groups.find((item) => item.key === key); const candidateIndex = groups.findIndex((item) => item.key === key); const service = services.find((item) => item.id === candidate?.serviceId); const label = candidate?.label?.trim() || `${t("packages.grouped.groups.groupNumber")} ${candidateIndex + 1}`; return <option key={key} value={key}>{label}{service ? ` · ${serviceOptionLabel(service, locale)}` : ""}</option> })}
           </select>
           <p className="text-xs text-muted-foreground">{t("packages.grouped.groups.dependencyHint")}</p>
@@ -158,14 +158,14 @@ function GroupedSessionRow({ form, path, idPrefix, index, durationChoices, error
   const session = form.watch(path)
   const domPath = idPrefix ? `${idPrefix}-${path}` : path
   const selected = durationChoices.find((choice) => choice.id === session?.durationOptionId)
-  const durationRegistration = form.register(`${path}.durationOptionId`)
+  const durationField = controlledSelectField(form.register(`${path}.durationOptionId`))
   const chooseDuration = (durationOptionId: string) => {
     const duration = durationChoices.find((choice) => choice.id === durationOptionId)
     onChange({ durationOptionId, ...(duration ? { deliveryType: duration.deliveryType, unitPriceSar: duration.price / 100, hasUnitPriceOverride: false } : {}) })
   }
   const selectedLabel = selected ? (selected.labelAr || selected.label) : ""
   const selectedSummary = selected && selectedLabel.includes(String(selected.durationMins)) ? selectedLabel : selected ? `${selectedLabel} · ${selected.durationMins} ${t("common.min")}` : ""
-  return <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface-muted p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_auto] md:items-end"><span className="text-xs font-medium text-muted-foreground">{t("packages.grouped.session")} {index + 1}</span><Field label={t("packages.grouped.duration")} htmlFor={`${domPath}.durationOptionId`} error={translateError(error?.durationOptionId?.message)}><select {...durationRegistration} id={`${domPath}.durationOptionId`} disabled={disabled} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={session?.durationOptionId ?? ""} onChange={(event) => { void durationRegistration.onChange(event); chooseDuration(event.target.value) }}><option value="">{t("packages.items.durationPlaceholder")}</option>{durationChoices.map((duration) => <option key={duration.id} value={duration.id}>{t(`packages.items.deliveryType.${duration.deliveryType}`)} · {duration.durationMins} {t("common.min")}</option>)}</select></Field><Field label={t("packages.grouped.priceSar")} htmlFor={`${domPath}.unitPriceSar`} error={translateError(error?.unitPriceSar?.message)}><Input id={`${domPath}.unitPriceSar`} name={`${path}.unitPriceSar`} disabled={disabled} type="number" min={0} step="0.01" value={session?.unitPriceSar ?? 0} onChange={(event) => onChange({ unitPriceSar: Number(event.target.value) || 0, hasUnitPriceOverride: true })} inputMode="decimal" /></Field><Button type="button" variant="ghost" onClick={onRemove} disabled={!canRemove || disabled} aria-label={`${t("packages.grouped.session")} ${index + 1}`}>{t("packages.grouped.removeSession")}</Button>{selected && <p className="text-xs text-muted-foreground md:col-span-2">{selectedSummary}</p>}</div>
+  return <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface-muted p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_auto] md:items-end"><span className="text-xs font-medium text-muted-foreground">{t("packages.grouped.session")} {index + 1}</span><Field label={t("packages.grouped.duration")} htmlFor={`${domPath}.durationOptionId`} error={translateError(error?.durationOptionId?.message)}><select {...durationField} id={`${domPath}.durationOptionId`} disabled={disabled} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={session?.durationOptionId ?? ""} onChange={(event) => chooseDuration(event.target.value)}><option value="">{t("packages.items.durationPlaceholder")}</option>{durationChoices.map((duration) => <option key={duration.id} value={duration.id}>{t(`packages.items.deliveryType.${duration.deliveryType}`)} · {duration.durationMins} {t("common.min")}</option>)}</select></Field><Field label={t("packages.grouped.priceSar")} htmlFor={`${domPath}.unitPriceSar`} error={translateError(error?.unitPriceSar?.message)}><Input id={`${domPath}.unitPriceSar`} name={`${path}.unitPriceSar`} disabled={disabled} type="number" min={0} step="0.01" value={session?.unitPriceSar ?? 0} onChange={(event) => onChange({ unitPriceSar: Number(event.target.value) || 0, hasUnitPriceOverride: true })} inputMode="decimal" /></Field><Button type="button" variant="ghost" onClick={onRemove} disabled={!canRemove || disabled} aria-label={`${t("packages.grouped.session")} ${index + 1}`}>{t("packages.grouped.removeSession")}</Button>{selected && <p className="text-xs text-muted-foreground md:col-span-2">{selectedSummary}</p>}</div>
 }
 
 function Field({ label, error, children, htmlFor }: { label: string; error?: string; children: React.ReactNode; htmlFor: string }) { return <div className="flex min-w-0 flex-col gap-1.5"><Label htmlFor={htmlFor}>{label}</Label>{children}{error && <p role="alert" className="text-xs text-destructive">{error}</p>}</div> }

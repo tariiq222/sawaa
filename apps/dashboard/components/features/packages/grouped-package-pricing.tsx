@@ -5,19 +5,20 @@ import { Input, Label } from "@sawaa/ui"
 import { FormSection } from "@/components/features/shared/form-section"
 import { useLocale } from "@/components/locale-provider"
 import { formatPrice } from "@/lib/money"
+import { controlledSelectField } from "@/lib/package-groups-form"
 import type { GroupedPackageFormData } from "@/lib/schemas/package-groups.schema"
 
 export function GroupedPackagePricing({ form, preview, translateError, idPrefix }: { form: UseFormReturn<GroupedPackageFormData>; preview: { subtotal: number; discountAmount: number; amountPaid: number; valid: boolean; error?: string }; translateError: (message?: string) => string | undefined; idPrefix?: string }) {
   const { t, locale } = useLocale()
   const discount = form.watch("globalDiscount")
   const error = form.formState.errors.globalDiscount?.value?.message
-  const discountTypeRegistration = form.register("globalDiscount.type")
+  const discountTypeField = controlledSelectField(form.register("globalDiscount.type"))
   const typeId = idPrefix ? `${idPrefix}-globalDiscount.type` : "globalDiscount.type"
   const valueId = idPrefix ? `${idPrefix}-globalDiscount.value` : "globalDiscount.value"
   return <FormSection title={t("packages.grouped.pricing.title")} description={t("packages.grouped.pricing.description")}>
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Field label={t("packages.grouped.discount.type")} htmlFor={typeId} error={translateError(form.formState.errors.globalDiscount?.type?.message)}>
-        <select {...discountTypeRegistration} id={typeId} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={discount.type} onChange={(event) => { void discountTypeRegistration.onChange(event); form.setValue("globalDiscount", { type: event.target.value as "NONE" | "PERCENTAGE" | "FIXED", value: 0 }, { shouldDirty: true }) }}>
+        <select {...discountTypeField} id={typeId} className="h-10 rounded-md border border-border bg-background px-3 text-sm" value={discount.type} onChange={(event) => { form.setValue("globalDiscount", { type: event.target.value as "NONE" | "PERCENTAGE" | "FIXED", value: 0 }, { shouldDirty: true }) }}>
           <option value="NONE">{t("packages.grouped.discount.none")}</option><option value="PERCENTAGE">{t("packages.grouped.discount.percent")}</option><option value="FIXED">{t("packages.grouped.discount.fixed")}</option>
         </select>
       </Field>
