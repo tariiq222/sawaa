@@ -21,15 +21,15 @@
     "register.phoneError": "رقم الجوال مطلوب",
     "register.emailError": "البريد الإلكتروني غير صالح",
     "login.title": "تسجيل الدخول",
-    "login.identifier": "رقم الجوال أو البريد الإلكتروني",
-    "login.identifierPlaceholder": "05xxxxxxxx",
+    "login.identifier": "البريد الإلكتروني أو رقم الجوال",
+    "login.identifierPlaceholder": "example@email.com أو 05xxxxxxxx",
     "login.submit": "الدخول",
-    "login.submitting": "جارٍ...",
-    "login.welcome": "أهلاً بك",
-    "login.subtitle": "أدخل رقم جوالك أو بريدك الإلكتروني، ونرسل لك رمز التحقق.",
-    "login.sendCode": "إرسال الرمز",
-    "login.identifierError": "الرجاء إدخال رقم الجوال أو البريد الإلكتروني",
-    "login.continueAsGuest": "متابعة كزائر",
+    "login.submitting": "جارٍ تسجيل الدخول...",
+    "login.welcome": "مرحبًا بك",
+    "login.subtitle": "اختر الدخول بكلمة المرور أو رمز التحقق",
+    "login.sendCode": "إرسال رمز التحقق",
+    "login.identifierError": "أدخل بريدًا إلكترونيًا أو رقم جوال صحيحًا",
+    "login.continueAsGuest": "المتابعة كزائر",
     "otp.title": "رمز التحقق",
     "otp.code": "أدخل الرمز",
     "otp.resend": "إعادة إرسال الرمز",
@@ -57,12 +57,12 @@
     "loginWithOtp": "الدخول برمز التحقق",
     "loginWithPassword": "الدخول بكلمة المرور",
     "forgotPassword": {
-      "title": "نسيت كلمة المرور",
-      "subtitle": "أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق",
+      "title": "إنشاء أو استعادة كلمة المرور",
+      "subtitle": "أدخل البريد أو الجوال المرتبط بحسابك لاستلام رمز التحقق.",
       "emailLabel": "البريد الإلكتروني",
       "submit": "إرسال الرمز",
       "back": "العودة لتسجيل الدخول",
-      "linkLabel": "نسيت كلمة المرور؟"
+      "linkLabel": "إنشاء أو استعادة كلمة المرور"
     },
     "noAccount": "ليس لديك حساب؟",
     "hasAccount": "لديك حساب بالفعل؟",
@@ -100,15 +100,15 @@
     "employeeNote": "الأطباء والموظفون يُسجَّلون من لوحة الإدارة",
     "resetPassword": {
       "title": "إعادة تعيين كلمة المرور",
-      "otpStepSubtitle": "أدخل الرمز المكوّن من 6 أرقام المرسل إلى {{email}}",
-      "passwordStepSubtitle": "اختر كلمة مرور جديدة",
+      "otpStepSubtitle": "أدخل رمز التحقق المكوّن من أربعة أرقام المرسل إلى {{identifier}}",
+      "passwordStepSubtitle": "اختر كلمة مرور من 8 إلى 200 حرف تتضمن حرفًا إنجليزيًا كبيرًا ورقمًا.",
       "codeLabel": "رمز التحقق",
       "newPasswordLabel": "كلمة المرور الجديدة",
       "verifyCode": "تحقق من الرمز",
       "submit": "إعادة تعيين كلمة المرور",
       "success": "تم إعادة تعيين كلمة المرور. الرجاء تسجيل الدخول.",
       "invalidCode": "رمز غير صالح أو منتهي الصلاحية",
-      "weakPassword": "كلمة المرور يجب أن تكون 8 أحرف على الأقل"
+      "weakPassword": "استخدم 8 إلى 200 حرف، تتضمن حرفًا إنجليزيًا كبيرًا ورقمًا."
     },
     "emailEntry": {
       "title": "المتابعة بالبريد الإلكتروني",
@@ -135,7 +135,9 @@
       "invalidPhone": "أدخل رقم جوال صحيحًا، أو رقمًا دوليًا يبدأ برمز الدولة.",
       "nameTooLong": "يجب ألا يتجاوز الاسم 100 حرف.",
       "invalidDetails": "تحقق من البيانات المدخلة ثم حاول مجددًا."
-    }
+    },
+    "showPassword": "إظهار",
+    "hidePassword": "إخفاء"
   },
   "tabs": {
     "home": "الرئيسية",

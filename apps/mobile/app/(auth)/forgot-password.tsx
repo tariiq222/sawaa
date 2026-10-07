@@ -29,22 +29,23 @@ export default function ForgotPasswordScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
-  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
+  const { booking, redirect, identifier: initialIdentifier } = useLocalSearchParams<{ booking?: string; redirect?: string; identifier?: string }>();
   const insets = useSafeAreaInsets();
   const dir = useDir();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(initialIdentifier ?? '');
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
 
   const validate = useCallback((): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      setError(t('auth.register.emailError') || 'البريد الإلكتروني غير صالح');
+    const value = identifier.trim();
+    if (!value || (value.includes('@') ? !emailRegex.test(value) : !/^(?:\+|00)?[\d ()-]{7,20}$/.test(value))) {
+      setError(t('auth.login.identifierError'));
       return false;
     }
     return true;
-  }, [email, t]);
+  }, [identifier, t]);
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) {
@@ -54,11 +55,11 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      await authService.requestPasswordResetOtp(email.trim());
+      await authService.requestPasswordResetOtp(identifier.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/reset-password',
-        params: { email: email.trim(), ...authContinuationParams(booking, redirect) },
+        params: { identifier: identifier.trim(), ...authContinuationParams(booking, redirect) },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -66,7 +67,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, validate, router, t, booking, redirect]);
+  }, [identifier, validate, router, t, booking, redirect]);
 
   return (
     <AquaBackground>
@@ -91,7 +92,7 @@ export default function ForgotPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            استعادة كلمة المرور
+            {t('auth.forgotPassword.title')}
           </Text>
           <Text
             style={[
@@ -99,19 +100,19 @@ export default function ForgotPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            أدخل بريدك الإلكتروني لاستلام رمز التحقق
+            {t('auth.forgotPassword.subtitle')}
           </Text>
 
           <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
             <View style={styles.formInner}>
               <LabeledInput
-                label="البريد الإلكتروني"
-                value={email}
+                label={t('auth.login.identifier')}
+                value={identifier}
                 onChangeText={(v) => {
-                  setEmail(v);
+                  setIdentifier(v);
                   if (error) setError(undefined);
                 }}
-                placeholder="example@email.com"
+                placeholder={t('auth.login.identifierPlaceholder')}
                 error={error}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -119,21 +120,21 @@ export default function ForgotPasswordScreen() {
               />
 
               <PrimaryButton
-                label={loading ? 'جارِ الإرسال...' : 'إرسال رمز التحقق'}
+                label={loading ? t('common.loading') : t('auth.forgotPassword.submit')}
                 onPress={handleSubmit}
                 disabled={loading}
                 style={{ marginTop: 8 }}
               />
 
               <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>تذكرت كلمة المرور؟ </Text>
+                <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.back();
                   }}
                 >
-                  <Text style={styles.loginLink}>تسجيل الدخول</Text>
+                  <Text style={styles.loginLink}>{t('auth.loginNow')}</Text>
                 </Pressable>
               </View>
             </View>

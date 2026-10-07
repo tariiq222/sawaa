@@ -9,12 +9,13 @@ import { completeNativeSession, promoteEmailSession } from './complete-native-se
 import { emailEntryReducer, initialEmailEntryState } from './email-entry-state';
 import { useEmailEntryMutations } from './email-entry-mutations';
 
-type Context = { booking?: string; redirect?: string; initialEmail?: string; onExit?: () => void };
+type Context = { booking?: string; redirect?: string; initialEmail?: string; autoStart?: boolean; onExit?: () => void };
 export function useEmailEntry(context: Context) {
   const [state, dispatch] = useReducer(emailEntryReducer, context.initialEmail ?? '', initialEmailEntryState);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const autoStarted = useRef(false);
   const generation = useRef(0);
   const ownedSessionEpoch = useRef<number | null>(null);
   const busy = useRef(false);
@@ -84,6 +85,11 @@ export function useEmailEntry(context: Context) {
       if (current() && isSessionCurrent(epoch)) dispatch({ type: 'emailChallenge', result, now: Date.now() });
     });
   };
+  useEffect(() => {
+    if (!context.autoStart || autoStarted.current) return;
+    const timer = setTimeout(() => { autoStarted.current = true; void requestEmail(); }, 0);
+    return () => clearTimeout(timer);
+  });
   const verify = () => {
     if (state.code.length !== 6 || Date.now() >= state.expiresAt) return;
     return run(async (current, epoch) => {

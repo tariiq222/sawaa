@@ -88,6 +88,20 @@ describe('ClientLoginHandler', () => {
   });
 
   describe('execute', () => {
+    it('pins a mobile login lookup to the prevalidated client identity', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue(null);
+      await expect(handler.execute({ phone: '+966501234567', password: 'SecurePass123' }, '1.2.3.4', 'expected-client')).rejects.toThrow(UnauthorizedException);
+      expect(mockPrisma.client.findFirst).toHaveBeenCalledWith({ where: { phone: '+966501234567', deletedAt: null, id: 'expected-client' } });
+      expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
+    });
+
+    it.each([{ isActive: false }, { deletedAt: new Date() }])('rejects a disabled client before token issuance', async (state) => {
+      mockPrisma.client.findFirst.mockResolvedValue({ id: 'disabled', passwordHash: 'hash', ...state });
+      mockPasswords.verify.mockResolvedValue(true);
+      await expect(handler.execute({ email: 'client@example.com', password: 'SecurePass123' })).rejects.toThrow(UnauthorizedException);
+      expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
+    });
+
     it('returns tokens on successful login', async () => {
       mockPrisma.client.findFirst.mockResolvedValue({
         id: 'cl-1',

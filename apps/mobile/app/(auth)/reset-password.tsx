@@ -31,7 +31,8 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
-  const { email, booking, redirect } = useLocalSearchParams<{ email: string; booking?: string; redirect?: string }>();
+  const { identifier: target, email, booking, redirect } = useLocalSearchParams<{ identifier?: string; email?: string; booking?: string; redirect?: string }>();
+  const identifier = target ?? email ?? '';
 
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -47,22 +48,22 @@ export default function ResetPasswordScreen() {
 
   const validateVerify = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!code || code.length < 4) newErrors.code = 'الرمز غير صالح';
+    if (!/^\d{4}$/.test(code)) newErrors.code = t('auth.resetPassword.invalidCode');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [code]);
+  }, [code, t]);
 
   const validateReset = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!newPassword || newPassword.length < 8) {
-      newErrors.newPassword = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+    if (newPassword.length < 8 || newPassword.length > 200 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      newErrors.newPassword = t('auth.resetPassword.weakPassword');
     }
     if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'كلمتا المرور غير متطابقتين';
+      newErrors.confirmPassword = t('auth.passwordMismatch');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [newPassword, confirmPassword]);
+  }, [newPassword, confirmPassword, t]);
 
   const handleVerifyOtp = useCallback(async () => {
     if (!validateVerify()) {
@@ -72,17 +73,17 @@ export default function ResetPasswordScreen() {
 
     setLoading(true);
     try {
-      const result = await authService.verifyPasswordResetOtp(email, code);
+      const result = await authService.verifyPasswordResetOtp(identifier, code);
       setSessionToken(result.sessionToken);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep('reset');
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), 'رمز التحقق غير صحيح أو منتهي الصلاحية');
+      Alert.alert(t('common.error'), t('auth.resetPassword.invalidCode'));
     } finally {
       setLoading(false);
     }
-  }, [email, code, validateVerify, t]);
+  }, [identifier, code, validateVerify, t]);
 
   const handleResetPassword = useCallback(async () => {
     if (!validateReset()) {
@@ -94,12 +95,13 @@ export default function ResetPasswordScreen() {
     try {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('تم', 'تم تغيير كلمة المرور بنجاح', [
-        { text: 'تسجيل الدخول', onPress: () => router.replace(authLoginHref(booking, redirect)) },
+      setSessionToken(''); setNewPassword(''); setConfirmPassword('');
+      Alert.alert(t('common.success'), t('auth.resetPassword.success'), [
+        { text: t('auth.loginNow'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), 'تعذر تغيير كلمة المرور');
+      Alert.alert(t('common.error'), t('auth.error.generic'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +130,7 @@ export default function ResetPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            {step === 'verify' ? 'التحقق من الرمز' : 'كلمة مرور جديدة'}
+            {t(step === 'verify' ? 'auth.resetPassword.verifyCode' : 'auth.resetPassword.newPasswordLabel')}
           </Text>
           <Text
             style={[
@@ -137,8 +139,8 @@ export default function ResetPasswordScreen() {
             ]}
           >
             {step === 'verify'
-              ? `أدخل رمز التحقق المرسل إلى ${email}`
-              : 'أدخل كلمة المرور الجديدة'}
+              ? t('auth.resetPassword.otpStepSubtitle', { identifier })
+              : t('auth.resetPassword.passwordStepSubtitle')}
           </Text>
 
           <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
@@ -146,19 +148,20 @@ export default function ResetPasswordScreen() {
               {step === 'verify' ? (
                 <>
                   <LabeledInput
-                    label="رمز التحقق"
+                    label={t('auth.resetPassword.codeLabel')}
                     value={code}
                     onChangeText={(v) => {
                       setCode(v);
                       clearError('code');
                     }}
-                    placeholder="123456"
+                    placeholder="1234"
+                    maxLength={4}
                     error={errors.code}
                     keyboardType="number-pad"
                     dir={dir}
                   />
                   <PrimaryButton
-                    label={loading ? 'جارِ التحقق...' : 'تحقق'}
+                    label={loading ? t('common.loading') : t('auth.resetPassword.verifyCode')}
                     onPress={handleVerifyOtp}
                     disabled={loading}
                     style={{ marginTop: 8 }}
@@ -167,7 +170,7 @@ export default function ResetPasswordScreen() {
               ) : (
                 <>
                   <LabeledInput
-                    label="كلمة المرور الجديدة"
+                    label={t('auth.resetPassword.newPasswordLabel')}
                     value={newPassword}
                     onChangeText={(v) => {
                       setNewPassword(v);
@@ -179,7 +182,7 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <LabeledInput
-                    label="تأكيد كلمة المرور"
+                    label={t('auth.confirmPassword')}
                     value={confirmPassword}
                     onChangeText={(v) => {
                       setConfirmPassword(v);
@@ -191,7 +194,7 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <PrimaryButton
-                    label={loading ? 'جارِ الحفظ...' : 'حفظ كلمة المرور'}
+                    label={loading ? t('common.loading') : t('auth.resetPassword.submit')}
                     onPress={handleResetPassword}
                     disabled={loading}
                     style={{ marginTop: 8 }}
@@ -200,14 +203,14 @@ export default function ResetPasswordScreen() {
               )}
 
               <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>تذكرت كلمة المرور؟ </Text>
+                <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.replace(authLoginHref(booking, redirect));
                   }}
                 >
-                  <Text style={styles.loginLink}>تسجيل الدخول</Text>
+                  <Text style={styles.loginLink}>{t('auth.loginNow')}</Text>
                 </Pressable>
               </View>
             </View>
