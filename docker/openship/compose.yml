@@ -198,11 +198,20 @@ services:
         NEXT_PUBLIC_WEB_CHAT_ENABLED: ${NEXT_PUBLIC_WEB_CHAT_ENABLED:-false}
     image: ${WEBSITE_IMAGE:-sawaa-website:staging}
     restart: unless-stopped
+    # Production RSS reached ~1.3GB after 10 days of uptime, almost all
+    # anonymous memory. Cap the container so runaway growth restarts the
+    # website instead of eating the shared host's RAM.
+    mem_limit: 1536m
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: "5105"
       INTERNAL_API_URL: http://backend:5100/api/v1
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+      # Keep the V8 heap well under mem_limit so a heap leak fails as a clean
+      # OOM restart, and limit glibc malloc arenas (sharp/libvips threads
+      # otherwise fragment native memory on Debian images).
+      NODE_OPTIONS: "--max-old-space-size=1024"
+      MALLOC_ARENA_MAX: "2"
     depends_on:
       backend:
         condition: service_healthy
