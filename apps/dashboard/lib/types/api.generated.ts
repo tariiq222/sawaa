@@ -3396,6 +3396,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/password-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log in a customer with email or phone and password */
+        post: operations["MobileClientAuthController_loginWithPassword_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/refresh": {
         parameters: {
             query?: never;
@@ -10142,6 +10159,23 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             serviceId: string;
+        };
+        MobilePasswordLoginDto: {
+            /**
+             * @description Client email address (provide either email or phone, not both)
+             * @example client@example.com
+             */
+            email?: string;
+            /**
+             * @description Account password
+             * @example SecurePass123
+             */
+            password: string;
+            /**
+             * @description Saudi mobile number (any common format; normalized to E.164). Provide either email or phone, not both.
+             * @example +966501234567
+             */
+            phone?: string;
         };
         MobileRateBookingDto: {
             /**
@@ -30914,6 +30948,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientAuthController_loginWithPassword_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobilePasswordLoginDto"];
+            };
+        };
+        responses: {
+            /** @description Customer authenticated, native client tokens issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        sessionKind: "client";
+                        tokens: {
+                            accessToken: string;
+                            refreshToken: string;
+                        };
+                    };
+                };
             };
             /** @description Validation failed */
             400: {

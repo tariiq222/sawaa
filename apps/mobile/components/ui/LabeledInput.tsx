@@ -14,6 +14,7 @@ interface LabeledInputProps {
   placeholder?: string;
   error?: string;
   keyboardType?: KeyboardTypeOptions;
+  maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   secureTextEntry?: boolean;
   showVisibilityToggle?: boolean;
@@ -29,6 +30,7 @@ export function LabeledInput({
   placeholder,
   error,
   keyboardType,
+  maxLength,
   autoCapitalize,
   secureTextEntry,
   showVisibilityToggle,
@@ -49,6 +51,7 @@ export function LabeledInput({
           accessibilityLabel={label}
           placeholderTextColor={sawaaColors.ink[500]}
           keyboardType={keyboardType}
+          maxLength={maxLength}
           autoCapitalize={autoCapitalize}
           secureTextEntry={secureTextEntry && !isVisible}
           style={[styles.inputText, { textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}

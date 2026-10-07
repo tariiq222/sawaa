@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Ip, Post, UseGuards } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ApiStandardResponses } from '../../../common/swagger';
@@ -13,6 +13,8 @@ import { VerifyMobileOtpHandler } from '../../../modules/identity/verify-mobile-
 import { RequestEmailVerificationHandler } from '../../../modules/identity/request-email-verification/request-email-verification.handler';
 import { NativeSessionDto } from '../../../modules/identity/native-session/native-session.dto';
 import { NativeRefreshHandler } from '../../../modules/identity/native-session/native-refresh.handler';
+import { MobilePasswordLoginDto } from '../../../modules/identity/mobile-password-login/mobile-password-login.dto';
+import { MobilePasswordLoginHandler } from '../../../modules/identity/mobile-password-login/mobile-password-login.handler';
 import { NativeLogoutHandler } from '../../../modules/identity/native-session/native-logout.handler';
 
 @ApiTags('Mobile Client / Identity')
@@ -25,6 +27,7 @@ export class MobileClientAuthController {
     private readonly requestEmailVerification: RequestEmailVerificationHandler,
     private readonly nativeRefresh: NativeRefreshHandler,
     private readonly nativeLogout: NativeLogoutHandler,
+    private readonly passwordLogin: MobilePasswordLoginHandler,
   ) {}
 
   @Post('register')
@@ -36,6 +39,30 @@ export class MobileClientAuthController {
   @ApiStandardResponses()
   async registerUser(@Body() dto: RegisterMobileUserDto) {
     return this.register.execute(dto);
+  }
+
+  @Post('password-login')
+  @HttpCode(200)
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ApiOperation({ summary: 'Log in a customer with email or phone and password' })
+  @ApiOkResponse({
+    description: 'Customer authenticated, native client tokens issued',
+    schema: {
+      type: 'object',
+      required: ['sessionKind', 'tokens'],
+      properties: {
+        sessionKind: { type: 'string', enum: ['client'] },
+        tokens: {
+          type: 'object', required: ['accessToken', 'refreshToken'],
+          properties: { accessToken: { type: 'string' }, refreshToken: { type: 'string' } },
+        },
+      },
+    },
+  })
+  @ApiStandardResponses()
+  async loginWithPassword(@Body() dto: MobilePasswordLoginDto, @Ip() ip: string) {
+    return this.passwordLogin.execute(dto, ip);
   }
 
   @Post('request-login-otp')

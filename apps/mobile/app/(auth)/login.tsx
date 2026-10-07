@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { usePasswordLogin } from '@/features/auth/use-password-login';
 import EmailEntryScreen from './email-entry';
 import {
   View,
@@ -40,6 +41,12 @@ export default function LoginScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
+  const [mode, setMode] = useState<'password' | 'otp'>('password');
+  const [password, setPassword] = useState('');
+  const [visible, setVisible] = useState(false);
+  const otpBusy = useRef(false);
+  const passwordLogin = usePasswordLogin({ booking, redirect });
+  const leave = () => { passwordLogin.cancel(); otpBusy.current = false; setPassword(''); };
   const [identifier, setIdentifier] = useState('');
   const [emailEntry, setEmailEntry] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -47,8 +54,8 @@ export default function LoginScreen() {
 
   const requestOtp = useRequestLoginOtp();
   const continuation = authContinuationParams(booking, redirect);
-  const forgotPasswordHref = booking || redirect
-    ? { pathname: '/(auth)/forgot-password' as const, params: continuation }
+  const forgotPasswordHref = booking || redirect || identifier.trim()
+    ? { pathname: '/(auth)/forgot-password' as const, params: { ...continuation, ...(identifier.trim() ? { identifier: identifier.trim() } : {}) } }
     : '/(auth)/forgot-password';
   const registerHref = booking || redirect
     ? { pathname: '/(auth)/register' as const, params: continuation }
@@ -61,10 +68,21 @@ export default function LoginScreen() {
       return;
     }
 
+    if (mode === 'password') {
+      if (!password) { setError(t('auth.passwordRequired')); return; }
+      const result = await passwordLogin.submit(identifier, password);
+      if (result === 'failed') setError(t('auth.loginError'));
+      if (result !== 'cancelled') setPassword('');
+      return;
+    }
+    if (otpBusy.current) return;
     if (identifier.includes('@')) { setEmailEntry(true); return; }
 
+    otpBusy.current = true;
+    const current = passwordLogin.capture();
     try {
       const result = await requestOtp.mutateAsync({ identifier: identifier.trim() });
+      if (!current()) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/otp-verify',
@@ -76,14 +94,15 @@ export default function LoginScreen() {
         },
       });
     } catch {
+      if (!current()) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.error.generic'));
-    }
-  }, [identifier, requestOtp, router, t, booking, redirect]);
+    } finally { if (current()) otpBusy.current = false; }
+  }, [identifier, requestOtp, router, t, booking, redirect, mode, password, passwordLogin]);
 
   const centered = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
 
-  if (emailEntry) return <EmailEntryScreen initialEmail={identifier.trim()} onExit={() => { setEmailEntry(false); setIdentifier(''); }} />;
+  if (emailEntry) return <EmailEntryScreen initialEmail={identifier.trim()} autoStart onExit={() => setEmailEntry(false)} />;
 
   return (
     <AquaBackground>
@@ -99,7 +118,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <BackButton onPress={() => goBackOrHome(router)} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
+          <BackButton onPress={() => { leave(); goBackOrHome(router); }} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
 
           <View style={styles.logoWrap}>
             <Glass variant="strong" radius={sawaaTokens.radius.xl} style={styles.logoCard}>
@@ -119,6 +138,11 @@ export default function LoginScreen() {
             {t('auth.login.subtitle')}
           </Text>
 
+          <View style={[styles.modes, { flexDirection: dir.row }]}>
+            {(['password', 'otp'] as const).map(value => <Pressable key={value} accessibilityRole="tab" accessibilityState={{ selected: mode === value }} onPress={() => { leave(); setMode(value); setError(undefined); setVisible(false); }} style={[styles.mode, mode === value && styles.inputFocused]}>
+              <Text style={[styles.smallLink, { fontFamily: f700 }]}>{t(value === 'password' ? 'auth.loginWithPassword' : 'auth.loginWithOtp')}</Text>
+            </Pressable>)}
+          </View>
           <View style={styles.field}>
             <Text style={[styles.label, { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f700 }]}>
               {t('auth.login.identifier')}
@@ -139,21 +163,29 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.ink[500]}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoComplete="email"
-                textContentType="emailAddress"
+                autoComplete="username"
+                textContentType="username"
+                editable={!passwordLogin.pending}
                 style={[styles.inputText, { textAlign: 'center', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }]}
               />
             </View>
             {error ? (
-              <Text style={[styles.error, centered, { fontFamily: f400, fontWeight: '400' }]}>{error}</Text>
+              <Text accessibilityRole="alert" style={[styles.error, centered, { fontFamily: f400, fontWeight: '400' }]}>{error}</Text>
             ) : null}
           </View>
 
+          {mode === 'password' && <View style={[styles.field, { marginTop: 16 }]}>
+            <Text style={[styles.label, { textAlign: dir.textAlign, fontFamily: f700 }]}>{t('auth.password')}</Text>
+            <View style={[styles.input, { flexDirection: dir.row }]}>
+              <TextInput accessibilityLabel={t('auth.password')} value={password} onChangeText={value => { setPassword(value); setError(undefined); }} secureTextEntry={!visible} editable={!passwordLogin.pending} autoCapitalize="none" autoCorrect={false} autoComplete="password" textContentType="password" onSubmitEditing={handleLogin} style={[styles.inputText, { fontFamily: f400, textAlign: 'left', writingDirection: 'ltr' }]} />
+              <Pressable accessibilityRole="button" accessibilityLabel={t(visible ? 'auth.hidePassword' : 'auth.showPassword')} onPress={() => setVisible(!visible)} style={styles.linkTarget}><Text style={styles.smallLink}>{t(visible ? 'auth.hidePassword' : 'auth.showPassword')}</Text></Pressable>
+            </View>
+          </View>}
           <PrimaryButton
-            label={requestOtp.isPending ? t('auth.login.submitting') : t('auth.login.sendCode')}
+            label={requestOtp.isPending || passwordLogin.pending ? t('auth.login.submitting') : t(mode === 'password' ? 'auth.loginNow' : 'auth.login.sendCode')}
             onPress={handleLogin}
             fontFamily={f700}
-            disabled={requestOtp.isPending}
+            disabled={requestOtp.isPending || passwordLogin.pending}
             style={styles.primary}
           />
 
@@ -162,7 +194,7 @@ export default function LoginScreen() {
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push(registerHref);
+                leave(); router.push(registerHref);
               }}
               accessibilityRole="link"
               style={styles.linkTarget}
@@ -175,7 +207,7 @@ export default function LoginScreen() {
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.replace('/(guest)/home');
+                leave(); router.replace('/(guest)/home');
               }}
               accessibilityRole="button"
               style={styles.secondary}
@@ -187,7 +219,7 @@ export default function LoginScreen() {
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push(forgotPasswordHref);
+              leave(); router.push(forgotPasswordHref);
             }}
             accessibilityRole="link"
             style={styles.linkTarget}
@@ -199,7 +231,7 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={() => {
-              router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
+              leave(); router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
             }}
             accessibilityRole="button"
             style={styles.linkTarget}
@@ -221,6 +253,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   logo: { width: 60, height: 60, tintColor: colors.teal[700] },
   title: { fontSize: 28, lineHeight: 38, color: colors.ink[900] },
   subtitle: { fontSize: 15, lineHeight: 24, color: colors.ink[700], marginTop: 8, marginBottom: 28 },
+  modes: { gap: 8, marginBottom: 20 },
+  mode: { flex: 1, minHeight: 48, justifyContent: 'center', borderWidth: 1, borderColor: colors.teal[200], borderRadius: sawaaTokens.radius.lg },
   field: { gap: 8 },
   label: { fontSize: 14, lineHeight: 20, color: colors.ink[900] },
   input: {
