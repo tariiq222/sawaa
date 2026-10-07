@@ -28,7 +28,7 @@ export async function completeNativeSession(result: VerifiedMobileOtpResponse, c
   const profileResult = await authService.getProfile(result.sessionKind);
   if (!current()) throw new SessionSupersededError();
   const profile = profileResult.success && profileResult.data;
-  if (!profile) throw new Error('Authenticated profile unavailable');
+  if (!profile || (result.sessionKind === 'client' && profile.role !== 'CLIENT')) throw new Error('Authenticated profile unavailable');
   context.onReady?.();
   context.dispatch(setCredentials({ ...result.tokens, user: profile }));
   const kind = result.sessionKind ?? 'client';

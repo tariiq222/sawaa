@@ -35,3 +35,18 @@ e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:22
 e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:23
 e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:24
 e3ddb275291d14094ff4ba5e1e495c9794183019:.woodpecker/ci.yml:generic-api-key:25
+
+# Public, deterministic password used only by two mocked native-login tests.
+# Exact historical fingerprints; new credentials and other files remain scanned.
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/api/mobile/client/auth.controller.spec.ts:generic-api-key:65
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/api/mobile/client/auth.controller.spec.ts:generic-api-key:68
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/api/mobile/client/auth.controller.spec.ts:generic-api-key:74
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/api/mobile/client/auth.controller.spec.ts:generic-api-key:75
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/api/mobile/client/auth.controller.spec.ts:generic-api-key:78
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:106
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:113
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:129
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:133
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:69
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:79
+b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:85

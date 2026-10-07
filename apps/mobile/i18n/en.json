@@ -21,14 +21,14 @@
     "register.phoneError": "Phone number is required",
     "register.emailError": "Invalid email address",
     "login.title": "Login",
-    "login.identifier": "Phone or Email",
-    "login.identifierPlaceholder": "05xxxxxxxx",
+    "login.identifier": "Email or phone number",
+    "login.identifierPlaceholder": "example@email.com or 05xxxxxxxx",
     "login.submit": "Login",
-    "login.submitting": "Logging in...",
-    "login.welcome": "Welcome",
-    "login.subtitle": "Enter your phone number or email and we will send you a verification code.",
-    "login.sendCode": "Send code",
-    "login.identifierError": "Please enter your phone or email",
+    "login.submitting": "Signing in…",
+    "login.welcome": "Welcome back",
+    "login.subtitle": "Sign in with your password or a verification code",
+    "login.sendCode": "Send verification code",
+    "login.identifierError": "Enter a valid email or phone number",
     "login.continueAsGuest": "Continue as guest",
     "otp.title": "Verification Code",
     "otp.code": "Enter the code",
@@ -57,12 +57,12 @@
     "loginWithOtp": "Login with OTP",
     "loginWithPassword": "Login with Password",
     "forgotPassword": {
-      "title": "Forgot Password",
-      "subtitle": "Enter your email and we'll send a 6-digit code",
+      "title": "Create or reset password",
+      "subtitle": "Enter your account email or phone to receive a verification code.",
       "emailLabel": "Email",
       "submit": "Send Code",
       "back": "Back to Sign In",
-      "linkLabel": "Forgot password?"
+      "linkLabel": "Create or reset password"
     },
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
@@ -100,15 +100,15 @@
     "employeeNote": "Employees and staff are registered from the admin dashboard",
     "resetPassword": {
       "title": "Reset Password",
-      "otpStepSubtitle": "Enter the 6-digit code sent to {{email}}",
-      "passwordStepSubtitle": "Choose a new password",
+      "otpStepSubtitle": "Enter the 4-digit verification code sent to {{identifier}}",
+      "passwordStepSubtitle": "Choose 8–200 characters, including an uppercase letter and a number.",
       "codeLabel": "Verification Code",
       "newPasswordLabel": "New Password",
       "verifyCode": "Verify Code",
       "submit": "Reset Password",
       "success": "Password reset successful. Please sign in.",
       "invalidCode": "Invalid or expired code",
-      "weakPassword": "Password must be at least 8 characters",
+      "weakPassword": "Use 8–200 characters, including an uppercase letter and a number.",
       "failed": "Could not reset your password"
     },
     "emailEntry": {
@@ -137,7 +137,9 @@
       "nameTooLong": "The name must be no longer than 100 characters.",
       "invalidDetails": "Check the entered details and try again."
     },
-    "rememberPassword": "Remember your password?"
+    "rememberPassword": "Remember your password?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "tabs": {
     "home": "Home",

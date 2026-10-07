@@ -31,7 +31,8 @@ export default function ResetPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
-  const { email, booking, redirect } = useLocalSearchParams<{ email: string; booking?: string; redirect?: string }>();
+  const { identifier: target, email, booking, redirect } = useLocalSearchParams<{ identifier?: string; email?: string; booking?: string; redirect?: string }>();
+  const identifier = target ?? email ?? '';
 
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -47,15 +48,15 @@ export default function ResetPasswordScreen() {
 
   const validateVerify = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!code || code.length < 4) newErrors.code = t('auth.resetPassword.invalidCode');
+    if (!/^\d{4}$/.test(code)) newErrors.code = t('auth.resetPassword.invalidCode');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [code, t]);
 
   const validateReset = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!newPassword || newPassword.length < 8) {
-      newErrors.newPassword = t('auth.passwordMinLength');
+    if (newPassword.length < 8 || newPassword.length > 200 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      newErrors.newPassword = t('auth.resetPassword.weakPassword');
     }
     if (newPassword !== confirmPassword) {
       newErrors.confirmPassword = t('auth.passwordMismatch');
@@ -72,7 +73,7 @@ export default function ResetPasswordScreen() {
 
     setLoading(true);
     try {
-      const result = await authService.verifyPasswordResetOtp(email, code);
+      const result = await authService.verifyPasswordResetOtp(identifier, code);
       setSessionToken(result.sessionToken);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep('reset');
@@ -82,7 +83,7 @@ export default function ResetPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, code, validateVerify, t]);
+  }, [identifier, code, validateVerify, t]);
 
   const handleResetPassword = useCallback(async () => {
     if (!validateReset()) {
@@ -94,8 +95,9 @@ export default function ResetPasswordScreen() {
     try {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSessionToken(''); setNewPassword(''); setConfirmPassword('');
       Alert.alert(t('common.saved'), t('auth.resetPassword.success'), [
-        { text: t('auth.login'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
+        { text: t('auth.loginNow'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -128,7 +130,7 @@ export default function ResetPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            {t('auth.resetPassword.title')}
+            {t(step === 'verify' ? 'auth.resetPassword.verifyCode' : 'auth.resetPassword.newPasswordLabel')}
           </Text>
           <Text
             style={[
@@ -137,7 +139,7 @@ export default function ResetPasswordScreen() {
             ]}
           >
             {step === 'verify'
-              ? t('auth.resetPassword.otpStepSubtitle', { email })
+              ? t('auth.resetPassword.otpStepSubtitle', { identifier })
               : t('auth.resetPassword.passwordStepSubtitle')}
           </Text>
 
@@ -152,7 +154,8 @@ export default function ResetPasswordScreen() {
                       setCode(v);
                       clearError('code');
                     }}
-                    placeholder="123456"
+                    placeholder="1234"
+                    maxLength={4}
                     error={errors.code}
                     keyboardType="number-pad"
                     dir={dir}
@@ -205,14 +208,14 @@ export default function ResetPasswordScreen() {
                 <Text style={styles.loginText}>{t('auth.rememberPassword')}</Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={t('auth.login')}
+                  accessibilityLabel={t('auth.loginNow')}
                   style={{ minHeight: 44, justifyContent: 'center' }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.replace(authLoginHref(booking, redirect));
                   }}
                 >
-                  <Text style={styles.loginLink}>{t('auth.login')}</Text>
+                  <Text style={styles.loginLink}>{t('auth.loginNow')}</Text>
                 </Pressable>
               </View>
             </View>

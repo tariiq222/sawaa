@@ -22,7 +22,7 @@ export class ClientLoginHandler {
     private readonly clientTokens: ClientTokenService,
   ) {}
 
-  async execute(dto: ClientLoginDto, ip = 'unknown') {
+  async execute(dto: ClientLoginDto, ip = 'unknown', expectedClientId?: string) {
     // Exactly one identifier. This is a request-shape error (no account
     // lookup has happened yet), so a descriptive message leaks nothing.
     if ((dto.email && dto.phone) || (!dto.email && !dto.phone)) {
@@ -32,12 +32,14 @@ export class ClientLoginHandler {
     const identifier = (dto.email ?? dto.phone) as string;
 
     const client = await this.prisma.client.findFirst({
-      where: dto.email
-        ? { email: dto.email, deletedAt: null }
-        : { phone: dto.phone, deletedAt: null },
+      where: {
+        ...(dto.email ? { email: dto.email } : { phone: dto.phone }),
+        deletedAt: null,
+        ...(expectedClientId ? { id: expectedClientId } : {}),
+      },
     });
 
-    if (!client || !client.passwordHash) {
+    if (!client || !client.passwordHash || client.isActive === false || client.deletedAt) {
       throw new UnauthorizedException('Invalid credentials');
     }
 

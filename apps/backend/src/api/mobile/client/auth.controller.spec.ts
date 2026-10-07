@@ -8,6 +8,7 @@ import { VerifyMobileOtpHandler } from '../../../modules/identity/verify-mobile-
 import { RequestEmailVerificationHandler } from '../../../modules/identity/request-email-verification/request-email-verification.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { NativeRefreshHandler } from '../../../modules/identity/native-session/native-refresh.handler';
+import { MobilePasswordLoginHandler } from '../../../modules/identity/mobile-password-login/mobile-password-login.handler';
 import { NativeLogoutHandler } from '../../../modules/identity/native-session/native-logout.handler';
 
 describe('MobileClientAuthController (e2e)', () => {
@@ -18,12 +19,14 @@ describe('MobileClientAuthController (e2e)', () => {
   const mockVerifyOtp = { execute: jest.fn() };
   const mockRequestEmail = { execute: jest.fn() };
   const mockNativeRefresh = { execute: jest.fn() };
+  const mockPasswordLogin = { execute: jest.fn() };
   const mockNativeLogout = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileClientAuthController],
       providers: [
+        { provide: MobilePasswordLoginHandler, useValue: mockPasswordLogin },
         { provide: RegisterMobileUserHandler, useValue: mockRegister },
         { provide: RequestMobileLoginOtpHandler, useValue: mockRequestLogin },
         { provide: VerifyMobileOtpHandler, useValue: mockVerifyOtp },
@@ -54,6 +57,29 @@ describe('MobileClientAuthController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('POST /mobile/auth/password-login', () => {
+    it.each([{ email: ' CLIENT@EXAMPLE.COM ' }, { phone: '0501234567' }])('returns native tokens and normalizes %j', async (identifier) => {
+      mockPasswordLogin.execute.mockResolvedValue({ sessionKind: 'client', tokens: { accessToken: 'access', refreshToken: 'refresh' } });
+      const response = await request(app.getHttpServer()).post('/mobile/auth/password-login').send({ ...identifier, password: 'CorrectPass123' }).expect(200);
+      expect(response.body).toEqual({ sessionKind: 'client', tokens: { accessToken: 'access', refreshToken: 'refresh' } });
+      expect(mockPasswordLogin.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ ...('email' in identifier ? { email: 'client@example.com' } : { phone: '+966501234567' }), password: 'CorrectPass123' }),
+        expect.any(String),
+      );
+    });
+
+    it.each([
+      { email: 'invalid', password: 'CorrectPass123' },
+      { phone: '+12025550123', password: 'CorrectPass123' },
+      { email: 'client@example.com', password: 'short' },
+      { email: 'client@example.com', password: 'x'.repeat(201) },
+      { email: 'client@example.com', password: 'CorrectPass123', role: 'ADMIN' },
+    ])('rejects malformed password input %j', async (body) => {
+      await request(app.getHttpServer()).post('/mobile/auth/password-login').send(body).expect(400);
+      expect(mockPasswordLogin.execute).not.toHaveBeenCalled();
+    });
   });
 
   describe('POST /mobile/auth/register', () => {

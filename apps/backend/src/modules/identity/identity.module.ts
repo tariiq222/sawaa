@@ -48,6 +48,7 @@ import { OtpSessionGuard } from './otp/otp-session.guard';
 import { NotificationChannelModule } from '../comms/notification-channel/notification-channel.module';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { RegisterHandler } from './client-auth/register.handler';
+import { MobilePasswordLoginHandler } from './mobile-password-login/mobile-password-login.handler';
 import { ClientLoginHandler } from './client-auth/client-login.handler';
 import { ClientRefreshHandler } from './client-auth/client-refresh.handler';
 import { ClientLogoutHandler } from './client-auth/client-logout.handler';
@@ -96,6 +97,7 @@ const handlers = [
   VerifyOtpHandler,
   RegisterHandler,
   ClientLoginHandler,
+  MobilePasswordLoginHandler,
   ClientRefreshHandler,
   ClientLogoutHandler,
   GetMeHandler,

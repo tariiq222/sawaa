@@ -13,9 +13,9 @@ import { EmailForm } from '@/components/features/auth/email-entry/EmailForm';
 import { CodeForm } from '@/components/features/auth/email-entry/CodeForm';
 import { PhoneForm } from '@/components/features/auth/email-entry/PhoneForm';
 
-export default function EmailEntryScreen({ initialEmail, onExit }: { initialEmail?: string; onExit?: () => void } = {}) {
+export default function EmailEntryScreen({ initialEmail, autoStart, onExit }: { initialEmail?: string; autoStart?: boolean; onExit?: () => void } = {}) {
   const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
-  const flow = useEmailEntry({ booking, redirect, initialEmail, onExit });
+  const flow = useEmailEntry({ booking, redirect, initialEmail, autoStart, onExit });
   const { state } = flow; const { t } = useTranslation(); const colors = useSawaaColors();
   const dir = useDir(); const insets = useSafeAreaInsets();
   const textStyle = { color: colors.ink[900], fontFamily: getFontName(dir.locale), writingDirection: dir.writingDirection, textAlign: dir.textAlign };

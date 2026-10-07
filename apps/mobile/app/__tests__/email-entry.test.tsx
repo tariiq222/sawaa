@@ -1,4 +1,7 @@
 import React from 'react';
+import { Alert } from 'react-native';
+import ForgotPasswordScreen from '../(auth)/forgot-password';
+import ResetPasswordScreen from '../(auth)/reset-password';
 import { fireEvent, render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider, notifyManager } from '@tanstack/react-query';
 import { emailEntryService } from '@/services/email-entry';
@@ -18,7 +21,7 @@ jest.mock('@/services/api', () => ({ __esModule: true, default: { post: jest.fn(
 jest.mock('@/services/email-entry', () => ({ emailEntryError: jest.requireActual('@/services/email-entry').emailEntryError, emailEntryService: { request: jest.fn(), verify: jest.fn(), requestPhone: jest.fn(), verifyPhone: jest.fn(), resendPhone: jest.fn() } }));
 jest.mock('@/hooks/use-redux', () => ({ useAppDispatch: () => jest.fn() }));
 jest.mock('@/services/native-session-state', () => ({ getSessionEpoch: () => mockEpoch, isSessionCurrent: (e: number) => e === mockEpoch, beginSession: () => ++mockEpoch, fenceSession: () => ++mockEpoch, clearSessionAtEpoch: jest.fn().mockResolvedValue(true), persistSessionTokensAtEpoch: jest.fn().mockResolvedValue(true) }));
-jest.mock('@/services/auth', () => ({ authService: { getProfile: jest.fn().mockResolvedValue({ success: true, data: { id: 'u', role: 'CLIENT' } }) }, SessionSupersededError: class extends Error {} }));
+jest.mock('@/services/auth', () => ({ authService: { requestPasswordResetOtp: jest.fn().mockResolvedValue({}), verifyPasswordResetOtp: jest.fn().mockResolvedValue({ sessionToken: 'verified-proof' }), resetClientPassword: jest.fn().mockResolvedValue({ success: true }), getProfile: jest.fn().mockResolvedValue({ success: true, data: { id: 'u', role: 'CLIENT' } }) }, SessionSupersededError: class extends Error {} }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: { colors: { surface: '#FFF', surfaceHigh: '#EEE', textPrimary: '#000', textSecondary: '#666', textMuted: '#999', primary: '#098a7d', primaryFill: '#087a6f', primaryGradient: ['#087a6f', '#066962'], primaryForeground: '#FFF' }, typography: { fontFamily: { arabic: 'System', english: 'System' } } }, isRTL: false, language: 'en' }) }));
@@ -78,13 +81,15 @@ it('starts account registration with email ownership rather than profile details
 it('enters email login locally without route parameters or calling the legacy endpoint', async () => {
   const ui = mount(<LoginScreen />);
   fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), 'a@example.test');
+  fireEvent.press(ui.getByText('auth.loginWithOtp'));
   fireEvent.press(ui.getByText('auth.login.sendCode'));
-  await waitFor(() => expect(ui.getByLabelText('auth.register.email').props.value).toBe('a@example.test'));
+  await waitFor(() => expect(ui.getByLabelText('auth.emailEntry.code')).toBeTruthy());
   expect(mockLoginOtp).not.toHaveBeenCalled(); expect(mockPush).not.toHaveBeenCalled();
 });
 it('preserves the legacy phone login path and booking context', async () => {
   const ui = mount(<LoginScreen />);
   fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), '0501234567');
+  fireEvent.press(ui.getByText('auth.loginWithOtp'));
   fireEvent.press(ui.getByText('auth.login.sendCode'));
   await waitFor(() => expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/otp-verify', params: { purpose: 'login', identifier: '0501234567', maskedIdentifier: '***12', redirect: '/(client)/(tabs)/appointments' } }));
 });
@@ -219,4 +224,51 @@ it('preserves international phone entry and maps a backend invalid_phone rejecti
   await waitFor(() => expect(api.requestPhone).toHaveBeenCalledWith({ phone: '+1 (415) 555-0100', continuationToken: 'proof' }));
   await waitFor(() => expect(ui.getByText('auth.emailEntry.invalidPhone')).toBeTruthy());
   expect(ui.queryByText('invalid_phone')).toBeNull(); expect(ui.queryByText('auth.emailEntry.networkError')).toBeNull();
+});
+
+it('prefills phone recovery and carries its identifier and booking continuation to verification', async () => {
+  mockParams = { identifier: '0501234567', redirect: '/(client)/(tabs)/appointments' };
+  const ui = mount(<ForgotPasswordScreen />);
+  expect(ui.getByLabelText('auth.login.identifier').props.value).toBe('0501234567');
+  await act(async () => { fireEvent.press(ui.getByText('auth.forgotPassword.submit')); });
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/reset-password', params: { identifier: '0501234567', redirect: '/(client)/(tabs)/appointments' } }));
+  expect(authService.requestPasswordResetOtp).toHaveBeenCalledWith('0501234567');
+});
+it('sets a password only after OTP verification and enforces the server password policy', async () => {
+  mockParams = { identifier: '0501234567', redirect: '/(client)/(tabs)/appointments' };
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const ui = mount(<ResetPasswordScreen />);
+  fireEvent.changeText(ui.getByLabelText('auth.resetPassword.codeLabel'), '1234');
+  await act(async () => { fireEvent.press(ui.getByRole('button', { name: 'auth.resetPassword.verifyCode' })); });
+  await waitFor(() => expect(ui.getByLabelText('auth.resetPassword.newPasswordLabel')).toBeTruthy());
+  expect(authService.verifyPasswordResetOtp).toHaveBeenCalledWith('0501234567', '1234');
+  for (const value of ['longenough', 'Uppercase', 'lower123', 'A1' + 'a'.repeat(199)]) {
+    fireEvent.changeText(ui.getByLabelText('auth.resetPassword.newPasswordLabel'), value);
+    fireEvent.changeText(ui.getByLabelText('auth.confirmPassword'), value);
+    await act(async () => { fireEvent.press(ui.getByText('auth.resetPassword.submit')); });
+    expect(ui.getByText('auth.resetPassword.weakPassword')).toBeTruthy();
+  }
+  expect(authService.resetClientPassword).not.toHaveBeenCalled();
+  fireEvent.changeText(ui.getByLabelText('auth.resetPassword.newPasswordLabel'), 'SafePassword1');
+  fireEvent.changeText(ui.getByLabelText('auth.confirmPassword'), 'SafePassword1');
+  await act(async () => { fireEvent.press(ui.getByText('auth.resetPassword.submit')); });
+  await waitFor(() => expect(authService.resetClientPassword).toHaveBeenCalledWith('verified-proof', 'SafePassword1'));
+  await waitFor(() => expect(alert).toHaveBeenCalled());
+  alert.mock.calls.at(-1)?.[2]?.[0]?.onPress?.();
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(auth)/login', params: { redirect: '/(client)/(tabs)/appointments' } });
+  alert.mockRestore();
+});
+
+it.each(['123', '12345', '123456', '12a4'])('rejects invalid recovery code %s before verification', async code => {
+  mockParams = { identifier: '0501234567' };
+  const ui = mount(<ResetPasswordScreen />);
+  const input = ui.getByLabelText('auth.resetPassword.codeLabel');
+  fireEvent.changeText(input, code);
+  await act(async () => { fireEvent.press(ui.getByRole('button', { name: 'auth.resetPassword.verifyCode' })); });
+  expect(ui.getByText('auth.resetPassword.invalidCode')).toBeTruthy();
+  expect(authService.verifyPasswordResetOtp).not.toHaveBeenCalled();
+});
+it('limits the recovery code field to the four-digit public OTP contract', () => {
+  const ui = mount(<ResetPasswordScreen />);
+  expect(ui.getByLabelText('auth.resetPassword.codeLabel').props.maxLength).toBe(4);
 });
