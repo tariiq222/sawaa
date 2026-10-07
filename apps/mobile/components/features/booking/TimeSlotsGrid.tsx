@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatTimeOfDay } from '@/lib/session-format';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -16,15 +18,7 @@ export interface Slot {
 }
 
 export function formatTime(iso: string, isRTL: boolean): string {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const suffix = h < 12 ? (isRTL ? 'ص' : 'AM') : isRTL ? 'م' : 'PM';
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const locale = isRTL ? 'ar-SA-u-nu-arab' : 'en-US';
-  const hour = new Intl.NumberFormat(locale, { useGrouping: false }).format(h12);
-  const minute = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(m);
-  return `${hour}:${minute} ${suffix}`;
+  return formatTimeOfDay(iso, isRTL) ?? '—';
 }
 
 const SKELETON_SLOTS = 6;
@@ -55,6 +49,7 @@ export function TimeSlotsGrid({
   onRetry,
 }: TimeSlotsGridProps) {
   const sawaaColors = useSawaaColors();
+  const { t } = useTranslation();
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   if (loading) {
@@ -75,7 +70,7 @@ export function TimeSlotsGrid({
         icon="cloud-offline-outline"
         tone="danger"
         title={error}
-        actionLabel={onRetry ? (dir.isRTL ? 'إعادة المحاولة' : 'Retry') : undefined}
+        actionLabel={onRetry ? (t('common.retry')) : undefined}
         onAction={onRetry}
       />
     );
@@ -85,8 +80,8 @@ export function TimeSlotsGrid({
     return (
       <EmptyState
         icon="calendar-outline"
-        title={dir.isRTL ? 'لا مواعيد متاحة في هذا اليوم' : 'No appointments available on this day'}
-        description={dir.isRTL ? 'جرب اختيار يوم آخر من التقويم' : 'Try picking another day from the calendar'}
+        title={t('booking.noSlotsForDay')}
+        description={t('booking.chooseAnotherDay')}
       />
     );
   }
@@ -110,7 +105,7 @@ export function TimeSlotsGrid({
               borderColor: isSelected ? roles.selection.fill : roles.surfaceHigh,
             }]}
             accessibilityRole="button"
-            accessibilityLabel={`${dir.isRTL ? 'وقت' : 'Time'} ${formatTime(s.startTime, dir.isRTL)}`}
+            accessibilityLabel={t('booking.slotTime', { time: formatTime(s.startTime, dir.isRTL) })}
             accessibilityState={{ selected: isSelected }}
           >
             <Text

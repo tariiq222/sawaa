@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Pressable,
   StyleSheet,
   TextInput,
   View,
@@ -21,9 +19,10 @@ import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
 import { splitName } from '@/types/auth';
 import { setUser } from '@/stores/slices/auth-slice';
-import { clientProfileService } from '@/services/client';
+import { useUpdateClientProfile } from '@/hooks/queries/useClientProfile';
 
-const SAUDI_PHONE_RE = /^\+966\d{9}$/;
+import { hasPhoneFormat } from '@/lib/phone-format';
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, 'required'),
@@ -31,7 +30,7 @@ const profileSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || SAUDI_PHONE_RE.test(v), 'invalidPhone'),
+    .refine((v) => !v || hasPhoneFormat(v), 'invalidPhone'),
   email: z
     .string()
     .trim()
@@ -49,7 +48,8 @@ export function SettingsProfileSection() {
   const { theme, isRTL } = useTheme();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
-  const [saving, setSaving] = useState(false);
+  const updateProfile = useUpdateClientProfile();
+  const saving = updateProfile.isPending;
 
   const emailReadOnly = Boolean(user?.email);
   const initialName = user?.name ?? (user
@@ -81,9 +81,8 @@ export function SettingsProfileSection() {
 
   const onSave = handleSubmit(async (values) => {
     if (!user) return;
-    setSaving(true);
     try {
-      const profile = await clientProfileService.updateProfile({
+      const profile = await updateProfile.mutateAsync({
         name: values.name,
         phone: values.phone ? values.phone : null,
         ...(!emailReadOnly ? { email: values.email || null } : {}),
@@ -107,8 +106,6 @@ export function SettingsProfileSection() {
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('settings.profileSaveError'));
-    } finally {
-      setSaving(false);
     }
   });
 
@@ -193,27 +190,7 @@ export function SettingsProfileSection() {
         </ThemedText>
       ) : null}
 
-      <Pressable
-        onPress={onSave}
-        disabled={!isDirty || saving}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !isDirty || saving }}
-        style={({ pressed }) => [
-          styles.saveBtn,
-          {
-            backgroundColor: theme.colors.primaryFill,
-            opacity: !isDirty || saving ? 0.5 : pressed ? 0.85 : 1,
-          },
-        ]}
-      >
-        {saving ? (
-          <ActivityIndicator color={theme.colors.primaryForeground} />
-        ) : (
-          <ThemedText variant="body" color={theme.colors.primaryForeground} style={{ fontWeight: '700', fontSize: 17 }}>
-            {t('settings.saveProfile')}
-          </ThemedText>
-        )}
-      </Pressable>
+      <PrimaryButton label={t('settings.saveProfile')} onPress={onSave} disabled={!isDirty} loading={saving} style={styles.saveBtn} />
     </View>
   );
 }
@@ -264,9 +241,5 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 8,
-    minHeight: 56,
-    borderRadius: sawaaRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

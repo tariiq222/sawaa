@@ -4,6 +4,10 @@ import { fireEvent, render, within } from '@testing-library/react-native';
 const mockPush = jest.fn();
 let mockRouteParams: Record<string, string> = { id: 'dr-example' };
 let mockDirectClinic = false;
+let mockEmployeeError = false;
+let mockCatalogError = false;
+const mockEmployeeRetry = jest.fn();
+const mockCatalogRetry = jest.fn();
 let mockServiceGroup = false;
 const mockEmployee: { publicBioEn: string | null; [key: string]: unknown } = {
   id: 'employee-uuid', slug: 'dr-example', nameAr: 'سارة', nameEn: 'Sara',
@@ -37,8 +41,8 @@ jest.mock('expo-linear-gradient', () => {
 });
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
 jest.mock('@/hooks/queries', () => ({
-  useTherapist: () => ({ data: mockDirectClinic ? { ...mockEmployee, serviceIds: ['direct-service'] } : mockEmployee, isLoading: false }),
-  usePublicCatalog: () => ({ data: mockDirectClinic ? {
+  useTherapist: () => ({ isError: mockEmployeeError, refetch: mockEmployeeRetry, data: mockDirectClinic ? { ...mockEmployee, serviceIds: ['direct-service'] } : mockEmployee, isLoading: false }),
+  usePublicCatalog: () => ({ isError: mockCatalogError, refetch: mockCatalogRetry, data: mockDirectClinic ? {
     departments: [],
     categories: [{ id: 'direct-clinic', kind: 'CLINIC', bookingMode: 'DIRECT', nameAr: 'عيادة الأسرة', nameEn: 'Family clinic', isActive: true }],
     services: [{ id: 'direct-service', categoryId: 'direct-clinic', nameAr: 'خدمة داخلية', nameEn: 'Internal service', price: 0, currency: 'SAR', isHidden: true, isActive: true }],
@@ -67,7 +71,26 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) =>
 import EmployeeProfileScreen from '../[id]';
 
 describe('EmployeeProfileScreen', () => {
-  beforeEach(() => { mockEmployee.publicBioEn = null; mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; mockServiceGroup = false; });
+  beforeEach(() => { mockEmployee.publicBioEn = null; mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; mockServiceGroup = false; mockEmployeeError = false; mockCatalogError = false; jest.clearAllMocks(); });
+
+  it('retries employee errors and hides a stale profile booking action', () => {
+    mockEmployeeError = true;
+    const screen = render(<EmployeeProfileScreen />);
+    fireEvent.press(screen.getByText('common.tryAgain'));
+    expect(mockEmployeeRetry).toHaveBeenCalled();
+    expect(screen.queryByText('employeeProfile.bookAppointment')).toBeNull();
+  });
+
+  it('retries catalog errors while keeping missing clinic scope closed', () => {
+    mockCatalogError = true;
+    mockRouteParams = { id: 'dr-example', clinicId: 'missing' };
+    const screen = render(<EmployeeProfileScreen />);
+    fireEvent.press(screen.getByText('common.tryAgain'));
+    expect(mockCatalogRetry).toHaveBeenCalled();
+    expect(screen.queryByText('Individual session')).toBeNull();
+    fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
+    expect(mockPush).not.toHaveBeenCalled();
+  });
 
   it('does not show invented profile claims or imply that an unknown price is free', () => {
     const screen = render(<EmployeeProfileScreen />);

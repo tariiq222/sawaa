@@ -17,6 +17,7 @@ import {
 import { Pill } from '@/components/ui/Pill';
 import { Thumb } from '@/components/ui/Thumb';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -63,7 +64,7 @@ export default function ClientsScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data, isLoading } = useEmployeeClients({ search: debouncedSearch });
+  const { data, isLoading, isError, refetch } = useEmployeeClients({ search: debouncedSearch });
 
   const clients = useMemo<ClientItem[]>(
     () =>
@@ -120,6 +121,8 @@ export default function ClientsScreen() {
               <ClientRowSkeleton key={i} />
             ))}
           </View>
+        ) : isError ? (
+          <ErrorState onRetry={() => { void refetch(); }} />
         ) : (
           <FlatList
             data={clients}

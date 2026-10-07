@@ -4,6 +4,10 @@ import { decodeRedirect } from '@/lib/navigation';
 
 const mockPush = jest.fn();
 let mockSignedIn = false;
+let mockCatalogError = false;
+let mockTherapistError = false;
+const mockCatalogRetry = jest.fn();
+const mockTherapistRetry = jest.fn();
 let mockKind = 'service';
 let mockId = 'service-1';
 let mockClinicId: string | undefined;
@@ -37,9 +41,9 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
 jest.mock('@/hooks/queries', () => ({
-  usePublicCatalog: () => ({ data: { categories: [{ id: 'clinic-42', kind: mockCategoryKind, bookingMode: mockBookingMode, nameAr: 'عيادة', nameEn: mockCategoryKind === 'SERVICE_GROUP' ? 'Assessments' : 'Clinic' }], services: [{ id: 'service-1', categoryId: 'clinic-42', nameAr: 'خدمة', nameEn: 'Service', price: 10000, isActive: true, isHidden: mockBookingMode === 'DIRECT' }] }, isLoading: false }),
+  usePublicCatalog: () => ({ isError: mockCatalogError, refetch: mockCatalogRetry, data: { categories: [{ id: 'clinic-42', kind: mockCategoryKind, bookingMode: mockBookingMode, nameAr: 'عيادة', nameEn: mockCategoryKind === 'SERVICE_GROUP' ? 'Assessments' : 'Clinic' }], services: [{ id: 'service-1', categoryId: 'clinic-42', nameAr: 'خدمة', nameEn: 'Service', price: 10000, isActive: true, isHidden: mockBookingMode === 'DIRECT' }] }, isLoading: false }),
   useTherapists: () => ({ data: [{ id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }], isLoading: false }),
-  useTherapist: () => ({ data: { id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }, isLoading: false }),
+  useTherapist: () => ({ isError: mockTherapistError, refetch: mockTherapistRetry, data: mockTherapistError ? undefined : { id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }, isLoading: false }),
   usePackageFamily: () => ({ data: mockKind === 'package' ? { id: mockId, nameAr: 'باقة', nameEn: 'Package', options: [], ...mockPackageExtra } : null, isLoading: false }),
   useGroupSession: () => ({ data: mockKind === 'program' ? { id: mockId, nameAr: 'برنامج', nameEn: 'Program', price: 10000 } : null, isLoading: false }),
 }));
@@ -47,7 +51,24 @@ jest.mock('@/hooks/queries', () => ({
 import PublicDetailScreen from '../[kind]/[id]';
 
 describe('public appointment discovery', () => {
-  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockSteps = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; });
+  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockSteps = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; mockCatalogError = false; mockTherapistError = false; jest.clearAllMocks(); });
+
+  it('retries an employee read failure', () => {
+    mockKind = 'therapist'; mockTherapistError = true;
+    const screen = render(<PublicDetailScreen />);
+    fireEvent.press(screen.getByText('common.tryAgain'));
+    expect(mockTherapistRetry).toHaveBeenCalled();
+    expect(screen.queryByText('employeeProfile.noServices')).toBeNull();
+  });
+
+  it('retries a catalog failure instead of saying no services or enabling booking from stale data', () => {
+    mockKind = 'therapist'; mockCatalogError = true;
+    const screen = render(<PublicDetailScreen />);
+    fireEvent.press(screen.getByText('common.tryAgain'));
+    expect(mockCatalogRetry).toHaveBeenCalled();
+    expect(screen.queryByText('employeeProfile.noServices')).toBeNull();
+    expect(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' })).toBeDisabled();
+  });
 
   it('lets a guest choose a specialist and enter booking without signing in', () => {
     const screen = render(<PublicDetailScreen />);

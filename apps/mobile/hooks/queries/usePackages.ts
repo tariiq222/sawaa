@@ -12,7 +12,7 @@ import { PACKAGE_PAYMENT_POLL_INTERVAL_MS } from '@/lib/package-utils';
 import { clientPackagesService } from '@/services/client';
 import type { ClientPackageFamily, ClientPackagePurchaseRow } from '@/services/client/packages';
 
-import { clientBookingsKeys } from './useClientBookings';
+import { invalidateClientBookingResources } from './invalidateClientBookingResources';
 
 export const packageKeys = {
   all: ['packages'] as const,
@@ -81,9 +81,6 @@ export function useBookPackageCredit() {
   const queryClient = useQueryClient();
   return useMutation<unknown, Error, BookMyPackageCreditInput>({
     mutationFn: (input) => clientPackagesService.bookCredit(input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: packageKeys.purchases() });
-      void queryClient.invalidateQueries({ queryKey: clientBookingsKeys.all });
-    },
+    onSuccess: () => invalidateClientBookingResources(queryClient),
   });
 }

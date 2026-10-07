@@ -8,8 +8,8 @@ import { AquaBackground } from '@/theme/sawaa';
 export default function EmployeeProfileScreen() {
   const { id, clinicId, serviceId, steps } = useLocalSearchParams<{ id: string; clinicId?: string; serviceId?: string; steps?: string }>();
   const router = useRouter();
-  const { data: employee, isLoading: employeeLoading } = useTherapist(id);
-  const { data: catalog, isLoading: catalogLoading } = usePublicCatalog();
+  const { data: employee, isLoading: employeeLoading, isError: employeeError, refetch: refetchEmployee } = useTherapist(id);
+  const { data: catalog, isLoading: catalogLoading, isError: catalogError, refetch: refetchCatalog } = usePublicCatalog();
 
   const book = (selectedServiceId: string, employeeId: string) => {
     const selectedService = catalog?.services.find((service) => service.id === selectedServiceId);
@@ -31,6 +31,10 @@ export default function EmployeeProfileScreen() {
         loading={employeeLoading}
         catalog={catalog}
         catalogLoading={catalogLoading}
+        employeeError={employeeError}
+        catalogError={catalogError}
+        onRetryEmployee={() => void refetchEmployee()}
+        onRetryCatalog={() => void refetchCatalog()}
         clinicId={clinicId}
         serviceId={serviceId}
         onBack={() => router.back()}

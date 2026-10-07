@@ -7,6 +7,7 @@ jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
   return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 const mockRefetch = jest.fn();
 const mockQuery = jest.fn();
 const mockPush = jest.fn();
@@ -256,4 +257,12 @@ describe('appointment detail truthful states', () => {
     expect(mockCancel).not.toHaveBeenCalled();
   });
 
+});
+
+it('omits entering animations for reduced-motion users', () => {
+  mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: false, refetch: mockRefetch });
+  const screen = render(<AppointmentDetail />);
+  const { View } = require('react-native') as typeof import('react-native');
+  const views = screen.UNSAFE_getAllByType(View);
+  expect(views.filter((view) => view.props.entering !== undefined)).toHaveLength(0);
 });

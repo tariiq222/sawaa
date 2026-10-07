@@ -5,6 +5,7 @@ import {
 } from '@/services/client';
 
 import { clientBookingsKeys } from './useClientBookings';
+import { invalidateClientBookingResources } from './invalidateClientBookingResources';
 
 interface CancelVars {
   id: string;
@@ -21,9 +22,11 @@ export function useCancelBooking() {
     retry: false,
     // The cancellation screen localizes failures and refreshes stale quotes.
     onError: () => undefined,
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: clientBookingsKeys.all });
-      qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
+    onSuccess: async (_data, vars) => {
+      await Promise.all([
+        invalidateClientBookingResources(qc),
+        qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) }),
+      ]);
     },
   });
 }

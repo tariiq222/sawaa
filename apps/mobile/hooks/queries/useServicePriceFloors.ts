@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useQueries, type UseQueryResult } from '@tanstack/react-query';
 
+import { bookingOptionKeys } from './useBookingOptions';
 import { getPractitionerBookingOptions, type PractitionerBookingOptions } from '@/features/booking/booking-options';
 
 export interface ServicePriceFloor {
@@ -26,7 +27,7 @@ export function useServicePriceFloors(
 
   return useQueries({
     queries: employeeIds.map((employeeId) => ({
-      queryKey: ['booking-options', serviceId, employeeId] as const,
+      queryKey: bookingOptionKeys.detail(serviceId, employeeId),
       queryFn: () => getPractitionerBookingOptions(serviceId as string, employeeId),
       enabled: Boolean(serviceId),
       // A failed price request just leaves that card without a price; no global alert.

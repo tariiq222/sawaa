@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildTheme, type AppTheme } from './tokens';
 import { useBranding } from '@/hooks/queries/useBranding';
 
-export type ThemeMode = 'system' | 'light' | 'dark';
-const THEME_MODE_KEY = 'sawaa.themeMode';
+import { THEME_MODE_KEY, type ThemeMode } from './preferences';
+export type { ThemeMode } from './preferences';
 
 interface ThemeContextValue {
   theme: AppTheme;

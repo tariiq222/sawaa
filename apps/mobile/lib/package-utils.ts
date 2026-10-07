@@ -1,3 +1,4 @@
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { ClientPackageCredit, PackagePurchaseStatus } from '@sawaa/shared/types';
 
 export function isCreditBookable(credit: ClientPackageCredit): boolean {
@@ -12,7 +13,7 @@ export function creditLockReason(credit: ClientPackageCredit): 'depleted' | 'una
 }
 
 export function formatHalalas(value: number, locale: string): string {
-  return `${(value / 100).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR`;
+  return formatCurrencyAmount(value, 'SAR', locale.toLowerCase().startsWith('ar'));
 }
 
 /**

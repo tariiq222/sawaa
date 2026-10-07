@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { createPaymentStyles as createStyles } from '@/components/features/booking/payment-styles';
 import { useTheme } from '@/theme/useTheme';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import * as Haptics from 'expo-haptics';
 import { Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
-import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { BackButton } from '@/components/ui/BackButton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -54,7 +56,8 @@ export default function BookingPaymentScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
-  const { data: bankTransferSettings } = useBankTransferSettings();
+  const bankTransferQuery = useBankTransferSettings();
+  const bankTransferSettings = bankTransferQuery.data;
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
   const [method, setMethod] = useState<Method>('card');
@@ -65,13 +68,15 @@ export default function BookingPaymentScreen() {
   const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
   const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
+  const [resumeRetry, setResumeRetry] = useState(0);
+  const [resumeReadRetryable, setResumeReadRetryable] = useState(false);
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const total = params.amount ? Number(params.amount) : 0;
   const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods = useMemo<Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }>>(() => [
     { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: t('nativePayment.cards'), labelEn: t('nativePayment.cards'), subAr: t('nativePayment.cardNetworks'), subEn: t('nativePayment.cardNetworks'), color: colors.teal[600] },
-    { key: 'apple_pay', icon: null, labelAr: 'Apple Pay', labelEn: 'Apple Pay', subAr: 'ادفع بلمسة واحدة', subEn: 'Pay with one touch', color: colors.teal[600] },
-    { key: 'bank_transfer', icon: <Banknote size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: 'تحويل بنكي', labelEn: 'Bank transfer', subAr: 'حوّل يدوياً وارفع الإيصال', subEn: 'Transfer and upload receipt', color: colors.teal[600] },
+    { key: 'apple_pay', icon: null, labelAr: t('payment.applePay'), labelEn: t('payment.applePay'), subAr: t('payment.oneTouch'), subEn: t('payment.oneTouch'), color: colors.teal[600] },
+    { key: 'bank_transfer', icon: <Banknote size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: t('payment.bankTransferLabel'), labelEn: t('payment.bankTransferLabel'), subAr: t('payment.transferReceiptDescription'), subEn: t('payment.transferReceiptDescription'), color: colors.teal[600] },
   ], [colors, t]);
   const availableMethods = useMemo(() => methods.filter((paymentMethod) => {
     if (paymentMethod.key === 'bank_transfer') return isClientBankTransferAvailable(bankTransferSettings);
@@ -87,6 +92,7 @@ export default function BookingPaymentScreen() {
   useEffect(() => {
     let active = true;
     setResumeState('loading');
+    setResumeReadRetryable(false);
     setCreatedBooking(null);
     if (!userId || (!draft && !params.bookingId)) { setResumeState('invalid'); return () => { active = false; }; }
     void resolvePendingBookingResume(userId, draft, params.bookingId
@@ -94,6 +100,7 @@ export default function BookingPaymentScreen() {
       .then((result) => {
         if (!active) return;
         if (result.kind === 'invalid' || (result.kind === 'missing' && !!params.bookingId)) {
+          setResumeReadRetryable(true);
           setResumeState('invalid');
         } else if (result.kind === 'missing') {
           setResumeState('ready');
@@ -107,9 +114,9 @@ export default function BookingPaymentScreen() {
           setResumeState('ready');
         }
       })
-      .catch(() => { if (active) setResumeState('invalid'); });
+      .catch(() => { if (active) { setResumeReadRetryable(true); setResumeState('invalid'); } });
     return () => { active = false; };
-  }, [draft, params.bookingId, params.invoiceId, router, userId]);
+  }, [draft, params.bookingId, params.invoiceId, router, userId, resumeRetry]);
   const canPay =
     resumeState === 'ready' &&
     (!!createdBooking || !!draft) &&
@@ -137,6 +144,7 @@ export default function BookingPaymentScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           resumeSafe = true;
         } catch (error) {
+          setResumeReadRetryable(false);
           setResumeState('invalid');
           throw error;
         }
@@ -181,8 +189,8 @@ export default function BookingPaymentScreen() {
       if (!resumeSafe) setResumeState('invalid');
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        (dir.isRTL ? 'تعذّر إكمال الدفع. حاولي مرة أخرى.' : 'Could not continue payment. Try again.');
-      Alert.alert(dir.isRTL ? 'خطأ' : 'Error', message);
+        (t('payment.couldNotContinuePaymentTryAgain'));
+      Alert.alert(t('common.error'), message);
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -201,17 +209,27 @@ export default function BookingPaymentScreen() {
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'اختر طريقة الدفع' : 'Choose payment'}
+            {t('payment.choosePayment')}
           </Text>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-            {dir.isRTL ? `المبلغ الإجمالي ${formatMoney(total)}` : `Total ${formatMoney(total)}`}
+            {t('payment.totalAmount', { amount: formatMoney(total) })}
           </Text>
         </Animated.View>
 
-        {native.isError ? <View accessibilityRole="alert" style={{ gap: sawaaSpacing.sm }}>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('payment.methodsError')}</Text>
-          <Pressable accessibilityRole="button" onPress={native.refetch}><Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('common.retry')}</Text></Pressable>
-        </View> : null}
+        {resumeState === 'invalid' ? <ErrorState
+          title={t('payment.checkoutUnavailable')}
+          description={t(resumeReadRetryable ? 'payment.checkoutUnavailableDescription' : 'payment.checkoutUncertainDescription')}
+          onRetry={resumeReadRetryable ? () => setResumeRetry((attempt) => attempt + 1) : undefined}
+        /> : null}
+        {native.isError || bankTransferQuery.isError ? <ErrorState
+          title={t('payment.methodsError')}
+          retryLabel={t('common.retry')}
+          onRetry={() => { native.refetch(); if (bankTransferQuery.isError) void bankTransferQuery.refetch(); }}
+        /> : !native.isLoading && !bankTransferQuery.isLoading && availableMethods.length === 0 ? <ErrorState
+          title={t('payment.methodsUnavailable')}
+          description=""
+          onRetry={() => { native.refetch(); void bankTransferQuery.refetch(); }}
+        /> : null}
         {availableMethods.map((m, i) => {
           const isSelected = method === m.key;
           return (
@@ -227,6 +245,9 @@ export default function BookingPaymentScreen() {
                   setMethod(m.key);
                 }}
                 interactive
+                accessibilityRole="radio"
+                accessibilityLabel={m.labelEn}
+                accessibilityState={{ selected: isSelected }}
                 style={[
                   styles.methodCard,
                   isSelected && { borderWidth: 2, borderColor: m.color },
@@ -258,90 +279,18 @@ export default function BookingPaymentScreen() {
         entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
         style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
       >
-        <Pressable testID="booking-payment-submit" onPress={handlePay} disabled={!canPay}>
-          <LinearGradient
-            colors={theme.colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, !canPay && { opacity: 0.6 }]}
-          >
-            {submitting ? (
-              <ActivityIndicator color={theme.colors.primaryForeground} />
-            ) : (
-              <>
-                <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-                  {dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`}
-                </Text>
-                <GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />
-              </>
-            )}
-          </LinearGradient>
-        </Pressable>
+        <PrimaryButton
+          testID="booking-payment-submit"
+          label={t('booking.payAmount', { amount: formatMoney(total) })}
+          onPress={handlePay}
+          disabled={!canPay}
+          loading={submitting}
+          height={52}
+          fontFamily={f700}
+          labelStyle={styles.ctaBtnText}
+          icon={<GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />}
+        />
       </Animated.View>
     </AquaBackground>
   );
 }
-
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
-  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  title: {
-    fontSize: sawaaType.heading.fontSize,
-    lineHeight: sawaaType.heading.lineHeight,
-    color: colors.ink[900],
-    marginTop: 0,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  subtitle: {
-    fontSize: sawaaType.caption.fontSize,
-    lineHeight: sawaaType.caption.lineHeight,
-    color: colors.ink[500],
-    marginTop: 0,
-    paddingHorizontal: sawaaSpacing.xs,
-  },
-  methodCard: { padding: sawaaSpacing.md },
-  methodRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  methodIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: sawaaRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  methodMid: { flex: 1 },
-  methodLabel: {
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-    color: colors.ink[900],
-  },
-  methodSub: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[500],
-    marginTop: sawaaSpacing.xs,
-  },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: sawaaRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
-  ctaBtn: {
-    borderRadius: sawaaRadius.pill,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: sawaaSpacing.sm,
-    shadowColor: colors.teal[600],
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: {
-    color: themeColors.primaryForeground,
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
-  },
-});

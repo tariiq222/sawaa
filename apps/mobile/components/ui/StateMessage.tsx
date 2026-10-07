@@ -1,11 +1,12 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-import { sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa/tokens';
+import { SecondaryButton } from './SecondaryButton';
+import { sawaaSpacing, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 export type StateTone = 'error' | 'offline' | 'neutral';
@@ -29,7 +30,6 @@ interface StateMessageProps {
 const CIRCLE = 96;
 const GLYPH = 44;
 const DESCRIPTION_MAX_WIDTH = 290;
-const SECONDARY_HEIGHT = 56;
 
 /**
  * Shared layout for the full-screen state boards (error, offline, no results):
@@ -68,16 +68,7 @@ export function StateMessage({ icon: Icon, tone, title, description, primaryActi
         <PrimaryButton label={primaryAction.label} onPress={primaryAction.onPress} fontFamily={getFontName(locale, '700')} style={styles.action} />
       ) : null}
       {secondaryAction?.label && secondaryAction.onPress ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={secondaryAction.label}
-          onPress={secondaryAction.onPress}
-          style={[styles.secondary, styles.action, { borderColor: colors.teal[700] }]}
-        >
-          <Text style={[styles.secondaryLabel, { color: colors.teal[700], fontFamily: getFontName(locale, '700') }]}>
-            {secondaryAction.label}
-          </Text>
-        </Pressable>
+        <SecondaryButton label={secondaryAction.label} onPress={secondaryAction.onPress} style={styles.action} />
       ) : null}
     </View>
   );
@@ -90,12 +81,4 @@ const styles = StyleSheet.create({
   title: { marginTop: 8, fontSize: 22, lineHeight: 30, fontWeight: '700', textAlign: 'center' },
   description: { fontSize: 15, lineHeight: 24, textAlign: 'center', maxWidth: DESCRIPTION_MAX_WIDTH },
   action: { alignSelf: 'stretch', marginTop: 20 },
-  secondary: {
-    minHeight: SECONDARY_HEIGHT,
-    borderRadius: sawaaRadius.pill,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryLabel: { fontSize: 17, fontWeight: '700' },
 });

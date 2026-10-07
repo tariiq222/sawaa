@@ -40,7 +40,7 @@ export default function ForgotPasswordScreen() {
   const validate = useCallback((): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
-      setError(t('auth.register.emailError') || 'البريد الإلكتروني غير صالح');
+      setError(t('auth.invalidEmail'));
       return false;
     }
     return true;
@@ -91,7 +91,7 @@ export default function ForgotPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            استعادة كلمة المرور
+            {t('auth.forgotPassword.title')}
           </Text>
           <Text
             style={[
@@ -99,19 +99,19 @@ export default function ForgotPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            أدخل بريدك الإلكتروني لاستلام رمز التحقق
+            {t('auth.forgotPassword.subtitle')}
           </Text>
 
           <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
             <View style={styles.formInner}>
               <LabeledInput
-                label="البريد الإلكتروني"
+                label={t('auth.email')}
                 value={email}
                 onChangeText={(v) => {
                   setEmail(v);
                   if (error) setError(undefined);
                 }}
-                placeholder="example@email.com"
+                placeholder={t('auth.emailPlaceholder')}
                 error={error}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -119,21 +119,25 @@ export default function ForgotPasswordScreen() {
               />
 
               <PrimaryButton
-                label={loading ? 'جارِ الإرسال...' : 'إرسال رمز التحقق'}
+                label={t('auth.forgotPassword.submit')}
+                loading={loading}
                 onPress={handleSubmit}
                 disabled={loading}
                 style={{ marginTop: 8 }}
               />
 
               <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>تذكرت كلمة المرور؟ </Text>
+                <Text style={styles.loginText}>{t('auth.rememberPassword')}</Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.login')}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.back();
                   }}
                 >
-                  <Text style={styles.loginLink}>تسجيل الدخول</Text>
+                  <Text style={styles.loginLink}>{t('auth.login')}</Text>
                 </Pressable>
               </View>
             </View>

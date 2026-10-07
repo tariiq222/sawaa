@@ -30,9 +30,9 @@ import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import { goBackOrHome } from '@/lib/navigation';
+import { useBookingOptions } from '@/hooks/queries/useBookingOptions';
 import { useBookingSlots } from '@/features/booking/use-booking-slots';
 import {
-  getPractitionerBookingOptions,
   toMobileDeliveryType,
   type PractitionerBookingOption,
 } from '@/features/booking/booking-options';
@@ -73,35 +73,12 @@ export default function BookingTypeScreen() {
   const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const [options, setOptions] = useState<PractitionerBookingOption[]>([]);
+  const optionsQuery = useBookingOptions(serviceId, employeeId);
+  const options = optionsQuery.data?.options ?? [];
   const [selected, setSelected] = useState<PractitionerBookingOption | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  useEffect(() => {
-    if (!serviceId || !employeeId) {
-      setLoading(false);
-      setError(dir.isRTL ? 'بيانات الحجز غير مكتملة' : 'Booking details are incomplete');
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    (async () => {
-      try {
-        const data = await getPractitionerBookingOptions(serviceId, employeeId);
-        if (cancelled) return;
-        setOptions(data.options ?? []);
-      } catch {
-        if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الخيارات' : 'Failed to load options');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [serviceId, employeeId, dir.isRTL, reloadKey]);
+  const loading = optionsQuery.isLoading;
+  const error = !serviceId || !employeeId || optionsQuery.isError ? t('common.errorDescription') : null;
+  useEffect(() => { setSelected(null); }, [serviceId, employeeId]);
   const slots = useBookingSlots({
     serviceId,
     employeeId,
@@ -172,11 +149,11 @@ export default function BookingTypeScreen() {
             icon="cloud-offline-outline"
             tone="danger"
             title={error}
-            actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
-            onAction={() => setReloadKey((k) => k + 1)}
+            actionLabel={t('common.retry')}
+            onAction={() => void optionsQuery.refetch()}
           />
         ) : options.length === 0 ? (
-          <EmptyState icon="calendar-outline" title={dir.isRTL ? 'لا توجد خيارات متاحة' : 'No options available'} />
+          <EmptyState icon="calendar-outline" title={t('booking.noOptionsAvailable')} />
         ) : (
           <>
             {options.map((opt, i) => {
@@ -229,7 +206,7 @@ export default function BookingTypeScreen() {
 
             {selected ? (
               <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(600).easing(Easing.out(Easing.cubic))}>
-                <SectionHeader title={dir.isRTL ? 'اليوم' : 'Day'} />
+                <SectionHeader title={t('booking.day')} />
                 <DaySelector
                   days={slots.days}
                   dayIdx={slots.dayIdx}
@@ -242,27 +219,27 @@ export default function BookingTypeScreen() {
 
                 {slots.daysLoading ? (
                   <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? 'جارٍ التحقق من الأيام المتاحة…' : 'Checking available days…'}
+                    {t('booking.checkingAvailableDays')}
                   </Text>
                 ) : slots.daysError ? (
                   <EmptyState
                     icon="cloud-offline-outline"
                     tone="danger"
                     title={slots.daysError}
-                    actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
+                    actionLabel={t('common.retry')}
                     onAction={slots.handleRetryDays}
                   />
                 ) : noOpenings ? (
                   <EmptyState
                     icon="calendar-outline"
-                    title={dir.isRTL ? 'لا مواعيد متاحة لهذا الحجز خلال ٣٠ يومًا' : 'No openings for this booking in the next 30 days'}
+                    title={t('booking.noOpenings30Days')}
                   />
                 ) : null}
 
                 {slots.dayIdx != null ? (
                   <>
                     <View style={styles.timeHeader}>
-                      <SectionHeader title={dir.isRTL ? 'الوقت' : 'Time'} />
+                      <SectionHeader title={t('booking.time')} />
                     </View>
                     <Text style={[styles.tz, { fontFamily: f400, textAlign: dir.textAlign }]}>{tzLabel}</Text>
                     {slots.loading || slots.error || slots.slots.length > 0 ? (

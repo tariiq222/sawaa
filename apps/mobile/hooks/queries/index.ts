@@ -6,7 +6,7 @@ export { useClinics, clinicKeys } from './useClinics';
 export { useTherapist } from './useTherapist';
 export { useServicePriceFloors } from './useServicePriceFloors';
 export { useSlots } from './useSlots';
-export { useNotifications, notificationKeys } from './useNotifications';
+export { useNotifications, useNotificationFeed, useUnreadNotificationsCount, useMarkNotificationsRead, notificationKeys } from './useNotifications';
 export { useCancelBooking, useRateBooking } from './useBookingMutations';
 export { useEmployeeClients, employeeClientsKeys } from './useEmployeeClients';
 export { useEmployeeDayBookings, employeeDayBookingsKeys } from './useEmployeeDayBookings';
@@ -38,3 +38,12 @@ export {
 } from './usePackages';
 
 export { useBookingCancellationPreview } from './useBookingCancellationPreview';
+
+export { usePublicBranches, publicBranchKeys } from './usePublicBranches';
+export { useBookingOptions, bookingOptionKeys } from './useBookingOptions';
+export { useAvailableDays, availableDaysKeys } from './useAvailableDays';
+export { invalidateClientBookingResources } from './invalidateClientBookingResources';
+export { useEmployeeClient, useEmployeeClientHistory, employeeClientKeys } from './useEmployeeClient';
+export { useEmployeeAvailability, useUpdateEmployeeAvailability, employeeAvailabilityKeys } from './useEmployeeAvailability';
+export { useClientProfile, useUpdateClientProfile, clientProfileKeys } from './useClientProfile';
+export type { AvailableDaysParams } from './useAvailableDays';

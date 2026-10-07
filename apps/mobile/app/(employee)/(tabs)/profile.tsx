@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { useCallback, useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Linking, View, ScrollView, Pressable, Alert, StyleSheet, Text } from 'react-native';
@@ -108,6 +109,7 @@ export default function EmployeeProfileScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
 
+  const version = Constants.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '1.0.0';
   const fullName = user ? `${user.firstName} ${user.lastName}` : '';
 
   // Refresh /auth/me when the screen gains focus, mirroring the
@@ -182,7 +184,7 @@ export default function EmployeeProfileScreen() {
           <MenuGroup
             entries={[
               { icon: Clock, label: t('availability.hours'), onPress: () => router.push('/(employee)/availability') },
-              { icon: Info, label: t('profile.about'), onPress: () => Alert.alert('مركز سواء', 'نسخة 1.0.0') },
+              { icon: Info, label: t('profile.about'), onPress: () => Alert.alert(t('common.appName'), t('profile.version', { version })) },
               { icon: Shield, label: t('profile.privacy'), onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
             ]}
           />
@@ -196,7 +198,7 @@ export default function EmployeeProfileScreen() {
         </Animated.View>
 
         <Text style={[styles.version, { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection }]}>
-          {t('doctor.appVersion')} 1.0.0
+          {t('profile.version', { version })}
         </Text>
       </ScrollView>
     </AquaBackground>

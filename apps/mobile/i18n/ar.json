@@ -108,7 +108,8 @@
       "submit": "إعادة تعيين كلمة المرور",
       "success": "تم إعادة تعيين كلمة المرور. الرجاء تسجيل الدخول.",
       "invalidCode": "رمز غير صالح أو منتهي الصلاحية",
-      "weakPassword": "كلمة المرور يجب أن تكون 8 أحرف على الأقل"
+      "weakPassword": "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+      "failed": "تعذّر تغيير كلمة المرور"
     },
     "emailEntry": {
       "title": "المتابعة بالبريد الإلكتروني",
@@ -135,7 +136,8 @@
       "invalidPhone": "أدخل رقم جوال صحيحًا، أو رقمًا دوليًا يبدأ برمز الدولة.",
       "nameTooLong": "يجب ألا يتجاوز الاسم 100 حرف.",
       "invalidDetails": "تحقق من البيانات المدخلة ثم حاول مجددًا."
-    }
+    },
+    "rememberPassword": "تذكرت كلمة المرور؟"
   },
   "tabs": {
     "home": "الرئيسية",
@@ -498,7 +500,11 @@
     "aboutComingSoon": "صفحة عن المركز ستكون متاحة قريباً.",
     "faqComingSoon": "الأسئلة الشائعة ستكون متاحة قريباً.",
     "privacyComingSoon": "سياسة الخصوصية ستكون متاحة قريباً.",
-    "termsComingSoon": "شروط الاستخدام ستكون متاحة قريباً."
+    "termsComingSoon": "شروط الاستخدام ستكون متاحة قريباً.",
+    "version": "الإصدار {{version}}",
+    "sessions": "جلسات",
+    "lastVisit": "آخر زيارة",
+    "outstanding": "مبلغ مستحق"
   },
   "chat": {
     "headerTitle": "سَواء",
@@ -548,8 +554,43 @@
     "viewAppointment": "عرض الموعد",
     "invoiceNumber": "رقم الفاتورة",
     "backToHome": "العودة إلى الرئيسية",
-    "tryAgain": "إعادة المحاولة",
-    "yourLocalTime": "بتوقيتك المحلي"
+    "yourLocalTime": "بتوقيتك المحلي",
+    "failedToLoadService": "تعذّر تحميل الخدمة",
+    "serviceUnavailable": "الخدمة غير متوفرة",
+    "service": "الخدمة",
+    "date": "التاريخ",
+    "time": "وقت",
+    "total": "الإجمالي",
+    "processing": "جارٍ المعالجة…",
+    "signInOrRegisterToContinue": "الدخول أو التسجيل للمتابعة",
+    "paymentOpensAfterSignIn": "يفتح الدفع بعد تسجيل الدخول",
+    "payAmount": "ادفع {{amount}}",
+    "day": "اليوم",
+    "checkingAvailableDays": "جارٍ التحقق من الأيام المتاحة…",
+    "confirmingPayment": "جاري تأكيد الدفع",
+    "checkingPaymentStatus": "جاري تحديث حالة الدفع...",
+    "appointmentConfirmed": "تم تأكيد موعدك",
+    "paymentReceived": "تم استلام الدفع",
+    "confirmingAppointment": "جاري تأكيد الموعد",
+    "paymentProcessing": "الدفع قيد المعالجة",
+    "paymentNotCompleted": "لم يكتمل الدفع",
+    "therapist": "المعالج",
+    "dateTime": "التاريخ والوقت",
+    "checkAgain": "تحقق مرة أخرى",
+    "viewMyAppointments": "عرض مواعيدي",
+    "slotTime": "وقت {{time}}",
+    "noOpenings30Days": "لا مواعيد متاحة لهذا الحجز خلال ٣٠ يومًا",
+    "depositBalanceDue": "تم استلام العربون. المبلغ المتبقي لا يزال مستحقًا.",
+    "paymentFollowUp": "سنتواصل معكِ قريباً لترتيب الدفع وإرسال تفاصيل الجلسة",
+    "checkingAppointmentStatus": "تم استلام الدفع. نتحقق من حالة الموعد، يمكنكِ المحاولة مرة أخرى.",
+    "paymentUnconfirmed": "لم نتلقَّ تأكيد الدفع بعد. يمكنكِ التحقق مرة أخرى.",
+    "paymentNotReceived": "لم يتم استلام الدفع. لم يتم تأكيد موعدك بعد.",
+    "bookingReference": "رقم الموعد",
+    "paymentReference": "رقم الدفع",
+    "noSlotsForDay": "لا مواعيد متاحة في هذا اليوم",
+    "chooseAnotherDay": "جرب اختيار يوم آخر من التقويم",
+    "noOptionsAvailable": "لا توجد خيارات متاحة",
+    "tryAgain": "إعادة المحاولة"
   },
   "payment": {
     "methodsLoading": "جارٍ تحميل طرق الدفع…",
@@ -584,7 +625,29 @@
     "paymentError": "فشل الدفع. حاول مجدداً.",
     "summary": "ملخص الدفع",
     "amount": "المبلغ",
-    "total": "الإجمالي"
+    "total": "الإجمالي",
+    "receiptSelected": "تم اختيار الإيصال",
+    "checkoutUnavailable": "تعذّر متابعة الدفع",
+    "checkoutUnavailableDescription": "تعذّر التحقق من تفاصيل هذا الحجز. أعد المحاولة، أو ارجع إلى الموعد لفتح الدفع من جديد.",
+    "couldNotContinuePaymentTryAgain": "تعذّر إكمال الدفع. حاولي مرة أخرى.",
+    "choosePayment": "اختر طريقة الدفع",
+    "totalAmount": "المبلغ الإجمالي {{amount}}",
+    "photoLibraryPermissionRequired": "يلزم إذن المعرض",
+    "invalidAmount": "مبلغ غير صالح",
+    "couldNotUploadReceipt": "تعذّر رفع الإيصال",
+    "transferAndUploadReceipt": "حوّل المبلغ ثم ارفع الإيصال",
+    "transferReceipt": "إيصال التحويل",
+    "tapToUploadReceiptImage": "انقر لرفع صورة الإيصال",
+    "sending": "جاري الإرسال…",
+    "sendForReview": "إرسال للمراجعة",
+    "applePay": "Apple Pay",
+    "oneTouch": "ادفع بلمسة واحدة",
+    "atCenter": "الدفع في المركز",
+    "atCenterDescription": "أكّد موعدك الآن وادفع عند الحضور",
+    "checkoutUncertainDescription": "تعذّر تأكيد نتيجة محاولة الحجز. ارجع إلى مواعيدك للتحقق من الحجز قبل محاولة الدفع مجددًا.",
+    "bankTransferLabel": "تحويل بنكي",
+    "transferReceiptDescription": "حوّل يدوياً وارفع الإيصال",
+    "receiptFileFormats": "PNG, JPG · حتى ١٠ ميجا"
   },
   "settings": {
     "title": "الإعدادات",
@@ -689,7 +752,8 @@
     "readyTitle": "جلستك جاهزة",
     "opensBefore": "يفتح الانضمام قبل الموعد بـ ١٥ دقيقة.",
     "openNow": "الجلسة مفتوحة الآن.",
-    "durationLabel": "المدة"
+    "durationLabel": "المدة",
+    "joinSession": "انضمام للجلسة"
   },
   "verification": {
     "bannerTitle": "فعّل بريدك الإلكتروني للاستفادة من كامل الخدمات",

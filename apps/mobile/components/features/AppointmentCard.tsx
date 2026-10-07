@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { Avatar } from '@/components/ui/Avatar';
 import { useTheme } from '@/theme/useTheme';
 import { formatHalalas } from '@/lib/money';
 import type { Booking } from '@/types/models';

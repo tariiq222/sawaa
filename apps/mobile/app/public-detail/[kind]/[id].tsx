@@ -63,6 +63,10 @@ export default function PublicDetailScreen() {
           loading={therapist.isLoading}
           catalog={catalog.data}
           catalogLoading={catalog.isLoading}
+          employeeError={therapist.isError}
+          catalogError={catalog.isError}
+          onRetryEmployee={() => void therapist.refetch()}
+          onRetryCatalog={() => void catalog.refetch()}
           clinicId={clinicId}
           serviceId={serviceId}
           onBack={back}

@@ -47,22 +47,22 @@ export default function ResetPasswordScreen() {
 
   const validateVerify = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!code || code.length < 4) newErrors.code = 'الرمز غير صالح';
+    if (!code || code.length < 4) newErrors.code = t('auth.resetPassword.invalidCode');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [code]);
+  }, [code, t]);
 
   const validateReset = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
     if (!newPassword || newPassword.length < 8) {
-      newErrors.newPassword = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+      newErrors.newPassword = t('auth.passwordMinLength');
     }
     if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'كلمتا المرور غير متطابقتين';
+      newErrors.confirmPassword = t('auth.passwordMismatch');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [newPassword, confirmPassword]);
+  }, [newPassword, confirmPassword, t]);
 
   const handleVerifyOtp = useCallback(async () => {
     if (!validateVerify()) {
@@ -78,7 +78,7 @@ export default function ResetPasswordScreen() {
       setStep('reset');
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), 'رمز التحقق غير صحيح أو منتهي الصلاحية');
+      Alert.alert(t('common.error'), t('auth.resetPassword.invalidCode'));
     } finally {
       setLoading(false);
     }
@@ -94,12 +94,12 @@ export default function ResetPasswordScreen() {
     try {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('تم', 'تم تغيير كلمة المرور بنجاح', [
-        { text: 'تسجيل الدخول', onPress: () => router.replace(authLoginHref(booking, redirect)) },
+      Alert.alert(t('common.saved'), t('auth.resetPassword.success'), [
+        { text: t('auth.login'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), 'تعذر تغيير كلمة المرور');
+      Alert.alert(t('common.error'), t('auth.resetPassword.failed'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +128,7 @@ export default function ResetPasswordScreen() {
               { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
             ]}
           >
-            {step === 'verify' ? 'التحقق من الرمز' : 'كلمة مرور جديدة'}
+            {t('auth.resetPassword.title')}
           </Text>
           <Text
             style={[
@@ -137,8 +137,8 @@ export default function ResetPasswordScreen() {
             ]}
           >
             {step === 'verify'
-              ? `أدخل رمز التحقق المرسل إلى ${email}`
-              : 'أدخل كلمة المرور الجديدة'}
+              ? t('auth.resetPassword.otpStepSubtitle', { email })
+              : t('auth.resetPassword.passwordStepSubtitle')}
           </Text>
 
           <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
@@ -146,7 +146,7 @@ export default function ResetPasswordScreen() {
               {step === 'verify' ? (
                 <>
                   <LabeledInput
-                    label="رمز التحقق"
+                    label={t('auth.resetPassword.codeLabel')}
                     value={code}
                     onChangeText={(v) => {
                       setCode(v);
@@ -158,7 +158,8 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <PrimaryButton
-                    label={loading ? 'جارِ التحقق...' : 'تحقق'}
+                    label={t('auth.resetPassword.verifyCode')}
+                    loading={loading}
                     onPress={handleVerifyOtp}
                     disabled={loading}
                     style={{ marginTop: 8 }}
@@ -167,7 +168,7 @@ export default function ResetPasswordScreen() {
               ) : (
                 <>
                   <LabeledInput
-                    label="كلمة المرور الجديدة"
+                    label={t('auth.resetPassword.newPasswordLabel')}
                     value={newPassword}
                     onChangeText={(v) => {
                       setNewPassword(v);
@@ -179,7 +180,7 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <LabeledInput
-                    label="تأكيد كلمة المرور"
+                    label={t('auth.confirmPassword')}
                     value={confirmPassword}
                     onChangeText={(v) => {
                       setConfirmPassword(v);
@@ -191,7 +192,8 @@ export default function ResetPasswordScreen() {
                     dir={dir}
                   />
                   <PrimaryButton
-                    label={loading ? 'جارِ الحفظ...' : 'حفظ كلمة المرور'}
+                    label={t('auth.resetPassword.submit')}
+                    loading={loading}
                     onPress={handleResetPassword}
                     disabled={loading}
                     style={{ marginTop: 8 }}
@@ -200,14 +202,17 @@ export default function ResetPasswordScreen() {
               )}
 
               <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>تذكرت كلمة المرور؟ </Text>
+                <Text style={styles.loginText}>{t('auth.rememberPassword')}</Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.login')}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.replace(authLoginHref(booking, redirect));
                   }}
                 >
-                  <Text style={styles.loginLink}>تسجيل الدخول</Text>
+                  <Text style={styles.loginLink}>{t('auth.login')}</Text>
                 </Pressable>
               </View>
             </View>
