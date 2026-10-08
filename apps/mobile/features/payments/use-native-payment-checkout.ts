@@ -16,10 +16,10 @@ interface CheckoutInput {
   purchaseId?: string;
   method?: NativePaymentMethod;
 }
-type Phase = 'choosing' | 'unavailable' | 'loading' | 'ready' | 'checking' | 'pending' | 'completed' | 'failed' | 'review' | 'error';
-interface CheckoutState { phase: Phase; config: NativePaymentConfiguration | null; paymentId: string | null; error: string | null; canResume: boolean; unavailableReason?: NativePaymentReconcileResponse['unavailableReason'] }
+type Phase = 'choosing' | 'unavailable' | 'loading' | 'ready' | 'checking' | 'processing' | 'pending' | 'completed' | 'failed' | 'review' | 'error';
+interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentConfiguration | null; paymentId: string | null; error: string | null; canResume: boolean; unavailableReason?: NativePaymentReconcileResponse['unavailableReason'] }
 interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string }
-const empty: CheckoutState = { phase: 'loading', config: null, paymentId: null, error: null, canResume: false };
+const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false };
 
 function errorKey(error: unknown): string {
   const code = (error as { response?: { data?: { code?: string; message?: string } } })?.response?.data?.code;
@@ -34,13 +34,18 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const [state, setState] = useState<CheckoutState & { scope: string }>({ ...empty, scope });
-  const controls = useRef({ reconcile: async () => {}, retry: async () => {} });
+  const controls = useRef({ reconcile: async () => {}, retry: async () => {}, paymentResult: async (_attempt: number) => {} });
 
   useEffect(() => {
     let active = true;
     let busy = false;
     let paymentId: string | null = null;
     let polls = 0;
+    let attempt = 0;
+    let settling = false;
+    let resultReceived = false;
+    let queuedResult = false;
+    let terminalResult = false;
     let terminalFailure = false;
     let terminalUnavailable = false;
     let canInitialize = true;
@@ -69,7 +74,8 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       return purchase.status === 'ACTIVE' || purchase.status === 'COMPLETED';
     };
     const schedule = () => {
-      if (!valid() || terminalUnavailable || polls >= 6) return;
+      if (!valid() || terminalUnavailable) return;
+      if (polls >= 6) { settling = false; return; }
       clearTimeout(timer);
       timer = setTimeout(() => { polls += 1; void reconcile(); }, 3000);
     };
@@ -78,15 +84,17 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       busy = true;
       clearTimeout(timer);
       // Keep the live SDK/WebView mounted while checking a bank challenge.
-      update({ phase: 'checking', error: null });
+      update({ phase: settling ? 'processing' : 'checking', error: null });
       try {
         const result = await clientPaymentsService.reconcileNativePayment(paymentId);
         if (!valid()) return;
         if (result.paymentId !== paymentId || result.invoiceId !== invoiceId) throw new Error('Invalid identity');
         if (result.requiresReview || ['PARTIALLY_REFUNDED', 'REFUNDED'].includes(result.status)) {
+          terminalResult = true; settling = false;
           canInitialize = false;
           update({ phase: 'review', config: null, canResume: false });
         } else if (result.status === 'COMPLETED') {
+          settling = true;
           canInitialize = false;
           // Captured money cannot be retried while operational confirmation settles.
           update({ config: null, canResume: false });
@@ -94,28 +102,38 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           if (!valid()) return;
           if (confirmed) {
             await AsyncStorage.removeItem(storageKey);
+            terminalResult = true; settling = false;
             update({ phase: 'completed', config: null, canResume: false });
             void invalidateClientBookingResources(queryClient);
-          } else { update({ phase: 'pending' }); schedule(); }
+          } else { schedule(); update({ phase: settling ? 'processing' : 'pending' }); }
         } else if (result.status === 'FAILED') {
+          terminalResult = true; settling = false;
           terminalFailure = true;
           canInitialize = true;
           update({ phase: 'failed', config: null, canResume: false });
         } else if (result.unavailableReason) {
-          terminalUnavailable = true;
+          terminalUnavailable = true; settling = false;
           canInitialize = false;
           update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: result.unavailableReason });
         } else {
           canInitialize = result.canCreatePayment === true;
-          update({ phase: 'pending', canResume: canInitialize });
           schedule();
+          update({ phase: settling ? 'processing' : 'pending', canResume: canInitialize });
         }
       } catch {
-        update({ phase: 'error', error: 'nativePayment.verificationError' });
-      } finally { busy = false; }
+        if (settling) schedule();
+        update({ phase: settling ? 'processing' : 'error', error: settling ? null : 'nativePayment.verificationError' });
+      } finally {
+        busy = false;
+        // A Wallet result can arrive while the foreground request is still running.
+        if (queuedResult) {
+          queuedResult = false;
+          if (valid() && !terminalResult && !terminalUnavailable) await reconcile();
+        }
+      }
     };
     const initialize = async (restore = false) => {
-      if (!valid() || terminalUnavailable || busy || !clientId || !canInitialize) return;
+      if (!valid() || terminalUnavailable || busy || !clientId || !canInitialize || settling) return;
       busy = true;
       clearTimeout(timer);
       update({ phase: 'loading', config: null, error: null });
@@ -145,17 +163,18 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           || (paymentId && !terminalFailure && result.paymentId !== paymentId)) throw new Error('Invalid identity');
         createNativePaymentConfig(result.config);
         paymentId = result.paymentId;
-        terminalFailure = false;
         const pending: PendingIdentity = { clientId, invoiceId, paymentId, bookingId, purchaseId };
         await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
         if (!valid()) return;
-        update({ phase: 'ready', config: result.config, paymentId, canResume: true });
+        attempt += 1;
+        terminalFailure = false; terminalResult = false; resultReceived = false;
+        update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
       } catch (error) {
         if (!valid()) return;
         const conflict = (error as { response?: { data?: { code?: string; paymentId?: string; invoiceId?: string } } })?.response?.data;
         const code = conflict?.code;
         if (code === 'BOOKING_EXPIRED' || code === 'BOOKING_CLOSED' || code === 'INVOICE_CLOSED') {
-          terminalUnavailable = true;
+          terminalUnavailable = true; settling = false;
           canInitialize = false;
           update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: code });
           return;
@@ -174,7 +193,15 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         update({ phase: 'error', error: errorKey(error) });
       } finally { busy = false; }
     };
-    controls.current = { reconcile, retry: () => initialize() };
+    controls.current = { reconcile, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
+      if (!valid() || !paymentId || renderedAttempt !== attempt || terminalResult || terminalUnavailable || resultReceived) return;
+      resultReceived = true; settling = true; polls = 0; canInitialize = false;
+      // The SDK callback ends this bank interaction, but cannot decide payment success.
+      // Remove its pay control while the same saved UUID is verified automatically.
+      update({ phase: 'processing', config: null, error: null, canResume: false });
+      if (busy) { queuedResult = true; return; }
+      await reconcile();
+    } };
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') { polls = 0; void reconcile(); }
     });
@@ -188,5 +215,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
   const retryInitialization = useCallback(async () => {
     if (currentScope.current === scope) await controls.current.retry();
   }, [scope]);
-  return { ...(state.scope === scope ? state : empty), reconcile, retryInitialization };
+  const renderedAttempt = state.scope === scope ? state.attempt : 0;
+  const onPaymentResult = useCallback(async () => {
+    if (currentScope.current === scope) await controls.current.paymentResult(renderedAttempt);
+  }, [scope, renderedAttempt]);
+  return { ...(state.scope === scope ? state : empty), reconcile, retryInitialization, onPaymentResult };
 }

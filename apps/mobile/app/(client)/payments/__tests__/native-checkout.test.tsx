@@ -10,6 +10,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import NativeCheckout from '../native-checkout';
 const mockReplace = jest.fn();
+const mockDismiss = jest.fn();
 const mockReconcile = jest.fn();
 const mockRetry = jest.fn();
 const mockCheckoutInput = jest.fn();
@@ -23,7 +24,7 @@ let mockCanResume = true;
 let mockConfig: object | null = null;
 const mockMount = jest.fn();
 const mockUnmount = jest.fn();
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, back: jest.fn() }), Stack: { Screen: () => null } }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, dismiss: mockDismiss, back: jest.fn() }), Stack: { Screen: () => null } }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockClientId }));
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light' }) }));
@@ -51,6 +52,17 @@ it('navigates only from confirmed completion and never maps native completion to
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment', webResult: 'native' } });
   const destination = mockReplace.mock.calls[0][0];
   expect(fs.existsSync(path.resolve(__dirname, '../..', destination.pathname.replace(/^\/\(client\)\//, '') + '.tsx'))).toBe(true);
+  expect(mockDismiss).not.toHaveBeenCalled();
+});
+it('removes the retained booking confirmation before showing authoritative success', () => {
+  mockParams.fromBookingConfirm = 'true';
+  const view = render(<NativeCheckout />);
+  expect(mockDismiss).not.toHaveBeenCalled();
+  mockPhase = 'completed'; view.rerender(<NativeCheckout />);
+  expect(mockDismiss).toHaveBeenCalledTimes(1);
+  expect(mockDismiss).toHaveBeenCalledWith(1);
+  expect(mockDismiss.mock.invocationCallOrder[0]).toBeLessThan(mockReplace.mock.invocationCallOrder[0]);
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment', webResult: 'native' } });
 });
 it('keeps review-needed results visible without success navigation', () => {
   mockPhase = 'review'; const view = render(<NativeCheckout />);
