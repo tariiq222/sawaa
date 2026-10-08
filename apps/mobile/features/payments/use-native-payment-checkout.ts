@@ -224,12 +224,23 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (!valid() || !payable || !method || !readyConfig) return false;
       // The backend compares the attempt fingerprint only at initialization, so re-run it:
       // a rotated Moyasar/Apple Pay configuration rejects here and must not reach the token.
+      // Any failure revokes the prepared configuration and surfaces an explicit state, so the
+      // UI never keeps offering a Wallet action that would only be dismissed again.
+      const revoke = (error: string) => {
+        readyConfig = null;
+        update({ phase: 'error', config: null, canResume: false, error });
+        return false;
+      };
       try {
         const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
-        return valid() && fresh.invoiceId === invoiceId && fresh.paymentId === paymentId
-          && sameAttemptConfig(fresh.config, readyConfig);
-      } catch {
-        return false;
+        if (!valid()) return false;
+        if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
+          || !sameAttemptConfig(fresh.config, readyConfig)) return revoke('nativePayment.conflict');
+        return true;
+      } catch (error) {
+        if (!valid()) return false;
+        const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+        return revoke(code === 'PAYMENT_CONFIGURATION_CHANGED' ? 'nativePayment.conflict' : 'nativePayment.verificationError');
       }
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {

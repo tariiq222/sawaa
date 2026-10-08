@@ -33,3 +33,12 @@ it('offers retry only when initialization can actually be retried', () => {
   const allowed = renderActions(false, { phase: 'error', error: 'nativePayment.verificationError', canRetryInit: true });
   expect(JSON.stringify(allowed.toJSON())).toContain('nativePayment.retry');
 });
+
+it('offers Check again only when a payment identity exists', () => {
+  const noIdentity = renderActions(false, { phase: 'error', error: 'nativePayment.verificationError', canRetryInit: true, hasPaymentIdentity: false });
+  expect(JSON.stringify(noIdentity.toJSON())).not.toContain('nativePayment.checkAgain');
+  const withIdentity = renderActions(false, { phase: 'error', error: 'nativePayment.verificationError', canRetryInit: true, hasPaymentIdentity: true });
+  expect(JSON.stringify(withIdentity.toJSON())).toContain('nativePayment.checkAgain');
+  const pending = renderActions(false, { phase: 'pending', hasPaymentIdentity: true });
+  expect(JSON.stringify(pending.toJSON())).toContain('nativePayment.checkAgain');
+});

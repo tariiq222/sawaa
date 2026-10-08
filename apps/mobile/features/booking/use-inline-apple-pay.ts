@@ -106,7 +106,7 @@ export function useInlineApplePay({ clientId, scope, enabled, prepareBooking }: 
     || phase === 'processing' || (phase === 'pending' && !checkout.canResume)
     || phase === 'completed' || phase === 'review' || phase === 'unavailable' || phase === 'error';
   return { prepare, preparing, locked, phase, error: checkout.error,
-    unavailableReason: checkout.unavailableReason, canRetryInit: checkout.canRetryInit, reconcile: checkout.reconcile,
+    unavailableReason: checkout.unavailableReason, canRetryInit: checkout.canRetryInit, hasPaymentIdentity: Boolean(checkout.paymentId), reconcile: checkout.reconcile,
     retryInitialization: checkout.retryInitialization, cancel: () => setWalletOpen(false),
     handoff: () => { generation.current += 1; finish(null); setWalletOpen(false); setTarget(null); } };
 }

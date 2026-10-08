@@ -438,6 +438,8 @@ describe('verifyPayable provider configuration gate', () => {
     let ok = true;
     await act(async () => { ok = await result.current.verifyPayable(); });
     expect(ok).toBe(false);
+    expect(result.current.phase).toBe('error');
+    expect(result.current.config).toBeNull();
     unmount();
   });
   it('fails closed when the Apple Pay merchant configuration changed', async () => {
@@ -454,6 +456,10 @@ describe('verifyPayable provider configuration gate', () => {
     let ok = true;
     await act(async () => { ok = await result.current.verifyPayable(); });
     expect(ok).toBe(false);
+    // The prepared configuration is revoked and the conflict is explicit, not silently back to ready.
+    expect(result.current.phase).toBe('error');
+    expect(result.current.error).toBe('nativePayment.conflict');
+    expect(result.current.config).toBeNull();
     jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'other-payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
     await act(async () => { ok = await result.current.verifyPayable(); });
     expect(ok).toBe(false);

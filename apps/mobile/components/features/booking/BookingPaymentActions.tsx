@@ -47,7 +47,7 @@ export function BookingPaymentActions({ payment, apple }: {
           onPress={() => { apple.handoff(); void payment.pay('bank_transfer'); }} disabled={disabled} fontFamily={fontFamily} /> : null}
         {payment.availableMethods.includes('at_center') ? <SecondaryButton label={t('booking.confirmAndPayAtCenter')}
           onPress={() => { apple.handoff(); void payment.pay('at_center'); }} disabled={disabled} fontFamily={fontFamily} /> : null}
-        {apple.phase === 'pending' || apple.phase === 'error' ? <PrimaryButton label={t('nativePayment.checkAgain')}
+        {(apple.phase === 'pending' || apple.phase === 'error') && apple.hasPaymentIdentity ? <PrimaryButton label={t('nativePayment.checkAgain')}
           onPress={() => { void apple.reconcile(); }} fontFamily={fontFamily} /> : null}
         {apple.phase === 'error' && apple.canRetryInit ? <SecondaryButton label={t('nativePayment.retry')}
           onPress={() => { void apple.retryInitialization(); }} fontFamily={fontFamily} /> : null}

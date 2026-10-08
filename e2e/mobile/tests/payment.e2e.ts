@@ -39,7 +39,7 @@ test('new booking opens selected card form without another method chooser', asyn
   await expect(screen.getByText('تأكيد الموعد')).toBeVisible();
   await expect(screen.getByText('طريقة الدفع')).toBeVisible();
   await screen.getByRole('button', 'تأكيد الموعد والدفع في المركز').tap();
-  await expect(screen.getByText(/لهذا الحجز فاتورة/)).toBeVisible();
+  await expect(screen.getByText(/لهذا الموعد فاتورة/)).toBeVisible();
   await app.screenshot('existing-invoice-explanation');
   await screen.getByRole('button', 'OK').tap();
   await expect(screen.getByRole('button', 'الدفع بالبطاقات')).toBeVisible();
