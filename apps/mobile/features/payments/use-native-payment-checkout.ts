@@ -180,6 +180,11 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           await reconcile();
           return true;
         }
+        // Completed by a non-native payment: the backend sends no native identity, and the
+        // invoice is final, so this is a closed invoice rather than a retryable error.
+        terminalUnavailable = true; settling = false; canInitialize = false;
+        update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: 'INVOICE_CLOSED' });
+        return true;
       }
       if (code === 'NATIVE_PAYMENT_IN_PROGRESS' || code === 'HOSTED_PAYMENT_IN_PROGRESS') {
         // A provider payment is already in flight: stop initializing and keep verifying it (the

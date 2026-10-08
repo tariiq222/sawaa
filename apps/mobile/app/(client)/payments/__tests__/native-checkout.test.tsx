@@ -22,6 +22,7 @@ let mockClientId = 'client';
 let mockUnavailableReason: string | undefined;
 let mockPhase = 'pending';
 let mockCanResume = true;
+let mockCanRetryInit = true;
 let mockConfig: object | null = null;
 const mockMount = jest.fn();
 const mockUnmount = jest.fn();
@@ -34,8 +35,8 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ ink:
 let mockFormProps: { onResult: (outcome: 'submitted' | 'rejected') => void } | undefined;
 jest.mock('@/features/payments/NativePaymentForm', () => ({ NativePaymentForm: (props: { onResult: (outcome: 'submitted' | 'rejected') => void }) => { const React = require('react'); mockFormProps = props; React.useEffect(() => { mockMount(); return () => mockUnmount(); }, []); return null; } }));
 jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => mockCapabilities }));
-jest.mock('@/features/payments/use-native-payment-checkout', () => ({ useNativePaymentCheckout: (input: unknown) => { mockCheckoutInput(input); return { phase: mockPhase, config: mockConfig, paymentId: mockPaymentId, canResume: mockCanResume, reconcile: mockReconcile, retryInitialization: mockRetry, onPaymentResult: mockPaymentResult, error: null, unavailableReason: mockUnavailableReason }; } }));
-beforeEach(() => { mockPaymentId = 'payment'; mockClientId = 'client'; mockUnavailableReason = undefined; mockConfig = null; mockCanResume = true; mockPhase = 'pending'; mockParams = { invoiceId: 'invoice', bookingId: 'booking' }; mockCapabilities = { enabled: true, isLoading: false, isError: false, applePayAvailable: false, refetch: jest.fn() }; jest.clearAllMocks(); });
+jest.mock('@/features/payments/use-native-payment-checkout', () => ({ useNativePaymentCheckout: (input: unknown) => { mockCheckoutInput(input); return { phase: mockPhase, config: mockConfig, paymentId: mockPaymentId, canResume: mockCanResume, reconcile: mockReconcile, retryInitialization: mockRetry, canRetryInit: mockCanRetryInit, onPaymentResult: mockPaymentResult, error: null, unavailableReason: mockUnavailableReason }; } }));
+beforeEach(() => { mockPaymentId = 'payment'; mockClientId = 'client'; mockUnavailableReason = undefined; mockConfig = null; mockCanResume = true; mockCanRetryInit = true; mockPhase = 'pending'; mockParams = { invoiceId: 'invoice', bookingId: 'booking' }; mockCapabilities = { enabled: true, isLoading: false, isError: false, applePayAvailable: false, refetch: jest.fn() }; jest.clearAllMocks(); });
 it('offers only verification when the provider-created challenge cannot be recovered', () => {
   mockCanResume = false;
   const view = render(<NativeCheckout />);
@@ -180,4 +181,13 @@ it('keeps the card form and does not lock initialization after a definitive card
   expect(view.getByText('nativePayment.cardRejected')).toBeTruthy();
   act(() => mockFormProps?.onResult('submitted'));
   expect(mockPaymentResult).toHaveBeenCalledTimes(1);
+});
+
+it('hides Resume and Retry when initialization is blocked (for example a configuration conflict)', () => {
+  mockPaymentId = null; mockPhase = 'error'; mockCanRetryInit = false;
+  const view = render(<NativeCheckout />);
+  expect(view.queryByText('nativePayment.resume')).toBeNull();
+  expect(view.queryByText('nativePayment.retry')).toBeNull();
+  mockCanRetryInit = true; view.rerender(<NativeCheckout />);
+  expect(view.getByText('nativePayment.resume')).toBeTruthy();
 });

@@ -110,7 +110,7 @@ export default function NativeCheckout() {
       </View> : null}
       {appleUnavailable && !unavailable && !checkout.paymentId ? <AppButton variant="secondary" onPress={() => selectMethod('ONLINE_CARD')} label={t('nativePayment.useCard')} /> : null}
       {checkout.paymentId && !loading && !['completed', 'review', 'unavailable'].includes(checkout.phase) && !choosing ? <AppButton onPress={() => { void checkout.reconcile(); }} label={t('nativePayment.checkAgain')} loading={loading} /> : null}
-      {!loading && !unavailable && !appleUnavailable && !choosing && !checkout.config
+      {!loading && !unavailable && !appleUnavailable && !choosing && !checkout.config && checkout.canRetryInit
         && (checkout.phase === 'failed' || checkout.canResume || !checkout.paymentId) && ['pending', 'error', 'failed'].includes(checkout.phase) ? <AppButton variant="secondary" onPress={() => { void checkout.retryInitialization(); }} label={t(checkout.phase === 'failed' ? 'nativePayment.retry' : 'nativePayment.resume')} /> : null}
       {unavailable && !terminalUnavailable ? <AppButton variant="secondary" onPress={capabilities.refetch} label={t('nativePayment.retry')} /> : null}
       <AppButton variant="secondary" onPress={() => goBackOrHome(router, '/(client)/(tabs)/home')} label={t('nativePayment.back')} />

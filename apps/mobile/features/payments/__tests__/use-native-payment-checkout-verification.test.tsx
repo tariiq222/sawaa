@@ -171,6 +171,14 @@ describe('post-Wallet verification and initialization conflicts', () => {
     expect(result.current.paymentId).toBe('winner');
     unmount();
   });
+  it('treats an already-completed invoice without any native payment identity as closed, not as a retryable error', async () => {
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_ALREADY_COMPLETED' } } });
+    const { result, unmount } = renderHook(() => useNativePaymentCheckout(appleInput), { wrapper });
+    await waitFor(() => expect(result.current.phase).toBe('unavailable'));
+    expect(result.current.unavailableReason).toBe('INVOICE_CLOSED');
+    expect(result.current.canRetryInit).toBe(false);
+    unmount();
+  });
   it.each(['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS'])('%s on retry blocks initialization, keeps its message across checks and keeps verifying', async (code) => {
     const { result, unmount } = await ready();
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ ...pendingOk, canCreatePayment: false });
