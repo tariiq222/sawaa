@@ -71,7 +71,17 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) =>
 import EmployeeProfileScreen from '../[id]';
 
 describe('EmployeeProfileScreen', () => {
-  beforeEach(() => { mockEmployee.publicBioEn = null; mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; mockServiceGroup = false; mockEmployeeError = false; mockCatalogError = false; jest.clearAllMocks(); });
+  beforeEach(() => { mockEmployee.languages = undefined; mockEmployee.experience = undefined; mockEmployee.publicBioEn = null; mockPush.mockClear(); mockRouteParams = { id: 'dr-example' }; mockDirectClinic = false; mockServiceGroup = false; mockEmployeeError = false; mockCatalogError = false; jest.clearAllMocks(); });
+
+  it('shows saved spoken languages and experience on the public biography tab', () => {
+    mockEmployee.publicBioEn = 'Biography';
+    mockEmployee.languages = ['العربية', 'English'];
+    mockEmployee.experience = 8;
+    const screen = render(<EmployeeProfileScreen />);
+    fireEvent.press(screen.getByText('employeeProfile.about'));
+    expect(screen.getByText('employeeSelfProfile.publicLanguages')).toBeTruthy();
+    expect(screen.getByText('employeeSelfProfile.publicExperience')).toBeTruthy();
+  });
 
   it('retries employee errors and hides a stale profile booking action', () => {
     mockEmployeeError = true;

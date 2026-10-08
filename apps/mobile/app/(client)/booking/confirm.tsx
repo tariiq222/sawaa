@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,10 +16,10 @@ import {
 } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { InfoRows } from '@/components/ui/InfoRows';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+import { BookingPaymentActions } from '@/components/features/booking/BookingPaymentActions';
+import { useInlineApplePay } from '@/features/booking/use-inline-apple-pay';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
-import { PaymentMethods } from '@/components/features/booking/PaymentMethods';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
@@ -61,6 +61,7 @@ export default function BookingConfirmScreen() {
   const dir = useDir();
   const reduceMotion = useReduceMotion();
   const [footerHeight, setFooterHeight] = useState(180);
+  const clientId = useAppSelector((state) => state.auth.user?.id);
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
     const f600 = getFontName(dir.locale, '600');
@@ -108,6 +109,12 @@ export default function BookingConfirmScreen() {
     currency: currency ?? service?.currency,
   }, signedIn && canReview);
 
+  const apple = useInlineApplePay({ clientId,
+    scope: JSON.stringify([branchId, employeeId, serviceId, scheduledAt, durationOptionId, selectedDeliveryType]),
+    enabled: signedIn && canReview && payment.availableMethods.includes('apple_pay') && !payment.methodsLoading && !payment.methodsError,
+    prepareBooking: payment.prepareApplePay,
+  });
+
   const signIn = () => {
     if (!canReview) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -148,7 +155,7 @@ export default function BookingConfirmScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: footerHeight + sawaaSpacing.lg }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: signedIn ? insets.bottom + sawaaSpacing.lg : footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
@@ -176,25 +183,6 @@ export default function BookingConfirmScreen() {
             <InfoRows rows={infoRows} />
           )}
         </Animated.View>
-        {signedIn && canReview ? (
-          <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(220).duration(700).easing(Easing.out(Easing.cubic))} style={styles.methods}>
-            <SectionHeader title={t('booking.paymentMethod')} />
-            {payment.methodsLoading ? (
-              <Text style={[styles.hintText, localizedText]}>{t('payment.methodsLoading')}</Text>
-            ) : payment.methodsError ? (
-              <EmptyState icon="cloud-offline-outline" tone="danger" title={t('payment.methodsError')}
-                actionLabel={t('common.retry')} onAction={payment.retryMethods} />
-            ) : payment.availableMethods.length === 0 ? (
-              <EmptyState icon="card-outline" title={t('payment.methodsUnavailable')}
-                actionLabel={t('common.retry')} onAction={payment.retryMethods} />
-            ) : <PaymentMethods
-              methods={payment.availableMethods}
-              selected={payment.method}
-              onSelect={(method) => { Haptics.selectionAsync(); payment.setMethod(method); }}
-              dir={dir}
-            />}
-          </Animated.View>
-        ) : null}
         {!loading && !error && service ? (
           <View style={[styles.totalRow, { flexDirection: dir.row }]}>
             <Text style={[styles.priceLabelBold, { fontFamily: f600 }, localizedText]}>
@@ -205,29 +193,16 @@ export default function BookingConfirmScreen() {
             </Text>
           </View>
         ) : null}
+        {signedIn && canReview ? <BookingPaymentActions payment={payment} apple={apple} /> : null}
       </ScrollView>
 
-      <FloatingCta onHeightChange={setFooterHeight}>
-        {signedIn ? (
-          <PrimaryButton
-            label={payment.method === 'at_center'
-              ? t(payment.submitting ? 'booking.confirmingBooking' : 'booking.confirmAtCenter')
-              : payment.submitting
-              ? (t('booking.processing'))
-              : t('booking.payAmount', { amount: formatMoney(total) })}
-            onPress={() => { void payment.pay(); }}
-            disabled={!payment.canPay}
-            loading={payment.submitting}
-            fontFamily={f700}
-          />
-        ) : (
-          <PrimaryButton
-            label={t('booking.signInOrRegisterToContinue')}
-            onPress={signIn}
-            disabled={!canReview}
-            fontFamily={f700}
-          />
-        )}
+      {!signedIn ? <FloatingCta onHeightChange={setFooterHeight}>
+        <PrimaryButton
+          label={t('booking.signInOrRegisterToContinue')}
+          onPress={signIn}
+          disabled={!canReview}
+          fontFamily={f700}
+        />
         {!signedIn ? (
           <View style={[styles.hint, { flexDirection: dir.row }]}>
             <GoIcon size={14} color={colors.ink[500]} strokeWidth={1.75} />
@@ -236,13 +211,8 @@ export default function BookingConfirmScreen() {
             </Text>
           </View>
         ) : null}
-      </FloatingCta>
+      </FloatingCta> : null}
 
-      {signedIn && payment.submitting ? (
-        <View style={styles.processing} pointerEvents="none">
-          <ActivityIndicator color={colors.teal[600]} />
-        </View>
-      ) : null}
     </AquaBackground>
   );
 }
@@ -262,8 +232,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     fontVariant: ['tabular-nums'],
   },
   skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  methods: { gap: sawaaSpacing.sm },
   hint: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.xs, marginTop: sawaaSpacing.xs },
   hintText: { fontSize: sawaaType.caption.fontSize, color: colors.ink[500] },
-  processing: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingBottom: 120 },
 });

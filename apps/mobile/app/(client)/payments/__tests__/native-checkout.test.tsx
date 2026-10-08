@@ -7,11 +7,13 @@ import * as WebBrowser from 'expo-web-browser';
 import { getPendingPackagePurchase } from '@/services/client/packages';
 jest.mock('@/services/client/packages', () => ({ getPendingPackagePurchase: jest.fn() }));
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import NativeCheckout from '../native-checkout';
 const mockReplace = jest.fn();
+const mockDismiss = jest.fn();
 const mockReconcile = jest.fn();
 const mockRetry = jest.fn();
+const mockPaymentResult = jest.fn();
 const mockCheckoutInput = jest.fn();
 let mockParams: Record<string, string> = { invoiceId: 'invoice', bookingId: 'booking' };
 let mockCapabilities = { enabled: true, isLoading: false, isError: false, applePayAvailable: false, refetch: jest.fn() };
@@ -20,19 +22,21 @@ let mockClientId = 'client';
 let mockUnavailableReason: string | undefined;
 let mockPhase = 'pending';
 let mockCanResume = true;
+let mockCanRetryInit = true;
 let mockConfig: object | null = null;
 const mockMount = jest.fn();
 const mockUnmount = jest.fn();
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, back: jest.fn(), canGoBack: () => false }), Stack: { Screen: () => null } }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, dismiss: mockDismiss, back: jest.fn(), canGoBack: () => false }), Stack: { Screen: () => null } }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockClientId }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ ink: { 900: 'black', 500: 'gray' }, teal: { 600: 'teal', 700: 'teal' }, surface: 'white' }) }));
-jest.mock('@/features/payments/NativePaymentForm', () => ({ NativePaymentForm: () => { const React = require('react'); React.useEffect(() => { mockMount(); return () => mockUnmount(); }, []); return null; } }));
+let mockFormProps: { onResult: (outcome: 'submitted' | 'rejected') => void } | undefined;
+jest.mock('@/features/payments/NativePaymentForm', () => ({ NativePaymentForm: (props: { onResult: (outcome: 'submitted' | 'rejected') => void }) => { const React = require('react'); mockFormProps = props; React.useEffect(() => { mockMount(); return () => mockUnmount(); }, []); return null; } }));
 jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => mockCapabilities }));
-jest.mock('@/features/payments/use-native-payment-checkout', () => ({ useNativePaymentCheckout: (input: unknown) => { mockCheckoutInput(input); return { phase: mockPhase, config: mockConfig, paymentId: mockPaymentId, canResume: mockCanResume, reconcile: mockReconcile, retryInitialization: mockRetry, error: null, unavailableReason: mockUnavailableReason }; } }));
-beforeEach(() => { mockPaymentId = 'payment'; mockClientId = 'client'; mockUnavailableReason = undefined; mockConfig = null; mockCanResume = true; mockPhase = 'pending'; mockParams = { invoiceId: 'invoice', bookingId: 'booking' }; mockCapabilities = { enabled: true, isLoading: false, isError: false, applePayAvailable: false, refetch: jest.fn() }; jest.clearAllMocks(); });
+jest.mock('@/features/payments/use-native-payment-checkout', () => ({ useNativePaymentCheckout: (input: unknown) => { mockCheckoutInput(input); return { phase: mockPhase, config: mockConfig, paymentId: mockPaymentId, canResume: mockCanResume, reconcile: mockReconcile, retryInitialization: mockRetry, canRetryInit: mockCanRetryInit, onPaymentResult: mockPaymentResult, error: null, unavailableReason: mockUnavailableReason }; } }));
+beforeEach(() => { mockPaymentId = 'payment'; mockClientId = 'client'; mockUnavailableReason = undefined; mockConfig = null; mockCanResume = true; mockCanRetryInit = true; mockPhase = 'pending'; mockParams = { invoiceId: 'invoice', bookingId: 'booking' }; mockCapabilities = { enabled: true, isLoading: false, isError: false, applePayAvailable: false, refetch: jest.fn() }; jest.clearAllMocks(); });
 it('offers only verification when the provider-created challenge cannot be recovered', () => {
   mockCanResume = false;
   const view = render(<NativeCheckout />);
@@ -52,6 +56,17 @@ it('navigates only from confirmed completion and never maps native completion to
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment', webResult: 'native' } });
   const destination = mockReplace.mock.calls[0][0];
   expect(fs.existsSync(path.resolve(__dirname, '../..', destination.pathname.replace(/^\/\(client\)\//, '') + '.tsx'))).toBe(true);
+  expect(mockDismiss).not.toHaveBeenCalled();
+});
+it('removes the retained booking confirmation before showing authoritative success', () => {
+  mockParams.fromBookingConfirm = 'true';
+  const view = render(<NativeCheckout />);
+  expect(mockDismiss).not.toHaveBeenCalled();
+  mockPhase = 'completed'; view.rerender(<NativeCheckout />);
+  expect(mockDismiss).toHaveBeenCalledTimes(1);
+  expect(mockDismiss).toHaveBeenCalledWith(1);
+  expect(mockDismiss.mock.invocationCallOrder[0]).toBeLessThan(mockReplace.mock.invocationCallOrder[0]);
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment', webResult: 'native' } });
 });
 it('keeps review-needed results visible without success navigation', () => {
   mockPhase = 'review'; const view = render(<NativeCheckout />);
@@ -156,4 +171,23 @@ it('returns to client home when checkout has no navigation history', () => {
   const screen = render(<NativeCheckout />);
   fireEvent.press(screen.getByRole('button', {name:'nativePayment.back'}));
   expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
+});
+
+it('keeps the card form and does not lock initialization after a definitive card rejection', () => {
+  mockConfig = {}; mockPhase = 'ready';
+  const view = render(<NativeCheckout />);
+  act(() => mockFormProps?.onResult('rejected'));
+  expect(mockPaymentResult).not.toHaveBeenCalled();
+  expect(view.getByText('nativePayment.cardRejected')).toBeTruthy();
+  act(() => mockFormProps?.onResult('submitted'));
+  expect(mockPaymentResult).toHaveBeenCalledTimes(1);
+});
+
+it('hides Resume and Retry when initialization is blocked (for example a configuration conflict)', () => {
+  mockPaymentId = null; mockPhase = 'error'; mockCanRetryInit = false;
+  const view = render(<NativeCheckout />);
+  expect(view.queryByText('nativePayment.resume')).toBeNull();
+  expect(view.queryByText('nativePayment.retry')).toBeNull();
+  mockCanRetryInit = true; view.rerender(<NativeCheckout />);
+  expect(view.getByText('nativePayment.resume')).toBeTruthy();
 });

@@ -1,0 +1,7 @@
+{
+  "name": "sawaa-mobile-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "E2E_TELEMETRY_DISABLED=1 e2e run" },
+  "devDependencies": { "@e2e-dev/mobile": "0.10.0", "e2e": "0.16.0" }
+}

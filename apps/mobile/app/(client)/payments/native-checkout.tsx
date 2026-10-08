@@ -24,14 +24,16 @@ function single(value: string | string[] | undefined): string | undefined {
 }
 
 export default function NativeCheckout() {
-  const params = useLocalSearchParams<{ invoiceId?: string; bookingId?: string; purchaseId?: string; method?: string }>();
+  const params = useLocalSearchParams<{ invoiceId?: string; bookingId?: string; purchaseId?: string; method?: string; fromBookingConfirm?: string }>();
   const invoiceId = single(params.invoiceId) ?? '';
   const bookingId = single(params.bookingId);
   const purchaseId = single(params.purchaseId);
+  const fromBookingConfirm = single(params.fromBookingConfirm) === 'true';
   const clientId = useAppSelector((state) => state.auth.user?.id);
   const capabilities = useNativePaymentCapabilities();
   const choiceScope = JSON.stringify([clientId, invoiceId, bookingId, purchaseId, params.method]);
   const [choice, setChoice] = useState<{ scope: string; method: NativePaymentMethod } | null>(null);
+  const [cardRejected, setCardRejected] = useState(false);
   const explicitMethod = params.method === 'APPLE_PAY' || params.method === 'ONLINE_CARD' ? params.method : undefined;
   const method = (choice?.scope === choiceScope ? choice.method : explicitMethod)
     ?? (!capabilities.isLoading && !capabilities.applePayAvailable ? 'ONLINE_CARD' : undefined);
@@ -46,6 +48,7 @@ export default function NativeCheckout() {
     clientId: capabilities.isLoading || capabilities.isError || !capabilities.enabled || appleUnavailable ? undefined : clientId,
     invoiceId, bookingId, purchaseId, method,
   });
+  useEffect(() => { setCardRejected(false); }, [choiceScope, checkout.attempt]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
@@ -58,7 +61,11 @@ export default function NativeCheckout() {
   useEffect(() => {
     if (checkout.phase !== 'completed' || !clientId || !checkout.paymentId) return;
     let active = true;
-    if (bookingId) router.replace({ pathname: '/(client)/booking/success', params: { invoiceId, bookingId, paymentId: checkout.paymentId, webResult: 'native' } });
+    if (bookingId) {
+      // Pending Back retains confirmation; completion replaces that retained screen.
+      if (fromBookingConfirm) router.dismiss(1);
+      router.replace({ pathname: '/(client)/booking/success', params: { invoiceId, bookingId, paymentId: checkout.paymentId, webResult: 'native' } });
+    }
     else if (purchaseId) {
       void getPendingPackagePurchase(clientId).then((pending) => {
         if (!active || navigationScope.current !== clientId) return;
@@ -72,8 +79,8 @@ export default function NativeCheckout() {
       });
     }
     return () => { active = false; };
-  }, [checkout.phase, checkout.paymentId, clientId, invoiceId, bookingId, purchaseId, router]);
-  const loading = capabilities.isLoading || (!appleUnavailable && (checkout.phase === 'loading' || checkout.phase === 'checking'));
+  }, [checkout.phase, checkout.paymentId, clientId, invoiceId, bookingId, purchaseId, fromBookingConfirm, router]);
+  const loading = capabilities.isLoading || (!appleUnavailable && (checkout.phase === 'loading' || checkout.phase === 'checking' || checkout.phase === 'processing'));
   const unavailable = capabilities.isError || !capabilities.enabled || !clientId;
   const terminalUnavailable = checkout.phase === 'unavailable';
   const choosing = !method && !unavailable && (checkout.phase === 'choosing' || (checkout.canResume && !checkout.config));
@@ -92,12 +99,18 @@ export default function NativeCheckout() {
       </View> : null}
       {['ready', 'checking', 'pending', 'error'].includes(checkout.phase) && checkout.config && method && !unavailable && !appleUnavailable ? <View style={[styles.form, { backgroundColor: roles.surface }]}>
         <ThemedText variant="bodySm" align={dir.textAlign}>{t('nativePayment.cardNetworks')}</ThemedText>
+        {cardRejected ? <ThemedText variant="bodySm" align={dir.textAlign} accessibilityLiveRegion="polite">{t('nativePayment.cardRejected')}</ThemedText> : null}
         <NativePaymentForm config={checkout.config} method={method} applePayAvailable={capabilities.applePayAvailable}
-          onResult={() => { void checkout.reconcile(); }} onSelectCard={() => selectMethod('ONLINE_CARD')} />
+          onResult={(outcome) => {
+            // A definitive pre-creation rejection leaves the same form and attempt usable.
+            if (outcome === 'rejected') { setCardRejected(true); return; }
+            setCardRejected(false);
+            void checkout.onPaymentResult();
+          }} onSelectCard={() => selectMethod('ONLINE_CARD')} />
       </View> : null}
       {appleUnavailable && !unavailable && !checkout.paymentId ? <AppButton variant="secondary" onPress={() => selectMethod('ONLINE_CARD')} label={t('nativePayment.useCard')} /> : null}
       {checkout.paymentId && !loading && !['completed', 'review', 'unavailable'].includes(checkout.phase) && !choosing ? <AppButton onPress={() => { void checkout.reconcile(); }} label={t('nativePayment.checkAgain')} loading={loading} /> : null}
-      {!loading && !unavailable && !appleUnavailable && !choosing && !checkout.config
+      {!loading && !unavailable && !appleUnavailable && !choosing && !checkout.config && checkout.canRetryInit
         && (checkout.phase === 'failed' || checkout.canResume || !checkout.paymentId) && ['pending', 'error', 'failed'].includes(checkout.phase) ? <AppButton variant="secondary" onPress={() => { void checkout.retryInitialization(); }} label={t(checkout.phase === 'failed' ? 'nativePayment.retry' : 'nativePayment.resume')} /> : null}
       {unavailable && !terminalUnavailable ? <AppButton variant="secondary" onPress={capabilities.refetch} label={t('nativePayment.retry')} /> : null}
       <AppButton variant="secondary" onPress={() => goBackOrHome(router, '/(client)/(tabs)/home')} label={t('nativePayment.back')} />

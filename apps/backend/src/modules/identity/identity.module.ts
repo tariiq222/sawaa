@@ -1,3 +1,6 @@
+import { EmployeeContactStore } from './employee-contact/employee-contact.store';
+import { RequestEmployeeContactHandler } from './employee-contact/request-employee-contact.handler';
+import { VerifyEmployeeContactHandler } from './employee-contact/verify-employee-contact.handler';
 import { MobileEmailFlowStore } from './mobile-email-entry/mobile-email-flow.store';
 import { MobileEmailIdentity } from './mobile-email-entry/mobile-email-identity';
 import { MobileEmailSendLimiter } from './mobile-email-entry/mobile-email-send-limiter';
@@ -83,6 +86,7 @@ import { NativeLogoutHandler } from './native-session/native-logout.handler';
 import { RequestAccountDeletionHandler } from './request-account-deletion/request-account-deletion.handler';
 
 const handlers = [
+  EmployeeContactStore, RequestEmployeeContactHandler, VerifyEmployeeContactHandler,
   MobileEmailFlowStore, MobileEmailIdentity, MobileEmailSendLimiter, MobileEmailDelivery, MobileEmailPhoneDispatch, RequestEmailEntryHandler, VerifyEmailEntryHandler, RequestEmailEntryPhoneHandler, ResendEmailEntryPhoneHandler, VerifyEmailEntryPhoneHandler,
   ReviewLoginHandler,
   LoginHandler, RefreshTokenHandler, LogoutHandler,

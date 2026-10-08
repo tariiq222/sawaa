@@ -50,7 +50,7 @@ it('never marks an unconfirmed booking or review-required payment successful', a
   const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
   await waitFor(() => expect(result.current.phase).toBe('ready'));
   jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: false });
-  await act(() => result.current.reconcile()); expect(result.current.phase).toBe('pending');
+  await act(() => result.current.reconcile()); expect(result.current.phase).toBe('processing');
   expect(result.current.config).toBeNull(); expect(result.current.canResume).toBe(false);
   jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: true });
   await act(() => result.current.reconcile()); expect(result.current.phase).toBe('review'); unmount();
@@ -251,4 +251,83 @@ it.each(['BOOKING_EXPIRED', 'BOOKING_CLOSED', 'INVOICE_CLOSED'])('treats initial
   expect(result.current.unavailableReason).toBe(code); expect(result.current.config).toBeNull(); expect(result.current.canResume).toBe(false);
   await act(() => result.current.retryInitialization());
   expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1); unmount();
+});
+
+it.each(['pending', 'network'] as const)('bounds automatic verification after an SDK result with %s responses', async (response) => {
+  jest.useFakeTimers();
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  try {
+    await waitFor(() => expect(result.current.phase).toBe('ready'));
+    if (response === 'network') jest.mocked(clientPaymentsService.reconcileNativePayment).mockRejectedValue(new Error('Offline'));
+    await act(() => result.current.onPaymentResult());
+    expect(result.current.phase).toBe('processing'); expect(result.current.config).toBeNull();
+    await act(() => result.current.retryInitialization());
+    for (let i = 0; i < 10; i += 1) await act(async () => { jest.advanceTimersByTime(3000); });
+    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(7);
+    expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+    expect(result.current.phase).toBe(response === 'network' ? 'error' : 'pending');
+    expect(result.current.config).toBeNull(); expect(result.current.canResume).toBe(false);
+  } finally { unmount(); jest.useRealTimers(); }
+});
+it('offers a new attempt after an SDK result only when the server declares failure', async () => {
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  await act(() => result.current.onPaymentResult());
+  expect(result.current.phase).toBe('failed'); expect(result.current.config).toBeNull();
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  await act(() => result.current.retryInitialization());
+  expect(result.current.phase).toBe('ready'); expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(2);
+  unmount();
+});
+it('waits for booking confirmation after capture and never initializes another payment', async () => {
+  jest.useFakeTimers();
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  try {
+    await waitFor(() => expect(result.current.phase).toBe('ready'));
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: false });
+    await act(() => result.current.onPaymentResult());
+    expect(result.current.phase).toBe('processing'); expect(result.current.canResume).toBe(false);
+    await act(() => result.current.retryInitialization());
+    jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'confirmed' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
+    await act(async () => { jest.advanceTimersByTime(3000); });
+    expect(result.current.phase).toBe('completed'); expect(await AsyncStorage.getItem('sawaa.native-payment:client:invoice')).toBeNull();
+    expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  } finally { unmount(); jest.useRealTimers(); }
+});
+
+it.each(['payment', 'payment-next'])('ignores the old SDK callback after explicit retry initializes %s', async (nextId) => {
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  const oldResult = result.current.onPaymentResult;
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  await act(() => result.current.reconcile());
+  jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: nextId, invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+  await act(() => result.current.retryInitialization());
+  await act(() => oldResult());
+  expect(result.current.phase).toBe('ready'); expect(result.current.config).toBe(config);
+  expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(1);
+  unmount();
+});
+
+it('ignores an old SDK result while the new attempt identity is being persisted', async () => {
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  const oldResult = result.current.onPaymentResult;
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  await act(() => result.current.reconcile());
+  let finish!: () => void;
+  jest.spyOn(AsyncStorage, 'setItem').mockReturnValueOnce(new Promise<void>(resolve => { finish = resolve; }));
+  let retry!: Promise<void>;
+  act(() => { retry = result.current.retryInitialization(); });
+  await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2));
+  await act(() => oldResult());
+  expect(result.current.phase).toBe('loading');
+  await act(async () => { finish(); await retry; });
+  expect(result.current.phase).toBe('ready'); expect(result.current.config).toBe(config);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false });
+  await act(() => result.current.onPaymentResult());
+  expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(2);
+  expect(result.current.phase).toBe('processing'); expect(result.current.config).toBeNull();
+  unmount();
 });

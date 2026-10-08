@@ -99,6 +99,13 @@ __pycache__/
 
 # ─── Local-only folders (not tracked) ─────────────────────────
 docs/*
+!docs/e2e.md
+!docs/testing/
+docs/testing/*
+!docs/testing/e2e-scenarios.md
+!docs/testing/e2e-local-runbook.md
+!docs/testing/e2e-phase2-plan.md
+!docs/testing/e2e-phase2-acceptance.md
 !docs/README.md
 !docs/operations/
 !docs/operations/**
@@ -178,3 +185,7 @@ docs/architecture/*
 
 # Agentic E2E reports, traces, sessions and replay cache.
 .e2e/
+
+# Continued local E2E acceptance plan and evidence summary.
+!docs/testing/e2e-phase3-plan.md
+!docs/testing/e2e-phase3-acceptance.md

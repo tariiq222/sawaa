@@ -187,9 +187,17 @@ export function TherapistProfileView({
               onChange={setTab}
             />
             {catalogError ? <ErrorState onRetry={onRetryCatalog} /> : activeTab === 'about' ? (
-              <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
-                {bio ?? t('employeeProfile.noBio')}
-              </Text>
+              <View>
+                <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {bio ?? t('employeeProfile.noBio')}
+                </Text>
+                {(employee.languages?.length ?? 0) > 0 ? <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {t('employeeSelfProfile.publicLanguages', { languages: employee.languages?.join('، ') })}
+                </Text> : null}
+                {typeof employee.experience === 'number' && employee.experience > 0 ? <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {t('employeeSelfProfile.publicExperience', { years: employee.experience })}
+                </Text> : null}
+              </View>
             ) : servicesTab}
           </>
         ) : !employeeError ? (

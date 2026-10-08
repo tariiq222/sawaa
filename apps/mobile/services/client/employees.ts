@@ -10,6 +10,8 @@ export interface PublicEmployeeItem {
   title: string | null;
   specialty: string | null;
   specialtyAr: string | null;
+  languages?: string[];
+  experience?: number;
   publicBioAr: string | null;
   publicBioEn: string | null;
   publicImageUrl: string | null;
