@@ -460,6 +460,11 @@ describe('verifyPayable provider configuration gate', () => {
     expect(result.current.phase).toBe('error');
     expect(result.current.error).toBe('nativePayment.conflict');
     expect(result.current.config).toBeNull();
+    expect(result.current.canRetryInit).toBe(false);
+    // A later reconcile that still allows creation must not re-offer the retry that hits the same conflict.
+    await act(() => result.current.reconcile());
+    expect(result.current.canRetryInit).toBe(false);
+    expect(result.current.canResume).toBe(false);
     jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'other-payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
     await act(async () => { ok = await result.current.verifyPayable(); });
     expect(ok).toBe(false);

@@ -33,6 +33,7 @@ export default function NativeCheckout() {
   const capabilities = useNativePaymentCapabilities();
   const choiceScope = JSON.stringify([clientId, invoiceId, bookingId, purchaseId, params.method]);
   const [choice, setChoice] = useState<{ scope: string; method: NativePaymentMethod } | null>(null);
+  const [cardRejected, setCardRejected] = useState(false);
   const explicitMethod = params.method === 'APPLE_PAY' || params.method === 'ONLINE_CARD' ? params.method : undefined;
   const method = (choice?.scope === choiceScope ? choice.method : explicitMethod)
     ?? (!capabilities.isLoading && !capabilities.applePayAvailable ? 'ONLINE_CARD' : undefined);
@@ -97,8 +98,14 @@ export default function NativeCheckout() {
       </View> : null}
       {['ready', 'checking', 'pending', 'error'].includes(checkout.phase) && checkout.config && method && !unavailable && !appleUnavailable ? <View style={[styles.form, { backgroundColor: roles.surface }]}>
         <ThemedText variant="bodySm" align={dir.textAlign}>{t('nativePayment.cardNetworks')}</ThemedText>
+        {cardRejected ? <ThemedText variant="bodySm" align={dir.textAlign} accessibilityLiveRegion="polite">{t('nativePayment.cardRejected')}</ThemedText> : null}
         <NativePaymentForm config={checkout.config} method={method} applePayAvailable={capabilities.applePayAvailable}
-          onResult={() => { void checkout.onPaymentResult(); }} onSelectCard={() => selectMethod('ONLINE_CARD')} />
+          onResult={(outcome) => {
+            // A definitive pre-creation rejection leaves the same form and attempt usable.
+            if (outcome === 'rejected') { setCardRejected(true); return; }
+            setCardRejected(false);
+            void checkout.onPaymentResult();
+          }} onSelectCard={() => selectMethod('ONLINE_CARD')} />
       </View> : null}
       {appleUnavailable && !unavailable && !checkout.paymentId ? <AppButton variant="secondary" onPress={() => selectMethod('ONLINE_CARD')} label={t('nativePayment.useCard')} /> : null}
       {checkout.paymentId && !loading && !['completed', 'review', 'unavailable'].includes(checkout.phase) && !choosing ? <AppButton onPress={() => { void checkout.reconcile(); }} label={t('nativePayment.checkAgain')} loading={loading} /> : null}

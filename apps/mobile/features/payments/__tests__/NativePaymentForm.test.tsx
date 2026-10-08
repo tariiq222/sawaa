@@ -38,7 +38,7 @@ it('uses official cards for the chosen card method and discards raw SDK callback
   const callback = jest.fn();
   const screen = render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={callback} />);
   fireEvent.press(screen.getByText('official-card'));
-  expect(callback).toHaveBeenCalledWith(); expect(screen.queryByText('official-apple')).toBeNull();
+  expect(callback).toHaveBeenCalledWith('submitted'); expect(screen.queryByText('official-apple')).toBeNull();
 });
 it('lets the SDK card button grow with scaled text while keeping its minimum touch height', () => {
   render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={jest.fn()} />);
@@ -82,4 +82,26 @@ it('passes the current app language through the documented local SDK extension',
   mockAppLanguage = 'en';
   view.rerender(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={jest.fn()} />);
   expect(mockCardLanguage).toHaveBeenLastCalledWith('en');
+});
+
+describe('SDK result classification', () => {
+  const press = (result: unknown) => {
+    const callback = jest.fn();
+    render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={callback} />);
+    mockCardProps.mock.calls.at(-1)?.[0].onPaymentResult(result);
+    return callback;
+  };
+  it('reports a definitive pre-creation validation rejection as rejected', () => {
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', message: 'bad card' } })).toHaveBeenCalledWith('rejected');
+  });
+  it.each([
+    { name: 'MoyasarNetworkEndpointError', error: { type: 'api_error' } },
+    { name: 'MoyasarNetworkEndpointError', error: {} },
+    { name: 'MoyasarGeneralError' },
+    { status: 'failed' },
+    null,
+    undefined,
+  ])('keeps %p verification-only', (result) => {
+    expect(press(result)).toHaveBeenCalledWith('submitted');
+  });
 });

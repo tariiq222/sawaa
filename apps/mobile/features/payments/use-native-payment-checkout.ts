@@ -59,6 +59,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let canInitialize = true;
     let payable = false;
     let readyConfig: NativePaymentConfiguration | null = null;
+    let configConflict = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
     const valid = () => active && currentScope.current === scope;
@@ -134,7 +135,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           canInitialize = false;
           update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: result.unavailableReason });
         } else {
-          canInitialize = result.canCreatePayment === true && !resultReceived;
+          canInitialize = result.canCreatePayment === true && !resultReceived && !configConflict;
           payable = canInitialize;
           schedule();
           update({ phase: settling ? 'processing' : 'pending', canResume: canInitialize });
@@ -226,8 +227,11 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       // a rotated Moyasar/Apple Pay configuration rejects here and must not reach the token.
       // Any failure revokes the prepared configuration and surfaces an explicit state, so the
       // UI never keeps offering a Wallet action that would only be dismissed again.
-      const revoke = (error: string) => {
+      const revoke = (error: string, conflict = false) => {
         readyConfig = null;
+        // Initialization keeps failing on the stored fingerprint while the rotated configuration
+        // is active, so a conflict is not retryable (a later reconcile cannot re-enable it either).
+        if (conflict) { configConflict = true; canInitialize = false; }
         update({ phase: 'error', config: null, canResume: false, error });
         return false;
       };
@@ -235,12 +239,13 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
         if (!valid()) return false;
         if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
-          || !sameAttemptConfig(fresh.config, readyConfig)) return revoke('nativePayment.conflict');
+          || !sameAttemptConfig(fresh.config, readyConfig)) return revoke('nativePayment.conflict', true);
         return true;
       } catch (error) {
         if (!valid()) return false;
         const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
-        return revoke(code === 'PAYMENT_CONFIGURATION_CHANGED' ? 'nativePayment.conflict' : 'nativePayment.verificationError');
+        return code === 'PAYMENT_CONFIGURATION_CHANGED'
+          ? revoke('nativePayment.conflict', true) : revoke('nativePayment.verificationError');
       }
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {

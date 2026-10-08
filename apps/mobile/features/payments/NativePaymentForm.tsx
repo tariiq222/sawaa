@@ -10,11 +10,24 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { getSawaaRoles } from '@/theme/sawaa/tokens';
 import { createNativePaymentConfig } from './native-payment-config';
 
+export type SdkOutcome = 'submitted' | 'rejected';
+
+/**
+ * Only a validation rejection from Moyasar (HTTP error with type invalid_request_error) happens
+ * before any payment exists. Everything else, including transport errors and failed payments, is
+ * ambiguous and stays verification-only; the payload itself is never retained.
+ */
+function classifySdkResult(result: unknown): SdkOutcome {
+  const value = result as { name?: unknown; error?: { type?: unknown } } | null | undefined;
+  return value?.name === 'MoyasarNetworkEndpointError' && value.error?.type === 'invalid_request_error'
+    ? 'rejected' : 'submitted';
+}
+
 interface Props {
   config: NativePaymentConfiguration;
   method: NativePaymentMethod;
   applePayAvailable: boolean;
-  onResult: () => void;
+  onResult: (outcome: SdkOutcome) => void;
   onSelectCard?: () => void;
 }
 
@@ -25,8 +38,8 @@ export function NativePaymentForm({ config, method, applePayAvailable, onResult,
   const language = (i18n.resolvedLanguage ?? i18n.language).startsWith('ar') ? 'ar' : 'en';
   const colors = useSawaaColors();
   const action = getSawaaRoles(scheme).action;
-  // Deliberately discard the SDK payload: server reconciliation owns the outcome.
-  const resultReceived = () => onResult();
+  // Server reconciliation owns the outcome; the SDK payload is only classified, never stored.
+  const resultReceived = (result: unknown) => onResult(classifySdkResult(result));
   const appleReady = applePayAvailable && config.applePay
     && config.applePay.merchantId === Constants.expoConfig?.extra?.applePayMerchantId
     && canUseApplePay(config.supportedNetworks);

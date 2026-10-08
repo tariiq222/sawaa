@@ -996,6 +996,7 @@
     "INVOICE_CLOSED": "This invoice is no longer available for payment. Go back to review its details.",
     "processing": "Waiting for payment confirmation. Your result will appear automatically; you do not need to pay again.",
     "awaitingVerification": "Your payment is being verified. Check again, or contact the center if it remains pending.",
+    "cardRejected": "The card details were not accepted. Check them and try again.",
     "title": "Payment",
     "cards": "Cards",
     "cardNetworks": "Mada · Visa · Mastercard",
