@@ -21,13 +21,13 @@ export function SectionHeader({ title, actionLabel, onActionPress }: SectionHead
     <View style={[styles.row, { flexDirection: dir.row }]}>
       <Text
         accessibilityRole="header"
-        style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}
+        style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, sawaaType.subheading.weight), textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
       >
         {title}
       </Text>
       {actionLabel && onActionPress ? (
         <Pressable accessibilityRole="button" onPress={onActionPress} style={styles.action} hitSlop={8}>
-          <Text style={[styles.actionText, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '600') }]}>{actionLabel}</Text>
+          <Text style={[styles.actionText, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '600'), writingDirection: dir.writingDirection }]}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -35,8 +35,8 @@ export function SectionHeader({ title, actionLabel, onActionPress }: SectionHead
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: 'center', justifyContent: 'space-between' },
-  title: { flexShrink: 1, fontSize: sawaaType.subheading.fontSize + 2, lineHeight: sawaaType.subheading.lineHeight },
-  action: { minHeight: 44, justifyContent: 'center' },
-  actionText: { fontSize: sawaaType.body.fontSize },
+  row: { gap: 8, alignItems: 'center', justifyContent: 'space-between' },
+  title: { flex: 1, minWidth: 0, fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  action: { minHeight: 44, maxWidth: '45%', flexShrink: 1, justifyContent: 'center' },
+  actionText: { textAlign: 'center', fontSize: sawaaType.body.fontSize },
 });

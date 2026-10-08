@@ -5,8 +5,7 @@ import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { ActionButton } from '@/theme/sawaa/ActionButton';
-import { Glass } from '@/theme/components/Glass';
+import { AppButton } from './AppButton';
 import {
   sawaaRadius,
   sawaaSpacing,
@@ -96,11 +95,7 @@ export function EmptyState({
         </Text>
       ) : null}
       {actionLabel && onAction ? (
-        <View style={{ marginTop: sawaaSpacing.sm }}>
-          <Glass variant="strong" radius={sawaaRadius.pill}>
-            <ActionButton variant="plain" height={44} label={actionLabel} onPress={onAction} labelStyle={{ fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight }} fontFamily={getFontName(locale, '600')} />
-          </Glass>
-        </View>
+        <AppButton label={actionLabel} onPress={onAction} variant="secondary" style={{ marginTop: sawaaSpacing.sm }} />
       ) : null}
     </View>
   );

@@ -1,0 +1,2359 @@
+{
+  "date": "2026-10-07",
+  "status": "source audit complete; implementation awaiting design approval",
+  "reference": "/Users/tariq/Downloads/IMG_3052.PNG",
+  "git": {
+    "branch": "claude/fix-package-dependency-select",
+    "head": "0a6083c1f",
+    "product_changes": false,
+    "unrelated_dirty_docs": "preserved"
+  },
+  "coverage": {
+    "route_files": 70,
+    "layout_files": 7,
+    "missing_routes": [],
+    "support_files": 107,
+    "runtime_acceptance": false
+  },
+  "checks": {
+    "theme_ui": "21 suites / 124 tests passed",
+    "typecheck": "5 TS2307 errors: local react-native-moyasar-sdk missing despite package/lock declaration"
+  },
+  "routes": [
+    {
+      "path": "(auth)/_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/_layout.tsx",
+      "classification": "layout",
+      "notes": "Hidden stack headers with directional gestures.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/email-entry.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/email-entry.tsx",
+      "classification": "real screen",
+      "notes": "Multistep email/code/register/phone flow with shared ScreenHeader; keyboard-aware scroll and explicit flow errors/expiry/cooldown.",
+      "components": [
+        "EmailForm",
+        "CodeForm",
+        "PhoneForm",
+        "ScreenHeader"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/forgot-password.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/forgot-password.tsx",
+      "classification": "real screen",
+      "notes": "Keyboard-aware scroll; legacy separate back/title and form surface; most visible copy Arabic literals.",
+      "components": [
+        "BackButton",
+        "LabeledInput",
+        "Glass",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/login.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/login.tsx",
+      "classification": "real screen",
+      "notes": "KeyboardAvoidingView + ScrollView; branded logo hero, custom identifier field, inline error, PrimaryButton; can embed EmailEntryScreen; link and guest actions.",
+      "components": [
+        "BackButton",
+        "Glass",
+        "PrimaryButton",
+        "EmailEntryScreen"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/otp-verify.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/otp-verify.tsx",
+      "classification": "real screen",
+      "notes": "Single native four-digit OTP overlay with autofill, cooldown, autosubmit; ScreenHeader; non-scroll content and KeyboardAvoidingView.",
+      "components": [
+        "ScreenHeader",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/register.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/register.tsx",
+      "classification": "alias",
+      "notes": "Re-export of email-entry; no separate registration screen.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/reset-password.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/reset-password.tsx",
+      "classification": "real screen",
+      "notes": "Legacy verify/reset form; Arabic literals; keyboard-aware scroll; code field differs from other OTP forms.",
+      "components": [
+        "BackButton",
+        "LabeledInput",
+        "Glass",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/review-login.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/review-login.tsx",
+      "classification": "real screen",
+      "notes": "Keyboard-aware scroll; back/title/body + custom email/password fields; input font hardcoded to Arabic.",
+      "components": [
+        "BackButton",
+        "ThemedText",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(auth)/suspended.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(auth)/suspended.tsx",
+      "classification": "real screen",
+      "notes": "Centered lock + translated status + logout/guest outline controls; fixed non-scroll layout.",
+      "components": [
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(client)/(tabs)/_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/(tabs)/_layout.tsx",
+      "classification": "layout",
+      "notes": "Native Home/Appointments/Explore/Account tabs; template icons and translated labels; shared tabBar styling; RTL explicit reversed order. Client shell omits locale label font style supplied by guest and employee shells. No minimizeBehavior supplied (same as guest; employee opts into onScrollDown).",
+      "components": [
+        "NativeTabs",
+        "tabIcons",
+        "useTabBarStyle"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(client)/(tabs)/account.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/(tabs)/account.tsx",
+      "classification": "alias",
+      "notes": "Renders ProfileScreen with asTab; owns no separate visual surface.",
+      "components": [
+        "ProfileScreen"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/(client)/(tabs)/appointments.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 164,
+      "implementation": null,
+      "audit": "Aqua + FlatList; tab chips, AppointmentRowCard, skeleton/error/empty, pagination, pull refresh; fixed 140 bottom reserve."
+    },
+    {
+      "path": "app/(client)/(tabs)/explore.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 33,
+      "implementation": null,
+      "audit": "Aqua + scroll tab title + ExploreDirectory; client and guest duplicate shell with different bottom reserve."
+    },
+    {
+      "path": "app/(client)/(tabs)/home.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 126,
+      "implementation": null,
+      "audit": "Aqua + scroll; greeting, up-next, promotional carousel, package balance, discovery grid, therapist/clinic horizontal lists, assessments; refresh available; home/clinic/therapist errors silently omit sections."
+    },
+    {
+      "path": "(client)/_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/_layout.tsx",
+      "classification": "layout",
+      "notes": "Protected role stack with login continuation and employee redirect; existing auth semantics remain protected.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/(client)/appointment/[id].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 212,
+      "implementation": null,
+      "audit": "Aqua + fixed header/scroll; summary + stacked InfoRows + resume/rate/join/cancellation; loading text uses EmptyState; animations bypass reduce-motion."
+    },
+    {
+      "path": "app/(client)/booking/[serviceId].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 335,
+      "implementation": null,
+      "audit": "Aqua + scroll + BookingStepHeader; priced duration/delivery radios, days/availability/time states, FloatingCta; forward chevron fixed to right."
+    },
+    {
+      "path": "app/(client)/booking/bank-transfer.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 286,
+      "implementation": null,
+      "audit": "Aqua + scroll; standalone back/title hero, bank accounts, invoice loading/error, image receipt chooser, custom absolute gradient send action."
+    },
+    {
+      "path": "app/(client)/booking/checkout.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 219,
+      "implementation": null,
+      "audit": "Existing-booking checkout/reconciliation real screen; Aqua + scroll, standalone BackButton + title/body, strong card, in-flow PrimaryButton actions."
+    },
+    {
+      "path": "app/(client)/booking/confirm.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 267,
+      "implementation": null,
+      "audit": "Aqua + scroll review; InfoRows, payment method radios before total, floating Pay/confirm action; guest auth continuation; source differs from screenshot payment actions."
+    },
+    {
+      "path": "app/(client)/booking/payment-callback.tsx",
+      "lane": "client",
+      "classification": "redirect",
+      "lines": 45,
+      "implementation": null,
+      "audit": "Redirect transport route; loading Aqua/spinner; routes to checkout with booking/invoice or appointment tab if booking absent."
+    },
+    {
+      "path": "app/(client)/booking/payment.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 347,
+      "implementation": null,
+      "audit": "Real legacy/resume payment chooser; Aqua + Glass cards + manual gradient absolute CTA; capabilities/resume states retained; custom header and missing selection semantics."
+    },
+    {
+      "path": "app/(client)/booking/schedule.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 169,
+      "implementation": null,
+      "audit": "Real compatibility time-only screen; shared useBookingSlots/day/time/BookingCta; progress hardcoded 1 of 2."
+    },
+    {
+      "path": "app/(client)/booking/service.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 146,
+      "implementation": null,
+      "audit": "Aqua + scroll; SERVICES selection; shared catalog selector; header, skeleton/error/empty states; keeps clinic/service context."
+    },
+    {
+      "path": "app/(client)/booking/success.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 322,
+      "implementation": null,
+      "audit": "Real payment/appointment status screen with polling/pending/failed/confirmed states; Aqua + non-scrolling flex View + FloatingCta; large status icon and financial summary."
+    },
+    {
+      "path": "(client)/chat.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/chat.tsx",
+      "classification": "redirect",
+      "notes": "Retired chat entry redirects home; dormant chat components are not visible through this route.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/(client)/clinic/[id].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 258,
+      "implementation": null,
+      "audit": "Aqua + scroll + floating booking action; ProfileHero, segmented services/practitioners/about; skeleton/error/not-found and DIRECT misconfiguration; keeps clinic/service scope."
+    },
+    {
+      "path": "app/(client)/clinics.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 97,
+      "implementation": null,
+      "audit": "Aqua + FlatList; ScreenHeader/DirectorySearch/ClinicCard; loading text, retryable error, empty/search empty."
+    },
+    {
+      "path": "app/(client)/employee/[id].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 41,
+      "implementation": null,
+      "audit": "Screen wrapper using TherapistProfileView; keeps clinic/service parameters; queries expose only loading to view, omit error/retry."
+    },
+    {
+      "path": "app/(client)/groups/[id].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 140,
+      "implementation": null,
+      "audit": "Aqua + scroll + FloatingCta; strong summary, capacity pill, InfoRows and registration; retryable error; full session enrollment recovery must remain reachable."
+    },
+    {
+      "path": "app/(client)/groups/index.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 92,
+      "implementation": null,
+      "audit": "Aqua + FlatList; ScreenHeader/intro, GroupCard; skeleton/error/empty."
+    },
+    {
+      "path": "(client)/notifications.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/notifications.tsx",
+      "classification": "real screen",
+      "notes": "All/unread segmented filters, mark-all, clickable notifications, distinct loading/empty/errors/pagination; custom card rendering.",
+      "components": [
+        "ScreenHeader",
+        "GlassSegmented",
+        "Pill",
+        "Glass"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/(client)/packages/[id].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 258,
+      "implementation": null,
+      "audit": "Aqua + scroll + FloatingCta; image, package option radios, details and branch picker; retryable family load; fixed selected border overrides."
+    },
+    {
+      "path": "app/(client)/packages/book.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 165,
+      "implementation": null,
+      "audit": "Aqua + scroll; custom header, DaySelector, branch picker and time grid; inline PackageBookingAction; no reduceMotion passed to time grid."
+    },
+    {
+      "path": "app/(client)/packages/index.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 80,
+      "implementation": null,
+      "audit": "Aqua + scroll; ScreenHeader, balance shortcut, PackageCards; loading/error/empty with retry."
+    },
+    {
+      "path": "app/(client)/packages/purchases.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 97,
+      "implementation": null,
+      "audit": "Aqua + scroll; custom BackButton/title row; purchase/credit cards with inline book action; loading/error/empty."
+    },
+    {
+      "path": "app/(client)/packages/return.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 174,
+      "implementation": null,
+      "audit": "Real payment status return/reconciliation screen; Aqua + centered non-scroll View; PackagePaymentStatus error/recheck/retry/back controls."
+    },
+    {
+      "path": "app/(client)/payments/native-checkout.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 124,
+      "implementation": null,
+      "audit": "Real native payment screen; Aqua + scroll, SDK form, live status and bare Pressable actions; no shared header, locale font or useDir."
+    },
+    {
+      "path": "(client)/profile.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/profile.tsx",
+      "classification": "real screen",
+      "notes": "Profile summary/menu groups/support/sign-out; doubles as account tab; refreshes summary only; custom stats and menu rows.",
+      "components": [
+        "ScreenHeader",
+        "Glass"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/(client)/rate/[bookingId].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 206,
+      "implementation": null,
+      "audit": "Aqua + scroll + floating submit; booking identity skeleton/error, five 48pt stars and multiline note; no explicit keyboard avoidance."
+    },
+    {
+      "path": "(client)/records.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/records.tsx",
+      "classification": "real screen",
+      "notes": "Completed booking list, static placeholders, inline retry/empty, custom appointment-history cards; goBackOrHome fallback.",
+      "components": [
+        "ScreenHeader",
+        "Glass"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(client)/settings-profile.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/settings-profile.tsx",
+      "classification": "real screen",
+      "notes": "Composition of shared settings scaffold, profile form, deletion confirmation.",
+      "components": [
+        "SettingsScaffold",
+        "SettingsProfileSection",
+        "DeleteAccountButton",
+        "UnverifiedEmailBanner"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(client)/settings.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/settings.tsx",
+      "classification": "real screen",
+      "notes": "Language segmented control, dark/push switches, privacy/about; push errors disable switch without state message.",
+      "components": [
+        "SettingsScaffold",
+        "GlassSegmented",
+        "GlassSwitch",
+        "SectionHeader"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/(client)/therapists.tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 207,
+      "implementation": null,
+      "audit": "Aqua + FlatList; normal or booking header, search/filter chips, scoped cards with separate profile action; retry errors; one matching practitioner conditional redirect."
+    },
+    {
+      "path": "(client)/video-call.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(client)/video-call.tsx",
+      "classification": "real screen",
+      "notes": "Feature-gated wrapper; currently videoCalls=false so redirect to client home.",
+      "components": [
+        "VideoCallScreen"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/(tabs)/_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/(tabs)/_layout.tsx",
+      "classification": "layout",
+      "notes": "Native Today/Calendar/Clients/Profile tabs reversed in RTL; uses shared tabBar tokens; minimizes on scroll unlike guest shell.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/(tabs)/calendar.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/(tabs)/calendar.tsx",
+      "classification": "real screen",
+      "notes": "Week selection/day bookings FlatList; skeleton/error/retry/empty; availability footer; reduced-motion-aware.",
+      "components": [
+        "WeekStrip",
+        "EmployeeAppointmentCard",
+        "OutlineButton",
+        "EmptyState",
+        "Skeleton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/(tabs)/clients.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/(tabs)/clients.tsx",
+      "classification": "real screen",
+      "notes": "Debounced search + skeleton/list/empty; query error not rendered; reduced-motion-aware entrance animations.",
+      "components": [
+        "Glass",
+        "Thumb",
+        "Pill",
+        "EmptyState",
+        "Skeleton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/(tabs)/profile.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/(tabs)/profile.tsx",
+      "classification": "real screen",
+      "notes": "Profile card/menu groups/email verification; cached profile refresh; logout confirmation; fixed version copy; reduced-motion-aware.",
+      "components": [
+        "UnverifiedEmailBanner",
+        "Glass",
+        "Thumb"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/(tabs)/today.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/(tabs)/today.tsx",
+      "classification": "real screen",
+      "notes": "Stats+today schedule FlatList; skeleton, error/retry, empty, refresh; reduced-motion-aware animations.",
+      "components": [
+        "EmployeeAppointmentCard",
+        "Glass",
+        "SectionHeader",
+        "EmptyState",
+        "Skeleton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/_layout.tsx",
+      "classification": "layout",
+      "notes": "Protected role stack with login continuation/client redirect; protected auth semantics unchanged.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/appointment/[id].tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/appointment/[id].tsx",
+      "classification": "real screen",
+      "notes": "Booking skeleton/error/not-found/detail; client card/info rows/action footer; protected operational permission/action logic; reduced-motion-aware.",
+      "components": [
+        "ScreenHeader",
+        "BackButton",
+        "AppointmentClientCard",
+        "InfoRows",
+        "FloatingCta",
+        "PrimaryButton",
+        "OutlineButton",
+        "JoinVideoCallButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/availability.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/availability.tsx",
+      "classification": "real screen",
+      "notes": "Schedule skeleton/day switches/time readouts/save footer; load failure becomes all-off schedule and hides save; reduced-motion-aware.",
+      "components": [
+        "ScreenHeader",
+        "GlassSwitch",
+        "Glass",
+        "FloatingCta",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/client/[id].tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/client/[id].tsx",
+      "classification": "real screen",
+      "notes": "Client skeleton/error/profile/contact/history; skeleton has no back control; error offers back; source reads directly; reduced-motion-aware.",
+      "components": [
+        "ScreenHeader",
+        "Thumb",
+        "Pill",
+        "StatusPill",
+        "EmptyState",
+        "Skeleton",
+        "Glass"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(employee)/video-call.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(employee)/video-call.tsx",
+      "classification": "real screen",
+      "notes": "Feature-gated wrapper; currently videoCalls=false so redirect to employee today.",
+      "components": [
+        "VideoCallScreen"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(guest)/_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(guest)/_layout.tsx",
+      "classification": "layout",
+      "notes": "Native Home/Appointments/Explore/Account tabs reversed in RTL; shared tabBar tokens.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(guest)/appointments.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(guest)/appointments.tsx",
+      "classification": "real screen",
+      "notes": "Guest appointment sign-in prompt uses PrimaryButton and 16pt page/card spacing.",
+      "components": [
+        "Glass",
+        "AppIcon",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(guest)/explore.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(guest)/explore.tsx",
+      "classification": "real screen",
+      "notes": "Aqua + tab title + ExploreDirectory; common feature content audited in client lane.",
+      "components": [
+        "ExploreDirectory"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(guest)/guest-account.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(guest)/guest-account.tsx",
+      "classification": "real screen",
+      "notes": "Visitor/account cards with custom outline sign-in action, 18/20 spacing and 17 radius unlike matching guest appointment prompt.",
+      "components": [
+        "Glass",
+        "AppIcon"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "(guest)/home.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/(guest)/home.tsx",
+      "classification": "alias",
+      "notes": "Shared HomeScreen plus bounded 15s session bootstrap; redirects authenticated users into role shell. Home content audited in client lane.",
+      "components": [
+        "HomeScreen"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "+not-found.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/+not-found.tsx",
+      "classification": "real screen",
+      "notes": "Aqua centered fallback with translated copy and goBackOrHome escape. Non-scroll body may need large-type check.",
+      "components": [
+        "AquaBackground",
+        "PrimaryButton"
+      ],
+      "evidence": "static source read"
+    },
+    {
+      "path": "_layout.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/_layout.tsx",
+      "classification": "layout",
+      "notes": "Redux/query/theme/direction/safe area/font/splash bootstrap; hides native stack headers; intentionally keeps physical native layout LTR and handles RTL per component.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "index.tsx",
+      "lane": "remainder",
+      "file": "apps/mobile/app/index.tsx",
+      "classification": "redirect",
+      "notes": "Session hydration spinner then guest home / client home / employee today; auth restoration protected, not a theme refactor target.",
+      "components": [],
+      "evidence": "static source read"
+    },
+    {
+      "path": "app/public-booking/[serviceId].tsx",
+      "lane": "client",
+      "classification": "alias",
+      "lines": 1,
+      "implementation": "export { default } from '../(client)/booking/[serviceId]';",
+      "audit": "Re-export of the exact client implementation, carrying the public route/auth shell; audit inherited from target."
+    },
+    {
+      "path": "app/public-booking/confirm.tsx",
+      "lane": "client",
+      "classification": "alias",
+      "lines": 1,
+      "implementation": "export { default } from '../(client)/booking/confirm';",
+      "audit": "Re-export of the exact client implementation, carrying the public route/auth shell; audit inherited from target."
+    },
+    {
+      "path": "app/public-booking/schedule.tsx",
+      "lane": "client",
+      "classification": "alias",
+      "lines": 1,
+      "implementation": "export { default } from '../(client)/booking/schedule';",
+      "audit": "Re-export of the exact client implementation, carrying the public route/auth shell; audit inherited from target."
+    },
+    {
+      "path": "app/public-booking/service.tsx",
+      "lane": "client",
+      "classification": "alias",
+      "lines": 1,
+      "implementation": "export { default } from '../(client)/booking/service';",
+      "audit": "Re-export of the exact client implementation, carrying the public route/auth shell; audit inherited from target."
+    },
+    {
+      "path": "app/public-clinic/[id].tsx",
+      "lane": "client",
+      "classification": "alias",
+      "lines": 1,
+      "implementation": "export { default } from '../(client)/clinic/[id]';",
+      "audit": "Re-export of the exact client implementation, carrying the public route/auth shell; audit inherited from target."
+    },
+    {
+      "path": "app/public-detail/[kind]/[id].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 152,
+      "implementation": null,
+      "audit": "Real polymorphic detail: therapist shares TherapistProfileView; service/package/program use minimal Glass summary, pricing and login action; generic load-error/empty without retry."
+    },
+    {
+      "path": "app/public-list/[kind].tsx",
+      "lane": "client",
+      "classification": "screen",
+      "lines": 215,
+      "implementation": null,
+      "audit": "Real public polymorphic directory: clinics, therapists, packages, programs; list/search/booking header/error/retry/empty; one-practitioner conditional redirect; package/program rows diverge from client cards."
+    }
+  ],
+  "support_inventory": [
+    "apps/mobile/components/chat/chat-quick-actions.tsx",
+    "apps/mobile/components/chat/chat-typing-indicator.tsx",
+    "apps/mobile/components/features/AppointmentCard.tsx",
+    "apps/mobile/components/features/BookingCancellation.tsx",
+    "apps/mobile/components/features/JoinVideoCallButton.tsx",
+    "apps/mobile/components/features/NotificationItem.tsx",
+    "apps/mobile/components/features/PractitionerBookingAction.tsx",
+    "apps/mobile/components/features/PractitionerCard.tsx",
+    "apps/mobile/components/features/VideoCallScreen.tsx",
+    "apps/mobile/components/features/appointments/AppointmentRowCard.tsx",
+    "apps/mobile/components/features/appointments/appointments.styles.ts",
+    "apps/mobile/components/features/auth/UnverifiedEmailBanner.tsx",
+    "apps/mobile/components/features/auth/email-entry/CodeForm.tsx",
+    "apps/mobile/components/features/auth/email-entry/EmailForm.tsx",
+    "apps/mobile/components/features/auth/email-entry/PhoneForm.tsx",
+    "apps/mobile/components/features/booking/BankTransferAccountDetails.tsx",
+    "apps/mobile/components/features/booking/BookingCta.tsx",
+    "apps/mobile/components/features/booking/BookingStepHeader.tsx",
+    "apps/mobile/components/features/booking/DaySelector.tsx",
+    "apps/mobile/components/features/booking/PaymentMethods.tsx",
+    "apps/mobile/components/features/booking/TimeSlotsGrid.tsx",
+    "apps/mobile/components/features/directory/ClinicCard.tsx",
+    "apps/mobile/components/features/directory/ClinicProfileHeader.tsx",
+    "apps/mobile/components/features/directory/DirectoryCard.tsx",
+    "apps/mobile/components/features/directory/DirectorySearch.tsx",
+    "apps/mobile/components/features/directory/ProfileHero.tsx",
+    "apps/mobile/components/features/directory/ServiceRow.tsx",
+    "apps/mobile/components/features/directory/TherapistCard.tsx",
+    "apps/mobile/components/features/directory/TherapistProfileView.tsx",
+    "apps/mobile/components/features/employee-appointment-styles.ts",
+    "apps/mobile/components/features/employee/AppointmentClientCard.tsx",
+    "apps/mobile/components/features/employee/EmployeeAppointmentCard.tsx",
+    "apps/mobile/components/features/employee/OutlineButton.tsx",
+    "apps/mobile/components/features/employee/WeekStrip.tsx",
+    "apps/mobile/components/features/explore/ExploreDirectory.tsx",
+    "apps/mobile/components/features/groups/GroupCard.tsx",
+    "apps/mobile/components/features/home/FeaturedClinics.tsx",
+    "apps/mobile/components/features/home/HomeAssessmentServices.tsx",
+    "apps/mobile/components/features/home/HomeCardsCarousel.tsx",
+    "apps/mobile/components/features/home/HomeDiscoveryCards.tsx",
+    "apps/mobile/components/features/home/HomeSectionHeading.tsx",
+    "apps/mobile/components/features/home/HomeTopBar.tsx",
+    "apps/mobile/components/features/home/PackageBalanceCard.tsx",
+    "apps/mobile/components/features/home/ServiceThumbnail.tsx",
+    "apps/mobile/components/features/home/SupportSessions.tsx",
+    "apps/mobile/components/features/home/TherapistsRow.tsx",
+    "apps/mobile/components/features/home/UpNextCard.tsx",
+    "apps/mobile/components/features/packages/PackageBookingAction.tsx",
+    "apps/mobile/components/features/packages/PackageBranchPicker.tsx",
+    "apps/mobile/components/features/packages/PackageCard.tsx",
+    "apps/mobile/components/features/packages/PackageCreditCard.tsx",
+    "apps/mobile/components/features/packages/PackagePaymentStatus.tsx",
+    "apps/mobile/components/features/settings/DeleteAccountButton.tsx",
+    "apps/mobile/components/features/settings/SettingsProfileSection.tsx",
+    "apps/mobile/components/features/settings/SettingsScaffold.tsx",
+    "apps/mobile/components/features/video-join-state.ts",
+    "apps/mobile/components/ui/AppIcon.tsx",
+    "apps/mobile/components/ui/Avatar.tsx",
+    "apps/mobile/components/ui/BackButton.tsx",
+    "apps/mobile/components/ui/Chip.tsx",
+    "apps/mobile/components/ui/DateBox.tsx",
+    "apps/mobile/components/ui/EmailVerificationBanner.tsx",
+    "apps/mobile/components/ui/EmptyState.tsx",
+    "apps/mobile/components/ui/ErrorState.tsx",
+    "apps/mobile/components/ui/FloatingActionBar.tsx",
+    "apps/mobile/components/ui/FloatingCta.tsx",
+    "apps/mobile/components/ui/GlassSegmented.tsx",
+    "apps/mobile/components/ui/GlassSwitch.tsx",
+    "apps/mobile/components/ui/InfoRows.tsx",
+    "apps/mobile/components/ui/LabeledInput.tsx",
+    "apps/mobile/components/ui/ListSkeleton.tsx",
+    "apps/mobile/components/ui/LocalizedHorizontalScroll.tsx",
+    "apps/mobile/components/ui/NoResultsState.tsx",
+    "apps/mobile/components/ui/OfflineState.tsx",
+    "apps/mobile/components/ui/Pill.tsx",
+    "apps/mobile/components/ui/ProgressBar.tsx",
+    "apps/mobile/components/ui/ScreenHeader.tsx",
+    "apps/mobile/components/ui/SecondaryButton.tsx",
+    "apps/mobile/components/ui/SectionHeader.tsx",
+    "apps/mobile/components/ui/Skeleton.tsx",
+    "apps/mobile/components/ui/StateMessage.tsx",
+    "apps/mobile/components/ui/StatusPill.tsx",
+    "apps/mobile/components/ui/Thumb.tsx",
+    "apps/mobile/features/payments/NativePaymentForm.tsx",
+    "apps/mobile/hooks/useA11y.ts",
+    "apps/mobile/hooks/useDir.ts",
+    "apps/mobile/theme/ThemeProvider.tsx",
+    "apps/mobile/theme/components/Glass.tsx",
+    "apps/mobile/theme/components/GlassWebLayers.tsx",
+    "apps/mobile/theme/components/ThemedButton.tsx",
+    "apps/mobile/theme/components/ThemedCard.tsx",
+    "apps/mobile/theme/components/ThemedInput.tsx",
+    "apps/mobile/theme/components/ThemedText.tsx",
+    "apps/mobile/theme/components/index.ts",
+    "apps/mobile/theme/fonts.ts",
+    "apps/mobile/theme/index.ts",
+    "apps/mobile/theme/sawaa/AquaBackground.tsx",
+    "apps/mobile/theme/sawaa/GlassSurface.tsx",
+    "apps/mobile/theme/sawaa/PrimaryButton.tsx",
+    "apps/mobile/theme/sawaa/components.ts",
+    "apps/mobile/theme/sawaa/index.ts",
+    "apps/mobile/theme/sawaa/tabIcons.ts",
+    "apps/mobile/theme/sawaa/tokens.ts",
+    "apps/mobile/theme/sawaa/useSawaaColors.ts",
+    "apps/mobile/theme/sawaa/useTabBarStyle.ts",
+    "apps/mobile/theme/tokens.ts",
+    "apps/mobile/theme/useTheme.ts"
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P1",
+      "file": "apps/mobile/components/ui/LabeledInput.tsx",
+      "line": 92,
+      "issue": "Auth validation text uses light accent.coral (#ef7a6b) rather than the readable semantic error role. On its #F7F9FB opaque input/page surface, static contrast is 2.60:1 for 12pt error copy. Border at line 89 reuses it. This bypasses the darker error roles already defined in theme/tokens.ts.",
+      "remedy": "Use a scheme-aware semantic error foreground for validation text and a dedicated error border role; preserve validation/auth behavior.",
+      "evidence": [
+        "apps/mobile/theme/sawaa/tokens.ts:20",
+        "apps/mobile/theme/tokens.ts:37",
+        "apps/mobile/components/ui/LabeledInput.tsx:87"
+      ],
+      "diagnostic": "Static sRGB luminance calculation, not runtime/device verification: #ef7a6b / #F7F9FB = 2.60:1; existing #DC2626 = 4.58:1.",
+      "lane": "foundation"
+    },
+    {
+      "id": "F02",
+      "priority": "P2",
+      "file": "apps/mobile/theme/components/ThemedText.tsx",
+      "line": 90,
+      "issue": "The color prop is applied before variantStyles; bodySm and label variants override it with textSecondary. A live settings profile label requests textPrimary but receives textSecondary unless its style independently overrides color.",
+      "remedy": "Resolve the variant base first, then explicit color and style; keep existing variants as adapters into one canonical role scale.",
+      "evidence": [
+        "apps/mobile/theme/components/ThemedText.tsx:67",
+        "apps/mobile/theme/components/ThemedText.tsx:76",
+        "apps/mobile/components/features/settings/SettingsProfileSection.tsx:233"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F03",
+      "priority": "P1",
+      "file": "apps/mobile/components/ui/InfoRows.tsx",
+      "line": 53,
+      "issue": "Inline detail values have neither flexShrink nor bounded width, while labels absorb remaining width. Long service/practitioner/date strings or large text can push icons/labels out of the summary card. Values also omit the locale textAlign/writingDirection used by labels. This is the summary primitive in the reference confirmation screenshot.",
+      "remedy": "Define responsive InfoRows: fixed icon, bounded label column, shrinkable/wrapping value with locale prose alignment, and stacked fallback at narrow width/large text. Keep dates/amounts under an explicit bidi contract.",
+      "evidence": [
+        "apps/mobile/components/ui/InfoRows.tsx:65",
+        "apps/mobile/components/ui/InfoRows.tsx:66",
+        "apps/mobile/app/(client)/booking/confirm.tsx:175"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F04",
+      "priority": "P2",
+      "file": "apps/mobile/theme/components/ThemedText.tsx",
+      "line": 55,
+      "issue": "Typography is split across sawaaType (display32/heading24/subheading18), ThemedText (36/20/16), SawaaText (24/16) and arithmetic adjustments in headers. ScreenHeader/SectionHeader render 20pt while SectionHeader documents 18pt. Font/line height changes do not propagate through one system.",
+      "remedy": "Choose canonical mobile semantic roles: display, pageTitle, sectionTitle, body, supporting, caption, action, numeric. Map legacy ThemedText variant names into those roles and remove local arithmetic from shared primitives.",
+      "evidence": [
+        "apps/mobile/theme/sawaa/tokens.ts:76",
+        "apps/mobile/theme/sawaa/components.ts:62",
+        "apps/mobile/components/ui/ScreenHeader.tsx:46",
+        "apps/mobile/components/ui/SectionHeader.tsx:39"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F05",
+      "priority": "P2",
+      "file": "apps/mobile/theme/tokens.ts",
+      "line": 154,
+      "issue": "AppTheme exports shared legacy radius values (pill6/card14/btn10), while newer components use Sawaa pill999/lg20/xl24. Shared numeric spacing and Sawaa named spacing match core steps but expose separate contracts; consuming theme.radius perpetuates a different geometry.",
+      "remedy": "Make mobile semantic radius/spacing aliases resolve to Sawaa definitions; retain compatibility names during migration. Default content card20/24, control capsule, input20 should follow the approved design instead of silently modifying every old shared token.",
+      "evidence": [
+        "packages/shared/tokens/radius.ts:4",
+        "apps/mobile/theme/sawaa/tokens.ts:45",
+        "apps/mobile/theme/components/ThemedInput.tsx:84",
+        "apps/mobile/theme/components/ThemedButton.tsx:112"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F06",
+      "priority": "P2",
+      "file": "apps/mobile/theme/components/ThemedButton.tsx",
+      "line": 66,
+      "issue": "ThemedButton secondary is visually identical to primary, and its small square CTA differs from the PrimaryButton/SecondaryButton capsule system. StateMessage duplicates its own outline action and EmptyState uses a third CTA. A live practitioner card uses small ThemedButton.",
+      "remedy": "Unify one mobile action implementation with explicit primary/secondary/tertiary/destructive intents and size roles. Keep existing exports as wrappers; do not replace native Apple Pay.",
+      "evidence": [
+        "apps/mobile/theme/components/ThemedButton.tsx:112",
+        "apps/mobile/theme/sawaa/PrimaryButton.tsx:40",
+        "apps/mobile/components/ui/SecondaryButton.tsx:36",
+        "apps/mobile/components/ui/StateMessage.tsx:71",
+        "apps/mobile/components/ui/EmptyState.tsx:98",
+        "apps/mobile/components/features/PractitionerCard.tsx:124"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F07",
+      "priority": "P2",
+      "file": "apps/mobile/theme/sawaa/PrimaryButton.tsx",
+      "line": 34,
+      "issue": "PrimaryButton and SecondaryButton have no pressed feedback or loading/busy prop; ThemedButton and ThemedCard scale even when Reduce Motion is enabled. GlassSurface honors that preference, so shared interactions differ by import.",
+      "remedy": "Use one press-state hook/contract: disabled, busy, selected, pressed, reduceMotion, hit target and optional haptic. Reduced-motion feedback should use nonmotion color/opacity; pending action disables repeat submission and announces busy.",
+      "evidence": [
+        "apps/mobile/components/ui/SecondaryButton.tsx:28",
+        "apps/mobile/theme/components/ThemedButton.tsx:134",
+        "apps/mobile/theme/components/ThemedCard.tsx:46",
+        "apps/mobile/theme/sawaa/GlassSurface.tsx:106"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F08",
+      "priority": "P1",
+      "file": "apps/mobile/theme/sawaa/PrimaryButton.tsx",
+      "line": 40,
+      "issue": "Core actions have fixed height 56 and Text can scale; long Arabic labels or large accessibility text can extend beyond the capsule. SecondaryButton similarly uses fixed height, while ScreenHeader is permanently one line. GlassSegmented sm is line16 + vertical16 =32pt, below other controls’44pt target.",
+      "remedy": "Use minHeight plus vertical padding and wrapping labels, scalable header layout, and min44pt segments. Define bottom-area measurement rather than a fixed guessed reservation; validate on small devices and large text.",
+      "evidence": [
+        "apps/mobile/components/ui/SecondaryButton.tsx:28",
+        "apps/mobile/components/ui/ScreenHeader.tsx:30",
+        "apps/mobile/components/ui/GlassSegmented.tsx:128",
+        "apps/mobile/components/ui/FloatingCta.tsx:12"
+      ],
+      "limit": "Clipping/touch behavior inferred statically; no large-text render was run.",
+      "lane": "foundation"
+    },
+    {
+      "id": "F09",
+      "priority": "P2",
+      "file": "apps/mobile/components/ui/LabeledInput.tsx",
+      "line": 62,
+      "issue": "Password visibility toggle announces only the field label, so screen-reader users cannot identify show/hide state. Error text is not announced; this input has no focus border, while unused ThemedInput has focus treatment but tiny unlabelled suffix and no default label link.",
+      "remedy": "One input primitive should provide translated visibility action/state, error announcement, focus role, meaningful accessibility label, 44pt suffix, and caller event composition. Keep existing form state and validation contracts.",
+      "evidence": [
+        "apps/mobile/components/ui/LabeledInput.tsx:44",
+        "apps/mobile/components/ui/LabeledInput.tsx:72",
+        "apps/mobile/theme/components/ThemedInput.tsx:74",
+        "apps/mobile/theme/components/ThemedInput.tsx:95"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F10",
+      "priority": "P2",
+      "file": "apps/mobile/components/ui/StatusPill.tsx",
+      "line": 40,
+      "issue": "StatusPill uses system fontWeight without bundled IBM fontFamily. Avatar initials do likewise; ThemedButton obtains regular IBM family then requests600 instead of selecting the bundled weight alias. Other primitives explicitly use the correct alias.",
+      "remedy": "Use a canonical Text role/helper with getFontName(locale,weight) in every shared component, including pills, avatar initials and buttons. Keep numeric role explicit; audit mixed Arabic/English/date samples.",
+      "evidence": [
+        "apps/mobile/components/ui/Avatar.tsx:57",
+        "apps/mobile/theme/components/ThemedButton.tsx:40",
+        "apps/mobile/theme/components/ThemedButton.tsx:102",
+        "apps/mobile/theme/fonts.ts:10"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F11",
+      "priority": "P2",
+      "file": "apps/mobile/components/ui/EmailVerificationBanner.tsx",
+      "line": 79,
+      "issue": "Staff verification banner uses a physical row rather than useDir.row; dismiss target is16+8=24pt and lacks accessible role/name, resend lacks a minimum target and pending/success/error status.",
+      "remedy": "Mirror via useDir, share44pt icon/button controls and inline async status. Any resend behavior change requires separately scoped auth approval; presentational geometry and labels can be planned independently.",
+      "evidence": [
+        "apps/mobile/components/ui/EmailVerificationBanner.tsx:46",
+        "apps/mobile/components/ui/EmailVerificationBanner.tsx:53",
+        "apps/mobile/components/ui/EmailVerificationBanner.tsx:88"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F12",
+      "priority": "P2",
+      "file": "apps/mobile/components/ui/FloatingCta.tsx",
+      "line": 12,
+      "issue": "FloatingCta requires each caller to reserve roughly160pt manually. Actual height depends on safe area, number of actions, text scale and labels; FloatingActionBar exposes a different absolute-action API. This invites hidden final content or excess blank space across screens.",
+      "remedy": "Create a shared screen scaffold with safe-area header/content/footer slots. Measure footer height and expose a content inset; support keyboard avoidance. Preserve screenshot full-width payment hierarchy and native Apple Pay geometry.",
+      "evidence": [
+        "apps/mobile/components/ui/FloatingCta.tsx:26",
+        "apps/mobile/components/ui/FloatingActionBar.tsx:31"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F13",
+      "priority": "P3",
+      "file": "apps/mobile/theme/sawaa/components.ts",
+      "line": 10,
+      "issue": "Exported SawaaButton/SawaaCard/SawaaText objects are static light-only styles and include hardcoded white/black; they claim branding support but no production consumer was found. GlassWebLayers, GLASS_CFG, getSawaaGlassAppearance, getBrandingTokens and FloatingActionBar similarly have no runtime consumer in audited search. These competing public paths risk reintroducing outdated visual policy.",
+      "remedy": "Deprecate/trim only after repository import audit; route documented entry points to theme-aware primitives. Keep Glass as a compatibility alias to GlassSurface.",
+      "evidence": [
+        "apps/mobile/theme/sawaa/components.ts:36",
+        "apps/mobile/theme/sawaa/index.ts:3",
+        "apps/mobile/theme/components/Glass.tsx:2",
+        "apps/mobile/theme/components/GlassWebLayers.tsx:5",
+        "apps/mobile/theme/sawaa/tokens.ts:182",
+        "apps/mobile/theme/sawaa/tokens.ts:215",
+        "apps/mobile/theme/sawaa/tokens.ts:278"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F14",
+      "priority": "P3",
+      "file": "apps/mobile/theme/ThemeProvider.tsx",
+      "line": 64,
+      "issue": "ThemeProvider fetches PublicBranding and rebuilds the theme on branding changes, but buildTheme intentionally ignores branding colors. Mobile CLAUDE says runtime branding colors are authoritative; source and tests explicitly enforce fixed Sawa colors. Unifying styles must resolve this policy conflict without accidentally restoring legacy blue/lime.",
+      "remedy": "Document the approved fixed-color mobile contract; keep logo/content branding separate. Do not wire arbitrary provider colors into semantic contrast roles unless the design explicitly changes.",
+      "evidence": [
+        "apps/mobile/theme/tokens.ts:121",
+        "apps/mobile/theme/__tests__/tokens.test.ts:11",
+        "apps/mobile/CLAUDE.md:62"
+      ],
+      "lane": "foundation"
+    },
+    {
+      "id": "F15",
+      "priority": "P3",
+      "file": "apps/mobile/components/ui/LocalizedHorizontalScroll.tsx",
+      "line": 23,
+      "issue": "Every content-size change forcibly scrolls to locale start, potentially moving users away from the current carousel selection when data or text size changes.",
+      "remedy": "Anchor only on initial mount/locale change or preserve current logical scroll offset on dynamic updates; retain current locale mirroring contract.",
+      "limit": "Interaction risk is static inference; no device scroll journey was performed.",
+      "lane": "foundation"
+    },
+    {
+      "priority": "P1",
+      "file": "apps/mobile/app/(client)/booking/success.tsx",
+      "line": 202,
+      "issue": "Financial-result screen is a non-scrolling flex View containing a 112pt icon, title/subtitle and up to five InfoRows while reserving 180pt for absolute FloatingCta. Small phones, long Arabic text or increased font size can overflow behind actions with no way to scroll.",
+      "remedy": "Use shared scrollable status-screen shell, reserve measured CTA height plus safe-area bottom; preserve phase/retry/payment reconciliation logic.",
+      "related": [
+        "app/(client)/packages/return.tsx:151",
+        "components/features/packages/PackagePaymentStatus.tsx:50"
+      ],
+      "evidence": "static source",
+      "id": "C01",
+      "lane": "client"
+    },
+    {
+      "priority": "P1",
+      "file": "apps/mobile/components/features/directory/TherapistProfileView.tsx",
+      "line": 141,
+      "issue": "Profile surface receives loading only. Catalog request failure becomes noServices and disabled booking; practitioner request failure shows generic text without retry. Both authenticated and public profile callers discard query isError/refetch.",
+      "remedy": "Pass explicit practitioner/catalog request states and retry callbacks into the shared profile view; distinguish failed, loading, unavailable and genuinely empty scoped catalog. Keep clinic/service scope unchanged.",
+      "related": [
+        "app/(client)/employee/[id].tsx:11",
+        "app/public-detail/[kind]/[id].tsx:59"
+      ],
+      "evidence": "static source",
+      "id": "C02",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/payments/native-checkout.tsx",
+      "line": 80,
+      "issue": "Native checkout falls outside the existing visual system: plain 24px/fontWeight title, no localized font/directional alignment, no shared ScreenHeader, and transparent rectangular bare action rows instead of shared actions. Arabic status copy aligns by native default.",
+      "remedy": "Wrap app-owned header/status/actions with ScreenHeader, localized typography/useDir, PrimaryButton/SecondaryButton and consistent surface spacing. Preserve the Apple Pay/CreditCard SDK components and callback/reconciliation semantics.",
+      "related": [
+        "features/payments/NativePaymentForm.tsx:47"
+      ],
+      "evidence": "static source",
+      "id": "C03",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/booking/payment.tsx",
+      "line": 199,
+      "issue": "Legacy/resume payment route and bank-transfer use standalone BackButton + bespoke headings and a manual 52pt gradient CTA/absolute positioning while current confirmation uses centered ScreenHeader/PrimaryButton/FloatingCta. This creates inconsistent typography, hit sizes, loading state and bottom spacing.",
+      "remedy": "Use shared screen header and common footer/actions for app-owned presentation, retaining all capability/resume/upload conditions.",
+      "related": [
+        "app/(client)/booking/payment.tsx:257",
+        "app/(client)/booking/bank-transfer.tsx:110",
+        "app/(client)/booking/bank-transfer.tsx:199",
+        "app/(client)/booking/checkout.tsx:134",
+        "app/(client)/packages/book.tsx:116",
+        "app/(client)/packages/purchases.tsx:34"
+      ],
+      "evidence": "static source",
+      "id": "C04",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/packages/PackageBookingAction.tsx",
+      "line": 35,
+      "issue": "Packages use solid small-radius custom actions, small credit book buttons and text retry rows; booking and groups use full pill actions. Primary semantics, sizing and busy states vary across related journeys.",
+      "remedy": "Use shared primary/secondary/compact actions with explicit disabled/busy accessibility; keep selection, entitlement and mutation guards unchanged.",
+      "related": [
+        "components/features/packages/PackageCreditCard.tsx:67",
+        "components/features/packages/PackagePaymentStatus.tsx:92"
+      ],
+      "evidence": "static source",
+      "id": "C05",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/booking/[serviceId].tsx",
+      "line": 221,
+      "issue": "Unselected booking-option forward indicator always renders ChevronRight in both directions, unlike directory cards and headers. It points backward in Arabic RTL.",
+      "remedy": "Resolve ChevronLeft/ChevronRight using useDir, matching other forward actions.",
+      "related": [],
+      "evidence": "static source",
+      "id": "C06",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/packages/PackageBranchPicker.tsx",
+      "line": 45,
+      "issue": "Selected branch is indicated only by Glass variant and a thin teal border; no accessibilityState selected or radio role. Branch retry is a text-only Pressable without minimum target.",
+      "remedy": "Adopt shared selectable surface with radio/selected state, stable border width, stronger check/selection cue and >=44pt retry target.",
+      "related": [
+        "components/features/directory/ServiceRow.tsx:37",
+        "app/(client)/packages/[id].tsx:164"
+      ],
+      "evidence": "static source",
+      "id": "C07",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/booking/payment.tsx",
+      "line": 222,
+      "issue": "Legacy payment chooser shows a border/check for selected method but omits accessibilityRole radio and selected state. The submit and bank-transfer submit Pressables also omit role/disabled/busy semantics.",
+      "remedy": "Apply shared selectable surface and action components with accessibility state, preserving availability and submit gates.",
+      "related": [
+        "app/(client)/booking/payment.tsx:261",
+        "app/(client)/booking/bank-transfer.tsx:203"
+      ],
+      "evidence": "static source",
+      "id": "C08",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/public-detail/[kind]/[id].tsx",
+      "line": 99,
+      "issue": "Public detail has only spinner + generic load-error text when item is absent. Service practitioner-query failure is rendered as empty practitioners. None of these failures has an in-place retry despite neighboring list and clinic routes providing retries.",
+      "remedy": "Use common request-state UI with separate error/not-found/empty and scoped retry callbacks; never widen missing clinic/service data.",
+      "related": [
+        "app/public-detail/[kind]/[id].tsx:124"
+      ],
+      "evidence": "static source",
+      "id": "C09",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/(tabs)/home.tsx",
+      "line": 90,
+      "issue": "Home drops up-next/therapist/clinic/package sections when their queries fail with no local error indication. A user cannot distinguish no appointment/balance/catalog from an outage; only pull refresh remains.",
+      "remedy": "Add compact recoverable section error states and stable loading placeholders using common request-state components; avoid inventing counts/availability.",
+      "related": [
+        "app/(client)/(tabs)/home.tsx:107",
+        "components/features/home/FeaturedClinics.tsx:29",
+        "components/features/home/PackageBalanceCard.tsx:25"
+      ],
+      "evidence": "static source",
+      "id": "C10",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/home/HomeCardsCarousel.tsx",
+      "line": 162,
+      "issue": "Arbitrary CMS image is covered by only 2%-16% dark scrim, yet title/description are white. Bright images can make copy unreadable; a one-pixel shadow does not guarantee legibility.",
+      "remedy": "Give image copy a stronger shared contrast scrim/solid backing and verify representative bright/dark images; retain original image and destination.",
+      "related": [
+        "components/features/home/HomeCardsCarousel.tsx:173"
+      ],
+      "evidence": "static source",
+      "id": "C11",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/appointment/[id].tsx",
+      "line": 127,
+      "issue": "Appointment detail uses entrance animations unconditionally although nearby list/booking/home screens respect useReduceMotion. Package booking also leaves TimeSlotsGrid reduceMotion at false.",
+      "remedy": "Propagate useReduceMotion consistently to owned animation consumers.",
+      "related": [
+        "app/(client)/appointment/[id].tsx:165",
+        "app/(client)/packages/book.tsx:139"
+      ],
+      "evidence": "static source",
+      "id": "C12",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/booking/TimeSlotsGrid.tsx",
+      "line": 133,
+      "issue": "Time cells use 31.5% width plus two 8pt gaps. At 288pt content width (320pt phone with 16pt gutters) three cells need 288.16pt, so a nominal three-column row can wrap to two. Fixed text sizing also needs large-font verification.",
+      "remedy": "Use gap-aware flex-basis or measured grid width, allow safe row/cell height growth and verify 320pt Arabic + accessibility font size.",
+      "related": [],
+      "evidence": "static source",
+      "id": "C13",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/directory/ProfileHero.tsx",
+      "line": 29,
+      "issue": "Hero always places a fixed 120pt image beside the name/rating/tags. On a 320pt phone, gutters, padding and gaps leave approximately 80pt for text; rating row does not wrap. Long practitioner names and increased font size can overcrowd or overflow.",
+      "remedy": "Use responsive portrait size/stacked hero below a width threshold; make rating/tags wrap and retain untruncated important identity.",
+      "related": [],
+      "evidence": "static source",
+      "id": "C14",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/packages/PackageCreditCard.tsx",
+      "line": 57,
+      "issue": "Credit book action hardcodes alignSelf flex-start in Arabic too. The locked-reason text at lines 43 and 59 omits directional alignment.",
+      "remedy": "Use useDir alignStart/textAlign and shared compact action; preserve credit eligibility and lock reasons.",
+      "related": [
+        "app/(client)/packages/purchases.tsx:55"
+      ],
+      "evidence": "static source",
+      "id": "C15",
+      "lane": "client"
+    },
+    {
+      "priority": "P2",
+      "file": "apps/mobile/components/features/explore/ExploreDirectory.tsx",
+      "line": 187,
+      "issue": "Explore uses independent 16/18pt radius surfaces, a bare TextInput instead of DirectorySearch, and 40pt filled retry colored using palette ramp rather than action role. Directory and explore states/cards look different for the same entities.",
+      "remedy": "Consume common directory/search/request-state/selectable tokens with app-owned forward semantics; avoid separate local palette-derived buttons.",
+      "related": [
+        "app/(client)/(tabs)/explore.tsx:30",
+        "app/public-list/[kind].tsx:152"
+      ],
+      "evidence": "static source",
+      "id": "C16",
+      "lane": "client"
+    },
+    {
+      "priority": "P3",
+      "file": "apps/mobile/app/(client)/booking/confirm.tsx",
+      "line": 190,
+      "issue": "Reference screenshot and current source describe different visual/interactions: screenshot has total before payment section, native white Apple Pay plus two outlined direct actions; current source uses method-selection Glass radios followed by total and a floating Pay action. The SDK Apple Pay button exists on separate native-checkout screen.",
+      "remedy": "Adopt screenshot colors/surface/typography/outline hierarchy as reference after explicit design choice. Do not move native SDK/direct-pay interactions or alter booking/payment execution in a visual pass.",
+      "related": [
+        "components/features/booking/PaymentMethods.tsx:83",
+        "features/payments/NativePaymentForm.tsx:47"
+      ],
+      "evidence": "Source inspection plus reference image /Users/tariq/Downloads/IMG_3052.PNG",
+      "id": "C17",
+      "lane": "client"
+    },
+    {
+      "priority": "P3",
+      "file": "apps/mobile/app/public-list/[kind].tsx",
+      "line": 149,
+      "issue": "Public package/program lists use generic ServiceRow, while client lists have PackageCard/GroupCard with richer price/session/capacity hierarchy. Guests lose comparable visual context.",
+      "remedy": "Define shared compact/full entity card variants across public/client lists using data already exposed; keep auth continuation and enrollment recovery unchanged.",
+      "related": [],
+      "evidence": "static source",
+      "id": "C18",
+      "lane": "client"
+    },
+    {
+      "id": "R01",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/settings/DeleteAccountButton.tsx",
+      "line": 132,
+      "issue": "Dark mode deletion confirmation text uses ink[900] (#e8f4f2) over coral fill (#ffa599): deterministic contrast 1.68:1. The danger action becomes difficult to read in the requested dark palette. Backdrop also borrows the near-white dark ink ramp.",
+      "remedy": "Add shared destructive-action fill/foreground and scrim roles; consume them in deletion sheet without changing deletion semantics. Shared sheet should support accessible modal semantics and large type.",
+      "related_evidence": [
+        "theme/sawaa/tokens.ts:106-107",
+        "components/features/settings/DeleteAccountButton.tsx:103,130"
+      ],
+      "visibility": "visible",
+      "evidence": "static token pair + local luminance calculation; no device render",
+      "lane": "remainder"
+    },
+    {
+      "id": "R02",
+      "priority": "P2",
+      "file": "apps/mobile/app/(employee)/(tabs)/clients.tsx",
+      "line": 66,
+      "issue": "Employee client query consumes only data/isLoading. Network/server failure produces the same noClients/noResults UI as an empty successful response, with no retry.",
+      "remedy": "Use shared query-state/EmptyState error variant and refetch action, preserve successful search/list behavior.",
+      "related_evidence": [
+        "app/(employee)/(tabs)/clients.tsx:172-176",
+        "hooks/queries/useEmployeeClients.ts:17"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R03",
+      "priority": "P2",
+      "file": "apps/mobile/app/(employee)/availability.tsx",
+      "line": 69,
+      "issue": "Availability fetch failure replaces schedule with seven empty days; after native error alert closes, screen displays every day as off and editable-looking switches, with no persistent failure/retry. Save is hidden, but failed data appears like a valid schedule.",
+      "remedy": "Show persistent shared error state and retry, disable/hide schedule editing while loadFailed; keep existing save/service contract.",
+      "related_evidence": [
+        "app/(employee)/availability.tsx:117-157,162"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R04",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/settings/SettingsScaffold.tsx",
+      "line": 29,
+      "issue": "Profile editing is inside a plain ScrollView with no KeyboardAvoidingView or automatic keyboard inset configuration. Lower fields/save may be covered by the keyboard on small phones.",
+      "remedy": "Give shared settings/form scaffold a keyboard-safe mode using the existing auth pattern, safe-area scroll padding and handled taps; verify lower fields/save on iOS and Android.",
+      "related_evidence": [
+        "app/(client)/settings-profile.tsx:14-17",
+        "components/features/settings/SettingsProfileSection.tsx:169-216"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R05",
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/profile.tsx",
+      "line": 246,
+      "issue": "Profile edit control has a fixed 32pt height and no hitSlop; visual compactness also makes the interaction target compact.",
+      "remedy": "Use a shared compact action with a minimum 44pt press target and a separate 32pt visual pill.",
+      "related_evidence": [
+        "app/(client)/profile.tsx:162-164"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R06",
+      "priority": "P2",
+      "file": "apps/mobile/app/(auth)/otp-verify.tsx",
+      "line": 151,
+      "issue": "OTP screen uses a non-scroll flex View despite keyboard-safe wrapper; fixed header/icon/boxes/actions can exceed available height with keyboard, landscape or large accessibility text. Suspended state is similarly non-scroll.",
+      "remedy": "Move auth status/code pages onto shared scrollable keyboard-aware scaffold; keep single native OTP autofill input and backend-required code lengths intact.",
+      "related_evidence": [
+        "app/(auth)/otp-verify.tsx:244-279",
+        "app/(auth)/suspended.tsx:32-53"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R07",
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/profile.tsx",
+      "line": 148,
+      "issue": "Client account/profile, records and notifications animate entrance unconditionally; employee screens respect useReduceMotion. Records also staggers all up-to-50 items, delaying late content by about 3s.",
+      "remedy": "Use shared motion helper that honors reduce motion and caps stagger delay; keep data and ordering unchanged.",
+      "related_evidence": [
+        "app/(client)/profile.tsx:178-182",
+        "app/(client)/records.tsx:101,119,131,155",
+        "app/(client)/notifications.tsx:203"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R08",
+      "priority": "P2",
+      "file": "apps/mobile/app/(auth)/forgot-password.tsx",
+      "line": 94,
+      "issue": "Password recovery and reset remain Arabic-only through hardcoded titles, field labels, validation errors, CTAs and alerts, although surrounding app supports English. They also use fontWeight without Sawaa locale font and separate large-title headers.",
+      "remedy": "Adopt translated auth copy, locale fonts, shared pushed-screen header/form layout; preserve validation and reset API semantics.",
+      "related_evidence": [
+        "app/(auth)/forgot-password.tsx:102,108,122,129-136",
+        "app/(auth)/reset-password.tsx:50-61,81,97-102,131-149,161,170,182,194,203-210"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R09",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/settings/SettingsProfileSection.tsx",
+      "line": 116,
+      "issue": "Profile fields use custom raw inputs with no fontFamily/writingDirection. Phone/email are aligned right in Arabic like names; review-login always uses Arabic input font even in English. Email-entry, login, recovery, and profile forms implement distinct input focus/error/font treatments.",
+      "remedy": "Consolidate a locale-aware shared form-field component with text/email/phone/password/code modes, explicit numeric/email LTR direction, locale font, error announcements and consistent focus/disabled surface. Preserve each form rule.",
+      "related_evidence": [
+        "components/features/settings/SettingsProfileSection.tsx:122,155-164,174-185,258-264",
+        "app/(auth)/review-login.tsx:95",
+        "components/features/auth/email-entry/EmailForm.tsx:11-14",
+        "components/features/auth/email-entry/CodeForm.tsx:11-13"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R10",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/settings/SettingsScaffold.tsx",
+      "line": 38,
+      "issue": "Pushed settings/profile/notifications/video/employee-client screens use raw router.back with no cold-link fallback. Several may be entered without stack history through deep links; records and employee appointment already use goBackOrHome.",
+      "remedy": "Apply explicit role-owned fallback in shared pushed-screen scaffold/header callbacks; auth steps should retain flow-specific continuation/back semantics.",
+      "related_evidence": [
+        "app/(client)/profile.tsx:145",
+        "app/(client)/notifications.tsx:141",
+        "components/features/VideoCallScreen.tsx:126",
+        "app/(employee)/client/[id].tsx:84,108",
+        "app/(employee)/availability.tsx:102"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R11",
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/settings.tsx",
+      "line": 101,
+      "issue": "Push preference pending/error disables the switch but the row has no loading/error/retry explanation. Failure looks like an off preference that cannot be changed.",
+      "remedy": "Use shared preference-row states: loading indicator, persistent localized failure/retry, and disabled state announcement. Preserve permission handling.",
+      "related_evidence": [
+        "app/(client)/settings.tsx:30-31,103-105"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R12",
+      "priority": "P2",
+      "file": "apps/mobile/app/(employee)/appointment/[id].tsx",
+      "line": 279,
+      "issue": "Start/complete/cancel CTAs do not consume their mutation pending flags; after confirming the native alert there is no button loading/disabled feedback while request runs.",
+      "remedy": "Connect shared button pending/disabled presentation to existing mutations and show localized progress; preserve all action eligibility and permission logic.",
+      "related_evidence": [
+        "app/(employee)/appointment/[id].tsx:66-69,127-135,146-153,165-173,186-197,279-299"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R13",
+      "priority": "P2",
+      "file": "apps/mobile/app/(client)/records.tsx",
+      "line": 160,
+      "issue": "Record navigation Pressable has no button role or combined accessible label; retry control has no minimum height and record metadata uses ad hoc 10.5/11.5/12.5 sizes.",
+      "remedy": "Use shared accessible history/appointment row with button role, combined date/service/practitioner label, type tokens, 44pt retry action and visible loading/empty/error templates.",
+      "related_evidence": [
+        "app/(client)/records.tsx:124,275-282,295-310"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R14",
+      "priority": "P3",
+      "file": "apps/mobile/app/(guest)/guest-account.tsx",
+      "line": 71,
+      "issue": "Equivalent guest sign-in prompts use different CTA systems: account custom 50pt rounded-17 outline vs appointments shared PrimaryButton; page/card insets also differ 18/20 vs 16. Login/suspended each duplicate their outline action while employee has another OutlineButton.",
+      "remedy": "Promote secondary/outline button plus guest sign-in prompt card into shared Sawaa UI; standardize page gutter/card spacing/CTA height/radius while retaining deliberately different emphasis.",
+      "related_evidence": [
+        "app/(guest)/appointments.tsx:35-40,48-52",
+        "app/(auth)/login.tsx:245-254",
+        "app/(auth)/suspended.tsx:72-80",
+        "components/features/employee/OutlineButton.tsx:43"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R15",
+      "priority": "P3",
+      "file": "apps/mobile/app/(client)/profile.tsx",
+      "line": 77,
+      "issue": "Summary loading/error/missing data all render dashes and no persistent message or retry; only pull-refresh lets user recover. Data is not fabricated, but state meaning is unclear.",
+      "remedy": "Give shared summary block loading skeleton, neutral missing-value display, localized error/retry and preserved stale-data behavior.",
+      "related_evidence": [
+        "app/(client)/profile.tsx:56-57,77-96,167-174"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R16",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/auth/UnverifiedEmailBanner.tsx",
+      "line": 29,
+      "issue": "Email verification request failures are explicitly silent. Send action is text-sized without minimum touch area/accessibility role/state.",
+      "remedy": "Use shared banner action with pending, success, error/retry and accessible 44pt target; preserve role visibility conditions and request semantics.",
+      "related_evidence": [
+        "components/features/auth/UnverifiedEmailBanner.tsx:22,54-62"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R17",
+      "priority": "P3",
+      "file": "apps/mobile/app/(employee)/(tabs)/profile.tsx",
+      "line": 185,
+      "issue": "Employee about/version is hardcoded Arabic and 1.0.0 while client Settings resolves native version/build from Constants; same app gives different version presentation across roles.",
+      "remedy": "Share locale-aware About section/version formatter from client settings with staff profile.",
+      "related_evidence": [
+        "app/(employee)/(tabs)/profile.tsx:198-199",
+        "app/(client)/settings.tsx:33-38,125-130"
+      ],
+      "visibility": "visible",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R18",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/JoinVideoCallButton.tsx",
+      "line": 41,
+      "issue": "Join eligibility/countdown is memoized from Date.now with no clock state; a screen left open before the window can remain disabled after it opens. Video screen also computes hero state on render only.",
+      "remedy": "When video feature is explicitly activated, use one shared time-aware state hook for hero/CTA, retaining backend eligibility and host/client rules; keep disabled flag unchanged during visual work.",
+      "related_evidence": [
+        "components/features/JoinVideoCallButton.tsx:48-68",
+        "components/features/VideoCallScreen.tsx:100-113"
+      ],
+      "visibility": "latent: videoCalls=false",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R19",
+      "priority": "P2",
+      "file": "apps/mobile/components/features/VideoCallScreen.tsx",
+      "line": 97,
+      "issue": "Video fetch errors collapse into bookingNotFound and offer no retry. Join URL opening errors are swallowed, leaving no feedback.",
+      "remedy": "Before enabling video, use shared distinct loading/error/not-found state and URL-open failure feedback; preserve provider and role semantics.",
+      "related_evidence": [
+        "components/features/VideoCallScreen.tsx:132-137",
+        "components/features/JoinVideoCallButton.tsx:74"
+      ],
+      "visibility": "latent: videoCalls=false",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R20",
+      "priority": "P3",
+      "file": "apps/mobile/components/features/JoinVideoCallButton.tsx",
+      "line": 106,
+      "issue": "Video action uses fixed-height 56 gradient and physical LTR icon row with literal bilingual labels; separate from PrimaryButton/OutlineButton. Large-font text may clip, and Arabic icon order differs from other controls.",
+      "remedy": "Before enabling video, render timing-specific label through shared locale-aware button with minHeight, horizontal padding, wrapping and i18n keys.",
+      "related_evidence": [
+        "components/features/JoinVideoCallButton.tsx:43-66,107-109"
+      ],
+      "visibility": "latent: videoCalls=false",
+      "evidence": "static",
+      "lane": "remainder"
+    },
+    {
+      "id": "R21",
+      "priority": "P3",
+      "file": "apps/mobile/app/(client)/(tabs)/_layout.tsx",
+      "line": 33,
+      "issue": "Client native tab layout omits labelStyle with locale fontFamily; guest and employee native tab layouts supply getFontName(dir.locale, 500). Shared tab style supplies only tint and icon colors, so client tab typography depends on native defaults.",
+      "remedy": "Centralize locale labelStyle in shared native-tab configuration and consume it consistently across all role shells; confirm Arabic/English native rendering. Keep RTL ordering and route names intact.",
+      "related_evidence": [
+        "apps/mobile/app/(guest)/_layout.tsx:35",
+        "apps/mobile/app/(employee)/(tabs)/_layout.tsx:35",
+        "apps/mobile/theme/sawaa/useTabBarStyle.ts:4-9"
+      ],
+      "visibility": "visible",
+      "evidence": "static; native rendering not verified",
+      "lane": "remainder"
+    }
+  ],
+  "limits": {
+    "foundation": [
+      "Static source and provided screenshot/assets only; no simulator/browser/device or screen-reader run.",
+      "No tests/build/lint run per batch contract. Existing test files were inventoried and selected tests inspected as coverage evidence only.",
+      "No claim all rendered screens, keyboard states, large text, RTL gestures, native glass or payment behavior work.",
+      "No product source/docs/config changes; report and late usage baseline only under /tmp.",
+      "No backend/auth/payment/provider changes authorized by this lane.",
+      "Unknown/late whole-task usage attribution retained."
+    ],
+    "client": [
+      "Runtime rendered screens: none. Only supplied reference screenshot was visually inspected; no simulator, physical device, browser or provider payment journey executed.",
+      "No build, lint, unit/e2e tests or business/security review performed; parent integrates and verifies.",
+      "Source-based overflow, contrast and keyboard risks require runtime Arabic/English, light/dark, small/large phone and increased-font acceptance.",
+      "Layouts/root/account/auth/employee/chat/records/notifications/video are remainder lane; common theme/UI primitives foundations lane.",
+      "Unused legacy components were inspected and classified; no production imports found by source search, not a runtime reachability guarantee.",
+      "No product or documentation files modified. Only unique /tmp report and baseline written."
+    ],
+    "remainder": [
+      "37 owned route files read and classified, including aliases/redirects/layouts. Shared HomeScreen/ExploreDirectory internals belong to client lane; theme/primitives belong to foundation lane.",
+      "No simulator, physical-device, screenshot rendering, VoiceOver/TalkBack, keyboard, large-type, real provider, network runtime or business-flow acceptance evidence.",
+      "Video and chat are dormant under current route/feature flag state; findings do not authorize activation.",
+      "All findings are source-derived; explicit contrast calculation is deterministic token evidence, not a rendered UI contrast measurement.",
+      "No code/docs/dependency/database/auth/permission mutations; no tests/build/lint/commits/pushes/deployments. Unrelated dirty mobile release docs were observed and preserved."
+    ]
+  },
+  "contracts": [
+    "ThemeProvider remains the single scheme/mode owner; do not add Redux theme state or change auth/server-data ownership.",
+    "Use semantic scheme-aware foreground/surface/action/selection/error roles; palette numbers are primitives, not UI intents. Do not reuse theme.colors.primary mint as white-label fill.",
+    "One typography function resolves role size/lineHeight/weight/font alias and bidi. Legacy ThemedText variant exports adapt during migration; caller color must win.",
+    "One Button contract supplies intent,size,label,icon,disabled,busy,onPress and accessible state. Existing PrimaryButton/SecondaryButton/ThemedButton wrap it until screens migrate.",
+    "Keep native Apple Pay/provider payment views and financial/auth/business logic untouched in a theme migration.",
+    "GlassSurface is the one surface renderer. Preserve material=surface default opaque; material=glass opt-in for navigation. Do not treat historical clear/regular names as evidence of translucency.",
+    "One ScreenScaffold owns safe-area, keyboard, header, scroll/footer inset. Footer height is measured; pushed ScreenHeader and root page title are separate semantic patterns.",
+    "One shared Input owns focus/error/suffix/bidi/a11y. Caller form events and validation results must compose without overrides. Password toggle messages are localized.",
+    "useDir owns row mirroring on LTR root basis. Do not re-enable native forced RTL and mirror helpers again.",
+    "StatusPill remains the semantic booking/payment status adapter; Pill remains informational. Use one typography layer and test contrast for all documented statuses including available/unknown.",
+    "Feature card adapters may retain data/actions; first unify shared primitives, then migrate app screens in separate disjoint ownership batches.",
+    "No payment/booking/auth logic changes; preserve native SDK Apple Pay visual control and server reconciliation.",
+    "DIRECT clinic hidden service stays hidden, fixed serviceId through practitioner/time/review; SERVICES scoped selector retained; invalid context never widened.",
+    "Preserve cancellation quote/refund guards, package entitlement locks, full-group existing-enrollment recovery and role route separation.",
+    "No hardcoded brand colors or backend/AAD/VAT changes."
+  ],
+  "initial_snapshot_scope": "Original fields, routes, findings, lines, checks and limits describe the pre-implementation snapshot. The separate receipt supersedes current implementation status only.",
+  "implementation_receipt": {
+    "date": "2026-10-08",
+    "status": "local implementation integrated, independently source reviewed and mobile checks passed; release acceptance incomplete",
+    "design": "docs/superpowers/specs/2026-10-07-mobile-ui-unification-design.md",
+    "git": {
+      "worktree": "/Users/tariq/.codex/worktrees/mobile-ui-unification/sawaa",
+      "base": "0a6083c1f98b040be57601febb75a5c31b8d1177",
+      "head_mode": "detached",
+      "product_changes": true,
+      "committed": false,
+      "pushed": false,
+      "merged": false,
+      "deployed": false,
+      "testflight_uploaded": false,
+      "unrelated_dirty_docs": "preserved in primary checkout"
+    },
+    "coverage": {
+      "initial_route_files": 70,
+      "initial_layout_files": 7,
+      "initial_support_files": 107,
+      "original_findings": 54,
+      "source_implemented_runtime_pending": 48,
+      "retained_approved_contract": 3,
+      "excluded_dormant": 3,
+      "all_page_runtime_acceptance": false
+    },
+    "validation_checkpoint": {
+      "status": "passed mobile integrated local checks; release acceptance incomplete",
+      "mobile_jest": {
+        "passed_suites": 207,
+        "total_suites": 207,
+        "passed_tests": 1460,
+        "total_tests": 1460,
+        "exit_code": 0,
+        "duration_seconds": 46.116,
+        "evidence": "docs/mobile-app/audits/2026-10-07-checks/mobile-jest.log"
+      },
+      "mobile_typecheck": {
+        "result": "passed",
+        "exit_code": 0,
+        "command": "pnpm --dir apps/mobile typecheck",
+        "evidence": "docs/mobile-app/audits/2026-10-07-checks/mobile-typecheck.log"
+      },
+      "mobile_lint": {
+        "errors": 0,
+        "warnings": 5,
+        "exit_code": 0,
+        "command": "pnpm --dir apps/mobile exec eslint .",
+        "evidence": "docs/mobile-app/audits/2026-10-07-checks/mobile-lint.log"
+      },
+      "dashboard_smoke": {
+        "result": "blocked by local authentication HTTP429",
+        "exit_code": 1,
+        "failed": 31,
+        "passed": 10,
+        "skipped": 1,
+        "diagnosis": "All failures at repeated API login before feature assertions; no guard/security changes made",
+        "evidence": "docs/mobile-app/audits/2026-10-07-checks/dashboard-smoke-diagnosis.md"
+      },
+      "native_host": {
+        "result": "fresh native build/install/launch succeeded; selected display cases verified",
+        "platform": "iOS26.5 unsigned simulator",
+        "logical_size": "375x667",
+        "font_scales": [
+          1,
+          2.14
+        ],
+        "verified": [
+          "coldstart restored dark Aqua after hydration remedy",
+          "two long footer actions independently scrollable and last contentrow visible atfont214"
+        ],
+        "evidence": "docs/mobile-app/audits/2026-10-07-native-ui/evidence.json",
+        "visual_acceptance": "representative isolated display fixtures; full matrix and business/provider flows incomplete"
+      },
+      "source": {
+        "protected_base_files_inspected": 109,
+        "protected_hooks_services_store_payment_feature_navigation_changes": 0,
+        "new_source_over350": 0,
+        "git_diff_check": "passed",
+        "translation_new_keys_parity": "passed; original Arabic plural-specific3key differences retained"
+      }
+    },
+    "limits": [
+      "Final AR/EN light/dark small/large-phone 100%/200% native matrix pending.",
+      "Keyboard/autofill, RTL/bidi pixels, safe-area footer geometry, native tab fit, Reduce Motion and screen-reader announcement/focus need explicit runtime evidence.",
+      "All-page runtime acceptance, Android, physical devices, native Apple Pay/Moyasar sandbox/provider journeys and owner manual acceptance unverified.",
+      "Payment/booking/auth contracts retained by source review; test fixtures are not real provider acceptance.",
+      "No production data, backend endpoint, encryption AAD, VAT, migration or video activation changes.",
+      "expo-application requires its native binary in the host; mocked null metadata does not prove missing-native-module support.",
+      "No commit, push, merge, staging/production deployment, TestFlight upload or release approval.",
+      "Whole-task usage attribution incomplete; total token/quota savings unknown."
+    ],
+    "finding_dispositions": [
+      {
+        "id": "F01",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Semantic error color and polite error announcement; form validation unchanged.",
+        "source_evidence": [
+          "apps/mobile/components/ui/LabeledInput.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F02",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Canonical text role before caller color/style, native TextProps forwarded.",
+        "source_evidence": [
+          "apps/mobile/theme/components/ThemedText.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F03",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Protected icon, bounded/wrapping labels and values, natural value direction; both layout APIs retained.",
+        "source_evidence": [
+          "apps/mobile/components/ui/InfoRows.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F04",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Shared text/header roles consume sawaaType and legacy variant adapters; not every local size is claimed removed.",
+        "source_evidence": [
+          "apps/mobile/theme/sawaa/tokens.ts",
+          "apps/mobile/theme/components/ThemedText.tsx",
+          "apps/mobile/components/ui/ScreenHeader.tsx",
+          "apps/mobile/components/ui/SectionHeader.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F05",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Sawaa spacing/radius aliases added; legacy compatibility keys retained and consumers migrated incrementally.",
+        "source_evidence": [
+          "apps/mobile/theme/tokens.ts",
+          "apps/mobile/theme/sawaa/tokens.ts"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F06",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "AppButton owns action intents/sizes; button wrappers and request-state actions delegate.",
+        "source_evidence": [
+          "apps/mobile/components/ui/AppButton.tsx",
+          "apps/mobile/theme/components/ThemedButton.tsx",
+          "apps/mobile/components/ui/EmptyState.tsx",
+          "apps/mobile/components/ui/StateMessage.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F07",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Busy/disabled actions lock and retain labels with nonmotion pressed feedback; ThemedCard honors Reduce Motion.",
+        "source_evidence": [
+          "apps/mobile/components/ui/AppButton.tsx",
+          "apps/mobile/theme/components/ThemedCard.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F08",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Buttons grow with wrapping/minimum heights; headers allow two lines; segments minimum44pt; native geometry pending.",
+        "source_evidence": [
+          "apps/mobile/components/ui/AppButton.tsx",
+          "apps/mobile/components/ui/ScreenHeader.tsx",
+          "apps/mobile/components/ui/GlassSegmented.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F09",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Shared input normalizes editability/native props, focus/error and localized visibility action; ThemedInput is an adapter.",
+        "source_evidence": [
+          "apps/mobile/components/ui/LabeledInput.tsx",
+          "apps/mobile/theme/components/ThemedInput.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F10",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Status, initials and actions use bundled locale/weight font aliases.",
+        "source_evidence": [
+          "apps/mobile/components/ui/StatusPill.tsx",
+          "apps/mobile/components/ui/Avatar.tsx",
+          "apps/mobile/components/ui/AppButton.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F11",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Staff verification uses directional layout, named44pt actions, busy and outcomes; eligibility/service preserved.",
+        "source_evidence": [
+          "apps/mobile/components/ui/EmailVerificationBanner.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F12",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Footer measures full visible height, caps outer height and scrolls actions; migrated consumers reserve height plus spacing.",
+        "source_evidence": [
+          "apps/mobile/components/ui/FloatingCta.tsx",
+          "apps/mobile/components/ui/FloatingActionBar.tsx",
+          "apps/mobile/app/(client)/booking/confirm.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F13",
+        "status": "retained_approved_contract",
+        "implementation": "Approved retention: static legacy exports deprecated/documented; not deleted or promoted; GlassSurface remains surface owner.",
+        "source_evidence": [
+          "apps/mobile/theme/sawaa/components.ts",
+          "apps/mobile/theme/sawaa/GlassSurface.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F14",
+        "status": "retained_approved_contract",
+        "implementation": "Approved fixed Sawaa palette preserved; mobile CLAUDE matches buildTheme; PublicBranding compatibility retained.",
+        "source_evidence": [
+          "apps/mobile/CLAUDE.md",
+          "apps/mobile/theme/tokens.ts"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "F15",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Horizontal scroll initializes once per locale and preserves later user position.",
+        "source_evidence": [
+          "apps/mobile/components/ui/LocalizedHorizontalScroll.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C01",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Booking success/package return scroll, preserve status/poll/retry and reserve measured actions.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/booking/success.tsx",
+          "apps/mobile/app/(client)/packages/return.tsx",
+          "apps/mobile/components/features/packages/PackagePaymentStatus.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C02",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Distinct practitioner/catalog read errors and retry, cached entities retained without widening service scope.",
+        "source_evidence": [
+          "apps/mobile/components/features/directory/TherapistProfileView.tsx",
+          "apps/mobile/app/(client)/employee/[id].tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C03",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Native checkout surrounding header/status/actions unified; SDK form/choice/reconciliation preserved.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/payments/native-checkout.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C04",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Resume payment/bank transfer/checkout use shared headers/actions and measured footer; handlers preserved.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/booking/payment.tsx",
+          "apps/mobile/app/(client)/booking/bank-transfer.tsx",
+          "apps/mobile/app/(client)/booking/checkout.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C05",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Package actions/retries use shared busy/disabled actions; eligibility/amount contracts retained.",
+        "source_evidence": [
+          "apps/mobile/components/features/packages/PackageBookingAction.tsx",
+          "apps/mobile/components/features/packages/PackagePaymentStatus.tsx",
+          "apps/mobile/components/features/packages/PackageCreditCard.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C06",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Booking option forward indicator follows useDir.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/booking/[serviceId].tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C07",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Branch choices expose radio/selected state and visible cue; retry shared action.",
+        "source_evidence": [
+          "apps/mobile/components/features/packages/PackageBranchPicker.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C08",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Legacy payment selected radios/check cue and shared busy/disabled submit/upload; original handlers retained.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/booking/payment.tsx",
+          "apps/mobile/app/(client)/booking/bank-transfer.tsx",
+          "apps/mobile/components/features/booking/BankTransferAccountDetails.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C09",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Public resource/practitioner failures have distinct retry states rather than successful empty.",
+        "source_evidence": [
+          "apps/mobile/app/public-detail/[kind]/[id].tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C10",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Home sections distinguish load/failure/empty/cached refresh failure and retry owning reads.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/(tabs)/home.tsx",
+          "apps/mobile/components/features/home/HomeSectionState.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C11",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "CMS image text uses opaque token surface backing; image/destination retained; representative native images pending.",
+        "source_evidence": [
+          "apps/mobile/components/features/home/HomeCardsCarousel.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C12",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Appointment entrance and package slots consume Reduce Motion.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/appointment/[id].tsx",
+          "apps/mobile/app/(client)/packages/book.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C13",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Measured gap-aware time-slot/skeleton widths with growing text; slot values/indices retained.",
+        "source_evidence": [
+          "apps/mobile/components/features/booking/TimeSlotsGrid.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C14",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Hero adapts portrait/layout to width/font scale and wraps identity/rating/tags.",
+        "source_evidence": [
+          "apps/mobile/components/features/directory/ProfileHero.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C15",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Credit actions/locked reasons use directional alignment and shared compact actions; locks unchanged.",
+        "source_evidence": [
+          "apps/mobile/components/features/packages/PackageCreditCard.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C16",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Explore consumes DirectorySearch, common request-state actions, Sawaa geometry and directional forward indicator.",
+        "source_evidence": [
+          "apps/mobile/components/features/explore/ExploreDirectory.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C17",
+        "status": "retained_approved_contract",
+        "implementation": "Approved journey retained: summary/methods/total/continue; reference palette/surface/action hierarchy, native Apple Pay stays in SDK checkout.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/booking/confirm.tsx",
+          "apps/mobile/features/payments/NativePaymentForm.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "C18",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Public packages/programs use shared full-entity cards/public-preview adapters without invented data or enrollment.",
+        "source_evidence": [
+          "apps/mobile/app/public-list/[kind].tsx",
+          "apps/mobile/components/features/groups/GroupCard.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R01",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Deletion sheet uses semantic danger/scrim, modal semantics and available-height scroll; delete contract unchanged; no live delete acceptance.",
+        "source_evidence": [
+          "apps/mobile/components/features/settings/DeleteAccountButton.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R02",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Employee clients isolate new-search placeholders and expose persistent errors/retry with same-key cached data preserved.",
+        "source_evidence": [
+          "apps/mobile/app/(employee)/(tabs)/clients.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R03",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Availability failure hides editor/save and exposes persistent read retry; successful load precedes editing.",
+        "source_evidence": [
+          "apps/mobile/app/(employee)/availability.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R04",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Settings profile enables keyboard-aware scaffold with one safe scroll padding.",
+        "source_evidence": [
+          "apps/mobile/components/features/settings/SettingsScaffold.tsx",
+          "apps/mobile/app/(client)/settings-profile.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R05",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Profile edit uses shared compact action with minimum44pt target.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/profile.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R06",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "OTP/suspended use scrollable auth scaffold; single native code overlay/autofill and escapes retained.",
+        "source_evidence": [
+          "apps/mobile/components/features/auth/AuthFormScaffold.tsx",
+          "apps/mobile/app/(auth)/otp-verify.tsx",
+          "apps/mobile/app/(auth)/suspended.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R07",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Profile/history/inbox honor Reduce Motion and cap stagger delays.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/profile.tsx",
+          "apps/mobile/app/(client)/records.tsx",
+          "apps/mobile/app/(client)/notifications.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R08",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Recovery/reset localized AR/EN with shared fields/header and unchanged validation/API/reset flow.",
+        "source_evidence": [
+          "apps/mobile/app/(auth)/forgot-password.tsx",
+          "apps/mobile/app/(auth)/reset-password.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R09",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Auth/profile forms use shared locale fields and natural LTR phone/email; rules/payloads unchanged.",
+        "source_evidence": [
+          "apps/mobile/components/features/settings/SettingsProfileSection.tsx",
+          "apps/mobile/components/features/auth/email-entry/EmailForm.tsx",
+          "apps/mobile/app/(auth)/review-login.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R10",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Active pushed account/settings/inbox/employee-client/availability use role fallback; auth exits retained; dormant video navigation excluded.",
+        "source_evidence": [
+          "apps/mobile/components/features/settings/SettingsScaffold.tsx",
+          "apps/mobile/app/(client)/notifications.tsx",
+          "apps/mobile/app/(employee)/client/[id].tsx",
+          "apps/mobile/app/(employee)/availability.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R11",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Push row explains pending/error/permission-off and retries existing read only; permission/mutation logic retained.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/settings.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R12",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Employee existing mutation flags drive busy/conflict-disabled actions; eligibility/handlers unchanged.",
+        "source_evidence": [
+          "apps/mobile/app/(employee)/appointment/[id].tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R13",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "History accessible button labels combine identity/service/date, wrapping and shared retry states; IDs/order retained.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/records.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R14",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Guest pages share presentation-only sign-in prompt and actions; primary/secondary emphasis and login destination retained.",
+        "source_evidence": [
+          "apps/mobile/components/features/guest/GuestSignInPrompt.tsx",
+          "apps/mobile/app/(guest)/guest-account.tsx",
+          "apps/mobile/app/(guest)/appointments.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R15",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Profile summary separates initial load/missing/stale read failure with read-only retry; money/date conversion unchanged.",
+        "source_evidence": [
+          "apps/mobile/app/(client)/profile.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R16",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Client verification exposes accessible44pt busy action and localized success/error/retry; eligibility/request retained.",
+        "source_evidence": [
+          "apps/mobile/components/features/auth/UnverifiedEmailBanner.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R17",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Roles share AboutSection/getAppVersion via expo-application native metadata and platform fallback; host must contain native module.",
+        "source_evidence": [
+          "apps/mobile/components/features/settings/AboutSection.tsx",
+          "apps/mobile/lib/app-version.ts",
+          "apps/mobile/app/(employee)/(tabs)/profile.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      },
+      {
+        "id": "R18",
+        "status": "excluded_dormant",
+        "implementation": "Excluded dormant video timing/eligibility; disabled feature unchanged, no time-aware hook introduced.",
+        "source_evidence": [
+          "apps/mobile/components/features/JoinVideoCallButton.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Dormant feature excluded; original finding remains open before future activation."
+      },
+      {
+        "id": "R19",
+        "status": "excluded_dormant",
+        "implementation": "Excluded dormant video read/open-URL failure; no provider activation or remediation claimed.",
+        "source_evidence": [
+          "apps/mobile/components/features/VideoCallScreen.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Dormant feature excluded; original finding remains open before future activation."
+      },
+      {
+        "id": "R20",
+        "status": "excluded_dormant",
+        "implementation": "Excluded dormant video button localization/geometry; no migration or activation claimed.",
+        "source_evidence": [
+          "apps/mobile/components/features/JoinVideoCallButton.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Dormant feature excluded; original finding remains open before future activation."
+      },
+      {
+        "id": "R21",
+        "status": "source_implemented_runtime_pending",
+        "implementation": "Role tab shells share locale labelStyle with routes/order unchanged; native font fit pending.",
+        "source_evidence": [
+          "apps/mobile/theme/sawaa/useTabBarStyle.ts",
+          "apps/mobile/app/(client)/(tabs)/_layout.tsx",
+          "apps/mobile/app/(guest)/_layout.tsx",
+          "apps/mobile/app/(employee)/(tabs)/_layout.tsx"
+        ],
+        "runtime_acceptance": false,
+        "runtime_limit": "Source review and unit tests do not close runtime acceptance; applicable native matrix/provider/device evidence pending."
+      }
+    ],
+    "release_record": "docs/mobile-app/releases/2026-10-07-ui-unification.md",
+    "additional_native_remedies": [
+      "Capped measured FloatingCta at half usable screen height with inner scrolling; preserved consumer reserve contract",
+      "Aqua decorative image waits for persisted theme hydration; page content remains mounted; native coldstart verified"
+    ]
+  }
+}

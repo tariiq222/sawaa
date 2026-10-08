@@ -3,6 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { getSawaaColors, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { PackageBookingAction } from '../PackageBookingAction';
 import { PackagePaymentStatus } from '../PackagePaymentStatus';
+import { LinearGradient } from 'expo-linear-gradient';
 
 jest.mock('@/theme/sawaa', () => jest.requireActual('@/theme/sawaa/tokens'));
 
@@ -29,7 +30,7 @@ it.each(['light', 'dark'] as const)('pairs an opaque action label with action fi
   const onPress = jest.fn();
   const view = render(<PackageBookingAction enabled pending={false} onPress={onPress} fontFamily="System" />);
   const action = getSawaaRoles(scheme).action;
-  expect(view.getByRole('button')).toHaveStyle({ backgroundColor: action.fill });
+  expect(view.UNSAFE_getByType(LinearGradient).props.colors).toEqual(action.gradient);
   expect(view.getByText('packages.confirmBooking')).toHaveStyle({ color: action.foreground });
   fireEvent.press(view.getByRole('button'));
   expect(onPress).toHaveBeenCalledTimes(1);

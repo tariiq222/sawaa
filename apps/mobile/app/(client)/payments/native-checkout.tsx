@@ -1,6 +1,6 @@
 import type { NativePaymentMethod } from '@sawaa/shared';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,11 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { AquaBackground } from '@/theme/sawaa/AquaBackground';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { getSawaaRoles, sawaaRadius, sawaaSpacing } from '@/theme/sawaa/tokens';
+import { AppButton } from '@/components/ui/AppButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ThemedText } from '@/theme/components/ThemedText';
+import { goBackOrHome } from '@/lib/navigation';
+import { useDir } from '@/hooks/useDir';
 import { NativePaymentForm } from '@/features/payments/NativePaymentForm';
 import { useNativePaymentCheckout } from '@/features/payments/use-native-payment-checkout';
 import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
@@ -46,6 +51,7 @@ export default function NativeCheckout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const colors = useSawaaColors();
+  const dir = useDir();
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   const navigationScope = useRef(clientId);
@@ -82,40 +88,24 @@ export default function NativeCheckout() {
     <AquaBackground>
     <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: insets.bottom + sawaaSpacing['2xl'] }]} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: t('nativePayment.title') }} />
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.ink[900] }]}>{t('nativePayment.title')}</Text>
+      <ScreenHeader title={t('nativePayment.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
       {loading && !unavailable ? <ActivityIndicator color={colors.teal[600]} /> : null}
-      <Text accessibilityLiveRegion="polite" style={{ color: colors.ink[900] }}>{t(statusKey)}</Text>
+      <ThemedText variant="body" align={dir.textAlign} accessibilityLiveRegion="polite">{t(statusKey)}</ThemedText>
       {choosing ? <View style={styles.form}>
-        <Pressable accessibilityRole="button" style={styles.button} onPress={() => selectMethod('APPLE_PAY')}>
-          <Text style={{ color: colors.teal[700] }}>{t('nativePayment.useApplePay')}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" style={styles.button} onPress={() => selectMethod('ONLINE_CARD')}>
-          <Text style={{ color: colors.teal[700] }}>{t('nativePayment.useCard')}</Text>
-        </Pressable>
+        <AppButton variant="secondary" onPress={() => selectMethod('APPLE_PAY')} label={t('nativePayment.useApplePay')} />
+        <AppButton variant="secondary" onPress={() => selectMethod('ONLINE_CARD')} label={t('nativePayment.useCard')} />
       </View> : null}
       {['ready', 'checking', 'pending', 'error'].includes(checkout.phase) && checkout.config && method && !unavailable && !appleUnavailable ? <View style={[styles.form, { backgroundColor: roles.surface }]}>
-        <Text style={{ color: colors.ink[500] }}>{t('nativePayment.cardNetworks')}</Text>
+        <ThemedText variant="bodySm" align={dir.textAlign}>{t('nativePayment.cardNetworks')}</ThemedText>
         <NativePaymentForm config={checkout.config} method={method} applePayAvailable={capabilities.applePayAvailable}
           onResult={() => { void checkout.onPaymentResult(); }} onSelectCard={() => selectMethod('ONLINE_CARD')} />
       </View> : null}
-      {appleUnavailable && !unavailable && !checkout.paymentId ? <Pressable accessibilityRole="button" style={styles.button} onPress={() => selectMethod('ONLINE_CARD')}>
-        <Text style={{ color: colors.teal[700] }}>{t('nativePayment.useCard')}</Text>
-      </Pressable> : null}
-      {checkout.paymentId && !loading && !['completed', 'review', 'unavailable'].includes(checkout.phase) && !choosing ? <Pressable accessibilityRole="button"
-        style={[styles.button, { backgroundColor: roles.action.fill }]} onPress={() => { void checkout.reconcile(); }}>
-        <Text style={{ color: roles.action.foreground }}>{t('nativePayment.checkAgain')}</Text>
-      </Pressable> : null}
+      {appleUnavailable && !unavailable && !checkout.paymentId ? <AppButton variant="secondary" onPress={() => selectMethod('ONLINE_CARD')} label={t('nativePayment.useCard')} /> : null}
+      {checkout.paymentId && !loading && !['completed', 'review', 'unavailable'].includes(checkout.phase) && !choosing ? <AppButton onPress={() => { void checkout.reconcile(); }} label={t('nativePayment.checkAgain')} loading={loading} /> : null}
       {!loading && !unavailable && !appleUnavailable && !choosing && !checkout.config
-        && (checkout.phase === 'failed' || checkout.canResume || !checkout.paymentId) && ['pending', 'error', 'failed'].includes(checkout.phase) ? <Pressable accessibilityRole="button"
-        style={styles.button} onPress={() => { void checkout.retryInitialization(); }}>
-        <Text style={{ color: colors.teal[700] }}>{t(checkout.phase === 'failed' ? 'nativePayment.retry' : 'nativePayment.resume')}</Text>
-      </Pressable> : null}
-      {unavailable && !terminalUnavailable ? <Pressable accessibilityRole="button" style={styles.button} onPress={capabilities.refetch}>
-        <Text style={{ color: colors.teal[700] }}>{t('nativePayment.retry')}</Text>
-      </Pressable> : null}
-      <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.back()}>
-        <Text style={{ color: colors.teal[700] }}>{t('nativePayment.back')}</Text>
-      </Pressable>
+        && (checkout.phase === 'failed' || checkout.canResume || !checkout.paymentId) && ['pending', 'error', 'failed'].includes(checkout.phase) ? <AppButton variant="secondary" onPress={() => { void checkout.retryInitialization(); }} label={t(checkout.phase === 'failed' ? 'nativePayment.retry' : 'nativePayment.resume')} /> : null}
+      {unavailable && !terminalUnavailable ? <AppButton variant="secondary" onPress={capabilities.refetch} label={t('nativePayment.retry')} /> : null}
+      <AppButton variant="secondary" onPress={() => goBackOrHome(router, '/(client)/(tabs)/home')} label={t('nativePayment.back')} />
     </ScrollView>
     </AquaBackground>
   );
@@ -123,7 +113,5 @@ export default function NativeCheckout() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { flexGrow: 1, padding: sawaaSpacing['2xl'], gap: sawaaSpacing.lg },
-  title: { fontSize: 24, fontWeight: '600' },
   form: { gap: sawaaSpacing.lg, padding: sawaaSpacing.lg, borderRadius: sawaaRadius.md },
-  button: { padding: sawaaSpacing.lg, borderRadius: sawaaRadius.md, alignItems: 'center' },
 });

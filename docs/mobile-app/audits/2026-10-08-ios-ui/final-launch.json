@@ -1,0 +1,26 @@
+{
+  "schema": "xcodebuildmcp.output.launch-result",
+  "schemaVersion": "2",
+  "didError": false,
+  "error": null,
+  "data": {
+    "summary": {
+      "status": "SUCCEEDED"
+    },
+    "artifacts": {
+      "simulatorId": "0C73E5C5-B354-44C3-BC26-0BC35694950D",
+      "bundleId": "sa.sawa.app",
+      "processId": 83795,
+      "runtimeLogPath": "/Users/tariq/Library/Developer/XcodeBuildMCP/workspaces/sawaa-1974d6c1f3b7/logs/sa.sawa.app_2026-10-07T23-03-39-333Z_helperpid83783_ownerpid166_cc4baeea.log",
+      "osLogPath": "/Users/tariq/Library/Developer/XcodeBuildMCP/workspaces/sawaa-1974d6c1f3b7/logs/sa.sawa.app_oslog_2026-10-07T23-03-41-527Z_helperpid83918_ownerpid166_9a910f29.log"
+    },
+    "diagnostics": {
+      "warnings": [],
+      "errors": []
+    }
+  },
+  "nextSteps": [
+    "Open Simulator app to see it: open_sim()",
+    "Stop app in simulator: stop_app_sim({ simulatorId: \"0C73E5C5-B354-44C3-BC26-0BC35694950D\", bundleId: \"sa.sawa.app\" })"
+  ]
+}

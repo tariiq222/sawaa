@@ -137,7 +137,7 @@ export default function AppointmentDetailScreen() {
             <View style={[styles.summaryTop, { flexDirection: dir.row }]}>
               <DateBox iso={booking.scheduledAt} fallback={t('appointments.toBeScheduled')} />
               <View style={styles.summaryMid}>
-                <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                <Text style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
                   {scheduledTime ?? t('appointments.toBeScheduled')}
                 </Text>
                 {serviceName ? (
@@ -207,8 +207,8 @@ const styles = StyleSheet.create({
   summaryTop: { alignItems: 'center', gap: sawaaSpacing.md },
   summaryMid: { flex: 1, minWidth: 0, gap: sawaaSpacing.xs },
   time: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  service: { fontSize: 16, lineHeight: sawaaType.subheading.lineHeight },
+  service: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   therapist: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   section: { gap: sawaaSpacing.sm },
-  hint: { fontSize: 13, lineHeight: 18, paddingHorizontal: sawaaSpacing.xs },
+  hint: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, paddingHorizontal: sawaaSpacing.xs },
 });

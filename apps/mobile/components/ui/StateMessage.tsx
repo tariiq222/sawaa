@@ -4,8 +4,8 @@ import type { LucideIcon } from 'lucide-react-native';
 
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { sawaaSpacing, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 

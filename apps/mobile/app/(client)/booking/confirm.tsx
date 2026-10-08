@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -61,6 +61,7 @@ export default function BookingConfirmScreen() {
   const dir = useDir();
   const reduceMotion = useReduceMotion();
   const clientId = useAppSelector((state) => state.auth.user?.id);
+  const [footerHeight, setFooterHeight] = useState(180);
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
     const f600 = getFontName(dir.locale, '600');
@@ -154,11 +155,11 @@ export default function BookingConfirmScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + (signedIn ? sawaaSpacing.lg : 160) }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: signedIn ? insets.bottom + sawaaSpacing.lg : footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader {...bookingStep('confirm', steps)} title={t('booking.confirmBooking')} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader {...bookingStep('confirm', steps)} title={t('booking.confirmBooking')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/(tabs)/home' : '/(guest)/home')} />
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(120).duration(600).easing(Easing.out(Easing.cubic))}>
           {loading ? (
@@ -195,7 +196,7 @@ export default function BookingConfirmScreen() {
         {signedIn && canReview ? <BookingPaymentActions payment={payment} apple={apple} /> : null}
       </ScrollView>
 
-      {!signedIn ? <FloatingCta>
+      {!signedIn ? <FloatingCta onHeightChange={setFooterHeight}>
         <PrimaryButton
           label={t('booking.signInOrRegisterToContinue')}
           onPress={signIn}
@@ -218,7 +219,7 @@ export default function BookingConfirmScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  totalRow: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
+  totalRow: { flexWrap: 'wrap', gap: sawaaSpacing.md, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
   priceLabelBold: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,

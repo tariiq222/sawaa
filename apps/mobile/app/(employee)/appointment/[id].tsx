@@ -1,5 +1,4 @@
-import { useRef } from 'react';
-
+import { useRef, useState } from 'react';
 import { useTheme } from '@/theme/useTheme';
 import { View, ScrollView, Linking, Alert } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -69,7 +68,8 @@ export default function DoctorAppointmentDetailScreen() {
   const cancelBooking = useCancelEmployeeBooking();
   const requestCancelBooking = useRequestCancelEmployeeBooking();
   const actionLock = useRef(false);
-  const actionPending = Boolean(markCompleted.isPending || startSession.isPending || cancelBooking.isPending || requestCancelBooking.isPending);
+  const actionPending = Boolean(startSession.isPending || markCompleted.isPending || cancelBooking.isPending || requestCancelBooking.isPending);
+  const [footerHeight, setFooterHeight] = useState(220);
   const booking = bookingQuery.isError ? null : (bookingQuery.data ?? null);
   // Exact timing and the host link come from the dedicated start-meeting
   // endpoint; the detail payload carries neither. Skipped while video calls are
@@ -254,7 +254,7 @@ export default function DoctorAppointmentDetailScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + (hasBarActions ? 220 : sawaaSpacing.xl) },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: hasBarActions ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -297,7 +297,7 @@ export default function DoctorAppointmentDetailScreen() {
       </ScrollView>
 
       {hasBarActions && (
-        <FloatingCta>
+        <FloatingCta onHeightChange={setFooterHeight}>
           {canStartSession && (
             <PrimaryButton
               label={t('doctor.startSession')}

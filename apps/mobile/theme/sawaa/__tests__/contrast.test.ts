@@ -145,3 +145,8 @@ describe('StatusPill semantic contrast', () => {
     }
   });
 });
+
+it.each(['light', 'dark'] as const)('danger text is readable in %s', scheme => {
+  const { danger } = getSawaaRoles(scheme);
+  expect(contrast(danger.fill, danger.foreground)).toBeGreaterThanOrEqual(4.5);
+});

@@ -22,7 +22,7 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('lucide-react-native', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Building2: NativeView, Check: NativeView, ChevronRight: NativeView, Video: NativeView };
+  return { Building2: NativeView, Check: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, Video: NativeView };
 });
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

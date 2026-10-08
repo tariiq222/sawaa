@@ -38,7 +38,7 @@ export function AppointmentClientCard({ name, avatarUrl, status, statusLabel, on
       >
         <Thumb uri={avatarUrl} width={56} height={56} radius={sawaaRadius.pill} />
         <View style={styles.mid}>
-          <Text numberOfLines={1} style={[styles.name, textStyle, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}>
+          <Text style={[styles.name, textStyle, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}>
             {name}
           </Text>
           {onPress ? (
@@ -47,7 +47,7 @@ export function AppointmentClientCard({ name, avatarUrl, status, statusLabel, on
             </Text>
           ) : null}
         </View>
-        <StatusPill status={status} label={statusLabel} />
+        <View style={styles.status}><StatusPill status={status} label={statusLabel} /></View>
         {onPress ? <Chevron size={20} color={colors.ink[500]} strokeWidth={1.75} /> : null}
       </Pressable>
     </Glass>
@@ -55,8 +55,9 @@ export function AppointmentClientCard({ name, avatarUrl, status, statusLabel, on
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: 'center', gap: sawaaSpacing.md, padding: sawaaSpacing.lg },
-  mid: { flex: 1, gap: 2 },
+  row: { flexWrap: 'wrap', alignItems: 'center', gap: sawaaSpacing.md, padding: sawaaSpacing.lg },
+  status: { minWidth: 0, flexShrink: 1, maxWidth: '100%' },
+  mid: { flexGrow: 1, flexBasis: 120, minWidth: 0, flexShrink: 1, gap: 2 },
   name: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   link: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

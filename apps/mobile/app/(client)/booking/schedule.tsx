@@ -91,7 +91,7 @@ export default function BookingScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} total={2} title={t('booking.selectDate')} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader step={1} total={2} title={t('booking.selectDate')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/(tabs)/home' : '/(guest)/home')} />
         </Animated.View>
 
         <SectionHeader title={t('booking.day')} />

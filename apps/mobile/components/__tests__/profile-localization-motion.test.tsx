@@ -1,10 +1,11 @@
 import React from 'react';
-import { Alert, View } from 'react-native';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { View } from 'react-native';
+import { act, render } from '@testing-library/react-native';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }), useFocusEffect: () => undefined }));
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: () => undefined }));
-jest.mock('expo-constants', () => ({ __esModule: true, default: { nativeApplicationVersion: '9.7.3' } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { nativeApplicationVersion: '9.7.3', nativeBuildVersion: '42' } }));
+jest.mock('expo-application', () => ({ nativeApplicationVersion: '9.7.3', nativeBuildVersion: '42' }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-native-reanimated', () => { const animation = { duration: () => animation, delay: () => animation, easing: () => animation }; return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: () => undefined, cubic: undefined } }; });
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
@@ -30,14 +31,15 @@ it.each([['ar', 'جلسات', 'آخر زيارة', 'مبلغ مستحق'], ['en'
   const screen = render(<ClientProfile />);
   for (const label of [sessions, lastVisit, outstanding]) expect(screen.getByText(label)).toBeTruthy();
 });
-it.each([['ar', 'عن المركز', 'الإصدار 9.7.3', 'سواء'], ['en', 'About the Center', 'Version 9.7.3', 'Sawaa']])('uses the installed employee app version and translated About dialog in %s', async (locale, about, version, name) => {
+it.each([['ar', 'عن التطبيق', 'الإصدار', 'رقم البناء'], ['en', 'About', 'Version', 'Build']])('uses the installed employee app version/build and translated About section in %s', async (locale, about, version, build) => {
   await act(async () => { await i18n.changeLanguage(locale); });
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   const screen = render(<EmployeeProfile />);
+  expect(screen.getByText('9.7.3')).toBeTruthy();
+  expect(screen.getByText('42')).toBeTruthy();
+  expect(screen.getByText(about)).toBeTruthy();
   expect(screen.getByText(version)).toBeTruthy();
-  fireEvent.press(screen.getByRole('button', { name: about }));
-  expect(alert).toHaveBeenCalledWith(name, version);
-  alert.mockRestore();
+  expect(screen.getByText(build)).toBeTruthy();
+  expect(screen.queryByText(/1\.0\.0/)).toBeNull();
 });
 it.each([['client profile', ClientProfile], ['employee profile', EmployeeProfile], ['notifications', Notifications]] as const)('%s omits all entering callbacks for reduced motion', (_name, Component) => {
   mockReduced = true;

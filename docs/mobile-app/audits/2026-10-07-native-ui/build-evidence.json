@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-08",
+  "result": "SUCCEEDED",
+  "configuration": "Debug unsigned Simulator",
+  "durationMs": 188212,
+  "appPath": "/Users/tariq/.codex/worktrees/mobile-ui-unification/sawaa/.superpowers/sdd/2026-10-07-mobile-ui-foundation/qa/DerivedData/Build/Products/Debug-iphonesimulator/sawaa.app",
+  "bundleId": "sa.sawa.app",
+  "processId": 80013,
+  "simulatorId": "0C73E5C5-B354-44C3-BC26-0BC35694950D",
+  "buildLogPath": "/Users/tariq/Library/Developer/XcodeBuildMCP/workspaces/sawaa-1974d6c1f3b7/logs/build_run_sim_2026-10-07T20-42-47-828Z_pid166_1d5f81b2.log",
+  "runtimeLogPath": "/Users/tariq/Library/Developer/XcodeBuildMCP/workspaces/sawaa-1974d6c1f3b7/logs/sa.sawa.app_2026-10-07T20-45-42-433Z_helperpid79965_ownerpid166_f918817b.log",
+  "osLogPath": "/Users/tariq/Library/Developer/XcodeBuildMCP/workspaces/sawaa-1974d6c1f3b7/logs/sa.sawa.app_oslog_2026-10-07T20-45-55-892Z_helperpid80437_ownerpid166_71c96061.log",
+  "buildErrors": 0,
+  "nativeWarnings": 1017,
+  "runtimeEntry": "scratch isolated guest UI fixtures over Metro; current product components imported; not release acceptance",
+  "keychainWarning": "expo-notifications registration in unsigned host; push unverified"
+}

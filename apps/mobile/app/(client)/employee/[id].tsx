@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { TherapistProfileView } from '@/components/features/directory/TherapistProfileView';
 import { usePublicCatalog, useTherapist } from '@/hooks/queries';
+import { goBackOrHome } from '@/lib/navigation';
 import { AquaBackground } from '@/theme/sawaa';
 
 export default function EmployeeProfileScreen() {
@@ -37,7 +38,7 @@ export default function EmployeeProfileScreen() {
         onRetryCatalog={() => void refetchCatalog()}
         clinicId={clinicId}
         serviceId={serviceId}
-        onBack={() => router.back()}
+        onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')}
         onBook={book}
       />
     </AquaBackground>

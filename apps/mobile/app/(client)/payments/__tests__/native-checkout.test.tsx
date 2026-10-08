@@ -24,9 +24,10 @@ let mockCanResume = true;
 let mockConfig: object | null = null;
 const mockMount = jest.fn();
 const mockUnmount = jest.fn();
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, dismiss: mockDismiss, back: jest.fn() }), Stack: { Screen: () => null } }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, dismiss: mockDismiss, back: jest.fn(), canGoBack: () => false }), Stack: { Screen: () => null } }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockClientId }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ ink: { 900: 'black', 500: 'gray' }, teal: { 600: 'teal', 700: 'teal' }, surface: 'white' }) }));
 jest.mock('@/features/payments/NativePaymentForm', () => ({ NativePaymentForm: () => { const React = require('react'); React.useEffect(() => { mockMount(); return () => mockUnmount(); }, []); return null; } }));
@@ -161,4 +162,10 @@ it('retains the active card method if Apple Pay capability refreshes during a ba
   mockCapabilities.applePayAvailable = true; view.rerender(<NativeCheckout />);
   expect(mockCheckoutInput).toHaveBeenLastCalledWith(expect.objectContaining({ method: 'ONLINE_CARD' }));
   expect(mockMount).toHaveBeenCalledTimes(1); expect(mockUnmount).not.toHaveBeenCalled();
+});
+
+it('returns to client home when checkout has no navigation history', () => {
+  const screen = render(<NativeCheckout />);
+  fireEvent.press(screen.getByRole('button', {name:'nativePayment.back'}));
+  expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
 });

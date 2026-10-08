@@ -44,6 +44,6 @@ export function NativePaymentForm({ config, method, applePayAvailable, onResult,
   }
   return <CreditCard language={language} paymentConfig={paymentConfig} onPaymentResult={resultReceived}
     style={{ textInputs: { color: colors.ink[900] }, textInputsPlaceholderColor: colors.ink[500],
-      paymentButton: { backgroundColor: action.fill }, paymentButtonText: { color: action.foreground },
+      paymentButton: { backgroundColor: action.fill, height: 'auto', minHeight: 50 }, paymentButtonText: { color: action.foreground },
       activityIndicatorColor: colors.teal[600], webviewActivityIndicatorColor: colors.teal[600] }} />;
 }

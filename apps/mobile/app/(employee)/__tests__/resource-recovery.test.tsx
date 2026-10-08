@@ -13,8 +13,8 @@ let mockClientId = 'client-a';
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: mockClientId }),
-  useRouter: () => ({ back: mockBack, push: jest.fn() }),
-  router: { back: () => mockBack() },
+  useRouter: () => ({ back: mockBack, push: jest.fn(), canGoBack: () => true }),
+  router: { back: () => mockBack(), canGoBack: () => true },
   Stack: { Screen: () => null },
 }));
 jest.mock('@/hooks/useA11y', () => ({
@@ -96,7 +96,7 @@ describe('employee clients resource recovery', () => {
   it('shows an actionable read error and recovers, instead of reporting no clients', async () => {
     network.get.mockRejectedValueOnce(new Error('offline'));
     const view = await mount(ClientsScreen);
-    const retry = await view.findByText(i18n.t('common.tryAgain'));
+    const retry = await view.findByText(i18n.t('common.retry'));
     expect(view.queryByText(i18n.t('doctor.noClients'))).toBeNull();
     network.get.mockResolvedValue({ data: { data: [client('client-a', 'Nora A')] } });
     fireEvent.press(retry);
@@ -108,7 +108,7 @@ describe('employee clients resource recovery', () => {
     network.get.mockResolvedValue({ data: { data: [] } });
     const view = await mount(ClientsScreen);
     await view.findByText(i18n.t('doctor.noClients'));
-    expect(view.queryByText(i18n.t('common.tryAgain'))).toBeNull();
+    expect(view.queryByText(i18n.t('common.retry'))).toBeNull();
   });
 });
 
@@ -172,7 +172,7 @@ describe('employee availability resource recovery and draft', () => {
   it('does not manufacture editable days on failure and restores save after retry', async () => {
     network.get.mockRejectedValueOnce(new Error('offline'));
     const view = await mount(AvailabilityScreen);
-    const retry = await view.findByText(i18n.t('common.tryAgain'));
+    const retry = await view.findByText(i18n.t('common.retry'));
     expect(view.queryByText(i18n.t('availability.save'))).toBeNull();
     expect(view.UNSAFE_queryAllByType(Switch)).toHaveLength(0);
     network.get.mockResolvedValue({ data: schedule });

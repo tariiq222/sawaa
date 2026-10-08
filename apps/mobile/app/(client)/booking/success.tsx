@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ import { Glass } from '@/theme/components/Glass';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { InfoRows, type InfoRow } from '@/components/ui/InfoRows';
+import { SecondaryButton } from '@/components/ui/SecondaryButton';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { useDir } from '@/hooks/useDir';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +44,7 @@ export default function BookingSuccessScreen() {
   const dir = useDir();
   const { t } = useTranslation();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const { bookingId, invoiceId, paymentId, webResult, amount, currency } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
@@ -52,7 +54,6 @@ export default function BookingSuccessScreen() {
     currency?: string;
   }>();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
   const bookingQuery = useBooking(bookingId);
@@ -177,7 +178,7 @@ export default function BookingSuccessScreen() {
 
   return (
     <AquaBackground>
-      <ScrollView testID="booking-success-scroll" contentContainerStyle={[styles.container, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: insets.bottom + 180 }]}>
+      <ScrollView testID="booking-success-scroll" style={{ flex: 1 }} contentContainerStyle={[styles.container, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: footerHeight + sawaaSpacing.lg }]} showsVerticalScrollIndicator={false}>
         <Animated.View entering={reduceMotion ? undefined : ZoomIn.duration(600).easing(Easing.out(Easing.cubic))}>
           {isConfirmed ? (
             <LinearGradient colors={[colors.teal[500], colors.teal[700]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconCircle}>
@@ -215,12 +216,12 @@ export default function BookingSuccessScreen() {
               </View>
             </Glass>
           ) : (
-            <InfoRows rows={infoRows} />
+            <InfoRows rows={infoRows} layout="stacked" />
           )}
         </Animated.View>
       </ScrollView>
 
-      <FloatingCta>
+      <FloatingCta onHeightChange={setFooterHeight}>
         {effectivePhase === 'pending' ? (
           <PrimaryButton
             label={t('booking.checkAgain')}
@@ -240,15 +241,7 @@ export default function BookingSuccessScreen() {
             fontFamily={f700}
           />
         )}
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.replace('/(client)/(tabs)/home')}
-          style={styles.secondaryBtn}
-        >
-          <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }, centeredText]}>
-            {t('booking.backToHome')}
-          </Text>
-        </Pressable>
+        <SecondaryButton label={t('booking.backToHome')} onPress={() => router.replace('/(client)/(tabs)/home')} />
       </FloatingCta>
     </AquaBackground>
   );
@@ -284,17 +277,4 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   summaryWrap: { width: '100%' },
   skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  secondaryBtn: {
-    height: 56,
-    borderRadius: sawaaRadius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.teal[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtnText: {
-    fontSize: sawaaType.body.fontSize + 2,
-    color: colors.teal[700],
-    textAlign: 'center',
-  },
 });

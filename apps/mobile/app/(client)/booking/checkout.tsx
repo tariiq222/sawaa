@@ -12,7 +12,8 @@ import { type ClientInvoice } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
 import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { goBackOrHome } from '@/lib/navigation';
 import {
   useExistingBookingCheckout,
   canResumeOnlinePayment,
@@ -128,11 +129,8 @@ export default function ExistingBookingCheckoutScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
+        <ScreenHeader title={copy.title} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
 
-        <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-          {copy.title}
-        </Text>
         <Text style={[styles.body, { fontFamily: f400, textAlign: dir.textAlign }]}>
           {copy.body}
         </Text>
@@ -170,9 +168,10 @@ export default function ExistingBookingCheckoutScreen() {
         ) : null}
         {showPaymentChoice ? (
           <PrimaryButton
-            label={submitting ? t('checkout.processing') : t('checkout.continue')}
+            label={t('checkout.continue')}
             onPress={openPayment}
             disabled={!canPay}
+            loading={submitting}
             fontFamily={f700}
           />
         ) : null}
@@ -181,6 +180,7 @@ export default function ExistingBookingCheckoutScreen() {
             label={t('checkout.retry')}
             onPress={checkout.checkAgain}
             disabled={checkout.isRefreshing}
+            loading={checkout.isRefreshing}
             fontFamily={f700}
           />
         ) : null}

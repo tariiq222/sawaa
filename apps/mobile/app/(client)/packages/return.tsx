@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, StyleSheet, View } from 'react-native';
+import { Alert, AppState, ScrollView, StyleSheet } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -151,7 +151,7 @@ export default function PackagePaymentReturnScreen() {
 
   return (
     <AquaBackground>
-      <View style={[styles.content, { paddingTop: insets.top + sawaaSpacing['3xl'] }]}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing['3xl'], paddingBottom: insets.bottom + sawaaSpacing.lg }]} showsVerticalScrollIndicator={false}>
         <PackagePaymentStatus
           state={paymentState}
           error={paymentError}
@@ -164,11 +164,11 @@ export default function PackagePaymentReturnScreen() {
           f600={f600}
           f700={f700}
         />
-      </View>
+      </ScrollView>
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, paddingHorizontal: sawaaSpacing['2xl'], alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.lg },
+  content: { flexGrow: 1, paddingHorizontal: sawaaSpacing['2xl'], alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.lg },
 });

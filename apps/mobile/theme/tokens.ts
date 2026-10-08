@@ -1,6 +1,6 @@
 import type { PublicBranding } from '@sawaa/shared';
 import { getFontName } from './fonts';
-import { getSawaaColors, getSawaaRoles, sawaaTokens } from './sawaa/tokens';
+import { getSawaaColors, getSawaaRoles, sawaaTokens, sawaaRadius, sawaaSpacing } from './sawaa/tokens';
 import {
   colors,
   typography,
@@ -151,8 +151,8 @@ export function buildTheme(_branding?: PublicBranding | null, scheme: 'light' | 
       ...typography,
       fontFamily: { arabic: getFontName('ar'), english: getFontName('en') },
     },
-    spacing,
-    radius,
+    spacing: { ...spacing, ...sawaaSpacing },
+    radius: { ...radius, ...sawaaRadius },
     shadows: rnShadows,
     animations,
   } as const;

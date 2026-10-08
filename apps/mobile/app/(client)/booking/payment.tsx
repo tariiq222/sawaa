@@ -6,13 +6,15 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import * as Haptics from 'expo-haptics';
-import { Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
+import { Banknote, Check, CreditCard } from 'lucide-react-native';
 import { AquaBackground, sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { AppButton } from '@/components/ui/AppButton';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -56,6 +58,7 @@ export default function BookingPaymentScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const bankTransferQuery = useBankTransferSettings();
   const bankTransferSettings = bankTransferQuery.data;
   const f400 = getFontName(dir.locale, '400');
@@ -70,7 +73,6 @@ export default function BookingPaymentScreen() {
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const [resumeRetry, setResumeRetry] = useState(0);
   const [resumeReadRetryable, setResumeReadRetryable] = useState(false);
-  const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const total = params.amount ? Number(params.amount) : 0;
   const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods = useMemo<Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }>>(() => [
@@ -200,17 +202,14 @@ export default function BookingPaymentScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
+          <ScreenHeader title={t('booking.paymentMethod')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {t('payment.choosePayment')}
-          </Text>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {t('payment.totalAmount', { amount: formatMoney(total) })}
           </Text>
@@ -255,7 +254,7 @@ export default function BookingPaymentScreen() {
               >
                 <View style={[styles.methodRow, { flexDirection: dir.row }]}>
                   {m.icon ? <View style={[styles.methodIcon, { backgroundColor: withAlpha(m.color, 0.12) }]}>{m.icon}</View> : null}
-                  <View style={styles.methodMid}>
+                  <View style={[styles.methodMid, { minWidth: 0 }]}>
                     <Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
                       {dir.isRTL ? m.labelAr : m.labelEn}
                     </Text>
@@ -274,23 +273,12 @@ export default function BookingPaymentScreen() {
           );
         })}
       </ScrollView>
-
-      <Animated.View
-        entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
-      >
-        <PrimaryButton
-          testID="booking-payment-submit"
+      <FloatingCta onHeightChange={setFooterHeight}>
+        <AppButton testID="booking-payment-submit"
           label={t('booking.payAmount', { amount: formatMoney(total) })}
-          onPress={handlePay}
-          disabled={!canPay}
-          loading={submitting}
-          height={52}
-          fontFamily={f700}
-          labelStyle={styles.ctaBtnText}
-          icon={<GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />}
+          onPress={handlePay} disabled={!canPay} loading={submitting}
         />
-      </Animated.View>
+      </FloatingCta>
     </AquaBackground>
   );
 }

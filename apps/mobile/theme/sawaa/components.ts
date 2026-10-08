@@ -2,8 +2,9 @@ import { ViewStyle, TextStyle } from 'react-native';
 import { sawaaTokens } from './tokens';
 
 /**
- * Unified Sawaa component styles — replaces scattered Themed* + hardcoded colors.
- * All colors reference sawaaTokens (supports organization branding override).
+ * Legacy static styles retained for import compatibility; no production consumer.
+ * @deprecated Use AppButton, Glass and ThemedText for scheme-aware UI.
+ * The fixed Sawaa palette does not accept runtime branding overrides.
  */
 
 // ============ SawaaButton ============

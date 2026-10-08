@@ -1,6 +1,5 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
 const mockRefetchBooking = jest.fn();
 const mockCheckAgain = jest.fn();
@@ -156,5 +155,9 @@ it('does not display a number belonging to a different invoice', () => {
 
 it('keeps the status and details scrollable with large text', () => {
   const screen = render(<BookingSuccessScreen />);
-  expect(screen.UNSAFE_getByType(ScrollView).props.testID).toBe('booking-success-scroll');
+  const scroll = screen.getByTestId('booking-success-scroll');
+  expect(scroll).toHaveStyle({ flex: 1 });
+  expect(scroll.props.scrollEnabled).not.toBe(false);
+  expect(within(scroll).getByText('Invoice #')).toBeTruthy();
+  expect(within(scroll).queryByText('Back to home')).toBeNull();
 });

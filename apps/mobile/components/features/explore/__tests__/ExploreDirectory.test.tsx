@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 const mockPush = jest.fn();
 let mockToken: string | null = 'token';
 const mockLabels: Record<string, string> = {
@@ -118,6 +119,9 @@ describe('ExploreDirectory', () => {
     fireEvent.press(failed.getByText('Retry'));
     expect(mockQueries.catalog.refetch).toHaveBeenCalled();
     expect(failed.getByText('Could not load this information')).toBeTruthy();
+    expect(failed.queryByText('No results found')).toBeNull();
+    expect(mockQueries.therapists.refetch).not.toHaveBeenCalled();
+    expect(mockQueries.clinics.refetch).not.toHaveBeenCalled();
   });
 
   it('shows an empty state when the search has no matching result', () => {

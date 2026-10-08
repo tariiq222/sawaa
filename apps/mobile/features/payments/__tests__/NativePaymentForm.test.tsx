@@ -1,5 +1,7 @@
 let mockAppLanguage = 'ar';
 const mockCardLanguage = jest.fn();
+const mockCardProps = jest.fn();
+const mockAppleProps = jest.fn();
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: mockAppLanguage, resolvedLanguage: mockAppLanguage } }) }));
 jest.mock('expo-constants', () => ({ expoConfig: { extra: { applePayMerchantId: 'merchant.sa.sawa' } } }));
 jest.mock('@/modules/sawaa-payments', () => ({ canUseApplePay: () => true }));
@@ -9,8 +11,23 @@ import { NativePaymentForm } from '../NativePaymentForm';
 jest.mock('react-native-moyasar-sdk', () => {
   const { Pressable, Text } = require('react-native');
   const React = require('react');
-  const button = (name: string) => ({ onPaymentResult, language }: { onPaymentResult: (result: unknown) => void; language?: string }) => { if (name === 'official-card') mockCardLanguage(language); return React.createElement(Pressable,
-    { onPress: () => onPaymentResult({ status: 'paid', source: { number: 'sensitive' } }) }, React.createElement(Text, null, name)); };
+  const button = (name: string) => (props: {
+    onPaymentResult: (result: unknown) => void;
+    language?: string;
+    style?: unknown;
+    paymentConfig?: unknown;
+  }) => {
+    const { onPaymentResult, language } = props;
+    if (name === 'official-card') {
+      mockCardLanguage(language);
+      mockCardProps(props);
+    } else {
+      mockAppleProps(props);
+    }
+    return React.createElement(Pressable,
+      { onPress: () => onPaymentResult({ status: 'paid', source: { number: 'sensitive' } }) },
+      React.createElement(Text, null, name));
+  };
   return { CreditCard: button('official-card'), ApplePay: button('official-apple'), PaymentConfig: class { constructor(values: object) { Object.assign(this, values); } }, CreditCardConfig: class {}, ApplePayConfig: class {} };
 });
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light' }) }));
@@ -23,9 +40,24 @@ it('uses official cards for the chosen card method and discards raw SDK callback
   fireEvent.press(screen.getByText('official-card'));
   expect(callback).toHaveBeenCalledWith(); expect(screen.queryByText('official-apple')).toBeNull();
 });
+it('lets the SDK card button grow with scaled text while keeping its minimum touch height', () => {
+  render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={jest.fn()} />);
+  const props = mockCardProps.mock.calls.at(-1)?.[0];
+  expect(props.style.paymentButton).toEqual(expect.objectContaining({ height: 'auto', minHeight: 50 }));
+  expect(props.style.paymentButtonText).not.toHaveProperty('fontSize');
+  expect(props.style.paymentButtonText).not.toHaveProperty('lineHeight');
+  expect(props.paymentConfig).toEqual(expect.objectContaining({
+    givenId: 'a0000000-0000-4000-8000-000000000001', publishableApiKey: 'pk_test_fixture',
+    amount: 12500, currency: 'SAR', supportedNetworks: ['mada'],
+    createSaveOnlyToken: false, applyCoupon: false,
+  }));
+});
 it('renders the official Apple Pay component only when capability and config are ready', () => {
   const screen = render(<NativePaymentForm config={{ ...config, applePay: { merchantId: 'merchant.sa.sawa', label: 'Sawa', countryCode: 'SA' } }} method="APPLE_PAY" applePayAvailable onResult={jest.fn()} />);
   expect(screen.getByText('official-apple')).toBeTruthy();
+  expect(mockAppleProps.mock.calls.at(-1)?.[0].style).toEqual({
+    buttonType: 'buy', buttonStyle: 'black', width: '100%', height: 50,
+  });
 });
 
 it('fails closed when the payable configuration merchant differs from the built entitlement', () => {

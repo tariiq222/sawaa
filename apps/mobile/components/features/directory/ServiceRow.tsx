@@ -5,7 +5,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useDir } from '@/hooks/useDir';
 import { Glass } from '@/theme/components/Glass';
 import { getFontName } from '@/theme/fonts';
-import { sawaaRadius, sawaaSpacing } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 interface ServiceRowProps {
@@ -38,7 +38,7 @@ export function ServiceRow({ title, subtitle, onPress, mode = 'link', selected =
         <View style={styles.body}>
           <Text style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>{title}</Text>
           {subtitle ? (
-            <Text numberOfLines={2} style={[styles.subtitle, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>{subtitle}</Text>
+            <Text style={[styles.subtitle, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>{subtitle}</Text>
           ) : null}
         </View>
         {mode === 'radio' ? (
@@ -54,8 +54,8 @@ export function ServiceRow({ title, subtitle, onPress, mode = 'link', selected =
 const styles = StyleSheet.create({
   card: { padding: sawaaSpacing.lg, minHeight: 64, justifyContent: 'center' },
   row: { alignItems: 'center', gap: sawaaSpacing.md },
-  body: { flex: 1, gap: 2 },
-  title: { fontSize: 16, lineHeight: 22 },
-  subtitle: { fontSize: 14, lineHeight: 20 },
+  body: { flex: 1, minWidth: 0, gap: 2 },
+  title: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  subtitle: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   spacer: { width: 20 },
 });

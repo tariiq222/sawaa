@@ -7,13 +7,14 @@ import * as Haptics from 'expo-haptics';
 import { Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Thumb } from '@/components/ui/Thumb';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useBooking, useRateBooking } from '@/hooks/queries';
@@ -29,6 +30,7 @@ export default function RateScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
+  const [footerHeight, setFooterHeight] = useState(180);
   const [rating, setRating] = useState(0);
   const [note, setNote] = useState('');
   const rateMutation = useRateBooking();
@@ -84,16 +86,16 @@ export default function RateScreen() {
 
   const submitLabel = alreadyRatedThisSession
     ? t('appointments.ratingAlreadySubmitted')
-    : submitting ? t('appointments.rateSubmitting') : t('appointments.rateSubmit');
+    : t('appointments.rateSubmit');
 
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 160 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenHeader title={t('appointments.rateScreenTitle')} onBack={() => router.back()} />
+        <ScreenHeader title={t('appointments.rateScreenTitle')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
 
         {/* Therapist — real booking data, or a retryable load error */}
         {isLoading ? (
@@ -111,11 +113,11 @@ export default function RateScreen() {
             <View style={[styles.therapistRow, { flexDirection: dir.row }]}>
               <Thumb uri={booking?.employee?.avatarUrl} width={56} height={56} accessibilityLabel={displayName} />
               <View style={styles.therapistMid}>
-                <Text numberOfLines={1} style={[styles.therapistName, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                <Text style={[styles.therapistName, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
                   {displayName}
                 </Text>
                 {sessionWhen ? (
-                  <Text numberOfLines={1} style={[styles.therapistMeta, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                  <Text style={[styles.therapistMeta, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                     {sessionWhen}
                   </Text>
                 ) : null}
@@ -180,8 +182,8 @@ export default function RateScreen() {
         </View>
       </ScrollView>
 
-      <FloatingCta>
-        <PrimaryButton label={submitLabel} onPress={submit} disabled={submitDisabled} fontFamily={f700} />
+      <FloatingCta onHeightChange={setFooterHeight}>
+        <PrimaryButton label={submitLabel} onPress={submit} disabled={submitDisabled} loading={submitting} fontFamily={f700} />
       </FloatingCta>
     </AquaBackground>
   );
@@ -192,15 +194,15 @@ const styles = StyleSheet.create({
   therapistCard: { padding: sawaaSpacing.lg },
   therapistRow: { alignItems: 'center', gap: sawaaSpacing.md },
   therapistMid: { flex: 1, minWidth: 0, gap: 2 },
-  therapistName: { fontSize: 16, lineHeight: 22 },
-  therapistMeta: { fontSize: 14, lineHeight: 20 },
+  therapistName: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  therapistMeta: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   ratingBlock: { alignItems: 'center', gap: sawaaSpacing.sm },
-  question: { fontSize: 20, lineHeight: 28, textAlign: 'center' },
-  stars: { justifyContent: 'center', gap: sawaaSpacing.xs },
+  question: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, textAlign: 'center' },
+  stars: { flexWrap: 'wrap', justifyContent: 'center', gap: sawaaSpacing.xs },
   starBtn: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  ratingLabel: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  ratingLabel: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'center' },
   notes: { gap: sawaaSpacing.sm },
-  notesLabel: { fontSize: 14, lineHeight: 20 },
+  notesLabel: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   noteCard: { padding: sawaaSpacing.lg },
-  noteInput: { fontSize: 15, minHeight: 80, textAlignVertical: 'top' },
+  noteInput: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, minHeight: 80, textAlignVertical: 'top' },
 });

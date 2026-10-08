@@ -5,11 +5,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { sawaaType } from '@/theme/sawaa/tokens';
 import { GroupCard } from '@/components/features/groups/GroupCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useBranding, useGroupSessions } from '@/hooks/queries';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import type { GroupSession } from '@/services/client/group-sessions';
 import { getFontName } from '@/theme/fonts';
@@ -67,7 +69,7 @@ export default function GroupsScreen() {
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <ScreenHeader title={t('groups.title')} onBack={() => router.back()} />
+            <ScreenHeader title={t('groups.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
             <Text style={[styles.intro, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>
               {t('groups.intro')}
             </Text>
@@ -86,7 +88,7 @@ function Separator() {
 const styles = StyleSheet.create({
   list: { flexGrow: 1, paddingHorizontal: sawaaSpacing.lg },
   header: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
-  intro: { fontSize: 15, lineHeight: 24 },
+  intro: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   separator: { height: sawaaSpacing.md },
   skeletons: { gap: sawaaSpacing.md },
 });

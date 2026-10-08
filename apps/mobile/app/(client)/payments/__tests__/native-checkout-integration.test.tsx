@@ -20,10 +20,10 @@ let mockAppleAvailable = true;
 let mockClientId = 'client';
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, back: mockBack }), Stack: { Screen: () => null } }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, back: mockBack, canGoBack: () => true }), Stack: { Screen: () => null } }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockClientId }));
-jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light' }) }));
+jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light', theme: { colors: { surface: 'white', textPrimary: 'black' } } }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ ink: { 900: 'black', 500: 'gray' }, teal: { 600: 'teal', 700: 'teal' } }) }));
 jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => ({ enabled: true, isLoading: false, isError: false, applePayAvailable: mockAppleAvailable, refetch: jest.fn() }) }));
 // Native bank/card boundary only; the route and checkout lifecycle hook remain real.

@@ -2,11 +2,14 @@ import React from 'react';
 jest.mock('@/theme/useTheme', () => ({
   useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', setThemeMode: jest.fn(), isRTL: true, language: 'ar' }),
 }));
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
+let mockReduceMotion = false;
+const mockEntering: unknown[] = [];
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => mockReduceMotion }));
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
-  return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
+  return { __esModule: true, default: { View: ({ entering, ...props }: { entering?: unknown }) => { mockEntering.push(entering); return require('react').createElement(require('react-native').View, props); } }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn() }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
@@ -32,14 +35,17 @@ const summary = {
   // Integer halalas on the wire: 12000 halalas === 120.00 SAR.
   outstandingBalance: 12000,
 };
+const mockRefetch = jest.fn();
+let mockSummaryQuery: { data: typeof summary | undefined; isPending: boolean; isError: boolean; refetch: typeof mockRefetch };
 jest.mock('@/hooks/queries', () => ({
-  useSummary: () => ({ data: summary, refetch: jest.fn() }),
+  useSummary: () => mockSummaryQuery,
   useBranding: () => ({ data: null }),
 }));
 
 import ProfileScreen from '../profile';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 
+beforeEach(() => { jest.clearAllMocks(); mockReduceMotion = false; mockEntering.length = 0; mockSummaryQuery = { data: summary, isPending: false, isError: false, refetch: mockRefetch }; });
 describe('client profile summary stats', () => {
   it('renders the outstanding balance as SAR, not raw halalas', () => {
     const screen = render(<ProfileScreen />);
@@ -54,4 +60,24 @@ describe('client profile summary stats', () => {
     // The rendered figure is the SAR-major amount (120), never the raw 12000.
     expect(text).toBe(formatCurrencyAmount(12000, 'SAR', true));
   });
+});
+
+it('shows loading with no fabricated amount during first read', () => {
+ mockSummaryQuery.data = undefined; mockSummaryQuery.isPending = true;
+ const view = render(<ProfileScreen />);
+ expect(view.getByText('common.loading')).toBeTruthy();
+ expect(view.queryByText(formatCurrencyAmount(0, 'SAR', true))).toBeNull();
+});
+it.each([false, true])('explains summary failure and retries with stale data %s', stale => {
+ mockSummaryQuery.data = stale ? summary : undefined; mockSummaryQuery.isError = true;
+ const view = render(<ProfileScreen />);
+ expect(view.getByText('profile.summaryLoadError')).toBeTruthy();
+ if (stale) expect(view.getByText(formatCurrencyAmount(12000, 'SAR', true))).toBeTruthy();
+ fireEvent.press(view.getByRole('button', { name: 'common.retry' }));
+ expect(mockRefetch).toHaveBeenCalledTimes(1);
+});
+it('avoids all profile entrance animations with Reduce Motion', () => {
+ mockReduceMotion = true; render(<ProfileScreen />);
+ expect(mockEntering.length).toBeGreaterThan(0);
+ expect(mockEntering.every(value => value === undefined)).toBe(true);
 });
