@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,31 +18,18 @@ import { Glass } from '@/theme/components/Glass';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { InfoRows, type InfoRow } from '@/components/ui/InfoRows';
+import { SecondaryButton } from '@/components/ui/SecondaryButton';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { useDir } from '@/hooks/useDir';
 import { useTranslation } from 'react-i18next';
+import { formatWeekdayDateTime } from '@/lib/session-format';
 import { useReduceMotion } from '@/hooks/useA11y';
-import { useBooking } from '@/hooks/queries';
+import { useBooking, useClientInvoice } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 import { resolveConfirmedPhase, usePaymentStatus, type PaymentPhase } from '@/features/booking/use-payment-status';
 
-const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 function formatWhen(iso: string, isRTL: boolean): string {
-  const d = new Date(iso);
-  const dayName = isRTL ? DAYS_AR[d.getDay()] : DAYS_EN[d.getDay()];
-  const dayNum = isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate();
-  const month = isRTL ? MONTHS_AR[d.getMonth()] : MONTHS_EN[d.getMonth()];
-  const h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const suffix = h < 12 ? (isRTL ? 'ص' : 'AM') : (isRTL ? 'م' : 'PM');
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return isRTL
-    ? `${dayName} ${dayNum} ${month} · ${h12}:${m} ${suffix}`
-    : `${dayName} ${month} ${dayNum} · ${h12}:${m} ${suffix}`;
+  return formatWeekdayDateTime(iso, isRTL) ?? '—';
 }
 
 function shortBookingRef(id: string): string {
@@ -57,6 +44,7 @@ export default function BookingSuccessScreen() {
   const dir = useDir();
   const { t } = useTranslation();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const { bookingId, invoiceId, paymentId, webResult, amount, currency } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
@@ -66,10 +54,10 @@ export default function BookingSuccessScreen() {
     currency?: string;
   }>();
   const f400 = getFontName(dir.locale, '400');
-  const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
   const bookingQuery = useBooking(bookingId);
+  const invoiceQuery = useClientInvoice(invoiceId);
   const booking = bookingQuery.data ?? null;
   const loading = Boolean(bookingId) && bookingQuery.isLoading;
 
@@ -79,6 +67,7 @@ export default function BookingSuccessScreen() {
   const checkPaymentAndBookingAgain = () => {
     checkAgain();
     if (bookingId) void bookingQuery.refetch();
+    if (invoiceId) void invoiceQuery.refetch();
   };
 
   // A paid invoice does not guarantee the booking itself has been confirmed yet
@@ -117,35 +106,27 @@ export default function BookingSuccessScreen() {
 
   const headerCopy: Record<PaymentPhase, { title: string; subtitle: string }> = {
     polling: {
-      title: dir.isRTL ? 'جاري تأكيد الدفع' : 'Confirming payment',
-      subtitle: dir.isRTL ? 'جاري تحديث حالة الدفع...' : 'Checking payment status...',
+      title: t('booking.confirmingPayment'),
+      subtitle: t('booking.checkingPaymentStatus'),
     },
     confirmed: {
-      title: dir.isRTL ? 'تم تأكيد موعدك' : 'Appointment confirmed',
+      title: t('booking.appointmentConfirmed'),
       subtitle: booking?.status?.toUpperCase() === 'DEPOSIT_PAID'
-        ? (dir.isRTL ? 'تم استلام العربون. المبلغ المتبقي لا يزال مستحقًا.' : 'Deposit received. The remaining balance is still due.')
+        ? (t('booking.depositBalanceDue'))
         : invoiceId
-        ? (dir.isRTL ? 'تم استلام الدفع' : 'Payment received')
-        : (dir.isRTL
-          ? 'سنتواصل معكِ قريباً لترتيب الدفع وإرسال تفاصيل الجلسة'
-          : 'We\'ll reach out shortly to arrange payment and send session details'),
+        ? (t('booking.paymentReceived'))
+        : (t('booking.paymentFollowUp')),
     },
     pending: phase === 'confirmed' ? {
-      title: dir.isRTL ? 'جاري تأكيد الموعد' : 'Confirming appointment',
-      subtitle: dir.isRTL
-        ? 'تم استلام الدفع. نتحقق من حالة الموعد، يمكنكِ المحاولة مرة أخرى.'
-        : 'Payment received. Checking the appointment status; you can try again.',
+      title: t('booking.confirmingAppointment'),
+      subtitle: t('booking.checkingAppointmentStatus'),
     } : {
-      title: dir.isRTL ? 'الدفع قيد المعالجة' : 'Payment processing',
-      subtitle: dir.isRTL
-        ? 'لم نتلقَّ تأكيد الدفع بعد. يمكنكِ التحقق مرة أخرى.'
-        : 'We have not received payment confirmation yet. You can check again.',
+      title: t('booking.paymentProcessing'),
+      subtitle: t('booking.paymentUnconfirmed'),
     },
     failed: {
-      title: dir.isRTL ? 'لم يكتمل الدفع' : 'Payment not completed',
-      subtitle: dir.isRTL
-        ? 'لم يتم استلام الدفع. لم يتم تأكيد موعدك بعد.'
-        : 'We did not receive your payment. Your appointment is not confirmed yet.',
+      title: t('booking.paymentNotCompleted'),
+      subtitle: t('booking.paymentNotReceived'),
     },
   };
   const { title: headerTitle, subtitle: paymentStatusCopy } = headerCopy[effectivePhase];
@@ -160,24 +141,34 @@ export default function BookingSuccessScreen() {
 
   const infoRows: InfoRow[] = [];
   if (therapistName) {
-    infoRows.push({ icon: User, label: dir.isRTL ? 'المعالج' : 'Therapist', value: therapistName });
+    infoRows.push({ icon: User, label: t('booking.therapist'), value: therapistName });
   }
   if (booking?.scheduledAt) {
     infoRows.push({
       icon: Calendar,
-      label: dir.isRTL ? 'التاريخ والوقت' : 'Date & time',
+      label: t('booking.dateTime'),
       value: formatWhen(booking.scheduledAt, dir.isRTL),
     });
   }
   infoRows.push({
     icon: Hash,
-    label: dir.isRTL ? 'رقم الموعد' : 'Booking #',
+    label: t('booking.bookingReference'),
     value: bookingId ? shortBookingRef(bookingId) : '—',
   });
+  if (invoiceId) {
+    const invoice = invoiceQuery.data;
+    const number = invoice?.id === invoiceId ? invoice.number : undefined;
+    infoRows.push({
+      icon: Hash,
+      label: t('booking.invoiceNumber'),
+      value: typeof number === 'number' && Number.isSafeInteger(number) && number > 0 ? `#${number}` : '—',
+    });
+  }
+
   if (paymentId) {
     infoRows.push({
       icon: Hash,
-      label: dir.isRTL ? 'رقم الدفع' : 'Payment #',
+      label: t('booking.paymentReference'),
       value: shortBookingRef(paymentId),
     });
   }
@@ -187,7 +178,7 @@ export default function BookingSuccessScreen() {
 
   return (
     <AquaBackground>
-      <View style={[styles.container, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: insets.bottom + 180 }]}>
+      <ScrollView testID="booking-success-scroll" style={{ flex: 1 }} contentContainerStyle={[styles.container, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: footerHeight + sawaaSpacing.lg }]} showsVerticalScrollIndicator={false}>
         <Animated.View entering={reduceMotion ? undefined : ZoomIn.duration(600).easing(Easing.out(Easing.cubic))}>
           {isConfirmed ? (
             <LinearGradient colors={[colors.teal[500], colors.teal[700]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconCircle}>
@@ -225,40 +216,32 @@ export default function BookingSuccessScreen() {
               </View>
             </Glass>
           ) : (
-            <InfoRows rows={infoRows} />
+            <InfoRows rows={infoRows} layout="stacked" />
           )}
         </Animated.View>
-      </View>
+      </ScrollView>
 
-      <FloatingCta>
+      <FloatingCta onHeightChange={setFooterHeight}>
         {effectivePhase === 'pending' ? (
           <PrimaryButton
-            label={dir.isRTL ? 'تحقق مرة أخرى' : 'Check again'}
+            label={t('booking.checkAgain')}
             onPress={checkPaymentAndBookingAgain}
             fontFamily={f700}
           />
         ) : effectivePhase === 'failed' ? (
           <PrimaryButton
-            label={dir.isRTL ? 'إعادة المحاولة' : 'Try again'}
+            label={t('common.tryAgain')}
             onPress={retryPayment}
             fontFamily={f700}
           />
         ) : (
           <PrimaryButton
-            label={dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
+            label={t('booking.viewMyAppointments')}
             onPress={() => router.replace('/(client)/(tabs)/appointments')}
             fontFamily={f700}
           />
         )}
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.replace('/(client)/(tabs)/home')}
-          style={styles.secondaryBtn}
-        >
-          <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }, centeredText]}>
-            {t('booking.backToHome')}
-          </Text>
-        </Pressable>
+        <SecondaryButton label={t('booking.backToHome')} onPress={() => router.replace('/(client)/(tabs)/home')} />
       </FloatingCta>
     </AquaBackground>
   );
@@ -266,7 +249,7 @@ export default function BookingSuccessScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: sawaaSpacing['2xl'],
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -294,17 +277,4 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   summaryWrap: { width: '100%' },
   skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  secondaryBtn: {
-    height: 56,
-    borderRadius: sawaaRadius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.teal[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtnText: {
-    fontSize: sawaaType.body.fontSize + 2,
-    color: colors.teal[700],
-    textAlign: 'center',
-  },
 });

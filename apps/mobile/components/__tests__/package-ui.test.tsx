@@ -1,26 +1,33 @@
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: mockRTL, language: mockRTL ? 'ar' : 'en' }) }));
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import Detail from '../../app/(client)/packages/[id]';
 import Index from '../../app/(client)/packages/index';
 import Purchases from '../../app/(client)/packages/purchases';
 import Book from '../../app/(client)/packages/book';
 
+const mockReplace = jest.fn();
+const mockRunCheckout = jest.fn();
+const mockMutateAsync = jest.fn();
+let mockUser = { id: 'client' };
+let mockBranches: { id: string; name: string }[] = [];
+jest.mock('@/lib/package-checkout', () => ({ runPackageCheckout: (...args: unknown[]) => mockRunCheckout(...args) }));
 const mockBack = jest.fn();
 const mockRefetch = jest.fn();
 let mockRTL = false;
 let mockQuery = { isLoading: false, isError: false, isFetching: false, data: undefined as unknown, refetch: mockRefetch };
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: jest.fn() }), useLocalSearchParams: () => ({ id: 'family' }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }), useLocalSearchParams: () => ({ id: 'family' }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, row: mockRTL ? 'row-reverse' : 'row', textAlign: mockRTL ? 'right' : 'left' }) }));
-jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => ({ id: 'client' }) }));
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockUser }));
 jest.mock('@/hooks/queries', () => ({
+  usePublicBranches: () => ({ data: mockBranches, isFetching: false, isError: false, refetch: mockRefetch }),
   usePackageFamily: () => mockQuery, usePackageFamilies: () => mockQuery, usePackagePurchases: () => mockQuery,
-  useInitPackagePurchase: () => ({ isPending: false }), useBookPackageCredit: () => ({ isPending: false }), useSlots: () => ({ data: [] }),
+  useInitPackagePurchase: () => ({ isPending: false, mutateAsync: mockMutateAsync }), useBookPackageCredit: () => ({ isPending: false }), useSlots: () => ({ data: [] }),
 }));
-jest.mock('@/services/client', () => ({ publicBranchesService: { list: jest.fn(async () => []) } }));
+jest.mock('@/services/client', () => ({ publicBranchesService: { list: jest.fn(async () => mockBranches) } }));
 jest.mock('@/services/client/packages', () => ({ getPendingPackagePurchase: jest.fn(async () => null) }));
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
@@ -41,6 +48,9 @@ jest.mock('@/components/features/booking/TimeSlotsGrid', () => ({ TimeSlotsGrid:
 beforeEach(() => {
   jest.clearAllMocks();
   mockRTL = false;
+  mockUser = { id: 'client' };
+  mockBranches = [];
+  mockRunCheckout.mockReset();
   mockQuery = { isLoading: false, isError: false, isFetching: false, data: undefined, refetch: mockRefetch };
 });
 
@@ -123,4 +133,33 @@ it('balance shows the VAT-inclusive charged total, falling back to amountPaid', 
   await renderScreen(Purchases);
   expect(screen.getByText('414.00 SAR')).toBeTruthy();
   expect(screen.getByText('360.00 SAR')).toBeTruthy();
+});
+
+it.each([true, false])('opens native checkout for standalone=%s and ignores duplicate taps', async (isStandalone) => {
+  mockBranches = [{ id: 'branch-1', name: 'Branch' }];
+  mockQuery.data = { ...vatFamily(), isStandalone };
+  mockRunCheckout.mockResolvedValue({ purchaseId: 'purchase-1', invoiceId: 'invoice-1' });
+  await renderScreen(Detail);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'packages.purchase' })).not.toBeDisabled());
+  await act(async () => {
+    fireEvent.press(screen.getByRole('button', { name: 'packages.purchase' }));
+    fireEvent.press(screen.getByRole('button', { name: 'packages.purchase' }));
+  });
+  expect(mockRunCheckout).toHaveBeenCalledTimes(1);
+  expect(mockRunCheckout).toHaveBeenCalledWith(mockMutateAsync, { clientId: 'client', packageId: 'opt', familyId: isStandalone ? '' : 'family', branchId: 'branch-1' });
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: { purchaseId: 'purchase-1', invoiceId: 'invoice-1' } });
+});
+
+it('ignores an old account checkout completion after the account changes', async () => {
+  mockBranches = [{ id: 'branch-1', name: 'Branch' }];
+  mockQuery.data = vatFamily();
+  let finish!: (value: { purchaseId: string; invoiceId: string }) => void;
+  mockRunCheckout.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  const view = render(<Detail />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'packages.purchase' })).not.toBeDisabled());
+  fireEvent.press(screen.getByRole('button', { name: 'packages.purchase' }));
+  mockUser = { id: 'other-client' };
+  view.rerender(<Detail />);
+  await act(async () => { finish({ purchaseId: 'old-purchase', invoiceId: 'old-invoice' }); });
+  expect(mockReplace).not.toHaveBeenCalled();
 });

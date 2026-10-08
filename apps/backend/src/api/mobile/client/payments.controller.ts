@@ -1,3 +1,8 @@
+import { GetNativePaymentConfigHandler } from '../../../modules/finance/native-payments/get-native-payment-config/get-native-payment-config.handler';
+import { InitNativePaymentHandler } from '../../../modules/finance/native-payments/init-native-payment/init-native-payment.handler';
+import { ReconcileNativePaymentHandler } from '../../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
+import { InitNativePackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-native-package-purchase.handler';
+import { NativePaymentCapabilitiesDto, NativePaymentInitResponseDto, NativePackagePurchaseInitResponseDto, NativePaymentReconcileResponseDto } from '../../../modules/finance/native-payments/native-payment.dto';
 import {
   BadRequestException,
   Body,
@@ -69,7 +74,43 @@ export class MobileClientPaymentsController {
     private readonly initClientPayment: InitClientPaymentHandler,
     private readonly getClientBankTransferSettings: GetClientBankTransferSettingsHandler,
     private readonly initPackagePurchase: InitPackagePurchaseHandler,
+    private readonly nativeConfig: GetNativePaymentConfigHandler,
+    private readonly nativeInit: InitNativePaymentHandler,
+    private readonly nativeReconcile: ReconcileNativePaymentHandler,
+    private readonly nativePackageInit: InitNativePackagePurchaseHandler,
   ) {}
+
+  @Get('native/config')
+  @ApiOperation({summary:'Get native payment capabilities'})
+  @ApiOkResponse({type:NativePaymentCapabilitiesDto})
+  getNativeConfig() { return this.nativeConfig.execute(); }
+
+  @Post('native/init')
+  @Throttle({default:{ttl:60_000,limit:3}})
+  @ApiOperation({summary:'Reserve or resume a native invoice payment'})
+  @ApiCreatedResponse({type:NativePaymentInitResponseDto})
+  initNativePayment(@ClientSession() user:ClientSession,@Body() body:InitClientPaymentDto) {
+    return this.nativeInit.execute({clientId:user.id,invoiceId:body.invoiceId,method:body.method});
+  }
+
+  @Post('package-purchases/native/init')
+  @Throttle({default:{ttl:60_000,limit:5}})
+  @ApiOperation({summary:'Reserve or resume a native package purchase payment'})
+  @ApiCreatedResponse({type:NativePackagePurchaseInitResponseDto})
+  initNativePackagePurchase(@ClientSession() user:ClientSession,@Body() body:InitPackagePurchaseDto) {
+    return this.nativePackageInit.execute({clientId:user.id,idempotencyKey:body.idempotencyKey,packageId:body.packageId,packageFamilyId:body.packageFamilyId,branchId:body.branchId});
+  }
+
+  @Post('native/:paymentId/reconcile')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({default:{ttl:60_000,limit:20}})
+  @ApiOperation({summary:'Reconcile an owned native payment with Moyasar'})
+  @ApiParam({name:'paymentId',description:'Reserved native Payment UUID',format:'uuid'})
+  @ApiOkResponse({type:NativePaymentReconcileResponseDto})
+  reconcileNativePayment(@ClientSession() user:ClientSession,@Param('paymentId',ParseUUIDPipe) paymentId:string,@Body() body:unknown) {
+    if (body != null && (typeof body!=='object'||Array.isArray(body)||Object.keys(body).length>0)) throw new BadRequestException('Reconciliation accepts no payment data');
+    return this.nativeReconcile.execute({clientId:user.id,paymentId});
+  }
 
   @Get()
   @ApiOperation({ summary: 'List the authenticated client\'s payments' })

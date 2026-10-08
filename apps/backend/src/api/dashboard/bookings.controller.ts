@@ -1,3 +1,7 @@
+import { GetLateSessionContextHandler } from "../../modules/bookings/get-late-session-context/get-late-session-context.handler";
+import { GetLateSessionContextResponseDto } from "../../modules/bookings/get-late-session-context/get-late-session-context.dto";
+import { RecordLateSessionHandler } from '../../modules/bookings/record-late-session/record-late-session.handler';
+import { RecordLateSessionDto } from '../../modules/bookings/record-late-session/record-late-session.dto';
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
@@ -77,7 +81,25 @@ export class DashboardBookingsController {
     private readonly bookFromCreditHandler: BookFromCreditHandler,
     private readonly matchingCreditsHandler: GetMatchingCreditsHandler,
     private readonly transferCreditHandler: TransferCreditHandler,
+    private readonly recordLateSessionHandler: RecordLateSessionHandler,
+    private readonly lateSessionContextHandler: GetLateSessionContextHandler,
   ) {}
+
+  @Get('late-entry/context')
+  @CheckPermissions({ action: 'create', subject: 'Booking' })
+  @ApiOperation({ summary: 'Get permitted late session VAT and manual payment context' })
+  @ApiOkResponse({ description: 'Current VAT rate and enabled manual payment methods only', type: GetLateSessionContextResponseDto })
+  getLateSessionContext() {
+    return this.lateSessionContextHandler.execute();
+  }
+
+  @Post('late-entry')
+  @CheckPermissions({ action: 'create', subject: 'Booking' })
+  @ApiOperation({ summary: 'Record a previous session and its actual financial facts' })
+  @ApiCreatedResponse({ description: 'Session and financial facts recorded atomically', schema: { type:'object', properties: { booking:{type:'object',additionalProperties:true},invoice:{type:'object',nullable:true,additionalProperties:true},payment:{type:'object',nullable:true,additionalProperties:true},outstanding:{type:'integer'},isLateEntry:{type:'boolean',enum:[true]},lateEntryRecordedAt:{type:'string',format:'date-time'},lateEntryRecordedBy:{type:'string'} } } })
+  recordLateSession(@CurrentUser() user: JwtUser, @Body() body: RecordLateSessionDto) {
+    return this.recordLateSessionHandler.execute(body, user);
+  }
 
   @Post()
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
@@ -113,10 +135,26 @@ export class DashboardBookingsController {
     schema: {
       type: 'object',
       properties: {
-        data: { type: 'array', items: { type: 'object' } },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        totalPages: { type: 'number' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              payAtClinic: { type: 'boolean', description: 'Client selected payment at the center; independent of financial payment status', example: true },
+            },
+          },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            page: { type: 'number' },
+            limit: { type: 'number' },
+            totalPages: { type: 'number' },
+            hasNextPage: { type: 'boolean' },
+            hasPreviousPage: { type: 'boolean' },
+          },
+        },
       },
     },
   })
@@ -285,8 +323,15 @@ export class DashboardBookingsController {
       },
     },
   })
-  getBookingStatusLog(@Param('id', ParseUUIDPipe) id: string) {
-    return this.statusLogHandler.execute({ bookingId: id });
+  getBookingStatusLog(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.statusLogHandler.execute({
+      bookingId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
+    });
   }
 
   @Get(':id/timeline')
@@ -320,8 +365,15 @@ export class DashboardBookingsController {
       },
     },
   })
-  getBookingTimeline(@Param('id', ParseUUIDPipe) id: string) {
-    return this.timelineHandler.execute({ bookingId: id });
+  getBookingTimeline(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.timelineHandler.execute({
+      bookingId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
+    });
   }
 
   @Get(':id')
@@ -334,6 +386,7 @@ export class DashboardBookingsController {
       type: 'object',
       properties: {
         id: { type: 'string', format: 'uuid' },
+        payAtClinic: { type: 'boolean', description: 'Client selected payment at the center; independent of financial payment status', example: true },
         status: { type: 'string' },
         scheduledAt: { type: 'string', format: 'date-time' },
         durationMins: { type: 'number' },

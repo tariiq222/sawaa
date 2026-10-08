@@ -175,3 +175,6 @@ outputs/
 docs/architecture/*
 !docs/architecture/clinic-service-booking-contract.md
 !docs/architecture/mobile-client-flow.md
+
+# Agentic E2E reports, traces, sessions and replay cache.
+.e2e/

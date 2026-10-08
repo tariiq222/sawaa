@@ -1,3 +1,4 @@
+jest.mock('@/features/auth/use-password-login', () => ({ usePasswordLogin: () => ({ pending: false, cancel: jest.fn(), capture: () => () => true, submit: jest.fn() }) }));
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import type { NavigatorScreenParams } from '@react-navigation/native';
@@ -64,10 +65,13 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
 jest.mock('@/hooks/useDir', () => ({
   useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right', alignStart: 'flex-end', writingDirection: 'rtl' }),
 }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', language: 'ar' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
   useRequestLoginOtp: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
+
+jest.mock('../email-entry', () => ({ __esModule: true, default: () => null }));
 
 import LoginScreen from '../login';
 import { getStateFromPath } from 'expo-router/build/fork/getStateFromPath';

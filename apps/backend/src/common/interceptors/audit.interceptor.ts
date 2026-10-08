@@ -110,42 +110,18 @@ interface AuditUserInfo {
   userEmail?: string;
 }
 
-/**
- * Extracts user info from RequestContextStorage first, then falls back to
- * parsing the JWT payload directly from the Authorization header.
- */
+/** Use only server-authenticated identity; headers are untrusted input. */
 function extractUserFromContext(req: Request): AuditUserInfo {
   const ctx = RequestContextStorage.get();
+  const principal = req.user as { sub?: string; id?: string; email?: string } | undefined;
+  const principalId = principal?.sub ?? principal?.id;
   if (ctx?.userId) {
-    return { userId: ctx.userId };
-  }
-
-  // Fallback: parse JWT from Authorization header
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return {};
-
-  try {
-    const token = authHeader.slice(7);
-    const payload = parseJwtPayload(token);
     return {
-      userId: payload.sub ?? payload.userId,
-      userEmail: payload.email,
+      userId: ctx.userId,
+      ...(principalId === ctx.userId ? { userEmail: principal?.email } : {}),
     };
-  } catch {
-    return {};
   }
-}
-
-/** Minimal JWT payload parser - avoids adding a jwt decode dependency. */
-function parseJwtPayload(token: string): Record<string, string> {
-  const parts = token.split('.');
-  if (parts.length !== 3) return {};
-  try {
-    const raw = Buffer.from(parts[1], 'base64url').toString('utf-8');
-    return JSON.parse(raw) as Record<string, string>;
-  } catch {
-    return {};
-  }
+  return principalId ? { userId: principalId, userEmail: principal?.email } : {};
 }
 
 /**
@@ -156,7 +132,7 @@ function parseJwtPayload(token: string): Record<string, string> {
  * - Only intercepts write methods; GET/OPTIONS/HEAD pass through untouched.
  * - Entity name is derived from the handler class name (e.g. CreateBookingHandler
  *   -> entity="Booking", action=CREATE).
- * - User context is pulled first from RequestContextStorage, then from the JWT.
+ * - User context is pulled from RequestContextStorage or the verified principal.
  * - Audit failures never break the request, but they are NOT swallowed silently:
  *   each failure logs, increments the `audit_log_failures_total` metric, and is
  *   reported to Sentry so a degraded DB cannot open an undetected audit gap.

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 
 import HomeScreen from '../(client)/(tabs)/home';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
@@ -29,6 +29,7 @@ const HYDRATION_TIMEOUT_MS = 15_000;
  */
 export default function HomeRoute() {
   const router = useRouter();
+  const focused = useIsFocused();
   const dispatch = useAppDispatch();
   const colors = useSawaaColors();
   const { token, user } = useAppSelector((state) => state.auth);
@@ -118,7 +119,8 @@ export default function HomeRoute() {
   }, [dispatch, token, user]);
 
   useEffect(() => {
-    if (hydrating) return;
+    // A pushed auth screen owns its continuation while guest home is underneath.
+    if (!focused || hydrating) return;
     if (!token || !user) return;
 
     const role = getPrimaryRole(user);
@@ -127,7 +129,7 @@ export default function HomeRoute() {
     } else {
       router.replace('/(client)/(tabs)/home');
     }
-  }, [hydrating, token, user, router]);
+  }, [focused, hydrating, token, user, router]);
 
   if (hydrating) {
     return (

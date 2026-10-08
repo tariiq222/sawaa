@@ -1,6 +1,7 @@
 // sendgrid-adapter — deployment-level email via SendGrid API.
 
 import { Logger } from '@nestjs/common';
+import { emailHttpFailure } from './email-provider.interface';
 import type { EmailProvider, EmailSendPayload, EmailSendResult } from './email-provider.interface';
 import { fetchWithTimeout } from '../http';
 
@@ -43,13 +44,12 @@ export class SendGridEmailAdapter implements EmailProvider {
     );
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`SendGrid API error ${res.status}: ${body}`);
+      throw emailHttpFailure('SendGrid', res.status);
     }
 
     // SendGrid returns 202 with X-Message-Id header
     const messageId = res.headers.get('X-Message-Id') ?? 'sendgrid-ok';
-    this.logger.debug(`SendGrid sent to ${payload.to}: ${messageId}`);
+    this.logger.debug('Email accepted by provider');
     return { messageId };
   }
 }

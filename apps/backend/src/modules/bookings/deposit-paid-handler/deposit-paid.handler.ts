@@ -54,7 +54,7 @@ export class DepositPaidEventHandler {
             this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
             return this.prisma.booking.findFirst({ where: { id: bookingId } });
           });
-          if (!booking) return;
+          if (!booking || booking.lateEntryRecordedAt) return;
 
           // Guard DEPOSIT_CONFIRMED; skip silently if the booking is already
           // DEPOSIT_PAID or in any state that does not allow the transition

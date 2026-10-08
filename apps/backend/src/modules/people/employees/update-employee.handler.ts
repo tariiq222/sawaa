@@ -5,10 +5,12 @@ import { EventBusService } from '../../../infrastructure/events';
 import { EmployeeDeactivatedEvent } from '../events/employee-deactivated.event';
 import { EmployeeReactivatedEvent } from '../events/employee-reactivated.event';
 import { UpdateEmployeeDto } from './update-employee.dto';
+import { assertCanManageEmployeeUser } from '../../identity/shared/assert-can-manage-employee-user';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpdateEmployeeCommand = UpdateEmployeeDto & {
   employeeId: string;
+  actorUserId?: string;
 };
 
 const EMAIL_IN_USE = {
@@ -40,7 +42,7 @@ export class UpdateEmployeeHandler {
     if (!employee) throw new NotFoundException('Employee not found');
 
     const wasActive = employee.isActive;
-    const { employeeId: _e, avatarUrl, email: rawEmail, ...rest } = cmd;
+    const { employeeId: _e, actorUserId, avatarUrl, email: rawEmail, ...rest } = cmd;
     const data: Record<string, unknown> = { ...rest };
     if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
     if (cmd.nameAr || cmd.nameEn) {
@@ -57,6 +59,16 @@ export class UpdateEmployeeHandler {
     let updated;
     try {
       updated = await this.rlsTransaction.withTransaction(async (tx) => {
+        let syncUserEmail = false;
+        if (email !== undefined && employee.userId) {
+          const linkedUser = await tx.user.findUnique({
+            where: { id: employee.userId }, select: { email: true },
+          });
+          if (!linkedUser) throw new NotFoundException('User not found');
+          // Forms may resubmit an unchanged email while editing public profile fields.
+          syncUserEmail = linkedUser.email !== email;
+          if (syncUserEmail) await assertCanManageEmployeeUser(tx, actorUserId, employee.userId);
+        }
         if (email !== undefined) {
           await this.assertEmailAvailable(tx, email, employee.id, employee.userId);
         }
@@ -67,7 +79,7 @@ export class UpdateEmployeeHandler {
           include: { branches: true, services: true },
         });
 
-        if (email !== undefined && employee.userId) {
+        if (syncUserEmail && employee.userId) {
           await tx.user.update({
             where: { id: employee.userId },
             data: { email },

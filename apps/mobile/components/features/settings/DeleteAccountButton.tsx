@@ -1,13 +1,16 @@
 import { useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react-native';
 
 import { authService } from '@/services/auth';
 import { useDir } from '@/hooks/useDir';
-import { getFontName } from '@/theme/fonts';
-import { sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { AppButton } from '@/components/ui/AppButton';
+import { ThemedText } from '@/theme/components/ThemedText';
+import { useTheme } from '@/theme/useTheme';
+import { useReduceMotion } from '@/hooks/useA11y';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 /** Delete-account link that opens a confirmation bottom sheet. */
@@ -20,8 +23,10 @@ export function DeleteAccountButton() {
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
-  const f600 = getFontName(dir.locale, '600');
-  const f700 = getFontName(dir.locale, '700');
+  const { scheme } = useTheme();
+  const roles = getSawaaRoles(scheme);
+  const reduceMotion = useReduceMotion();
+  const { height } = useWindowDimensions();
 
   const closeAccount = async () => {
     if (pending.current) return;
@@ -47,49 +52,39 @@ export function DeleteAccountButton() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('profile.deleteAccount')}
-        accessibilityState={{ disabled: busy }}
+        accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={() => setOpen(true)}
         style={[styles.trigger, { flexDirection: dir.row }]}
       >
         <Trash2 size={20} color={colors.accent.coral} strokeWidth={1.75} />
-        <Text style={[styles.triggerText, { fontFamily: f600 }]}>{t('profile.deleteAccount')}</Text>
+        {busy ? <ActivityIndicator color={colors.teal[700]} /> : null}
+        <ThemedText variant="body">{t('profile.deleteAccount')}</ThemedText>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={styles.backdrop}>
+      <Modal visible={open} transparent animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => setOpen(false)}>
+        <View style={[styles.backdrop, { backgroundColor: roles.scrim }]}>
           <Pressable
+            testID="delete-account-backdrop"
             accessible={false}
             style={StyleSheet.absoluteFill}
             onPress={() => setOpen(false)}
           />
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+          <View accessibilityViewIsModal style={[styles.sheet, { maxHeight: height - insets.top }]}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+              contentContainerStyle={[styles.sheetContent, { paddingBottom: insets.bottom + sawaaSpacing.lg }]}>
             <View style={styles.handle} />
             <View style={styles.iconCircle}>
               <Trash2 size={30} color={colors.accent.coral} strokeWidth={1.75} />
             </View>
-            <Text accessibilityRole="header" style={[styles.title, { fontFamily: f700 }]}>
+            <ThemedText accessibilityRole="header" variant="subheading" style={styles.title}>
               {t('profile.deleteAccountSheetTitle')}
-            </Text>
-            <Text style={[styles.body, { fontFamily: getFontName(dir.locale, '400'), writingDirection: dir.writingDirection }]}>
-              {t('profile.deleteAccountBody')}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('profile.deleteAccountAction')}
-              onPress={confirm}
-              style={styles.destructive}
-            >
-              <Text style={[styles.destructiveText, { fontFamily: f700 }]}>{t('profile.deleteAccountAction')}</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('profile.deleteAccountCancel')}
-              onPress={() => setOpen(false)}
-              style={styles.cancel}
-            >
-              <Text style={[styles.cancelText, { fontFamily: f700 }]}>{t('profile.deleteAccountCancel')}</Text>
-            </Pressable>
+            </ThemedText>
+            <ThemedText variant="body" style={styles.body}>{t('profile.deleteAccountBody')}</ThemedText>
+            <AppButton variant="danger" label={t('profile.deleteAccountAction')} onPress={confirm}
+              disabled={busy} loading={busy} style={styles.action} />
+            <AppButton variant="secondary" label={t('profile.deleteAccountCancel')} onPress={() => setOpen(false)} style={styles.action} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -98,17 +93,15 @@ export function DeleteAccountButton() {
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  trigger: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, paddingHorizontal: 16 },
-  triggerText: { fontSize: 15, color: colors.ink[900] },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: withAlpha(colors.ink[900], 0.45) },
+  trigger: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.sm, minHeight: 48, paddingHorizontal: sawaaSpacing.lg },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.glass.opaqueBg,
     borderTopLeftRadius: sawaaRadius.xl,
     borderTopRightRadius: sawaaRadius.xl,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    alignItems: 'center',
-    gap: 12,
+  },
+  sheetContent: {
+    paddingHorizontal: sawaaSpacing.lg, paddingTop: sawaaSpacing.md, alignItems: 'center', gap: sawaaSpacing.md,
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.ink[400], marginBottom: 6 },
   iconCircle: {
@@ -119,25 +112,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     justifyContent: 'center',
     backgroundColor: withAlpha(colors.accent.coral, 0.16),
   },
-  title: { fontSize: 20, lineHeight: 28, color: colors.ink[900], textAlign: 'center' },
-  body: { fontSize: 15, lineHeight: 24, color: colors.ink[700], textAlign: 'center', marginBottom: 8 },
-  destructive: {
-    alignSelf: 'stretch',
-    minHeight: 56,
-    borderRadius: sawaaRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent.coral,
-  },
-  destructiveText: { fontSize: 17, color: colors.ink[900] },
-  cancel: {
-    alignSelf: 'stretch',
-    minHeight: 56,
-    borderRadius: sawaaRadius.pill,
-    borderWidth: 1,
-    borderColor: colors.teal[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelText: { fontSize: 16, color: colors.teal[700] },
+  title: { textAlign: 'center' },
+  body: { textAlign: 'center', marginBottom: 8 },
+  action: { alignSelf: 'stretch' },
 });

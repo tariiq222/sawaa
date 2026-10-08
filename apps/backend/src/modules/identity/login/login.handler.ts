@@ -7,6 +7,7 @@ import { TokenService, TokenPair } from '../shared/token.service';
 import type { User } from '@prisma/client';
 import type { LoginCommand } from './login.command';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isEffectiveSuperAdmin } from '../shared/effective-super-admin';
 import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
@@ -112,7 +113,7 @@ export class LoginHandler {
       });
     }
 
-    const requiresTwoFactor = user.isSuperAdmin && await this.settings.get<boolean>('security.twoFactor.required');
+    const requiresTwoFactor = isEffectiveSuperAdmin(user) && await this.settings.get<boolean>('security.twoFactor.required');
     if (requiresTwoFactor) {
       const twoFactorChallenge = await this.twoFactorChallenges.create(user.id, user.email.trim().toLowerCase());
       return { user, requiresOtp: true, twoFactorChallenge };

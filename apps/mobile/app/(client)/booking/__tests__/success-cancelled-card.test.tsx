@@ -30,7 +30,7 @@ jest.mock('lucide-react-native', () => {
   return { Calendar: NativeView, Check: NativeView, CircleAlert: NativeView, Clock: NativeView, Hash: NativeView, User: NativeView };
 });
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
-jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string) => key === 'booking.backToHome' ? 'Back to home' : key }) }));
+jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string, options?: import('i18next').TOptions) => require('@/test-utils/translation').translatedTestMessage(key, 'en', options) }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
@@ -62,6 +62,7 @@ jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : '
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
+  useClientInvoice: () => ({ data: undefined, isError: false }),
   useBooking: () => ({ data: { id: 'booking-1', status: 'PENDING' }, isLoading: false, isError: false, refetch: jest.fn() }),
 }));
 jest.mock('@/services/client/payments', () => ({

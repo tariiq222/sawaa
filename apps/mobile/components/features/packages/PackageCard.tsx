@@ -48,7 +48,7 @@ export function PackageCard({ family, onPress }: { family: ClientPackageFamily; 
         </View>
       ) : null}
       {description ? (
-        <Text numberOfLines={3} style={[styles.description, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>{description}</Text>
+        <Text style={[styles.description, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>{description}</Text>
       ) : null}
       {highlights.length > 0 ? (
         <View style={styles.highlights}>
@@ -67,12 +67,12 @@ export function PackageCard({ family, onPress }: { family: ClientPackageFamily; 
 
 const styles = StyleSheet.create({
   card: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  name: { fontSize: sawaaType.subheading.fontSize - 2, lineHeight: 22 },
+  name: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   priceBlock: { gap: 0 },
-  priceCaption: { fontSize: 13 },
-  price: { fontSize: 32, lineHeight: 40 },
-  description: { fontSize: 14, lineHeight: 20 },
+  priceCaption: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
+  price: { fontSize: sawaaType.display.fontSize, lineHeight: sawaaType.display.lineHeight },
+  description: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   highlights: { gap: sawaaSpacing.sm },
   highlight: { alignItems: 'center', gap: 10 },
-  highlightText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  highlightText: { flex: 1, minWidth: 0, fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

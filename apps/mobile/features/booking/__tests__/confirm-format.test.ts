@@ -11,3 +11,8 @@ describe('confirm formatting', () => {
     expect(formatConfirmTime(new Date(2026, 9, 2, 17, 0), false)).toBe('5:00 PM');
   });
 });
+
+it('renders missing timing as a placeholder instead of malformed date text', () => {
+  expect(formatConfirmDate(new Date('invalid'), true)).toBe('—');
+  expect(formatConfirmTime(new Date('invalid'), false)).toBe('—');
+});

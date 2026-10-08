@@ -145,6 +145,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
           onTabChange: handleTimeTabChange,
         }}
         selects={[
+          { key: "isLateEntry", value: String(filters.isLateEntry ?? "all"), placeholder: t("bookings.late.title"), options: [{ value: "all", label: t("bookings.filters.allSources") }, { value: "true", label: t("bookings.late.title") }], onValueChange: (v) => setFilters({ isLateEntry: v === "all" ? "all" : true }) },
           {
             key: "delivery",
             value: filters.delivery,

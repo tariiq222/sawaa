@@ -1,3 +1,4 @@
+import { enBookingsLate } from "./en.bookings-late"
 /**
  * English translations — Sawaa Dashboard
  *
@@ -29,6 +30,7 @@ export const en: Record<string, string> = {
   ...enNav,
   ...enDashboard,
   ...enBookings,
+  ...enBookingsLate,
   ...enClients,
   ...enEmployees,
   ...enServices,

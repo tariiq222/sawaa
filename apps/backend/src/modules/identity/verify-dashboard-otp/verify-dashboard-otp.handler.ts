@@ -9,6 +9,7 @@ import { flattenPermissions } from '../casl/flatten-permissions';
 import { loadSystemRolePermissions } from '../shared/load-system-role-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isEffectiveSuperAdmin } from '../shared/effective-super-admin';
 import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
@@ -137,7 +138,7 @@ export class VerifyDashboardOtpHandler {
       throw new UnauthorizedException('Account is inactive');
     }
 
-    const requiresTwoFactor = user.isSuperAdmin && await this.settings.get<boolean>('security.twoFactor.required');
+    const requiresTwoFactor = isEffectiveSuperAdmin(user) && await this.settings.get<boolean>('security.twoFactor.required');
     if (requiresTwoFactor) {
       await this.twoFactorChallenges.assertValid(cmd.twoFactorChallenge, user.id, identifier);
     }

@@ -80,6 +80,7 @@ export class InitClientPaymentHandler {
     let { invoice, outstanding, payment, existing, programHoldExpiresAt } = reservation;
 
     if (existing) {
+      if(payment.gatewayRef===payment.id) throw new ConflictException({code:"NATIVE_PAYMENT_IN_PROGRESS",message:"A native payment is already in progress"});
       if (payment.status === PaymentStatus.COMPLETED) {
         throw new ConflictException('Payment for this invoice has already been completed');
       }
@@ -287,9 +288,10 @@ export class InitClientPaymentHandler {
           invoiceId: invoice.id,
           status: { in: [PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION] },
         },
-        select: { id: true, status: true },
+        select: { id: true, status: true, gatewayRef: true },
       });
       if (competingReservation) {
+        if(competingReservation.gatewayRef===competingReservation.id) throw new ConflictException({code:"NATIVE_PAYMENT_IN_PROGRESS",message:"A native payment is already in progress"});
         throw new ConflictException('Invoice has another payment pending completion or verification');
       }
 

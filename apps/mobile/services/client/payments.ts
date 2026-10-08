@@ -1,5 +1,5 @@
 import api from '../api';
-import type { ClientBankTransferSettings } from '@sawaa/shared';
+import type { NativePaymentCapabilities, NativePaymentInitResponse, NativePaymentReconcileResponse, ClientBankTransferSettings } from '@sawaa/shared';
 import type { Payment } from '@/types/models';
 
 export interface ReceiptUploadAsset {
@@ -60,6 +60,7 @@ export interface ClientPaymentInitResponse {
 
 export interface ClientInvoice {
   id: string;
+  number?: number;
   status: string;
   total?: number | string;
   currency?: string;
@@ -91,6 +92,21 @@ export interface PaymentsListResponse {
 }
 
 export const clientPaymentsService = {
+  async getNativeConfig(): Promise<NativePaymentCapabilities> {
+    const response = await api.get<NativePaymentCapabilities>('/mobile/client/payments/native/config');
+    return response.data;
+  },
+
+  async initNativePayment(invoiceId: string, method: ClientPaymentInitMethod): Promise<NativePaymentInitResponse> {
+    const response = await api.post<NativePaymentInitResponse>('/mobile/client/payments/native/init', { invoiceId, method });
+    return response.data;
+  },
+
+  async reconcileNativePayment(paymentId: string): Promise<NativePaymentReconcileResponse> {
+    const response = await api.post<NativePaymentReconcileResponse>(`/mobile/client/payments/native/${paymentId}/reconcile`);
+    return response.data;
+  },
+
   async getBankTransferSettings(): Promise<ClientBankTransferSettings> {
     const response = await api.get<ClientBankTransferSettings>(
       '/mobile/client/payments/bank-transfer/settings',

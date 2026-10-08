@@ -1,4 +1,5 @@
-import type { Client } from '@prisma/client';
+import type { Client, Prisma } from '@prisma/client';
+import { employeeClientSelect } from './list-employee-clients.handler';
 
 // Dashboard and mobile clients historically use lowercase enum values
 // ("male" / "female", "walk_in" / "full"). Prisma emits the raw enum names
@@ -46,6 +47,40 @@ export function serializeClient(client: Client, options: SerializeOptions = {}):
     ...safe,
     gender: client.gender ? (client.gender.toLowerCase() as 'male' | 'female') : null,
     accountType: client.accountType === 'FULL' ? 'full' : 'walk_in',
+    lastBooking: options.lastBooking ?? null,
+    nextBooking: options.nextBooking ?? null,
+  };
+}
+
+
+// Match the existing employee-client projection; keep dashboard reference and
+// account-type display fields without exposing medical, national-ID or auth data.
+export const employeeDashboardClientSelect = {
+  ...employeeClientSelect,
+  ref: true,
+  accountType: true,
+} satisfies Prisma.ClientSelect;
+
+type EmployeeDashboardClient = Prisma.ClientGetPayload<{
+  select: typeof employeeDashboardClientSelect;
+}>;
+
+export function serializeEmployeeClient(client: EmployeeDashboardClient, options: SerializeOptions = {}) {
+  return {
+    id: client.id,
+    ref: client.ref,
+    name: client.name,
+    firstName: client.firstName,
+    lastName: client.lastName,
+    phone: client.phone,
+    email: client.email,
+    gender: client.gender ? (client.gender.toLowerCase() as 'male' | 'female') : null,
+    dateOfBirth: client.dateOfBirth,
+    avatarUrl: client.avatarUrl,
+    isActive: client.isActive,
+    createdAt: client.createdAt,
+    updatedAt: client.updatedAt,
+    accountType: client.accountType === 'FULL' ? 'full' as const : 'walk_in' as const,
     lastBooking: options.lastBooking ?? null,
     nextBooking: options.nextBooking ?? null,
   };

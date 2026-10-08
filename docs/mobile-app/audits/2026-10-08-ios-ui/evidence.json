@@ -1,0 +1,162 @@
+{
+  "recordedAt": "2026-10-07T23:05:25.346670+00:00",
+  "policy": "sol61-all-v1",
+  "worktree": "/Users/tariq/.codex/worktrees/mobile-ui-unification/sawaa",
+  "base": "0a6083c1f98b040be57601febb75a5c31b8d1177",
+  "platform": "iOS26.5 Simulator",
+  "device": "Sawaa UI Small QA / iPhone SE3",
+  "simulatorId": "0C73E5C5-B354-44C3-BC26-0BC35694950D",
+  "viewportPoints": [
+    375,
+    667
+  ],
+  "nativeHost": "Debug host from 2026-10-07-native-ui/build-evidence.json; latest JS source via isolated Metro entry",
+  "screenshots": [
+    {
+      "file": "card-ar-dark-font100.jpg",
+      "sha256": "ddf6692242a4a2ea42cba3e16a0cb0b116414b9dad45794fbfceecc69c125c31",
+      "status": "baseline",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 1.0,
+      "note": "SDK card display before change; disabled with empty fields."
+    },
+    {
+      "file": "card-ar-dark-font214-before.jpg",
+      "sha256": "07c1a8d8a02201b53dcb8120ee3a9294adddcbf791f6e52f3c03247ebca12a53",
+      "status": "reproduced-failure",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 2.14,
+      "note": "Pay text vertically clipped inside fixed 50pt SDK button."
+    },
+    {
+      "file": "card-ar-dark-font214-after.jpg",
+      "sha256": "a9f584e4d3a294c04f8ae6bace35bdc3a4a5af1c68057ad161b2985d06c76e9a",
+      "status": "pass-display",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 2.14,
+      "note": "Pay label and SAR125 are fully visible after scrolling; original fixture header retained for comparison."
+    },
+    {
+      "file": "card-en-light-font214-after.jpg",
+      "sha256": "1ffdfeffcd051c7f40e6b5abb876a8ef2159ceec8db068a7a87b4dcd4a3476f5",
+      "status": "pass-display",
+      "locale": "en",
+      "scheme": "light",
+      "fontScale": 2.14,
+      "note": "Pay and SAR125 fully visible; empty fields keep button disabled. Large Card Number placeholder overlaps SDK network marks; wider form acceptance remains open."
+    },
+    {
+      "file": "metadata-en-light-font214.jpg",
+      "sha256": "033500ceb8e8706808153b39eb48ad0d46b9300b20be2e1a6e2837c4c056488c",
+      "status": "runtime-metadata",
+      "locale": "en",
+      "scheme": "light",
+      "fontScale": 2.14,
+      "note": "Native useWindowDimensions reports 375x667, fontScale2.14; QA chrome alone is unscaled."
+    },
+    {
+      "file": "card-ar-dark-font100-after.jpg",
+      "sha256": "0c2f082fcb5310a01d568dcf65b0217c6b051e189ba151a9aca829f7766704e9",
+      "status": "pass-display",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 1.0,
+      "note": "Fresh launch, default native text size; full card form and Pay label visible."
+    },
+    {
+      "file": "apple-unavailable-en-light-font214.jpg",
+      "sha256": "b511830ea8194c3cf891538a8c3e6038caf30204cf4f787d0541f62af30cd0eb",
+      "status": "pass-display",
+      "locale": "en",
+      "scheme": "light",
+      "fontScale": 2.14,
+      "note": "Actual NativePaymentForm unavailable branch with null merchant config; no payment sheet/transaction."
+    },
+    {
+      "file": "apple-fallback-card-en-light-font214.jpg",
+      "sha256": "305dda3a77ec5f412be778976b0a7cb31ab1c18c1a74ec76b60cd052137b134a",
+      "status": "pass-local-action",
+      "locale": "en",
+      "scheme": "light",
+      "fontScale": 2.14,
+      "note": "Pressing fallback renders actual CreditCard via scratch router callback; not actual authenticated checkout acceptance."
+    },
+    {
+      "file": "login-password-en-light-font214-keyboard.jpg",
+      "sha256": "dfcd7bd67075b3dc22060a4d353cdc6e9d627eec08d2b0cc76d6aa0164e44929",
+      "status": "pass-display",
+      "locale": "en",
+      "scheme": "light",
+      "fontScale": 2.14,
+      "note": "Actual review-login renderer, fictional qa-password masked; Sign in visible above native keyboard, no submit."
+    },
+    {
+      "file": "otp-en-light-font214-partial.jpg",
+      "sha256": "a57246816ea063c241b98abf27ecbd8cfcc036e5e1b9bd8ebea5fae4d4665f8f",
+      "status": "pass-display",
+      "locale": "en",
+      "scheme": "light",
+      "fontScale": 2.14,
+      "note": "Actual OTP renderer; incomplete123, digitsLTR, Verify disabled above numeric keyboard; no SMS/request."
+    },
+    {
+      "file": "otp-ar-dark-font214-partial.jpg",
+      "sha256": "3f4a5ebb5ae753d3a5f7f20014f8d95bde7b05e0f768e644c1c1f2ff64f7a973",
+      "status": "pass-display",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 2.14,
+      "note": "Actual Arabic OTP renderer; incomplete123 staysLTR, Verify disabled and visible above native keyboard."
+    },
+    {
+      "file": "settings-ar-dark-font214-about.jpg",
+      "sha256": "89c30d98a9fd4290cdad1cde2761c726eae2900599f37f0a7998720cc9054c40",
+      "status": "partial-display",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 2.14,
+      "note": "Actual settings renderer; semantic native tree exposes application1.0.0/build1. Debug overlays obscure lowest rows; notification read remains pending in guest isolated fixture."
+    },
+    {
+      "file": "card-keyboard-scroll-diagnostic.jpg",
+      "sha256": "ce4bd82e0c183061fdcb889d61f9c08d520e0ef2f5818adff043eb49afb28fec",
+      "status": "unaccepted-diagnostic",
+      "locale": "ar",
+      "scheme": "dark",
+      "fontScale": 2.14,
+      "note": "Native CVC accepted12 and showed validation error; subsequent nested scrolling showed blank content above keyboard. Observed also with scratch outer KeyboardAvoidingView disabled; ownership/cause and authenticated-route reproduction unresolved. No SDK patch or payment behavioral change."
+    }
+  ],
+  "validation": {
+    "mobileTypecheck": {
+      "exitCode": 0
+    },
+    "mobileLint": {
+      "exitCode": 0,
+      "errors": 0,
+      "existingWarnings": 5
+    },
+    "mobileJest": {
+      "exitCode": 0,
+      "suites": 207,
+      "tests": 1461,
+      "coverage": true
+    },
+    "gitDiffCheck": {
+      "exitCode": 0
+    },
+    "independentNarrowReview": "PASS; saved with source diff review under .superpowers/sdd/2026-10-08-ios-acceptance"
+  },
+  "limits": [
+    "All Axios and fetch requests rejected in scratch JS runtime; fictional data and guest session. Product root layouts/auth guards not mounted.",
+    "No actual ApplePay merchant, Wallet sheet, token, provider transaction, webhook, reconciliation, signed device build or TestFlight upload accepted.",
+    "No full70-route native runtime or all size/locale/theme matrix acceptance.",
+    "Known unsigned Debug Keychain entitlement warning from expo-notifications overlays portions of screenshots; push not accepted.",
+    "Card keyboard scrolling and SDK logo/placeholder overlap at214% remain unresolved acceptance gaps.",
+    "Dashboard smoke from previous batch failed loginHTTP429; not rerun or counted as passed; required payment smoke and Moyasar Sandbox gates remain open.",
+    "Usage capture late/incomplete; whole-task token attribution unknown."
+  ]
+}

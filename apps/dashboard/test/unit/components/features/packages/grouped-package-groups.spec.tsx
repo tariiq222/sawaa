@@ -12,8 +12,9 @@ vi.mock("@/hooks/use-services", () => ({
 }))
 vi.mock("@/lib/package-editor-labels", () => ({ packageEmployeeLabel: () => "Test Practitioner" }))
 
-function Harness({ values }: { values: GroupedPackageFormData }) {
-  const form = useForm<GroupedPackageFormData>({ defaultValues: values })
+function Harness({ values, onForm }: { values: GroupedPackageFormData; onForm?: (form: ReturnType<typeof useForm<GroupedPackageFormData>>) => void }) {
+  const form = useForm<GroupedPackageFormData>({ defaultValues: values, mode: "onBlur" })
+  onForm?.(form)
   return <FormProvider {...form}><GroupedPackageGroups form={form} translateError={(message) => message} /></FormProvider>
 }
 
@@ -49,5 +50,28 @@ describe("GroupedPackageGroups", () => {
     expect(confirm).toHaveBeenCalled()
     expect(screen.getAllByRole("button", { name: "packages.grouped.groups.remove" })).toHaveLength(2)
     confirm.mockRestore()
+  })
+
+  it("keeps «no dependency» as null when the dependency select loses focus", () => {
+    let form: ReturnType<typeof useForm<GroupedPackageFormData>> | undefined
+    render(<Harness values={valuesWithTwoSessions()} onForm={(value) => { form = value }} />)
+    const select = document.getElementById("groups.0.dependsOnGroupKey") as HTMLSelectElement
+    fireEvent.focus(select)
+    fireEvent.blur(select)
+    expect(form?.getValues("groups.0.dependsOnGroupKey")).toBeNull()
+    fireEvent.change(select, { target: { value: "" } })
+    fireEvent.blur(select)
+    expect(form?.getValues("groups.0.dependsOnGroupKey")).toBeNull()
+  })
+
+  it("does not overwrite a saved practitioner that is missing from the options on blur", () => {
+    let form: ReturnType<typeof useForm<GroupedPackageFormData>> | undefined
+    const values = valuesWithTwoSessions()
+    values.groups[0].employeeId = "employee-inactive"
+    render(<Harness values={values} onForm={(value) => { form = value }} />)
+    const select = document.getElementById("groups.0.employeeId") as HTMLSelectElement
+    fireEvent.focus(select)
+    fireEvent.blur(select)
+    expect(form?.getValues("groups.0.employeeId")).toBe("employee-inactive")
   })
 })

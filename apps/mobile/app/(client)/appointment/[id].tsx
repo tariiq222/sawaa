@@ -13,9 +13,10 @@ import {
   Video,
 } from 'lucide-react-native';
 
-import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { useBooking } from '@/hooks/queries';
 import { BookingCancellation } from '@/components/features/BookingCancellation';
@@ -39,6 +40,7 @@ export default function AppointmentDetailScreen() {
   const handleBack = () => goBackOrHome(router, '/(client)/(tabs)/appointments');
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
   const f700 = getFontName(dir.locale, '700');
@@ -96,8 +98,11 @@ export default function AppointmentDetailScreen() {
   if (isLoading || isError || !booking) {
     return (
       <AquaBackground>
-        <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
-          <ScreenHeader title={t('appointments.details')} onBack={handleBack} />
+        <View style={[styles.screen, { paddingTop: insets.top + sawaaSpacing.md }]}>
+          <View style={styles.header}>
+            <ScreenHeader title={t('appointments.details')} onBack={handleBack} />
+          </View>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + sawaaSpacing['2xl'] }]}>
           <EmptyState
             icon={isError ? 'alert-circle-outline' : 'calendar-outline'}
             title={t(isLoading ? 'common.loading' : isError ? 'common.error' : 'common.noResults')}
@@ -105,40 +110,45 @@ export default function AppointmentDetailScreen() {
             actionLabel={isError ? t('common.retry') : undefined}
             onAction={isError ? () => { void refetch(); } : undefined}
           />
-        </ScrollView>
+          </ScrollView>
+        </View>
       </AquaBackground>
     );
   }
 
   return (
     <AquaBackground>
+      <View style={[styles.screen, { paddingTop: insets.top + sawaaSpacing.md }]}>
+        <View style={styles.header}>
+          <ScreenHeader title={t('appointments.details')} onBack={handleBack} />
+        </View>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('appointments.details')} onBack={handleBack} />
-
-        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.summary}>
-            <View style={[styles.summaryTop, { flexDirection: dir.row }]}>
-              <DateBox iso={booking.scheduledAt} fallback={t('appointments.toBeScheduled')} />
-              <View style={styles.summaryMid}>
-                <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {scheduledTime ?? t('appointments.toBeScheduled')}
-                </Text>
-                {serviceName ? (
-                  <Text testID="appointment-service-name" numberOfLines={2} style={[styles.therapist, { color: colors.ink[900], fontFamily: f500, textAlign: dir.textAlign }]}>
-                    {serviceName}
-                  </Text>
-                ) : null}
-                <Text numberOfLines={1} style={[styles.therapist, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
-                  {t('appointments.with', { name: therapistName })}
-                </Text>
-              </View>
+            <View style={{ alignItems: dir.alignEnd }}>
               <StatusPill
                 status={booking.status}
                 label={STATUS_LABEL_MAP[booking.status] ? t(STATUS_LABEL_MAP[booking.status]) : '—'}
               />
+            </View>
+            <View style={[styles.summaryTop, { flexDirection: dir.row }]}>
+              <DateBox iso={booking.scheduledAt} fallback={t('appointments.toBeScheduled')} />
+              <View style={styles.summaryMid}>
+                <Text style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                  {scheduledTime ?? t('appointments.toBeScheduled')}
+                </Text>
+                {serviceName ? (
+                  <Text testID="appointment-service-name" style={[styles.service, { color: colors.ink[900], fontFamily: f500, textAlign: dir.textAlign }]}>
+                    {serviceName}
+                  </Text>
+                ) : null}
+                <Text style={[styles.therapist, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                  {t('appointments.with', { name: therapistName })}
+                </Text>
+              </View>
             </View>
             {canShowZoom ? (
               <JoinVideoCallButton
@@ -154,8 +164,8 @@ export default function AppointmentDetailScreen() {
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
-          <InfoRows rows={rows} />
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
+          <InfoRows rows={rows} layout="stacked" />
           {isOnline ? (
             <Text style={[styles.hint, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
               {t('appointments.locationRemote')}
@@ -184,17 +194,21 @@ export default function AppointmentDetailScreen() {
 
         <BookingCancellation bookingId={booking.id} canCancel={canCancel} persistedRefund={booking.cancellationRefund} />
       </ScrollView>
+      </View>
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: sawaaSpacing.xl },
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
-  summary: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
+  summary: { padding: sawaaSpacing.xl, gap: sawaaSpacing.md },
   summaryTop: { alignItems: 'center', gap: sawaaSpacing.md },
-  summaryMid: { flex: 1, minWidth: 0, gap: 2 },
-  time: { fontSize: 20, lineHeight: 28 },
-  therapist: { fontSize: 14, lineHeight: 20 },
+  summaryMid: { flex: 1, minWidth: 0, gap: sawaaSpacing.xs },
+  time: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  service: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  therapist: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   section: { gap: sawaaSpacing.sm },
-  hint: { fontSize: 13, lineHeight: 18, paddingHorizontal: sawaaSpacing.xs },
+  hint: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, paddingHorizontal: sawaaSpacing.xs },
 });

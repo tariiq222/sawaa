@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { BookingPaymentIntent } from "./booking-payment-intent"
+import { LateSessionDetails } from "./late-session-details"
 import {
   User03Icon,
   Call02Icon,
@@ -129,6 +131,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
 
   return (
     <div className="flex flex-col gap-3">
+      <LateSessionDetails booking={booking} />
       <div className="grid grid-cols-2 gap-3">
         <div className={card}>
           <div className={cardHeader}><p className={cardTitle}>{t("detail.client")}</p></div>
@@ -164,6 +167,13 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
           </div>
           <div className="px-5 pb-3 pt-1 flex flex-col gap-2 border-t border-border/60">
             <DetailRow label={t("detail.bookedAt")} value={bookedAt} numeric />
+            {booking.payAtClinic === true && <DetailRow label={t("detail.payment")} value={
+              <span className="inline-flex flex-col items-start gap-1">
+                <BookingPaymentIntent payAtClinic={booking.payAtClinic} />
+                {!booking.payment && !booking.historicalPayment && !booking.packageFunding &&
+                  <PaymentStatusBadge status="unpaid" label={t("bookings.col.paymentStatus.unpaid")} />}
+              </span>
+            } />}
             <DetailRow
               label={t("detail.bookingChannel")}
               value={t(bookingChannelKey(booking.source))}

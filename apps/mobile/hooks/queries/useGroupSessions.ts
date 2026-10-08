@@ -5,7 +5,7 @@ import {
   type EnrollInProgramResponse,
   type Program,
 } from '@/services/client/group-sessions';
-import { clientBookingsKeys } from './useClientBookings';
+import { invalidateClientBookingResources } from './invalidateClientBookingResources';
 
 export const programKeys = {
   all: ['programs'] as const,
@@ -39,7 +39,7 @@ export function useBookGroupSession() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: programKeys.lists() }),
         queryClient.invalidateQueries({ queryKey: programKeys.detail(id) }),
-        queryClient.invalidateQueries({ queryKey: clientBookingsKeys.all }),
+        invalidateClientBookingResources(queryClient),
       ]);
     },
   });

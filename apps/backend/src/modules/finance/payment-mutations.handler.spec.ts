@@ -29,6 +29,7 @@ const buildPaymentRow = (
 const buildPrisma = () => {
   const prisma: {
     payment: {
+      findUnique: jest.Mock;
       findFirst: jest.Mock;
       findFirstOrThrow: jest.Mock;
       findUniqueOrThrow: jest.Mock;
@@ -62,6 +63,7 @@ const buildPrisma = () => {
     $queryRaw: jest.Mock;
   } = {
     payment: {
+      findUnique: jest.fn().mockResolvedValue({ invoiceId: "inv-1" }),
       findFirst: jest.fn(),
       findFirstOrThrow: jest.fn(),
       findUniqueOrThrow: jest.fn(),
@@ -225,6 +227,7 @@ describe("RefundPaymentHandler", () => {
         refundedAmount: 0,
         currency: "SAR",
       })
+      .mockResolvedValueOnce({ amount: 100, refundedAmount: 0 })
       .mockResolvedValueOnce(refunded);
     prisma.payment.updateMany.mockResolvedValue({ count: 1 });
     prisma.payment.update.mockResolvedValue(refunded);
@@ -299,7 +302,7 @@ describe("RefundPaymentHandler", () => {
 
   it("throws NotFoundException when payment not found", async () => {
     const prisma = buildPrisma();
-    prisma.$queryRaw.mockResolvedValueOnce([]);
+    prisma.payment.findUnique.mockResolvedValueOnce(null);
 
     await expect(
       new RefundPaymentHandler(
@@ -313,7 +316,7 @@ describe("RefundPaymentHandler", () => {
 
   it("throws BadRequestException when payment is not COMPLETED", async () => {
     const prisma = buildPrisma();
-    prisma.$queryRaw.mockResolvedValueOnce([
+    prisma.$queryRaw.mockResolvedValueOnce([{ id: "inv-1" }]).mockResolvedValueOnce([
       { ...buildPaymentRow(), status: PaymentStatus.PENDING },
     ]);
 

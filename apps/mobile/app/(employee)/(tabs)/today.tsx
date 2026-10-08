@@ -64,7 +64,7 @@ export default function TodayScreen() {
 
   const renderItem = ({ item, index }: { item: Booking; index: number }) => (
     <Animated.View
-      entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
+      entering={reduceMotion ? undefined : FadeInDown.delay(240 + Math.min(index, 6) * 70).duration(600).easing(Easing.out(Easing.cubic))}
     >
       <EmployeeAppointmentCard
         booking={item}
@@ -163,13 +163,12 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     color: colors.ink[700],
   },
   greeting: {
-    fontSize: 28,
-    lineHeight: 38,
+    fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
     marginTop: sawaaSpacing.xs,
   },
   statsRow: { gap: sawaaSpacing.sm },
-  statCard: { flex: 1 },
+  statCard: { flex: 1, minWidth: 0 },
   statValue: {
     fontSize: sawaaType.heading.fontSize,
     lineHeight: sawaaType.heading.lineHeight,
@@ -178,8 +177,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   statSkeleton: { alignSelf: 'center', marginVertical: sawaaSpacing.xs },
   statLabel: {
-    fontSize: sawaaType.caption.fontSize + 1,
-    lineHeight: sawaaType.caption.lineHeight + 2,
+    fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight,
     color: colors.ink[700],
     textAlign: 'center',
     marginTop: sawaaSpacing.xs,

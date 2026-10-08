@@ -239,11 +239,11 @@ describe('VerifyDashboardOtpHandler', () => {
     expect(result.user.isSuperAdmin).toBe(true);
   });
 
-  it('requires and consumes the password-step challenge for a super-admin when 2FA is enabled', async () => {
+  it.each([{ role: 'SUPER_ADMIN', isSuperAdmin: false }, { role: 'ADMIN', isSuperAdmin: true }])('requires and consumes password proof for $role / $isSuperAdmin', async (authority) => {
     prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.otpCode.update.mockResolvedValue({});
-    prisma.user.findFirst.mockResolvedValue(createUser({ isSuperAdmin: true }));
+    prisma.user.findFirst.mockResolvedValue(createUser(authority));
     tokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
     settings.get.mockResolvedValue(true);
 
@@ -255,6 +255,17 @@ describe('VerifyDashboardOtpHandler', () => {
 
     expect(challenges.assertValid).toHaveBeenCalledWith('6f9619ff-8b86-d011-b42d-00cf4fc964ff', 'u-1', 'test@test.com');
     expect(challenges.consume).toHaveBeenCalledWith('6f9619ff-8b86-d011-b42d-00cf4fc964ff', 'u-1', 'test@test.com');
+  });
+
+  it.each([{ role: 'SUPER_ADMIN', isSuperAdmin: false }, { role: 'ADMIN', isSuperAdmin: true }])('rejects OTP-only token issuance for $role / $isSuperAdmin', async (authority) => {
+    prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.user.findFirst.mockResolvedValue(createUser(authority));
+    settings.get.mockResolvedValue(true);
+    challenges.assertValid.mockRejectedValue(new UnauthorizedException('Password proof required'));
+    await expect(handler.execute({ identifier: 'test@test.com', code: '123456' })).rejects.toThrow(UnauthorizedException);
+    expect(tokens.issueTokenPair).not.toHaveBeenCalled();
+    expect(prisma.otpCode.updateMany).not.toHaveBeenCalled();
   });
 
   it('should handle user with customRole', async () => {

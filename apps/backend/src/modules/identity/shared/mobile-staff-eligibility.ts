@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { isEffectiveSuperAdmin } from './effective-super-admin';
 
 type EmployeeReader = { employee: Pick<Prisma.TransactionClient['employee'], 'findFirst'> };
 
@@ -11,10 +12,10 @@ type EmployeeReader = { employee: Pick<Prisma.TransactionClient['employee'], 'fi
 export async function isMobileStaffEligible(
   db: EmployeeReader,
   settings: Pick<PlatformSettingsService, 'get'>,
-  user: { id: string; isSuperAdmin?: boolean | null },
+  user: { id: string; role: string; isSuperAdmin?: boolean | null },
 ): Promise<boolean> {
   const practitioner = await db.employee.findFirst({ where: { userId: user.id, isActive: true }, select: { id: true } });
   if (!practitioner) return false;
-  if (user.isSuperAdmin === true && (await settings.get<boolean>('security.twoFactor.required')) === true) return false;
+  if (isEffectiveSuperAdmin(user) && (await settings.get<boolean>('security.twoFactor.required')) === true) return false;
   return true;
 }

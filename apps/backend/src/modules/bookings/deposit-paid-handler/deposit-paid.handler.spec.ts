@@ -192,3 +192,12 @@ it('retains an existing confirmation timestamp and meeting without reprovisionin
   expect(prisma.booking.updateMany.mock.calls[0][0].data.confirmedAt).toEqual(confirmedAt);
   expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
 });
+
+it.each([BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED])('preserves marked late status %s without status log or Zoom request', async (status) => {
+  const { prisma, getSubscriber } = buildHandler();
+  prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status, deliveryType: DeliveryType.ONLINE, lateEntryRecordedAt: new Date() });
+  await getSubscriber()(makeEnvelope());
+  expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+  expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  expect(prisma.outboxEvent.upsert).not.toHaveBeenCalled();
+});

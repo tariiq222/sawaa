@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
 import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
-import { clientBookingsKeys } from '@/hooks/queries/useClientBookings';
+import { invalidateClientBookingResources } from '@/hooks/queries/invalidateClientBookingResources';
 import { queryClient } from '@/services/query-client';
 import {
   resolveExistingBookingCheckout,
@@ -11,8 +11,8 @@ import {
 } from '@/features/booking/existing-booking-checkout-state';
 
 export { resolveExistingBookingCheckout } from '@/features/booking/existing-booking-checkout-state';
-export { canResumeHostedPayment } from '@/features/booking/existing-booking-checkout-state';
-export { canStartHostedPayment } from '@/features/booking/existing-booking-checkout-state';
+export { canResumeHostedPayment, canResumeHostedPayment as canResumeOnlinePayment } from '@/features/booking/existing-booking-checkout-state';
+export { canStartHostedPayment, canStartHostedPayment as canStartOnlinePayment } from '@/features/booking/existing-booking-checkout-state';
 export type { ExistingBookingCheckoutInput, ExistingBookingCheckoutPhase } from '@/features/booking/existing-booking-checkout-state';
 
 export interface ExistingBookingCheckoutSnapshot {
@@ -106,8 +106,7 @@ export function useExistingBookingCheckout({ bookingId, invoiceId }: UseExisting
 
   useEffect(() => {
     if (!bookingId || !['success', 'deposit_confirmed', 'failed', 'cancelled', 'expired'].includes(phase)) return;
-    void queryClient.invalidateQueries({ queryKey: clientBookingsKeys.all });
-    void queryClient.invalidateQueries({ queryKey: clientBookingsKeys.detail(bookingId) });
+    void invalidateClientBookingResources(queryClient);
   }, [bookingId, phase]);
 
   useEffect(() => {

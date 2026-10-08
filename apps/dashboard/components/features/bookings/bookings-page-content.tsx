@@ -1,5 +1,7 @@
 "use client"
 
+import { LateSessionForm } from "./late-session-form"
+import { useAuth } from "@/components/providers/auth-provider"
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -22,6 +24,8 @@ export function BookingsPageContent() {
   const searchParams = useSearchParams()
   const newParam = searchParams.get("new")
   const { t } = useLocale()
+  const { canDo } = useAuth()
+  const [lateEntry, setLateEntry] = useState(false)
   const titleLabel = t("nav.bookings")
   const queryClient = useQueryClient()
 
@@ -55,7 +59,8 @@ export function BookingsPageContent() {
             title={titleLabel}
             description={creating ? t("bookings.create.pageTitle") : t("bookings.description")}
           >
-            {!creating && (
+            {!creating && !lateEntry && canDo("Booking", "create") && <Button variant="outline" onClick={() => setLateEntry(true)}>{t("bookings.late.title")}</Button>}
+            {!creating && !lateEntry && (
               <Button
                 variant="accent"
                 size="lg"
@@ -69,7 +74,7 @@ export function BookingsPageContent() {
           </PageHeader>
         </div>
 
-        {creating ? (
+        {lateEntry ? <LateSessionForm onCancel={() => setLateEntry(false)} onOpenExisting={booking => { setLateEntry(false); handleRowClick(booking) }} onSaved={booking => { setLateEntry(false); handleRowClick(booking); refresh() }} /> : creating ? (
           <BookingCreateView
             onSuccess={() => { setCreating(false); refresh() }}
             onCancel={() => setCreating(false)}

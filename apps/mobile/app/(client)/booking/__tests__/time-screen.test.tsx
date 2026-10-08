@@ -1,4 +1,5 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
@@ -21,7 +22,7 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('lucide-react-native', () => {
   const { View: NativeView } = require('react-native') as typeof import('react-native');
-  return { Building2: NativeView, Check: NativeView, ChevronRight: NativeView, Video: NativeView };
+  return { Building2: NativeView, Check: NativeView, ChevronLeft: NativeView, ChevronRight: NativeView, Video: NativeView };
 });
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -79,8 +80,12 @@ jest.mock('@/features/booking/use-booking-slots', () => ({
 
 import BookingTypeScreen from '../[serviceId]';
 
+let queryClient: QueryClient;
+function wrapper({ children }: React.PropsWithChildren) { return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>; }
+afterEach(() => queryClient.clear());
 describe('BookingTypeScreen', () => {
   beforeEach(() => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     mockPush.mockClear();
     mockIsRTL = false;
     mockOptions = [
@@ -90,7 +95,7 @@ describe('BookingTypeScreen', () => {
   });
 
   it('titles options by visit type with localized minutes and the backend label', async () => {
-    const screen = render(<BookingTypeScreen />);
+    const screen = render(<BookingTypeScreen />, { wrapper });
     await waitFor(() => expect(screen.getByText('booking.inPerson')).toBeTruthy());
     expect(screen.getByText('45 min')).toBeTruthy();
     expect(screen.getByText('booking.online')).toBeTruthy();
@@ -100,12 +105,12 @@ describe('BookingTypeScreen', () => {
 
   it('uses Arabic-Indic digits for minutes in RTL', async () => {
     mockIsRTL = true;
-    const screen = render(<BookingTypeScreen />);
+    const screen = render(<BookingTypeScreen />, { wrapper });
     await waitFor(() => expect(screen.getByText('٤٥ min')).toBeTruthy());
   });
 
   it('forwards steps to the confirm route', async () => {
-    const screen = render(<BookingTypeScreen />);
+    const screen = render(<BookingTypeScreen />, { wrapper });
     await waitFor(() => expect(screen.getByText('booking.inPerson')).toBeTruthy());
     fireEvent.press(screen.getByText('booking.inPerson'));
     fireEvent.press(screen.getByText('go'));
@@ -118,7 +123,7 @@ describe('BookingTypeScreen', () => {
       { deliveryType: 'IN_PERSON', durationOptionId: 'd1', durationMins: 60, price: 30000, currency: 'SAR', label: '60 دقيقة' },
       { deliveryType: 'ONLINE', durationOptionId: 'd2', durationMins: 30, price: 20000, currency: 'SAR', label: '٣٠ دقيقة' },
     ];
-    const screen = render(<BookingTypeScreen />);
+    const screen = render(<BookingTypeScreen />, { wrapper });
     await waitFor(() => expect(screen.getByText('٦٠ min')).toBeTruthy());
     expect(screen.getByText('٣٠ min')).toBeTruthy();
     expect(screen.queryByText(/·/)).toBeNull();

@@ -640,6 +640,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/bookings/late-entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a previous session and its actual financial facts */
+        post: operations["DashboardBookingsController_recordLateSession_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/late-entry/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get permitted late session VAT and manual payment context */
+        get: operations["DashboardBookingsController_getLateSessionContext_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/bookings/matching-credits": {
         parameters: {
             query?: never;
@@ -3260,6 +3294,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/email-entry/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a mobile email ownership code */
+        post: operations["MobileEmailEntryController_requestEmail_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/request-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bind details and send a phone ownership code */
+        post: operations["MobileEmailEntryController_requestPhoneCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/resend-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace a mobile phone ownership challenge */
+        post: operations["MobileEmailEntryController_resendPhoneCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify email ownership and determine the next step */
+        post: operations["MobileEmailEntryController_verifyEmail_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/email-entry/verify-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify phone ownership and issue a client session */
+        post: operations["MobileEmailEntryController_verifyPhoneCode_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/logout": {
         parameters: {
             query?: never;
@@ -3271,6 +3390,23 @@ export interface paths {
         put?: never;
         /** Revoke native mobile sessions */
         post: operations["MobileClientAuthController_logout_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/password-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log in a customer with email or phone and password */
+        post: operations["MobileClientAuthController_loginWithPassword_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3707,6 +3843,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/client/payments/native/{paymentId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reconcile an owned native payment with Moyasar */
+        post: operations["MobileClientPaymentsController_reconcileNativePayment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/native/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get native payment capabilities */
+        get: operations["MobileClientPaymentsController_getNativeConfig_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/native/init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve or resume a native invoice payment */
+        post: operations["MobileClientPaymentsController_initNativePayment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/client/payments/package-purchases/init": {
         parameters: {
             query?: never;
@@ -3718,6 +3905,23 @@ export interface paths {
         put?: never;
         /** Initialize a Moyasar payment to self-purchase a session package */
         post: operations["MobileClientPaymentsController_initPackagePurchaseEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/payments/package-purchases/native/init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve or resume a native package purchase payment */
+        post: operations["MobileClientPaymentsController_initNativePackagePurchase_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8695,6 +8899,123 @@ export interface components {
              */
             sortOrder?: number;
         };
+        EmailEntryChallengeDto: {
+            /**
+             * Format: uuid
+             * @description Opaque identifier of the delivered email ownership challenge
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Email challenge lifetime in seconds
+             * @example 300
+             * @enum {number}
+             */
+            expiresIn: 300;
+            /**
+             * @description Masked destination for the email ownership code
+             * @example p***@example.test
+             */
+            maskedEmail: string;
+            /**
+             * @description Minimum number of seconds before requesting another email code
+             * @example 60
+             * @enum {number}
+             */
+            retryAfterSeconds: 60;
+        };
+        EmailEntryContinueDto: {
+            /**
+             * @description Opaque continuation secret held only in memory; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Normalized email whose ownership has been proven
+             * @example person@example.test
+             */
+            email: string;
+            /**
+             * @description Maximum continuation lifetime in seconds; subsequent sends never extend it
+             * @example 600
+             * @enum {number}
+             */
+            expiresIn: 600;
+            /**
+             * @description Required next step after successful email ownership proof (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "EmailEntryContinueDto";
+        };
+        EmailEntryPhoneChallengeDto: {
+            /**
+             * @description Rotated continuation secret replacing the previous value after accepted delivery
+             * @example yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+             */
+            continuationToken: string;
+            /**
+             * @description Remaining phone challenge lifetime in seconds, capped by the original continuation expiry
+             * @example 299
+             */
+            expiresIn: number;
+            /**
+             * @description Masked destination of the phone ownership code
+             * @example +966***78
+             */
+            maskedPhone: string;
+            /**
+             * Format: uuid
+             * @description Opaque identifier of the current delivered phone challenge
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            phoneChallengeId: string;
+            /**
+             * @description Minimum number of seconds before requesting another phone code
+             * @example 60
+             * @enum {number}
+             */
+            retryAfterSeconds: 60;
+        };
+        EmailEntrySessionDto: {
+            /**
+             * @description Authenticated outcome discriminator (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "EmailEntrySessionDto";
+            /**
+             * @description Session namespace used to select the matching profile and app navigation
+             * @example client
+             * @enum {string}
+             */
+            sessionKind: "client" | "staff";
+            /**
+             * @description Native access and refresh token pair
+             * @example {
+             *       "accessToken": "synthetic-access-token",
+             *       "refreshToken": "synthetic-refresh-token"
+             *     }
+             */
+            tokens: components["schemas"]["EmailEntryTokensDto"];
+        };
+        EmailEntryTokensDto: {
+            /**
+             * @description Native access token for the returned session namespace
+             * @example synthetic-access-token
+             */
+            accessToken: string;
+            /**
+             * @description Native refresh token to persist only after authenticated success
+             * @example synthetic-refresh-token
+             */
+            refreshToken: string;
+        };
+        EmailEntryUnavailableDto: {
+            /**
+             * @description Generic outcome when this identity cannot continue through email entry (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "EmailEntryUnavailableDto";
+        };
         EmployeeAvailabilityExceptionResponseDto: {
             /**
              * Format: date-time
@@ -9137,6 +9458,21 @@ export interface components {
              * @enum {string}
              */
             type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES" | "OVERVIEW" | "CLIENTS" | "SERVICES" | "RATINGS";
+        };
+        GetLateSessionContextResponseDto: {
+            /**
+             * @description Enabled methods permitted for manual receipt recording
+             * @example [
+             *       "CASH",
+             *       "BANK_TRANSFER"
+             *     ]
+             */
+            paymentMethods: ("CASH" | "BANK_TRANSFER" | "MADA" | "TABBY")[];
+            /**
+             * @description Current VAT rate as a fraction, using the existing center policy
+             * @example 0
+             */
+            vatRate: number;
         };
         GlobalDiscountDto: {
             /**
@@ -9824,6 +10160,23 @@ export interface components {
              */
             serviceId: string;
         };
+        MobilePasswordLoginDto: {
+            /**
+             * @description Client email address (provide either email or phone, not both)
+             * @example client@example.com
+             */
+            email?: string;
+            /**
+             * @description Account password
+             * @example SecurePass123
+             */
+            password: string;
+            /**
+             * @description Saudi mobile number (any common format; normalized to E.164). Provide either email or phone, not both.
+             * @example +966501234567
+             */
+            phone?: string;
+        };
         MobileRateBookingDto: {
             /**
              * @description Optional comment (max 2000 chars)
@@ -10147,6 +10500,218 @@ export interface components {
              * @example public-booking
              */
             source?: string;
+        };
+        NativeApplePayConfigDto: {
+            /**
+             * @description Merchant country code used for Apple Pay
+             * @example SA
+             * @enum {string}
+             */
+            countryCode: "SA";
+            /**
+             * @description Merchant display name shown on the Apple Pay payment sheet
+             * @example Example Counseling Center
+             */
+            label: string;
+            /**
+             * @description Apple Pay merchant identifier that must match the app entitlement
+             * @example merchant.sa.example.app
+             */
+            merchantId: string;
+        };
+        NativePackagePurchaseInitResponseDto: {
+            /**
+             * @description Server-owned SDK configuration for this reserved payment attempt
+             * @example {
+             *       "amount": 5000,
+             *       "applePay": null,
+             *       "currency": "SAR",
+             *       "description": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+             *       "enabled": true,
+             *       "givenId": "11111111-1111-4111-8111-111111111111",
+             *       "isLive": false,
+             *       "publishableKey": "pk_test_example000000000000000000000000",
+             *       "supportedNetworks": [
+             *         "mada",
+             *         "visa",
+             *         "mastercard"
+             *       ]
+             *     }
+             */
+            config: components["schemas"]["NativePaymentConfigurationDto"];
+            /**
+             * Format: uuid
+             * @description Owned invoice UUID associated with the reserved payment
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            invoiceId: string;
+            /**
+             * Format: uuid
+             * @description Reserved internal payment UUID used for native reconciliation
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            paymentId: string;
+            /**
+             * Format: uuid
+             * @description Package purchase UUID associated with the invoice and native payment attempt
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            purchaseId: string;
+        };
+        NativePaymentCapabilitiesDto: {
+            /**
+             * @description Server Apple Pay configuration, or null when unavailable; device capability is checked separately
+             * @example {
+             *       "countryCode": "SA",
+             *       "label": "Example Counseling Center",
+             *       "merchantId": "merchant.sa.example.app"
+             *     }
+             */
+            applePay: components["schemas"]["NativeApplePayConfigDto"] | null;
+            /**
+             * @description Whether online payments are enabled and a valid native publishable key is configured
+             * @example true
+             */
+            enabled: boolean;
+            /**
+             * @description Whether the configured Moyasar account uses live mode instead of test mode
+             * @example false
+             */
+            isLive: boolean;
+            /**
+             * @description Card networks supported by native checkout
+             * @example [
+             *       "mada",
+             *       "visa",
+             *       "mastercard"
+             *     ]
+             */
+            supportedNetworks: ("mada" | "visa" | "mastercard")[];
+        };
+        NativePaymentConfigurationDto: {
+            /**
+             * @description Server-owned payment amount in integer halalas
+             * @example 5000
+             */
+            amount: number;
+            /**
+             * @description Server Apple Pay configuration, or null when unavailable; device capability is checked separately
+             * @example {
+             *       "countryCode": "SA",
+             *       "label": "Example Counseling Center",
+             *       "merchantId": "merchant.sa.example.app"
+             *     }
+             */
+            applePay: components["schemas"]["NativeApplePayConfigDto"] | null;
+            /**
+             * @description Currency code from the invoice for the reserved payment
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Server-generated payment description identifying the invoice
+             * @example Invoice payment - 22222222-2222-4222-8222-222222222222
+             */
+            description: string;
+            /**
+             * @description Whether online payments are enabled and a valid native publishable key is configured
+             * @example true
+             */
+            enabled: boolean;
+            /**
+             * Format: uuid
+             * @description Server-reserved payment UUID passed to Moyasar as the payment identity
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            givenId: string;
+            /**
+             * @description Whether the configured Moyasar account uses live mode instead of test mode
+             * @example false
+             */
+            isLive: boolean;
+            /**
+             * @description Public Moyasar SDK key matching the configured live or test mode
+             * @example pk_test_example000000000000000000000000
+             */
+            publishableKey: string;
+            /**
+             * @description Card networks supported by native checkout
+             * @example [
+             *       "mada",
+             *       "visa",
+             *       "mastercard"
+             *     ]
+             */
+            supportedNetworks: ("mada" | "visa" | "mastercard")[];
+        };
+        NativePaymentInitResponseDto: {
+            /**
+             * @description Server-owned SDK configuration for this reserved payment attempt
+             * @example {
+             *       "amount": 5000,
+             *       "applePay": null,
+             *       "currency": "SAR",
+             *       "description": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+             *       "enabled": true,
+             *       "givenId": "11111111-1111-4111-8111-111111111111",
+             *       "isLive": false,
+             *       "publishableKey": "pk_test_example000000000000000000000000",
+             *       "supportedNetworks": [
+             *         "mada",
+             *         "visa",
+             *         "mastercard"
+             *       ]
+             *     }
+             */
+            config: components["schemas"]["NativePaymentConfigurationDto"];
+            /**
+             * Format: uuid
+             * @description Owned invoice UUID associated with the reserved payment
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            invoiceId: string;
+            /**
+             * Format: uuid
+             * @description Reserved internal payment UUID used for native reconciliation
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            paymentId: string;
+        };
+        NativePaymentReconcileResponseDto: {
+            /**
+             * @description True only after provider404 for a current payable native reservation
+             * @example true
+             */
+            canCreatePayment?: boolean;
+            /**
+             * Format: uuid
+             * @description Invoice UUID associated with the reconciled payment
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            invoiceId: string;
+            /**
+             * Format: uuid
+             * @description Owned internal payment UUID whose provider state was reconciled
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            paymentId: string;
+            /**
+             * @description Whether the payment requires center review before the client proceeds or retries
+             * @example false
+             */
+            requiresReview: boolean;
+            /**
+             * @description Internal payment status after checking the authoritative provider state
+             * @example PENDING
+             * @enum {string}
+             */
+            status: "PENDING" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+            /**
+             * @description Why a pending reservation cannot be resumed after provider404
+             * @example BOOKING_EXPIRED
+             * @enum {string}
+             */
+            unavailableReason?: "BOOKING_EXPIRED" | "BOOKING_CLOSED" | "INVOICE_CLOSED";
         };
         NativeSessionDto: {
             /**
@@ -10855,6 +11420,96 @@ export interface components {
             /** @description Card title in English. */
             titleEn: string | null;
         };
+        RecordLateSessionDto: {
+            /**
+             * @description Actual net amount in integer halalas
+             * @example 40000
+             */
+            amountHalalas: number;
+            /**
+             * Format: uuid
+             * @description Existing branch ID
+             */
+            branchId: string;
+            /** @description Actual cancellation reason */
+            cancellationReason?: string;
+            /**
+             * Format: date-time
+             * @description Actual cancellation time
+             */
+            cancelledAt?: string;
+            /**
+             * Format: uuid
+             * @description Existing client ID
+             */
+            clientId: string;
+            /**
+             * @description Stable operation key
+             * @example late-session-123
+             */
+            creationIdempotencyKey: string;
+            /**
+             * @description Actual delivery channel
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Actual session duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * Format: uuid
+             * @description Existing practitioner ID
+             */
+            employeeId: string;
+            /**
+             * Format: date-time
+             * @description Actual no-show determination time
+             */
+            noShowAt?: string;
+            /** @description Session notes */
+            notes?: string;
+            /**
+             * @description Amount received in integer halalas
+             * @example 15000
+             */
+            paymentAmountHalalas?: number;
+            /**
+             * @description Manual collection method
+             * @enum {string}
+             */
+            paymentMethod?: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY";
+            /**
+             * @description Financial recording mode
+             * @enum {string}
+             */
+            paymentMode: "UNPAID" | "PREVIOUSLY_RECEIVED" | "COLLECT_NOW";
+            /** @description Reason for documenting a previous receipt */
+            receiptEntryReason?: string;
+            /** @description Previous receipt evidence reference */
+            receiptEvidenceRef?: string;
+            /**
+             * Format: date-time
+             * @description Actual previous receipt time
+             */
+            receivedAt?: string;
+            /**
+             * Format: date-time
+             * @description Actual session start
+             */
+            scheduledAt: string;
+            /**
+             * Format: uuid
+             * @description Existing bound service ID
+             */
+            serviceId: string;
+            /**
+             * @description Recorded session status
+             * @enum {string}
+             */
+            status: "COMPLETED" | "CONFIRMED" | "NO_SHOW" | "CANCELLED";
+        };
         RefreshTokenDto: {
             /**
              * @description Client refresh token (optional when sent as httpOnly cookie)
@@ -10973,6 +11628,40 @@ export interface components {
              */
             twoFactorChallenge?: string;
         };
+        RequestEmailEntryDto: {
+            /**
+             * @description Email to prove ownership of
+             * @example person@example.test
+             */
+            email: string;
+        };
+        RequestEmailEntryPhoneDto: {
+            /**
+             * @description Opaque ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Required only for new registration
+             * @example Ali
+             */
+            firstName?: string;
+            /**
+             * @description Required only for new registration
+             * @example Saleh
+             */
+            lastName?: string;
+            /**
+             * @description Phone to verify
+             * @example +966512345678
+             */
+            phone: string;
+            /**
+             * @description Explicit privacy consent required only for new registration
+             * @example true
+             */
+            privacyAccepted?: boolean;
+        };
         RequestMobileLoginOtpDto: {
             /**
              * @description Phone (E.164) or email
@@ -11036,6 +11725,18 @@ export interface components {
              * @example re_...
              */
             apiKey: string;
+        };
+        ResendEmailEntryPhoneDto: {
+            /**
+             * @description Opaque ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Current phone challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            phoneChallengeId: string;
         };
         ResetPasswordDto: {
             /**
@@ -12682,6 +13383,35 @@ export interface components {
              */
             twoFactorChallenge?: string;
         };
+        VerifyEmailEntryDto: {
+            /**
+             * @description Email challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit ownership code
+             * @example 123456
+             */
+            code: string;
+        };
+        VerifyEmailEntryPhoneDto: {
+            /**
+             * @description Six-digit phone ownership code
+             * @example 123456
+             */
+            code: string;
+            /**
+             * @description Opaque ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Current phone challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            phoneChallengeId: string;
+        };
         VerifyMobileOtpDto: {
             /**
              * @description 4-digit OTP code
@@ -14210,6 +14940,8 @@ export interface operations {
     DashboardBookingsController_listBookings_v1: {
         parameters: {
             query?: {
+                /** @description Filter sessions entered through late recording */
+                isLateEntry?: boolean;
                 /** @description Filter by client */
                 clientId?: string;
                 /** @description Filter by employee */
@@ -14248,10 +14980,21 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data?: Record<string, never>[];
-                        page?: number;
-                        total?: number;
-                        totalPages?: number;
+                        items?: {
+                            /**
+                             * @description Client selected payment at the center; independent of financial payment status
+                             * @example true
+                             */
+                            payAtClinic?: boolean;
+                        }[];
+                        meta?: {
+                            hasNextPage?: boolean;
+                            hasPreviousPage?: boolean;
+                            limit?: number;
+                            page?: number;
+                            total?: number;
+                            totalPages?: number;
+                        };
                     };
                 };
             };
@@ -14394,6 +15137,11 @@ export interface operations {
                         employeeId?: string;
                         /** Format: uuid */
                         id?: string;
+                        /**
+                         * @description Client selected payment at the center; independent of financial payment status
+                         * @example true
+                         */
+                        payAtClinic?: boolean;
                         /** Format: date-time */
                         scheduledAt?: string;
                         status?: string;
@@ -15653,6 +16401,138 @@ export interface operations {
             };
             /** @description No remaining credit or slot conflict (concurrent over-draw rejected) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_recordLateSession_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordLateSessionDto"];
+            };
+        };
+        responses: {
+            /** @description Session and financial facts recorded atomically */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        booking?: {
+                            [key: string]: unknown;
+                        };
+                        invoice?: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** @enum {boolean} */
+                        isLateEntry?: true;
+                        /** Format: date-time */
+                        lateEntryRecordedAt?: string;
+                        lateEntryRecordedBy?: string;
+                        outstanding?: number;
+                        payment?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_getLateSessionContext_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current VAT rate and enabled manual payment methods only */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetLateSessionContextResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24811,6 +25691,8 @@ export interface operations {
     DashboardOrganizationSettingsController_listServicesEndpoint_v1: {
         parameters: {
             query?: {
+                /** @description Include historical inactive/archived references for staff recording */
+                historicalContext?: boolean;
                 /** @description Filter by active status */
                 isActive?: boolean;
                 /** @description Include hidden services */
@@ -26026,6 +26908,8 @@ export interface operations {
     DashboardPeopleController_listEmployeesEndpoint_v1: {
         parameters: {
             query?: {
+                /** @description Include historical inactive/archived references for staff recording */
+                historicalContext?: boolean;
                 /** @description Search by name, email, or phone */
                 search?: string;
                 /** @description Filter by active status */
@@ -29750,6 +30634,301 @@ export interface operations {
             };
         };
     };
+    MobileEmailEntryController_requestEmail_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestEmailEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntryChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_requestPhoneCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestEmailEntryPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntryPhoneChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_resendPhoneCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendEmailEntryPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntryPhoneChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_verifyEmail_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntrySessionDto"] | components["schemas"]["EmailEntryContinueDto"] | components["schemas"]["EmailEntryUnavailableDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmailEntryController_verifyPhoneCode_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailEntryPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailEntrySessionDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientAuthController_logout_v1: {
         parameters: {
             query?: never;
@@ -29769,6 +30948,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientAuthController_loginWithPassword_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobilePasswordLoginDto"];
+            };
+        };
+        responses: {
+            /** @description Customer authenticated, native client tokens issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        sessionKind: "client";
+                        tokens: {
+                            accessToken: string;
+                            refreshToken: string;
+                        };
+                    };
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31514,6 +32760,178 @@ export interface operations {
             };
         };
     };
+    MobileClientPaymentsController_reconcileNativePayment_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Reserved native Payment UUID */
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePaymentReconcileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPaymentsController_getNativeConfig_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePaymentCapabilitiesDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPaymentsController_initNativePayment_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitClientPaymentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePaymentInitResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientPaymentsController_initPackagePurchaseEndpoint_v1: {
         parameters: {
             query?: never;
@@ -31543,6 +32961,65 @@ export interface operations {
                         /** @example https://checkout.moyasar.com/pay/payment-id */
                         redirectUrl: string;
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPaymentsController_initNativePackagePurchase_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitPackagePurchaseDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NativePackagePurchaseInitResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -32048,6 +33525,8 @@ export interface operations {
     MobileEmployeeBookingsController_listMyBookings_v1: {
         parameters: {
             query?: {
+                /** @description Filter sessions entered through late recording */
+                isLateEntry?: boolean;
                 /** @description Filter by client */
                 clientId?: string;
                 /** @description Filter by employee */

@@ -3,7 +3,6 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
 
 import { useDir } from '@/hooks/useDir';
-import { getFontName } from '@/theme/fonts';
 import { tabIcons } from '@/theme/sawaa/tabIcons';
 import { useTabBarStyle } from '@/theme/sawaa/useTabBarStyle';
 
@@ -32,7 +31,7 @@ export default function GuestTabsLayout() {
   ];
 
   return (
-    <NativeTabs labelStyle={{ fontFamily: getFontName(dir.locale, '500') }} {...tabBar}>
+    <NativeTabs {...tabBar}>
       {dir.isRTL ? [...tabs].reverse() : tabs}
     </NativeTabs>
   );

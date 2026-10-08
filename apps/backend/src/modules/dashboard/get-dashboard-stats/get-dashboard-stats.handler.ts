@@ -1,3 +1,4 @@
+import { paymentCollectionDateSql } from '../../finance/payment-collection-date.helper';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { BookingStatus, Prisma } from '@prisma/client';
@@ -106,8 +107,8 @@ export class GetDashboardStatsHandler {
           )::int AS "pendingPayments",
           COALESCE(SUM(p.amount) FILTER (
             WHERE p.status = 'COMPLETED'
-              AND p."processedAt" >= ${rangeStart}
-              AND p."processedAt" <  ${rangeEnd}
+              AND ${paymentCollectionDateSql('PROCESSED')} >= ${rangeStart}
+              AND ${paymentCollectionDateSql('PROCESSED')} <  ${rangeEnd}
           ), 0)::float AS "todayRevenue"
         FROM "Payment" p
       `);

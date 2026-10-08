@@ -12,14 +12,14 @@ export class SmsChannelAdapter implements NotificationChannel {
 
   async send(identifier: string, code: string, _organizationId?: string): Promise<void> {
     if (!this.authentica.isConfigured()) {
-      this.logger.warn(`SmsChannelAdapter: Authentica not configured. OTP to ${identifier} will NOT be sent.`);
+      this.logger.warn('SmsChannelAdapter: Authentica not configured; OTP not sent');
       return;
     }
 
     try {
       await this.authentica.sendOtp({ channel: 'SMS', identifier, code });
     } catch (err) {
-      this.logger.error(`SmsChannelAdapter: Failed to send OTP to ${identifier}`, err);
+      this.logger.error('SmsChannelAdapter: OTP provider failure');
       throw err;
     }
   }

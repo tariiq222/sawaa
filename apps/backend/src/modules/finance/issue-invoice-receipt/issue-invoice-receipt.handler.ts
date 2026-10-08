@@ -65,6 +65,14 @@ export class IssueInvoiceReceiptHandler {
       return;
     }
 
+    // Invoice keeps a scalar cross-domain bookingId, not a Prisma relation.
+    const booking = invoice.bookingId ? await this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      return this.prisma.booking.findFirst({
+        where: { id: invoice.bookingId! },
+        select: { lateEntryRecordedAt: true },
+      });
+    }) : null;
     const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, paymentId);
     const pdfBuffer = await this.renderer.render(data);
 
@@ -92,7 +100,7 @@ export class IssueInvoiceReceiptHandler {
           where: { id: invoice.id, status: 'PAID', pdfUrl: null },
           data: { pdfUrl: key, pdfGeneratedAt: new Date() },
         });
-        if (count === 0) return;
+        if (count === 0 || booking?.lateEntryRecordedAt) return;
         await tx.outboxEvent.create({
           data: {
             id: issued.eventId,

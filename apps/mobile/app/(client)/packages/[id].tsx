@@ -5,18 +5,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { Check } from 'lucide-react-native';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Glass } from '@/theme/components/Glass';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
-import { useInitPackagePurchase, usePackageFamily } from '@/hooks/queries';
+import { useInitPackagePurchase, usePackageFamily, usePublicBranches } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
-import { publicBranchesService } from '@/services/client';
 import { getPendingPackagePurchase } from '@/services/client/packages';
 import { runPackageCheckout } from '@/lib/package-checkout';
 import { packagePurchaseErrorKey } from '@/lib/package-utils';
-import type { PublicBranchSummary } from '@/services/client';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import { packageGrossHalalas, packageVatHalalas, packageVatRate } from '@/lib/package-vat';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
@@ -30,15 +30,19 @@ export default function PackageFamilyDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const [footerHeight, setFooterHeight] = useState(180);
   const { t } = useTranslation();
   const user = useAppSelector((state) => state.auth.user);
   const query = usePackageFamily(id);
+  const userRef = useRef(user?.id);
+  userRef.current = user?.id;
   const initPurchase = useInitPackagePurchase();
   const [selectedId, setSelectedId] = useState<string>();
-  const [branches, setBranches] = useState<PublicBranchSummary[]>([]);
+  const branchQuery = usePublicBranches();
+  const branches = branchQuery.data ?? [];
   const [branchId, setBranchId] = useState<string>();
-  const [branchLoading, setBranchLoading] = useState(true);
-  const [branchError, setBranchError] = useState(false);
+  const branchLoading = branchQuery.isFetching;
+  const branchError = branchQuery.isError;
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
@@ -48,21 +52,12 @@ export default function PackageFamilyDetailScreen() {
     setSelectedId(query.data.options[0]?.id);
   }, [query.data, selectedId]);
 
-  const loadBranches = useCallback(async () => {
-    setBranchLoading(true);
-    setBranchError(false);
-    try {
-      const loaded = await publicBranchesService.list();
-      setBranches(loaded);
-      setBranchId((current) => current && loaded.some((branch) => branch.id === current) ? current : loaded[0]?.id);
-    } catch {
-      setBranchError(true);
-    } finally {
-      setBranchLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadBranches(); }, [loadBranches]);
+  useEffect(() => {
+    const loaded = branchQuery.data;
+    if (!loaded) return;
+    setBranchId((current) => current && loaded.some((branch) => branch.id === current)
+      ? current : loaded[0]?.id);
+  }, [branchQuery.data]);
 
   const option = useMemo(
     () => query.data?.options.find((candidate) => candidate.id === selectedId) ?? query.data?.options[0],
@@ -75,10 +70,10 @@ export default function PackageFamilyDetailScreen() {
 
   const recoverPending = useCallback(async () => {
     if (checkoutInFlight.current) return;
-    const pending = await getPendingPackagePurchase();
-    // The return screen clears this record once a checkout fails, is abandoned,
-    // or stays unconfirmed, so recovery cannot loop the client away from Buy.
-    if (checkoutInFlight.current) return;
+    if (!user?.id) return;
+    const pending = await getPendingPackagePurchase(user.id);
+    // Ignore a previous account's asynchronous recovery read.
+    if (checkoutInFlight.current || userRef.current !== user?.id) return;
     if (pending && pending.clientId === user?.id && pending.packageId === option?.id) {
       router.replace({ pathname: '/(client)/packages/return', params: {
         purchaseId: pending.purchaseId,
@@ -86,6 +81,7 @@ export default function PackageFamilyDetailScreen() {
         packageId: pending.packageId,
         familyId: pending.familyId,
         branchId: pending.branchId,
+        ...(pending.invoiceId ? { origin: 'native' } : {}),
       } });
     }
   }, [option?.id, router, user?.id]);
@@ -109,9 +105,10 @@ export default function PackageFamilyDetailScreen() {
     try {
       const target = { clientId: user.id, packageId: option.id, familyId, branchId };
       const result = await runPackageCheckout(initPurchase.mutateAsync, target);
+      if (userRef.current !== target.clientId) return;
       router.replace({
-        pathname: '/(client)/packages/return',
-        params: { purchaseId: result.purchaseId, ...target, signal: result.signal },
+        pathname: '/(client)/payments/native-checkout',
+        params: { purchaseId: result.purchaseId, invoiceId: result.invoiceId },
       });
     } catch (error) {
       Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
@@ -127,10 +124,10 @@ export default function PackageFamilyDetailScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 180 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: query.data ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('packages.details')} onBack={() => router.back()} />
+        <ScreenHeader title={t('packages.details')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         {query.isLoading ? <Text style={[styles.message, { color: colors.ink[500], fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
         {!query.isLoading && (query.isError || !query.data) ? (
           <>
@@ -159,9 +156,11 @@ export default function PackageFamilyDetailScreen() {
                   radius={sawaaRadius.lg}
                   style={[styles.option, selected && { borderWidth: 2, borderColor: colors.teal[600] }]}
                   onPress={() => setSelectedId(candidate.id)}
+                  accessibilityLabel={optionName(candidate)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
                 >
+                  {selected ? <Check size={18} color={colors.teal[700]} /> : null}
                   <View style={[styles.optionRow, { flexDirection: dir.row }]}>
                     <Text style={[styles.optionName, { color: colors.ink[900], fontFamily: f700 }]}>{optionName(candidate)}</Text>
                     <Text style={[styles.optionPrice, { color: colors.teal[700], fontFamily: f700 }]}>{formatCurrencyAmount(packageGrossHalalas(net, vatRate), 'SAR', dir.isRTL)}</Text>
@@ -212,7 +211,7 @@ export default function PackageFamilyDetailScreen() {
               loading={branchLoading}
               error={branchError}
               onSelect={setBranchId}
-              onRetry={() => { void loadBranches(); }}
+              onRetry={() => { void branchQuery.refetch(); }}
               dir={dir}
               f400={f400}
               f600={f600}
@@ -222,11 +221,12 @@ export default function PackageFamilyDetailScreen() {
         ) : null}
       </ScrollView>
       {query.data ? (
-        <FloatingCta>
+        <FloatingCta onHeightChange={setFooterHeight}>
           <PrimaryButton
-            label={initPurchase.isPending ? t('packages.purchasing') : t('packages.purchase')}
+            label={t('packages.purchase')}
             fontFamily={f700}
             disabled={purchaseDisabled}
+            loading={initPurchase.isPending}
             onPress={handlePurchase}
           />
         </FloatingCta>
@@ -240,15 +240,15 @@ const styles = StyleSheet.create({
   message: { textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   image: { width: '100%', height: 160, borderRadius: sawaaRadius.lg },
   intro: { gap: sawaaSpacing.sm },
-  familyName: { fontSize: sawaaType.heading.fontSize - 2, lineHeight: sawaaType.heading.lineHeight },
-  description: { fontSize: 15, lineHeight: 24 },
+  familyName: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  description: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   option: { padding: sawaaSpacing.lg, minHeight: 80 },
-  optionRow: { justifyContent: 'space-between', alignItems: 'center', gap: sawaaSpacing.md },
-  optionName: { flex: 1, fontSize: 16 },
-  optionPrice: { fontSize: 16 },
-  optionCount: { fontSize: 14, marginTop: sawaaSpacing.xs },
+  optionRow: { flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: sawaaSpacing.md },
+  optionName: { flex: 1, fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  optionPrice: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  optionCount: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, marginTop: sawaaSpacing.xs },
   vatNote: { fontSize: sawaaType.caption.fontSize, marginTop: sawaaSpacing.xs },
   groupDetail: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: sawaaSpacing.sm, paddingTop: sawaaSpacing.sm, gap: sawaaSpacing.xs },
-  groupLabel: { fontSize: sawaaType.caption.fontSize + 1 },
-  groupMeta: { fontSize: sawaaType.caption.fontSize, lineHeight: 18 },
+  groupLabel: { fontSize: sawaaType.bodySm.fontSize },
+  groupMeta: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
 });

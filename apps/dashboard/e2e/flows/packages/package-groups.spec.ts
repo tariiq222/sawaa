@@ -114,4 +114,70 @@ test.describe("grouped package editor", () => {
     packageIds.push(created.id)
     await expect(page).toHaveURL(/\/packages$/)
   })
+
+  test("saves a single group after the «no dependency» select is focused and left", async ({ page }) => {
+    await loginAs(page, "admin")
+    await page.goto("/packages/create", { waitUntil: "domcontentloaded" })
+    await page.locator('input[name="nameAr"]').fill(`باقة بدون اعتماد ${run}`)
+    await page.getByRole("button", { name: "التالي", exact: true }).click()
+    await page.locator('[id="groups.0.serviceId"]').selectOption(serviceA.id)
+    await page.locator('[id="groups.0.employeeId"]').selectOption(employeeA.id)
+    await page.locator('[id="groups.0.sessions.0.durationOptionId"]').selectOption(durationA)
+    const dependency = page.locator('[id="groups.0.dependsOnGroupKey"]')
+    await dependency.focus()
+    await dependency.blur()
+    await page.getByRole("button", { name: "التالي", exact: true }).click()
+    await page.getByRole("button", { name: "التالي", exact: true }).click()
+    await expect(page.getByRole("heading", { name: "مراجعة الباقة", exact: true })).toBeVisible()
+    const requestPromise = page.waitForRequest((request) => request.url().includes("/dashboard/organization/packages") && request.method() === "POST")
+    const responsePromise = page.waitForResponse((response) => response.url().includes("/dashboard/organization/packages") && response.request().method() === "POST")
+    await page.locator('form button[type="submit"]').click()
+    const body = (await requestPromise).postDataJSON() as { groups: Array<{ dependsOnGroupKey: string | null }> }
+    expect(body.groups[0].dependsOnGroupKey).toBeNull()
+    const response = await responsePromise
+    expect(response.ok()).toBe(true)
+    packageIds.push((await response.json() as { id: string }).id)
+    await expect(page).toHaveURL(/\/packages$/, { timeout: 30_000 })
+  })
+
+  test("keeps practitioners and dependency when an existing package is saved after leaving every select", async ({ page }) => {
+    const createResponse = await dashboardApiRequest("/dashboard/organization/packages", token, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      modelVersion: "GROUPED_V2",
+      nameAr: `باقة تعديل مجموعات ${run}`,
+      groups: [
+        { key: "first", label: "الأولى", serviceId: serviceA.id, employeeId: employeeA.id, sequenceMode: "ORDERED", dependsOnGroupKey: null, sessions: [{ key: "first-1", position: 0, durationOptionId: durationA, deliveryType: "IN_PERSON", unitPrice: serviceA.price }] },
+        { key: "second", label: "الثانية", serviceId: serviceB.id, employeeId: employeeB.id, sequenceMode: "ORDERED", dependsOnGroupKey: "first", sessions: [{ key: "second-1", position: 0, durationOptionId: durationB, deliveryType: "IN_PERSON", unitPrice: serviceB.price }] },
+      ],
+      globalDiscount: { type: "NONE", value: 0 },
+    }) })
+    expect(createResponse.ok).toBe(true)
+    const { id } = await createResponse.json() as { id: string }
+    packageIds.push(id)
+
+    await loginAs(page, "admin")
+    await page.goto(`/packages/${id}/edit`, { waitUntil: "domcontentloaded" })
+    await expect(page.locator('input[name="nameAr"]')).toHaveValue(`باقة تعديل مجموعات ${run}`)
+    await page.getByRole("button", { name: "التالي", exact: true }).click()
+    await expect(page.locator('[id="groups.1.dependsOnGroupKey"]')).toHaveValue("first")
+    for (const field of ["groups.0.serviceId", "groups.0.employeeId", "groups.0.dependsOnGroupKey", "groups.0.sessions.0.durationOptionId", "groups.1.serviceId", "groups.1.employeeId", "groups.1.dependsOnGroupKey", "groups.1.sessions.0.durationOptionId"]) {
+      const select = page.locator(`[id="${field}"]`)
+      await select.focus()
+      await select.blur()
+    }
+    await page.getByRole("button", { name: "التالي", exact: true }).click()
+    const discountType = page.locator('[id="globalDiscount.type"]')
+    await discountType.focus()
+    await discountType.blur()
+    await page.getByRole("button", { name: "التالي", exact: true }).click()
+    await expect(page.getByRole("heading", { name: "مراجعة الباقة", exact: true })).toBeVisible()
+    const saveResponse = page.waitForResponse((response) => response.url().includes(`/dashboard/organization/packages/${id}`) && ["PATCH", "PUT"].includes(response.request().method()))
+    await page.locator('form button[type="submit"]').click()
+    expect((await saveResponse).ok()).toBe(true)
+    await expect(page).toHaveURL(/\/packages$/, { timeout: 30_000 })
+
+    const saved = await (await dashboardApiRequest(`/dashboard/organization/packages/${id}`, token)).json() as { groups: Array<{ key: string; employeeId: string; serviceId: string; dependsOnGroupKey: string | null }> }
+    const byKey = new Map(saved.groups.map((group) => [group.key, group]))
+    expect(byKey.get("first")).toMatchObject({ serviceId: serviceA.id, employeeId: employeeA.id, dependsOnGroupKey: null })
+    expect(byKey.get("second")).toMatchObject({ serviceId: serviceB.id, employeeId: employeeB.id, dependsOnGroupKey: "first" })
+  })
 })

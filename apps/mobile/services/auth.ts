@@ -234,10 +234,10 @@ export const authService = {
    * POST /public/otp/request — send OTP for password reset.
    * Uses purpose CLIENT_PASSWORD_RESET so it cannot be confused with login OTPs.
    */
-  async requestPasswordResetOtp(email: string): Promise<ApiResponse> {
+  async requestPasswordResetOtp(identifier: string): Promise<ApiResponse> {
     const response = await api.post<ApiResponse>('/public/otp/request', {
-      channel: 'EMAIL',
-      identifier: email,
+      channel: identifier.includes('@') ? 'EMAIL' : 'SMS',
+      identifier: identifier.includes('@') ? identifier.trim().toLowerCase() : identifier.trim(),
       purpose: 'CLIENT_PASSWORD_RESET',
       
     });
@@ -248,14 +248,14 @@ export const authService = {
    * POST /public/otp/verify — verify the reset OTP, returns a short-lived sessionToken.
    */
   async verifyPasswordResetOtp(
-    email: string,
+    identifier: string,
     code: string,
   ): Promise<{ sessionToken: string }> {
     const response = await api.post<{ sessionToken: string }>(
       '/public/otp/verify',
       {
-        channel: 'EMAIL',
-        identifier: email,
+        channel: identifier.includes('@') ? 'EMAIL' : 'SMS',
+        identifier: identifier.includes('@') ? identifier.trim().toLowerCase() : identifier.trim(),
         code,
         purpose: 'CLIENT_PASSWORD_RESET',
       

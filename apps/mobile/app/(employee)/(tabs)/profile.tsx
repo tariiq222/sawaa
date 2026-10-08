@@ -7,7 +7,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
-  Info,
   Shield,
   LogOut,
   ChevronLeft,
@@ -24,6 +23,7 @@ import {
   sawaaType,
   withAlpha,
 } from '@/theme/sawaa';
+import { AboutSection } from '@/components/features/settings/AboutSection';
 import { Thumb } from '@/components/ui/Thumb';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -62,7 +62,7 @@ function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
         <Text
           style={[
             styles.menuLabel,
-            { fontFamily: f400, color: danger ? colors.accent.coral : colors.ink[900], writingDirection: dir.writingDirection },
+            { fontFamily: f400, color: danger ? colors.accent.coral : colors.ink[900], textAlign: dir.textAlign, writingDirection: dir.writingDirection },
           ]}
         >
           {label}
@@ -167,7 +167,7 @@ export default function EmployeeProfileScreen() {
                 <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                   {fullName}
                 </Text>
-                <Text style={[styles.profileEmail, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+                <Text style={[styles.profileEmail, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: 'ltr' }]}>
                   {user?.email}
                 </Text>
               </View>
@@ -182,7 +182,6 @@ export default function EmployeeProfileScreen() {
           <MenuGroup
             entries={[
               { icon: Clock, label: t('availability.hours'), onPress: () => router.push('/(employee)/availability') },
-              { icon: Info, label: t('profile.about'), onPress: () => Alert.alert('مركز سواء', 'نسخة 1.0.0') },
               { icon: Shield, label: t('profile.privacy'), onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
             ]}
           />
@@ -195,9 +194,7 @@ export default function EmployeeProfileScreen() {
           <MenuGroup entries={[{ icon: LogOut, label: t('auth.logout'), danger: true, onPress: handleLogout }]} />
         </Animated.View>
 
-        <Text style={[styles.version, { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection }]}>
-          {t('doctor.appVersion')} 1.0.0
-        </Text>
+        <AboutSection />
       </ScrollView>
     </AquaBackground>
   );
@@ -206,14 +203,13 @@ export default function EmployeeProfileScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 140 },
   title: {
-    fontSize: 28,
-    lineHeight: 38,
+    fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
     marginBottom: sawaaSpacing.xl,
   },
   profileCard: { marginBottom: sawaaSpacing.lg },
   profileRow: { alignItems: 'center', gap: sawaaSpacing.lg },
-  profileMid: { flex: 1, gap: sawaaSpacing.xs },
+  profileMid: { flex: 1, minWidth: 0, flexShrink: 1, gap: sawaaSpacing.xs },
   profileName: {
     fontSize: sawaaType.subheading.fontSize,
     lineHeight: sawaaType.subheading.lineHeight,
@@ -233,6 +229,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   menuLeft: { alignItems: 'center', gap: sawaaSpacing.md, flex: 1 },
   menuLabel: {
+    flex: 1, minWidth: 0, flexShrink: 1,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
   },
@@ -246,12 +243,5 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     height: StyleSheet.hairlineWidth,
     backgroundColor: withAlpha(colors.ink[900], 0.08),
     marginHorizontal: sawaaSpacing.md,
-  },
-  version: {
-    fontSize: sawaaType.micro.fontSize,
-    lineHeight: sawaaType.micro.lineHeight,
-    color: colors.ink[500],
-    textAlign: 'center',
-    marginTop: sawaaSpacing.lg,
   },
 });

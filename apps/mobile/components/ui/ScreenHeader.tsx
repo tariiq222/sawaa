@@ -27,8 +27,8 @@ export function ScreenHeader({ title, onBack, end }: ScreenHeaderProps) {
       <BackButton onPress={onBack} style={styles.slot} />
       <Text
         accessibilityRole="header"
-        numberOfLines={1}
-        style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}
+        numberOfLines={2}
+        style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, sawaaType.subheading.weight), writingDirection: dir.writingDirection }]}
       >
         {title}
       </Text>
@@ -39,11 +39,12 @@ export function ScreenHeader({ title, onBack, end }: ScreenHeaderProps) {
 
 const styles = StyleSheet.create({
   row: { alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  slot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'auto' },
+  slot: { width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'auto' },
   title: {
     flex: 1,
+    minWidth: 0,
     textAlign: 'center',
-    fontSize: sawaaType.subheading.fontSize + 2,
-    lineHeight: sawaaType.heading.lineHeight - 2,
+    fontSize: sawaaType.subheading.fontSize,
+    lineHeight: sawaaType.subheading.lineHeight,
   },
 });

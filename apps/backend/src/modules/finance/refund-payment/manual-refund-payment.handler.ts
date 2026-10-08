@@ -44,12 +44,12 @@ export class ManualRefundPaymentHandler {
   async execute(cmd: ManualRefundPaymentCommand) {
     const { updatedPayment } =
       await this.rlsTransaction.withTransaction(async (tx) => {
-        if (cmd.refundRequestId) {
-          const identity = await tx.refundRequest.findUnique({ where: { id: cmd.refundRequestId }, select: { invoiceId: true, paymentId: true } });
-          if (!identity || identity.paymentId !== cmd.paymentId) throw new NotFoundException('Refund request not found for this payment');
-          // Match cancellation/provider follow-up lock order on the new path.
-          await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${identity.invoiceId} FOR UPDATE`);
-        }
+        // Serialize invoice aggregates even when no reviewed request was supplied.
+        const identity = await tx.payment.findUnique({
+          where: { id: cmd.paymentId }, select: { invoiceId: true },
+        });
+        if (!identity) throw new NotFoundException('Payment not found');
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Invoice" WHERE "id" = ${identity.invoiceId} FOR UPDATE`);
         const rows = await tx.$queryRaw<
           Array<{
             id: string;
@@ -154,7 +154,7 @@ export class ManualRefundPaymentHandler {
         });
 
         const paymentStatus =
-          accounting.newInvoiceStatus === 'REFUNDED'
+          requestedAmount === outstanding
             ? PaymentStatus.REFUNDED
             : PaymentStatus.PARTIALLY_REFUNDED;
         const updated = await tx.payment.update({

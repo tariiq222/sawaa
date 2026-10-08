@@ -1,3 +1,13 @@
+import { MobileEmailFlowStore } from './mobile-email-entry/mobile-email-flow.store';
+import { MobileEmailIdentity } from './mobile-email-entry/mobile-email-identity';
+import { MobileEmailSendLimiter } from './mobile-email-entry/mobile-email-send-limiter';
+import { MobileEmailDelivery } from './mobile-email-entry/mobile-email-delivery';
+import { MobileEmailPhoneDispatch } from './mobile-email-entry/mobile-email-phone-dispatch';
+import { RequestEmailEntryHandler } from './mobile-email-entry/request-email-entry.handler';
+import { VerifyEmailEntryHandler } from './mobile-email-entry/verify-email-entry.handler';
+import { RequestEmailEntryPhoneHandler } from './mobile-email-entry/request-email-entry-phone.handler';
+import { ResendEmailEntryPhoneHandler } from './mobile-email-entry/resend-email-entry-phone.handler';
+import { VerifyEmailEntryPhoneHandler } from './mobile-email-entry/verify-email-entry-phone.handler';
 import { ReviewLoginHandler } from './review-login/review-login.handler';
 import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -38,6 +48,7 @@ import { OtpSessionGuard } from './otp/otp-session.guard';
 import { NotificationChannelModule } from '../comms/notification-channel/notification-channel.module';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { RegisterHandler } from './client-auth/register.handler';
+import { MobilePasswordLoginHandler } from './mobile-password-login/mobile-password-login.handler';
 import { ClientLoginHandler } from './client-auth/client-login.handler';
 import { ClientRefreshHandler } from './client-auth/client-refresh.handler';
 import { ClientLogoutHandler } from './client-auth/client-logout.handler';
@@ -72,6 +83,7 @@ import { NativeLogoutHandler } from './native-session/native-logout.handler';
 import { RequestAccountDeletionHandler } from './request-account-deletion/request-account-deletion.handler';
 
 const handlers = [
+  MobileEmailFlowStore, MobileEmailIdentity, MobileEmailSendLimiter, MobileEmailDelivery, MobileEmailPhoneDispatch, RequestEmailEntryHandler, VerifyEmailEntryHandler, RequestEmailEntryPhoneHandler, ResendEmailEntryPhoneHandler, VerifyEmailEntryPhoneHandler,
   ReviewLoginHandler,
   LoginHandler, RefreshTokenHandler, LogoutHandler,
   GetCurrentUserHandler, CreateUserHandler, GetUserHandler, UpdateUserHandler, UpdateUserRoleHandler, ListUsersHandler,
@@ -85,6 +97,7 @@ const handlers = [
   VerifyOtpHandler,
   RegisterHandler,
   ClientLoginHandler,
+  MobilePasswordLoginHandler,
   ClientRefreshHandler,
   ClientLogoutHandler,
   GetMeHandler,

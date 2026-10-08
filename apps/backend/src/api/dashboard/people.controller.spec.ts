@@ -269,7 +269,7 @@ describe('DashboardPeopleController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(mockGetClient.execute).toHaveBeenCalledWith({ clientId: 'CL-1024' });
+      expect(mockGetClient.execute).toHaveBeenCalledWith({ clientId: 'CL-1024', requesterRole: 'ADMIN', requesterUserId: 'user-1' });
     });
   });
 

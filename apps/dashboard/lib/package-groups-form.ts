@@ -1,6 +1,7 @@
 import { calculateGroupedSessionNet, sarToHalalas } from "@sawaa/shared/money"
 import { groupedPackageInputSchema } from "@sawaa/shared/schemas"
 import type { GlobalDiscount, PackageGroupInput } from "@sawaa/shared/types"
+import type { UseFormRegisterReturn } from "react-hook-form"
 import type { SessionPackage, CreateSessionPackagePayload } from "@/lib/types/package"
 import type { GroupedGroupFormData, GroupedPackageFormData } from "@/lib/schemas/package-groups.schema"
 
@@ -51,7 +52,7 @@ export function groupsToPayload(groups: GroupedPackageFormData["groups"]): Packa
     serviceId: group.serviceId,
     employeeId: group.employeeId,
     sequenceMode: group.sequenceMode,
-    dependsOnGroupKey: group.dependsOnGroupKey,
+    dependsOnGroupKey: group.dependsOnGroupKey || null,
     sessions: group.sessions.map((session, position) => ({
       key: session.key,
       position,
@@ -89,6 +90,26 @@ export function buildGroupedPackagePayload(form: GroupedPackageFormData): Create
     groups: input.groups,
     globalDiscount: input.globalDiscount,
   }
+}
+
+export interface PackageSubmitIssue {
+  path: string
+  message: string
+}
+
+/**
+ * Turn a payload validation error into field errors with translation keys.
+ * Returns null for any other error so the caller can show its own message; raw Zod text must never reach the toast.
+ */
+export function packageSubmitIssues(error: unknown): PackageSubmitIssue[] | null {
+  if (!(error instanceof Error) || error.name !== "ZodError" || !Array.isArray((error as { issues?: unknown }).issues)) return null
+  const issues = (error as Error & { issues: { path: (string | number)[]; message: string }[] }).issues
+  return issues.map((issue) => {
+    const isDependency = issue.path.includes("dependsOnGroupKey") || /dependency/i.test(issue.message)
+    if (!isDependency) return { path: issue.path.join("."), message: "packages.errors.submitSummary" }
+    const groupIndex = issue.path[0] === "groups" && typeof issue.path[1] === "number" ? issue.path[1] : 0
+    return { path: `groups.${groupIndex}.dependsOnGroupKey`, message: "packages.grouped.errors.dependency" }
+  })
 }
 
 export function groupedFormDefaults(pkg?: SessionPackage | null): GroupedPackageFormData {
@@ -178,6 +199,15 @@ export function applyFirstSessionToAll(sessions: GroupedGroupFormData["sessions"
   const first = sessions[0]
   if (!first) return sessions
   return sessions.map((session, position) => ({ ...first, key: session.key, position }))
+}
+
+/**
+ * Keep only the name + ref of a registration for a select whose value is written through setValue.
+ * RHF's register onBlur re-reads the DOM value, so blurring "no dependency" stored "" instead of null
+ * and blurring a select whose saved option is not listed wiped the saved id.
+ */
+export function controlledSelectField({ name, ref }: UseFormRegisterReturn): Pick<UseFormRegisterReturn, "name" | "ref"> {
+  return { name, ref }
 }
 
 export function dependencyOptions(groups: readonly Pick<PackageGroupInput, "key" | "dependsOnGroupKey">[], currentKey: string): string[] {

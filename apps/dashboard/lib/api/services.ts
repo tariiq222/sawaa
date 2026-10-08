@@ -116,7 +116,7 @@ export const DEFAULT_SERVICES_LIST_QUERY: ServiceListQuery = {
 }
 
 export async function fetchServices(
-  query: ServiceListQuery = {},
+  query: ServiceListQuery & { historicalContext?: boolean } = {},
 ): Promise<PaginatedResponse<Service>> {
   return api.get<PaginatedResponse<Service>>("/dashboard/organization/services", {
     page: query.page,
@@ -125,6 +125,7 @@ export async function fetchServices(
     categoryId: query.categoryId,
     search: query.search,
     includeHidden: query.includeHidden,
+    historicalContext: query.historicalContext,
   })
 }
 

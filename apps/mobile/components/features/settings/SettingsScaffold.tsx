@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { AquaBackground } from '@/theme/sawaa';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 
 /**
@@ -18,14 +19,15 @@ import { useDir } from '@/hooks/useDir';
 export function SettingsScaffold({
   title,
   children,
+  keyboardSafe = false,
 }: {
   title: string;
   children: React.ReactNode;
+  keyboardSafe?: boolean;
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  return (
-    <AquaBackground>
+  const scroll = (
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -35,12 +37,12 @@ export function SettingsScaffold({
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <ScreenHeader title={title} onBack={() => router.back()} />
+          <ScreenHeader title={title} onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')} />
         </View>
         {children}
       </ScrollView>
-    </AquaBackground>
   );
+  return <AquaBackground>{keyboardSafe ? <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>{scroll}</KeyboardAvoidingView> : scroll}</AquaBackground>;
 }
 
 export function SettingsSectionHeader({
@@ -63,7 +65,7 @@ export function SettingsSectionHeader({
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: 16 },
+  scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.lg },
   header: { marginBottom: sawaaSpacing.xl },
   sectionHeader: {
     alignItems: 'center',

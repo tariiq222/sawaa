@@ -19,9 +19,10 @@ import type { ServiceEmployeeServiceType } from "@/lib/types/service"
 /* ─── Queries ─── */
 
 export async function fetchEmployees(
-  query: EmployeeListQuery = {},
+  query: EmployeeListQuery & { historicalContext?: boolean } = {},
 ): Promise<PaginatedResponse<Employee>> {
   const res = await api.get<{ data?: RawEmployee[]; items?: RawEmployee[]; meta: PaginatedResponse<RawEmployee>["meta"] }>("/dashboard/people/employees", {
+    historicalContext: query.historicalContext,
     page: query.page,
     limit: query.limit,
     sortBy: query.sortBy,

@@ -51,15 +51,15 @@ export function AppointmentRowCard({ booking: b, onPress, showJoin }: Appointmen
       >
         <DateBox iso={b.scheduledAt} fallback={t('appointments.toBeScheduled')} />
         <View style={styles.mid}>
-          <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
+          <Text style={[styles.time, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
             {time}
           </Text>
           {serviceName ? (
-            <Text testID="appointment-service-name" numberOfLines={2} style={[styles.name, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '500'), textAlign: dir.textAlign }]}>
+            <Text testID="appointment-service-name" style={[styles.name, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '500'), textAlign: dir.textAlign }]}>
               {serviceName}
             </Text>
           ) : null}
-          <Text numberOfLines={1} style={[styles.name, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>
+          <Text style={[styles.name, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>
             {t('appointments.with', { name: therapistName })}
           </Text>
         </View>
@@ -82,8 +82,8 @@ export function AppointmentRowCard({ booking: b, onPress, showJoin }: Appointmen
 
 const styles = StyleSheet.create({
   card: { padding: 16, gap: 12 },
-  top: { alignItems: 'center', gap: 12 },
+  top: { flexWrap: 'wrap', alignItems: 'center', gap: 12 },
   mid: { flex: 1, minWidth: 0, gap: 2 },
-  time: { fontSize: sawaaType.subheading.fontSize - 2, lineHeight: sawaaType.subheading.lineHeight },
-  name: { fontSize: 14, lineHeight: 20 },
+  time: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  name: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

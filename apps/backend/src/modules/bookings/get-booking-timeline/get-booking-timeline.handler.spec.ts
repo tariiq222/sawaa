@@ -19,6 +19,12 @@ describe('GetBookingTimelineHandler', () => {
     } as never;
   }
 
+  it('keeps audit timeline today while describing the previous session facts', async () => {
+    const prisma=makePrisma({booking:{findUnique:jest.fn().mockResolvedValue({id:bookingId,createdAt:new Date('2026-10-05T10:00:00Z'),lateEntryRecordedAt:new Date('2026-10-05T10:00:00Z'),lateEntryRecordedBy:'staff',scheduledAt:new Date('2026-09-01T10:00:00Z'),endsAt:new Date('2026-09-01T11:00:00Z')})}});
+    const out=await new GetBookingTimelineHandler(prisma).execute({bookingId});
+    expect(out[0]).toMatchObject({at:'2026-10-05T10:00:00.000Z',actor:'staff',meta:{isLateEntry:true,scheduledAt:'2026-09-01T10:00:00.000Z'}});
+  });
+
   it('throws when the booking does not exist', async () => {
     const prisma = makePrisma({
       booking: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -138,5 +144,15 @@ describe('GetBookingTimelineHandler', () => {
     });
     // No confusing same-status transition leaks through.
     expect(out.some((e) => e.kind === 'STATUS_CHANGE')).toBe(false);
+  });
+});
+
+
+describe('GetBookingTimelineHandler ownership', () => {
+  it.each([['employee-b', 'user-a', 'EMPLOYEE', false], ['employee-a', undefined, 'EMPLOYEE', false], ['employee-a', 'user-a', 'EMPLOYEE', true], ['employee-b', 'admin', 'ADMIN', true]])('checks %s / %s / %s before nested reads', async (employeeId, requesterUserId, requesterRole, allowed) => {
+    const prisma = { employee: { findFirst: jest.fn().mockResolvedValue({ id: 'employee-a' }) }, booking: { findUnique: jest.fn().mockResolvedValue({ id: 'b1', employeeId, createdAt: new Date() }) }, bookingStatusLog: { findMany: jest.fn().mockResolvedValue([]) }, invoice: { findMany: jest.fn().mockResolvedValue([]) }, activityLog: { findMany: jest.fn().mockResolvedValue([]) } };
+    const action = new GetBookingTimelineHandler(prisma as any).execute({ bookingId: 'b1', requesterRole, requesterUserId } as any);
+    if (allowed) await expect(action).resolves.toBeInstanceOf(Array);
+    else { await expect(action).rejects.toThrow(); expect(prisma.bookingStatusLog.findMany).not.toHaveBeenCalled(); expect(prisma.invoice.findMany).not.toHaveBeenCalled(); expect(prisma.activityLog.findMany).not.toHaveBeenCalled(); }
   });
 });

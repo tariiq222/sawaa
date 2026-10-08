@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Lock } from 'lucide-react-native';
-import { AquaBackground } from '@/theme/sawaa';
+import { AuthFormScaffold } from '@/components/features/auth/AuthFormScaffold';
+import { AppButton } from '@/components/ui/AppButton';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-import { sawaaRadius, withAlpha } from '@/theme/sawaa/tokens';
+import { sawaaType, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { authService } from '@/services/auth';
@@ -15,7 +15,6 @@ import { getFontName } from '@/theme/fonts';
 export default function SuspendedScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
   const dir = useDir();
@@ -28,8 +27,8 @@ export default function SuspendedScreen() {
   }
 
   return (
-    <AquaBackground>
-      <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}>
+    <AuthFormScaffold>
+      <View style={styles.container}>
         <View style={styles.lockCircle}>
           <Lock size={44} color={colors.accent.amber} strokeWidth={1.75} />
         </View>
@@ -41,22 +40,16 @@ export default function SuspendedScreen() {
         </Text>
         <View style={styles.actions}>
           <PrimaryButton label={t('auth.logout')} onPress={handleLogout} fontFamily={f700} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('suspended.continueAsGuest')}
-            style={styles.secondary}
-            onPress={() => router.replace('/(guest)/home')}
-          >
-            <Text style={[styles.secondaryText, { fontFamily: f700 }]}>{t('suspended.continueAsGuest')}</Text>
-          </Pressable>
+          <AppButton variant="secondary" label={t('suspended.continueAsGuest')}
+            onPress={() => router.replace('/(guest)/home')} />
         </View>
       </View>
-    </AquaBackground>
+    </AuthFormScaffold>
   );
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', paddingHorizontal: 16 },
+  container: { flexGrow: 1, alignItems: 'center' },
   lockCircle: {
     width: 96,
     height: 96,
@@ -66,16 +59,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     justifyContent: 'center',
     backgroundColor: withAlpha(colors.accent.amber, 0.2),
   },
-  title: { fontSize: 24, lineHeight: 32, color: colors.ink[900], textAlign: 'center', marginTop: 24 },
-  body: { fontSize: 15, lineHeight: 24, color: colors.ink[700], textAlign: 'center', marginTop: 8, marginBottom: 32 },
+  title: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, color: colors.ink[900], textAlign: 'center', marginTop: 24 },
+  body: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700], textAlign: 'center', marginTop: 8, marginBottom: 32 },
   actions: { alignSelf: 'stretch', gap: 12 },
-  secondary: {
-    minHeight: 56,
-    borderRadius: sawaaRadius.pill,
-    borderWidth: 1,
-    borderColor: colors.teal[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryText: { fontSize: 16, color: colors.teal[700] },
 });

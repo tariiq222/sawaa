@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarPlus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
+import { ErrorState } from '@/components/ui/ErrorState';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -14,7 +15,7 @@ import type { PublicCatalogRaw, PublicService } from '@/services/client/catalog'
 import type { PublicEmployeeItem } from '@/services/client/employees';
 import { getFontName } from '@/theme/fonts';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-import { getSawaaRoles, sawaaSpacing } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 
@@ -27,6 +28,10 @@ type ProfileTab = 'about' | 'services';
 interface TherapistProfileViewProps {
   employee: PublicEmployeeItem | undefined;
   loading: boolean;
+  employeeError?: boolean;
+  onRetryEmployee?: () => void;
+  catalogError?: boolean;
+  onRetryCatalog?: () => void;
   catalog: PublicCatalogRaw | undefined;
   catalogLoading: boolean;
   /** Scope carried from clinic discovery; never widened here (see the clinic/service contract). */
@@ -44,7 +49,7 @@ interface TherapistProfileViewProps {
  * data source here (slots need a service, branch and date), so it is omitted.
  */
 export function TherapistProfileView({
-  employee, loading, catalog, catalogLoading, clinicId, serviceId, onBack, onBook,
+  employee, loading, catalog, catalogLoading, employeeError = false, catalogError = false, onRetryEmployee, onRetryCatalog, clinicId, serviceId, onBack, onBook,
 }: TherapistProfileViewProps) {
   const { t } = useTranslation();
   const colors = useSawaaColors();
@@ -53,6 +58,7 @@ export function TherapistProfileView({
   const insets = useSafeAreaInsets();
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
+  const [footerHeight, setFooterHeight] = useState(180);
   const [tab, setTab] = useState<ProfileTab | null>(null);
   const [chosenServiceId, setChosenServiceId] = useState<string | null>(null);
 
@@ -61,8 +67,8 @@ export function TherapistProfileView({
     ? (dir.isRTL ? employee.publicBioAr : employee.publicBioEn) ?? employee.publicBioEn ?? employee.publicBioAr
     : null;
   const services = useMemo<PublicService[]>(
-    () => (catalog && employee ? getProfileBookingServices(catalog, employee.serviceIds, clinicId, serviceId) : []),
-    [catalog, employee, clinicId, serviceId],
+    () => (!catalogError && catalog && employee ? getProfileBookingServices(catalog, employee.serviceIds, clinicId, serviceId) : []),
+    [catalog, employee, catalogError, clinicId, serviceId],
   );
   const { clinics, serviceGroups } = useMemo(
     () => (catalog ? getProfileBookingGroups(catalog, services) : { clinics: [], serviceGroups: [] }),
@@ -71,7 +77,7 @@ export function TherapistProfileView({
   const selectedServiceId = services.some((service) => service.id === chosenServiceId)
     ? chosenServiceId
     : services.length === 1 ? services[0].id : null;
-  const bookable = Boolean(employee?.isBookable) && services.length > 0;
+  const bookable = !employeeError && !catalogError && !loading && !catalogLoading && Boolean(employee?.isBookable) && services.length > 0;
   const needsChoice = bookable && !selectedServiceId;
   // Open on services when a choice is required (or there is no bio to read).
   const activeTab: ProfileTab = tab ?? (needsChoice || !bio ? 'services' : 'about');
@@ -138,7 +144,7 @@ export function TherapistProfileView({
           ))}
         </View>
       ) : null}
-      {services.length === 0 ? (
+      {services.length === 0 && !catalogError ? (
         <Text style={[styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
           {loading || catalogLoading ? t('therapists.loading') : t('employeeProfile.noServices')}
         </Text>
@@ -159,11 +165,11 @@ export function TherapistProfileView({
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 180 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: employee ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title={t('employeeProfile.profileTitle')} onBack={onBack} />
-        {employee && display ? (
+        {employeeError ? <ErrorState onRetry={onRetryEmployee} /> : employee && display ? (
           <>
             <ProfileHero
               name={display.name}
@@ -180,20 +186,20 @@ export function TherapistProfileView({
               value={activeTab}
               onChange={setTab}
             />
-            {activeTab === 'about' ? (
+            {catalogError ? <ErrorState onRetry={onRetryCatalog} /> : activeTab === 'about' ? (
               <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
                 {bio ?? t('employeeProfile.noBio')}
               </Text>
             ) : servicesTab}
           </>
-        ) : (
+        ) : !employeeError ? (
           <Text style={[styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
-            {loading ? t('therapists.loading') : t('guest.loadError')}
+            {loading ? t('therapists.loading') : t('guest.empty')}
           </Text>
-        )}
+        ) : null}
       </ScrollView>
-      {employee ? (
-        <FloatingCta>
+      {employee && !employeeError ? (
+        <FloatingCta onHeightChange={setFooterHeight}>
           {hint ? <Text style={[styles.hint, { color: colors.ink[700], fontFamily: f400 }]}>{hint}</Text> : null}
           <PrimaryButton
             label={needsChoice ? t('employeeProfile.chooseToContinue') : t('employeeProfile.bookAppointment')}
@@ -213,8 +219,8 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
   section: { gap: sawaaSpacing.xl },
   group: { gap: sawaaSpacing.md },
-  groupLabel: { fontSize: 15, lineHeight: 22 },
-  about: { fontSize: 15, lineHeight: 26 },
-  body: { fontSize: 15, lineHeight: 22 },
-  hint: { fontSize: 13, textAlign: 'center' },
+  groupLabel: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  about: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  body: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  hint: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, textAlign: 'center' },
 });

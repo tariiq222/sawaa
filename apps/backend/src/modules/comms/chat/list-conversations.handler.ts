@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListConversationsDto } from './list-conversations.dto';
+import { resolveConversationEmployeeId } from './assert-conversation-access.helper';
 
 export type ListConversationsCommand = Omit<ListConversationsDto, 'page' | 'limit'> & {
+  requesterRole?: string | null;
+  requesterUserId?: string;
   page: number;
   limit: number;
 };
@@ -14,9 +17,13 @@ export class ListConversationsHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(cmd: ListConversationsCommand) {
+    const employeeId = await resolveConversationEmployeeId(this.prisma, cmd);
+    if (employeeId && cmd.employeeId && cmd.employeeId !== employeeId) {
+      throw new ForbiddenException('Conversation is not assigned to you');
+    }
     const where = {
       ...(cmd.clientId ? { clientId: cmd.clientId } : {}),
-      ...(cmd.employeeId ? { employeeId: cmd.employeeId } : {}),
+      ...(employeeId || cmd.employeeId ? { employeeId: employeeId ?? cmd.employeeId } : {}),
     };
 
     const [rows, total] = await Promise.all([

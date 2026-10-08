@@ -23,10 +23,18 @@
     "db:seed": "pnpm --filter=backend run seed",
     "db:reset": "pnpm --filter=backend run prisma:migrate:deploy && pnpm --filter=backend run seed",
     "openapi:sync": "pnpm --filter=backend run openapi:export && pnpm --filter=dashboard run openapi:generate",
-    "e2e:dashboard": "pnpm --filter dashboard e2e"
+    "e2e:dashboard": "pnpm --filter dashboard e2e",
+    "e2e": "E2E_TELEMETRY_DISABLED=1 e2e run",
+    "e2e:website": "E2E_TELEMETRY_DISABLED=1 e2e run --target website",
+    "e2e:ta-dashboard": "E2E_TELEMETRY_DISABLED=1 e2e run --target dashboard"
   },
   "devDependencies": {
+    "@ai-sdk/openai": "4.0.83",
+    "@e2e-dev/web": "^0.11.2",
+    "ai": "^7.0.127",
+    "e2e": "^0.16.0",
     "lefthook": "^2.1.9",
+    "playwright": "1.63.0",
     "react-test-renderer": "19.2.4",
     "turbo": "2.9.14"
   },
@@ -58,7 +66,7 @@
       "postcss@<8.5.18": ">=8.5.18",
       "nodemailer@<9.1.0": "9.1.0",
       "nodemailer": ">=10.0.6",
-      "sharp@<0.35.4": "0.35.4",
+      "sharp@<0.35.5": "0.35.5",
       "next@<15.5.24": "15.5.24",
       "browserslist@<4.28.7": "4.28.7",
       "@hono/node-server@<1.19.15": "1.19.15",
@@ -78,7 +86,10 @@
       "multer@<2.4.0": "2.4.0",
       "mysql2@<3.23.1": "3.23.1",
       "hono@<4.13.7": "4.13.7",
-      "@fastify/busboy@<3.2.1": "3.2.1"
+      "@fastify/busboy@<3.2.1": "3.2.1",
+      "proxy-addr@<2.0.8": "2.0.8",
+      "source-map-js@<1.2.2": "1.2.2",
+      "@modelcontextprotocol/sdk@<1.31.0": "1.31.0"
     },
     "onlyBuiltDependencies": [
       "@prisma/client",

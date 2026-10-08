@@ -1,6 +1,11 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
-
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
+const mockStart = jest.fn().mockResolvedValue(undefined);
+let mockStartPending = false;
+let mockCompletePending = false;
+let mockCancelPending = false;
+let mockRequestPending = false;
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 let mockCanGoBack = false;
@@ -8,12 +13,10 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'booking-1' }),
   useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => mockCanGoBack }),
 }));
-
 const mockCancel = jest.fn().mockResolvedValue(undefined);
 const mockRequestCancel = jest.fn().mockResolvedValue(undefined);
 const mockComplete = jest.fn().mockResolvedValue(undefined);
 const mockRefetch = jest.fn();
-
 let mockAuthState: {
   user: {
     id: string;
@@ -29,12 +32,10 @@ let mockAuthState: {
     isSuperAdmin: true,
   },
 };
-
 jest.mock('@/hooks/use-redux', () => ({
   useAppSelector: (selector: (state: { auth: typeof mockAuthState }) => unknown) =>
     selector({ auth: mockAuthState }),
 }));
-
 let mockIsLoading = false;
 let mockIsError = false;
 let mockData: Record<string, unknown> | null = {
@@ -47,7 +48,6 @@ let mockData: Record<string, unknown> | null = {
   startTime: '10:00',
   endTime: '11:00',
 };
-
 jest.mock('@/hooks/queries', () => ({
   useEmployeeBooking: () => ({
     data: mockData,
@@ -56,10 +56,10 @@ jest.mock('@/hooks/queries', () => ({
     refetch: mockRefetch,
   }),
   useEmployeeMeetingStart: () => ({ data: undefined }),
-  useCancelEmployeeBooking: () => ({ mutateAsync: mockCancel }),
-  useRequestCancelEmployeeBooking: () => ({ mutateAsync: mockRequestCancel }),
-  useMarkEmployeeBookingCompleted: () => ({ mutateAsync: mockComplete }),
-  useStartEmployeeBookingSession: () => ({ mutateAsync: jest.fn() }),
+  useCancelEmployeeBooking: () => ({ mutateAsync: mockCancel, isPending: mockCancelPending }),
+  useRequestCancelEmployeeBooking: () => ({ mutateAsync: mockRequestCancel, isPending: mockRequestPending }),
+  useMarkEmployeeBookingCompleted: () => ({ mutateAsync: mockComplete, isPending: mockCompletePending }),
+  useStartEmployeeBookingSession: () => ({ mutateAsync: mockStart, isPending: mockStartPending }),
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('react-native-reanimated', () => {
@@ -75,7 +75,7 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (v: unknown) => v,
   };
 });
-jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 34 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', alignStart: 'flex-start', writingDirection: 'ltr' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
@@ -84,7 +84,7 @@ jest.mock('@/theme/sawaa', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
     ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: View,
-    PrimaryButton: ({ label, onPress }: { label: string; onPress: () => void }) => <Pressable onPress={onPress}><Text>{label}</Text></Pressable>,
+    PrimaryButton: ({ label, onPress, disabled, loading }: { label: string; onPress: () => void; disabled?: boolean; loading?: boolean }) => <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }} disabled={!!disabled || !!loading} onPress={onPress}><Text>{label}</Text></Pressable>,
   };
 });
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
@@ -102,15 +102,18 @@ jest.mock('@/components/ui/EmptyState', () => {
     ),
   };
 });
-
+jest.mock('@/components/ui/FloatingCta', () => {
+ const { View } = require('react-native');
+ return { FloatingCta: ({ children, onHeightChange }: { children?: React.ReactNode; onHeightChange?: (height: number) => void }) => <View testID="action-footer" onLayout={(event: { nativeEvent: { layout: { height: number } } }) => onHeightChange?.(event.nativeEvent.layout.height)}>{children}</View> };
+});
+import { sawaaSpacing } from '@/theme/sawaa';
 import EmployeeAppointmentDetail from '../../app/(employee)/appointment/[id]';
-
 // Sentinel value that would only appear if cached booking data leaked through
 const SENSITIVE_SENTINEL = 'September 27';
-
 describe('employee appointment detail states', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockStartPending = mockCompletePending = mockCancelPending = mockRequestPending = false;
     mockAuthState = { user: { id: 'staff', role: 'EMPLOYEE', permissions: ['booking:update', 'booking:delete'], isSuperAdmin: false } };
     mockCanGoBack = false;
     mockIsLoading = false;
@@ -118,22 +121,18 @@ describe('employee appointment detail states', () => {
     mockData = {
       id: 'booking-1',
       status: 'confirmed',
-      checkedInAt: null,
-      bookingType: 'individual',
-      deliveryType: 'in_person',
+      checkedInAt: null, bookingType: 'individual', deliveryType: 'in_person',
       date: '2026-09-27T10:00:00Z',
       startTime: '10:00',
       endTime: '11:00',
     };
   });
-
   describe('loading state', () => {
     it('shows loading skeleton without crashing', () => {
       mockIsLoading = true;
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.queryByText('appointments.details')).toBeNull();
     });
-
     it('allows back navigation during loading to avoid trapped screen (cold)', () => {
       mockIsLoading = true;
       const screen = render(<EmployeeAppointmentDetail />);
@@ -141,7 +140,6 @@ describe('employee appointment detail states', () => {
       expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
       expect(mockBack).not.toHaveBeenCalled();
     });
-
     it('uses router.back when history exists during loading (warm)', () => {
       mockIsLoading = true;
       mockCanGoBack = true;
@@ -151,7 +149,6 @@ describe('employee appointment detail states', () => {
       expect(mockReplace).not.toHaveBeenCalled();
     });
   });
-
   describe('error state', () => {
     it('shows error EmptyState with retry button on query error', () => {
       mockIsError = true;
@@ -161,7 +158,6 @@ describe('employee appointment detail states', () => {
       expect(screen.getByText('common.error')).toBeTruthy();
       expect(screen.getByText('common.retry')).toBeTruthy();
     });
-
     it('calls refetch when retry is pressed', () => {
       mockIsError = true;
       mockData = null;
@@ -169,7 +165,6 @@ describe('employee appointment detail states', () => {
       fireEvent.press(screen.getByText('common.retry'));
       expect(mockRefetch).toHaveBeenCalledTimes(1);
     });
-
     it('navigates to fallback on back press from error state (cold)', () => {
       mockIsError = true;
       mockData = null;
@@ -178,7 +173,6 @@ describe('employee appointment detail states', () => {
       expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
       expect(mockBack).not.toHaveBeenCalled();
     });
-
     it('uses router.back from error state when history exists (warm)', () => {
       mockIsError = true;
       mockData = null;
@@ -188,15 +182,12 @@ describe('employee appointment detail states', () => {
       expect(mockBack).toHaveBeenCalledTimes(1);
       expect(mockReplace).not.toHaveBeenCalled();
     });
-
     it('does NOT display cached sensitive booking details on error (data sentinel)', () => {
       mockIsError = true;
       mockData = {
         id: 'booking-1',
         status: 'confirmed',
-        checkedInAt: null,
-        bookingType: 'individual',
-        deliveryType: 'in_person',
+        checkedInAt: null, bookingType: 'individual', deliveryType: 'in_person',
         date: '2026-09-27T10:00:00Z',
         startTime: '10:00',
         endTime: '11:00',
@@ -207,15 +198,12 @@ describe('employee appointment detail states', () => {
       // The formatted date string is a sentinel that proves detail rendering
       expect(screen.queryByText(SENSITIVE_SENTINEL)).toBeNull();
     });
-
     it('does NOT show action buttons on error even with cached data', () => {
       mockIsError = true;
       mockData = {
         id: 'booking-1',
         status: 'confirmed',
-        checkedInAt: null,
-        bookingType: 'individual',
-        deliveryType: 'in_person',
+        checkedInAt: null, bookingType: 'individual', deliveryType: 'in_person',
         date: '2026-09-27T10:00:00Z',
         startTime: '10:00',
         endTime: '11:00',
@@ -225,32 +213,26 @@ describe('employee appointment detail states', () => {
       expect(screen.queryByText('doctor.markCompleted')).toBeNull();
       expect(screen.queryByText('doctor.cancelBooking')).toBeNull();
     });
-
     it('recovers to detail view after retry resolves the error', () => {
       mockIsError = true;
       mockData = null;
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('common.error')).toBeTruthy();
-
       // Simulate successful retry: error clears, data arrives
       mockIsError = false;
       mockData = {
         id: 'booking-1',
         status: 'confirmed',
-        checkedInAt: null,
-        bookingType: 'individual',
-        deliveryType: 'in_person',
+        checkedInAt: null, bookingType: 'individual', deliveryType: 'in_person',
         date: '2026-09-27T10:00:00Z',
         startTime: '10:00',
         endTime: '11:00',
       };
       screen.rerender(<EmployeeAppointmentDetail />);
-
       expect(screen.queryByText('common.error')).toBeNull();
       expect(screen.getByText('appointments.details')).toBeTruthy();
     });
   });
-
   describe('missing data (not found) state', () => {
     it('shows not-found EmptyState when data is null after loading', () => {
       mockData = null;
@@ -258,13 +240,11 @@ describe('employee appointment detail states', () => {
       expect(screen.getByTestId('empty-state')).toBeTruthy();
       expect(screen.getByText('appointments.notFound')).toBeTruthy();
     });
-
     it('does not render null (blank screen) when booking is missing', () => {
       mockData = null;
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.toJSON()).not.toBeNull();
     });
-
     it('navigates to fallback on back from not-found (cold)', () => {
       mockData = null;
       const screen = render(<EmployeeAppointmentDetail />);
@@ -272,7 +252,6 @@ describe('employee appointment detail states', () => {
       expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
       expect(mockBack).not.toHaveBeenCalled();
     });
-
     it('uses router.back from not-found when history exists (warm)', () => {
       mockData = null;
       mockCanGoBack = true;
@@ -282,13 +261,11 @@ describe('employee appointment detail states', () => {
       expect(mockReplace).not.toHaveBeenCalled();
     });
   });
-
   describe('successful data rendering preserves existing behavior', () => {
     it('renders appointment details when data is present', () => {
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('appointments.details')).toBeTruthy();
     });
-
     it('shows cancel button for confirmed bookings when user has direct cancel permission', () => {
       mockAuthState = {
         user: { id: 'admin-1', role: 'ADMIN', permissions: ['booking:delete'], isSuperAdmin: false },
@@ -297,7 +274,6 @@ describe('employee appointment detail states', () => {
       expect(screen.getByText('doctor.cancelBooking')).toBeTruthy();
       expect(screen.queryByText('appointments.requestCancel')).toBeNull();
     });
-
     it('shows request cancel button for ordinary employee with Booking:update and submits cancel request', () => {
       mockAuthState = {
         user: { id: 'emp-1', role: 'EMPLOYEE', permissions: ['booking:read', 'booking:update'], isSuperAdmin: false },
@@ -306,7 +282,6 @@ describe('employee appointment detail states', () => {
       expect(screen.getByText('appointments.requestCancel')).toBeTruthy();
       expect(screen.queryByText('doctor.cancelBooking')).toBeNull();
     });
-
     it('hides cancellation action when user has neither delete nor update permission', () => {
       mockAuthState = {
         user: { id: 'viewer-1', role: 'STAFF', permissions: ['booking:read'], isSuperAdmin: false },
@@ -315,28 +290,61 @@ describe('employee appointment detail states', () => {
       expect(screen.queryByText('doctor.cancelBooking')).toBeNull();
       expect(screen.queryByText('appointments.requestCancel')).toBeNull();
     });
-
     it('shows start session for a deposit-confirmed appointment', () => {
       mockData = { ...mockData!, status: 'deposit_paid' };
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('doctor.startSession')).toBeTruthy();
     });
-
     it('shows completion for a checked-in deposit-confirmed appointment', () => {
       mockData = { ...mockData!, status: 'deposit_paid', checkedInAt: '2026-09-27T09:55:00Z' };
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('doctor.markCompleted')).toBeTruthy();
     });
-
     it('shows start session for confirmed unchecked-in bookings', () => {
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('doctor.startSession')).toBeTruthy();
     });
-
     it('shows mark completed for confirmed checked-in bookings', () => {
       mockData = { ...mockData!, checkedInAt: '2026-09-27T09:55:00Z' };
       const screen = render(<EmployeeAppointmentDetail />);
       expect(screen.getByText('doctor.markCompleted')).toBeTruthy();
     });
   });
+});
+describe('employee pending actions and footer measurement', () => {
+ beforeEach(() => {
+  jest.clearAllMocks(); mockStartPending = mockCompletePending = mockCancelPending = mockRequestPending = false;
+  mockIsError = mockIsLoading = false;
+  mockAuthState = { user: { id: 'staff', role: 'EMPLOYEE', permissions: ['booking:update', 'booking:delete'] } };
+  mockData = { id: 'booking-1', status: 'confirmed', checkedInAt: null, bookingType: 'individual', deliveryType: 'in_person', date: '2026-09-27T10:00:00Z', startTime: '10:00', endTime: '11:00' };
+ });
+ it.each(['start', 'complete', 'cancel', 'request'] as const)('blocks all visible actions while %s is pending, recovers after failure', async pending => {
+  mockStartPending = pending === 'start'; mockCompletePending = pending === 'complete';
+  mockCancelPending = pending === 'cancel'; mockRequestPending = pending === 'request';
+  if (pending === 'complete') mockData = { ...mockData!, checkedInAt: '2026-09-27T09:55:00Z' };
+  if (pending === 'request') mockAuthState.user!.permissions = ['booking:update'];
+  const label = pending === 'start' ? 'doctor.startSession' : pending === 'complete' ? 'doctor.markCompleted' : pending === 'cancel' ? 'doctor.cancelBooking' : 'appointments.requestCancel';
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  const view = render(<EmployeeAppointmentDetail />);
+  const buttons = view.getAllByRole('button').filter(button => ['doctor.startSession','doctor.markCompleted','doctor.cancelBooking','appointments.requestCancel'].includes(button.props.accessibilityLabel));
+  expect(buttons.length).toBe(2);
+  for (const button of buttons) { expect(button.props.accessibilityState.disabled).toBe(true); fireEvent.press(button); }
+  expect(view.getByRole('button', { name: label }).props.accessibilityState.busy).toBe(true);
+  expect(alert).not.toHaveBeenCalled();
+  mockStartPending = mockCompletePending = mockCancelPending = mockRequestPending = false;
+  view.rerender(<EmployeeAppointmentDetail />);
+  const mutation = pending === 'start' ? mockStart : pending === 'complete' ? mockComplete : pending === 'cancel' ? mockCancel : mockRequestCancel;
+  mutation.mockRejectedValueOnce(new Error('offline'));
+  alert.mockImplementation((_title, _message, actions) => { actions?.find(action => action.text === 'common.confirm')?.onPress?.(); });
+  fireEvent.press(view.getByText(label));
+  await waitFor(() => expect(mutation).toHaveBeenCalledWith('booking-1'));
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('common.error', 'common.error'));
+  expect(view.getByRole('button', { name: label }).props.accessibilityState.disabled).toBe(false);
+  alert.mockRestore();
+ });
+ it('reserves measured full footer height without adding the safe inset twice', () => {
+  const view = render(<EmployeeAppointmentDetail />);
+  fireEvent(view.getByTestId('action-footer'), 'layout', { nativeEvent: { layout: { height: 310 } } });
+  expect(StyleSheet.flatten(view.UNSAFE_getByType(ScrollView).props.contentContainerStyle).paddingBottom).toBe(310 + sawaaSpacing.lg);
+ });
 });

@@ -39,3 +39,10 @@ describe("BookingHeaderBadges", () => {
     expect(screen.getByText("type:group")).toBeInTheDocument()
   })
 })
+
+test('marks only explicitly late bookings', () => {
+  const { rerender } = render(<BookingHeaderBadges booking={{ type:'individual', deliveryType:'IN_PERSON', status:'completed', isLateEntry:true }} />)
+  expect(screen.getByText('bookings.late.title')).toBeInTheDocument()
+  rerender(<BookingHeaderBadges booking={{ type:'individual', deliveryType:'IN_PERSON', status:'completed' }} />)
+  expect(screen.queryByText('bookings.late.title')).not.toBeInTheDocument()
+})

@@ -3,6 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Users, Wallet } from 'lucide-react-native';
 
+import { AppButton } from '@/components/ui/AppButton';
 import { DateBox } from '@/components/ui/DateBox';
 import { Pill } from '@/components/ui/Pill';
 import { useDir } from '@/hooks/useDir';
@@ -10,21 +11,24 @@ import { formatHalalasPrice, formatTimeOfDay } from '@/lib/session-format';
 import type { GroupSession } from '@/services/client/group-sessions';
 import { Glass } from '@/theme/components/Glass';
 import { getFontName } from '@/theme/fonts';
-import { PrimaryButton, sawaaRadius } from '@/theme/sawaa';
+import { PrimaryButton } from '@/theme/sawaa';
+import { sawaaRadius, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 interface GroupCardProps {
   group: GroupSession;
   onOpen: () => void;
   /** Center phone from branding; used by the «تواصل معنا» action when a session is full. */
+  publicPreview?: boolean;
   contactPhone?: string | null;
 }
 
 /** Group-session card: date box, name, time and duration, enrolment, price and the register / contact action. */
-export function GroupCard({ group, onOpen, contactPhone }: GroupCardProps) {
+export function GroupCard({ group, onOpen, contactPhone, publicPreview = false }: GroupCardProps) {
   const colors = useSawaaColors();
   const dir = useDir();
   const { t } = useTranslation();
+  const name = dir.isRTL ? group.nameAr : group.nameEn ?? group.nameAr;
   const isFull = group.isFull;
   const time = formatTimeOfDay(group.scheduledAt, dir.isRTL);
   const duration = group.durationMins ? t('groups.duration', { count: group.durationMins }) : null;
@@ -45,17 +49,17 @@ export function GroupCard({ group, onOpen, contactPhone }: GroupCardProps) {
       <Pressable
         onPress={onOpen}
         accessibilityRole="button"
-        accessibilityLabel={group.title}
+        accessibilityLabel={name}
         style={styles.body}
       >
         <View style={[styles.top, { flexDirection: dir.row }]}>
           <DateBox iso={group.scheduledAt} fallback={t('groups.dateTba')} />
           <View style={styles.titleBlock}>
-            <Text numberOfLines={2} style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
-              {group.title}
+            <Text style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign }]}>
+              {name}
             </Text>
             {when ? (
-              <Text numberOfLines={1} style={[styles.meta, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>
+              <Text style={[styles.meta, { color: colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign }]}>
                 {when}
               </Text>
             ) : null}
@@ -82,16 +86,8 @@ export function GroupCard({ group, onOpen, contactPhone }: GroupCardProps) {
         </View>
       </Pressable>
 
-      {isFull ? (
-        <Pressable
-          onPress={onContact}
-          accessibilityRole="button"
-          style={[styles.outline, { borderColor: colors.teal[700] }]}
-        >
-          <Text style={[styles.outlineText, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '700') }]}>
-            {t('groups.contactUs')}
-          </Text>
-        </Pressable>
+      {publicPreview ? <AppButton variant="secondary" label={t('guest.viewDetails')} onPress={onOpen} /> : isFull ? (
+        <AppButton variant="secondary" label={t('groups.contactUs')} onPress={onContact} />
       ) : (
         <PrimaryButton label={t('groups.register')} onPress={onOpen} fontFamily={getFontName(dir.locale, '700')} />
       )}
@@ -104,11 +100,9 @@ const styles = StyleSheet.create({
   body: { gap: 12 },
   top: { alignItems: 'center', gap: 12 },
   titleBlock: { flex: 1, minWidth: 0, gap: 2 },
-  title: { fontSize: 16, lineHeight: 22 },
-  meta: { fontSize: 14, lineHeight: 20 },
+  title: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  meta: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   stats: { alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
   stat: { alignItems: 'center', gap: 6 },
-  statText: { fontSize: 14, lineHeight: 20 },
-  outline: { minHeight: 56, borderRadius: sawaaRadius.pill, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  outlineText: { fontSize: 17 },
+  statText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

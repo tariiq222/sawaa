@@ -46,7 +46,7 @@ const buildPrisma = (
   user: {
     // Actor lookup is by { id }, the existing-account lookup is by { email }.
     findUnique: jest.fn(({ where }: { where: { id?: string; email?: string } }) =>
-      Promise.resolve(where.id ? actor : existingUser),
+      Promise.resolve(where.id ? (actor && { id: where.id, ...actor }) : existingUser),
     ),
   },
   $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx)),

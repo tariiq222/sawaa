@@ -1,3 +1,4 @@
+jest.mock('@/features/auth/use-password-login', () => ({ usePasswordLogin: () => ({ pending: false, cancel: jest.fn(), capture: () => () => true, submit: jest.fn() }) }));
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: mockLocale === 'ar', language: mockLocale }) }));
 import { StyleSheet, Text as MockText } from 'react-native';
@@ -42,6 +43,7 @@ jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ImpactFeedbackStyle: 
 
 import { shiftDateKey } from '../../lib/employee-schedule';
 import CalendarScreen from '../../app/(employee)/(tabs)/calendar';
+jest.mock('../../app/(auth)/email-entry', () => ({ __esModule: true, default: () => null }));
 import LoginScreen from '../../app/(auth)/login';
 
 beforeEach(() => {

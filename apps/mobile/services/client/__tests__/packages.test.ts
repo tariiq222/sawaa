@@ -15,7 +15,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
-jest.mock('expo-modules-core', () => ({ uuid: { v4: jest.fn() } }), { virtual: true });
+jest.mock('expo-modules-core', () => ({ uuid: { v4: jest.fn() } }));
 
 import api from '../../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -68,7 +68,7 @@ describe('clientPackagesService catalog and purchase calls', () => {
       idempotencyKey: 'attempt-1',
     });
 
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/payments/package-purchases/init', {
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/payments/package-purchases/native/init', {
       packageId: 'offer-9',
       packageFamilyId: 'family-1',
       branchId: 'branch-1',
@@ -183,14 +183,40 @@ describe('clientPackagesService authenticated balance and booking calls', () => 
       familyId: 'family-1',
       branchId: 'branch-1',
     });
-    expect(await getPendingPackagePurchase()).toEqual({
+    expect(await getPendingPackagePurchase('client-1')).toEqual({
       purchaseId: 'purchase-1',
       clientId: 'client-1',
       packageId: 'offer-9',
       familyId: 'family-1',
       branchId: 'branch-1',
     });
-    await clearPendingPackagePurchase();
-    expect(await getPendingPackagePurchase()).toBeNull();
+    await clearPendingPackagePurchase({ clientId: 'client-1', purchaseId: 'purchase-1' });
+    expect(await getPendingPackagePurchase('client-1')).toBeNull();
   });
+});
+
+it('does not clear another client or purchase pending identity', async () => {
+  const storage = AsyncStorage as unknown as { getItem: jest.Mock; removeItem: jest.Mock };
+  storage.getItem.mockResolvedValue(JSON.stringify({ purchaseId: 'purchase-new', clientId: 'client-2', packageId: 'p', familyId: '', branchId: 'b' }));
+  await clearPendingPackagePurchase({ clientId: 'client-1', purchaseId: 'purchase-old' });
+  expect(storage.removeItem).not.toHaveBeenCalled();
+});
+
+it('preserves both accounts when an already-dispatched A init finishes after B saved a checkout', async () => {
+  const values = new Map<string, string>();
+  (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) => values.get(key) ?? null);
+  (AsyncStorage.setItem as jest.Mock).mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+  const b = { clientId: 'client-B', purchaseId: 'purchase-B', packageId: 'p', branchId: 'b', familyId: '' };
+  const a = { ...b, clientId: 'client-A', purchaseId: 'purchase-A' };
+  await savePendingPackagePurchase(b);
+  await savePendingPackagePurchase(a);
+  expect(await getPendingPackagePurchase('client-B')).toEqual(b);
+  expect(await getPendingPackagePurchase('client-A')).toEqual(a);
+});
+
+it('does not create an attempt key if the initiating session expired during storage read', async () => {
+  let current = true;
+  (AsyncStorage.getItem as jest.Mock).mockImplementation(async () => { current = false; return null; });
+  await expect(getPackagePurchaseAttemptKey('client-A', 'p', undefined, 'b', () => current)).rejects.toThrow('Session changed');
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
 });

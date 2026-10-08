@@ -37,6 +37,14 @@ describe('MaterializeNotificationIntentHandler', () => {
     return { handler: new MaterializeNotificationIntentHandler(prisma as unknown as PrismaService), prisma, tx };
   };
 
+  it('does not materialize a late-entry reminder', async () => {
+    const scheduledAt = new Date(Date.now() + 60_000);
+    const {handler, tx} = build({...baseIntent({kind: 'booking-reminder-client', bookingId: 'booking-1', clientId: 'client-1', scheduledAt: scheduledAt.toISOString(), policyVersion: 1}), consumerKey: 'comms.booking-reminder-client.v2'});
+    tx.booking.findUnique.mockResolvedValue({status: 'CONFIRMED', clientId: 'client-1', scheduledAt, lateEntryRecordedAt: new Date()});
+    await handler.execute('intent-1');
+    expect(tx.notificationIntent.update).toHaveBeenCalledWith({where: {id: 'intent-1'}, data: {status: 'EXPIRED'}});
+  });
+
   it.each(['CONFIRMED', 'DEPOSIT_PAID'])('materializes a current future reminder for %s', async status => {
     const scheduledAt = new Date(Date.now() + 3600000);
     const { handler, tx } = build({ ...baseIntent({ kind: 'booking-reminder-client', bookingId: 'booking-1', clientId: 'client-1', scheduledAt: scheduledAt.toISOString(), policyVersion: 1 }), consumerKey: 'comms.booking-reminder-client.v2' });

@@ -77,7 +77,6 @@ export function WeekStrip({ selectedKey, onSelect, onShiftWeek }: WeekStripProps
               ]}
             >
               <Text
-                numberOfLines={1}
                 style={[styles.weekday, {
                   color: selected ? roles.selection.foreground : colors.ink[700],
                   fontFamily: getFontName(dir.locale, '400'),
@@ -105,16 +104,20 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', justifyContent: 'space-between' },
   arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   month: { flex: 1, textAlign: 'center', fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
-  days: { gap: 6 },
+  days: { gap: sawaaSpacing.xs, flexWrap: 'wrap' },
   day: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '12%',
+    minWidth: 44,
     minHeight: 64,
+    paddingHorizontal: sawaaSpacing.xs,
+    paddingVertical: sawaaSpacing.sm,
     borderRadius: sawaaRadius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
   },
-  weekday: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
+  weekday: { textAlign: 'center', flexShrink: 1, fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
   number: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
 });

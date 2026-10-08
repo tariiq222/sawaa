@@ -52,7 +52,7 @@ export class ExpireBookingHandler {
 		let refundRequestId: string | null = null;
 		let idempotencyKey: string | null = null;
 
-		const { updated, completedPayment } = await this.rlsTransaction.withTransaction(async (tx) => {
+		const { updated, completedPayment, latePaymentReview } = await this.rlsTransaction.withTransaction(async (tx) => {
 			// Recheck the deadline, historical flag and selected status in the same
 			// write so stale cron selections cannot expire a changed booking.
 			const expiredBooking = await updateBookingAtomically(tx, {
@@ -72,10 +72,25 @@ export class ExpireBookingHandler {
 			});
 			const completedPayment = await tx.payment.findFirst({
 				where: { invoice: { bookingId: booking.id }, status: "COMPLETED" },
-				select: { id: true, amount: true, refundedAmount: true },
+				select: { id: true, amount: true, refundedAmount: true, gatewayRef: true },
 			});
 
-			if (completedPayment) {
+			// Late provider capture has its own explicit review lifecycle. Expiry
+			// still releases the booking and capacity, but must not create a second
+			// automatic request beside that review (or override its later decision).
+			// The booking CAS above holds the same row lock used by settlement, so
+			// this read observes a capture/review committed ahead of expiry.
+			const latePaymentReview = completedPayment?.gatewayRef
+				? await tx.refundRequest.findFirst({
+					where: {
+						paymentId: completedPayment.id,
+						idempotencyKey: `refund:late-payment:${completedPayment.gatewayRef}`,
+					},
+					select: { id: true },
+				})
+				: null;
+
+			if (completedPayment && !latePaymentReview) {
 				// FULL refund — amount left undefined so the finance handler refunds
 				// the whole paid amount. Created inside the same transaction as the
 				// status flip so a concurrent double-expiry cannot skip the refund.
@@ -110,7 +125,7 @@ export class ExpireBookingHandler {
 				);
 			}
 
-			return { updated: expiredBooking, completedPayment };
+			return { updated: expiredBooking, completedPayment, latePaymentReview };
 		});
 
 		// Reuse the existing cancellation/refund event so
@@ -125,7 +140,7 @@ export class ExpireBookingHandler {
 			employeeId: booking.employeeId,
 			reason: CancellationReason.SYSTEM_EXPIRED,
 			zoomMeetingId: booking.zoomMeetingId ?? null,
-			refundType: completedPayment ? RefundType.FULL : RefundType.NONE,
+			refundType: completedPayment && !latePaymentReview ? RefundType.FULL : RefundType.NONE,
 			paymentId: completedPayment?.id ?? null,
 			refundRequestId,
 			idempotencyKey,

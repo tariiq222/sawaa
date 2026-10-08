@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -60,6 +60,7 @@ export default function BookingConfirmScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
     const f600 = getFontName(dir.locale, '600');
@@ -79,9 +80,9 @@ export default function BookingConfirmScreen() {
   const activeCatalogQuery = clinicId ? catalogQuery : departmentsQuery;
   const loading = activeCatalogQuery.isLoading;
   const error = activeCatalogQuery.isError
-    ? (dir.isRTL ? 'تعذّر تحميل الخدمة' : 'Failed to load service')
+    ? (t('booking.failedToLoadService'))
     : activeCatalogQuery.data && !service
-      ? (dir.isRTL ? 'الخدمة غير متوفرة' : 'Service unavailable')
+      ? (t('booking.serviceUnavailable'))
       : null;
   const scheduledDate = useMemo(
     () => (scheduledAt && Number.isFinite(Date.parse(scheduledAt)) ? new Date(scheduledAt) : null),
@@ -136,22 +137,22 @@ export default function BookingConfirmScreen() {
   const therapist = employeeId ? therapistsQuery.data?.find((entry) => entry.id === employeeId) : undefined;
   const specialistName = therapist ? therapistDisplay(therapist, dir.isRTL, t('therapists.unknownName')).name : null;
   const infoRows = [
-    ...(serviceName ? [{ icon: Stethoscope, label: dir.isRTL ? 'الخدمة' : 'Service', value: serviceName }] : []),
+    ...(serviceName ? [{ icon: Stethoscope, label: t('booking.service'), value: serviceName }] : []),
     ...(clinicName && !directClinic ? [{ icon: Building2, label: t('booking.clinic'), value: clinicName }] : []),
     ...(specialistName ? [{ icon: UserRound, label: t('booking.specialist'), value: specialistName }] : []),
     { icon: isOnline ? Video : Building2, label: t('booking.visitType'), value: t(isOnline ? 'booking.online' : 'booking.inPerson') },
-    { icon: Calendar, label: dir.isRTL ? 'التاريخ' : 'Date', value: scheduledDate ? formatConfirmDate(scheduledDate, dir.isRTL) : '—' },
-    { icon: Clock, label: dir.isRTL ? 'الوقت' : 'Time', value: scheduledDate ? formatConfirmTime(scheduledDate, dir.isRTL) : '—' },
+    { icon: Calendar, label: t('booking.date'), value: scheduledDate ? formatConfirmDate(scheduledDate, dir.isRTL) : '—' },
+    { icon: Clock, label: t('booking.time'), value: scheduledDate ? formatConfirmTime(scheduledDate, dir.isRTL) : '—' },
   ];
   const localizedText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 160 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader {...bookingStep('confirm', steps)} title={t('booking.confirmBooking')} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader {...bookingStep('confirm', steps)} title={t('booking.confirmBooking')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/(tabs)/home' : '/(guest)/home')} />
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(120).duration(600).easing(Easing.out(Easing.cubic))}>
           {loading ? (
@@ -167,7 +168,7 @@ export default function BookingConfirmScreen() {
                 icon="cloud-offline-outline"
                 tone="danger"
                 title={error}
-                actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
+                actionLabel={t('common.retry')}
                 onAction={() => { void activeCatalogQuery.refetch(); }}
               />
             </Glass>
@@ -197,7 +198,7 @@ export default function BookingConfirmScreen() {
         {!loading && !error && service ? (
           <View style={[styles.totalRow, { flexDirection: dir.row }]}>
             <Text style={[styles.priceLabelBold, { fontFamily: f600 }, localizedText]}>
-              {dir.isRTL ? 'الإجمالي' : 'Total'}
+              {t('booking.total')}
             </Text>
             <Text style={[styles.priceTotal, { fontFamily: f700 }]}>
               {subtotal == null ? '—' : formatMoney(total)}
@@ -206,19 +207,22 @@ export default function BookingConfirmScreen() {
         ) : null}
       </ScrollView>
 
-      <FloatingCta>
+      <FloatingCta onHeightChange={setFooterHeight}>
         {signedIn ? (
           <PrimaryButton
-            label={payment.submitting
-              ? (dir.isRTL ? 'جارٍ المعالجة…' : 'Processing…')
-              : (dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`)}
+            label={payment.method === 'at_center'
+              ? t(payment.submitting ? 'booking.confirmingBooking' : 'booking.confirmAtCenter')
+              : payment.submitting
+              ? (t('booking.processing'))
+              : t('booking.payAmount', { amount: formatMoney(total) })}
             onPress={() => { void payment.pay(); }}
             disabled={!payment.canPay}
+            loading={payment.submitting}
             fontFamily={f700}
           />
         ) : (
           <PrimaryButton
-            label={dir.isRTL ? 'الدخول أو التسجيل للمتابعة' : 'Sign in or register to continue'}
+            label={t('booking.signInOrRegisterToContinue')}
             onPress={signIn}
             disabled={!canReview}
             fontFamily={f700}
@@ -228,7 +232,7 @@ export default function BookingConfirmScreen() {
           <View style={[styles.hint, { flexDirection: dir.row }]}>
             <GoIcon size={14} color={colors.ink[500]} strokeWidth={1.75} />
             <Text style={[styles.hintText, { fontFamily: f400 }, localizedText]}>
-              {dir.isRTL ? 'يفتح الدفع بعد تسجيل الدخول' : 'Payment opens after sign-in'}
+              {t('booking.paymentOpensAfterSignIn')}
             </Text>
           </View>
         ) : null}
@@ -245,7 +249,7 @@ export default function BookingConfirmScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
-  totalRow: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
+  totalRow: { flexWrap: 'wrap', gap: sawaaSpacing.md, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
   priceLabelBold: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,

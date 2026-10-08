@@ -16,10 +16,7 @@ async function getCspHeaders(environment: "development" | "production") {
   if (typeof config.headers !== "function") throw new Error("next.config.mjs did not expose headers()")
   const headers = await config.headers()
   const normal = headers.find((entry) => entry.source === "/(.*)")
-  const frontman = headers.find((entry) => entry.source === "/frontman")
-  const csp = (headerSet: typeof normal) =>
-    headerSet?.headers.find((header) => header.key === "Content-Security-Policy")?.value ?? ""
-  return { normal: csp(normal), frontman: csp(frontman) }
+  return normal?.headers.find((header) => header.key === "Content-Security-Policy")?.value ?? ""
 }
 
 function imageSource(policy: string) {
@@ -33,9 +30,9 @@ function connectSource(policy: string) {
 afterEach(() => vi.unstubAllEnvs())
 
 describe("next.config.mjs Content-Security-Policy", () => {
-  it("allows only the dashboard loopback origins for development images in both policies", async () => {
-    const { normal, frontman } = await getCspHeaders("development")
-    for (const policy of [normal, frontman]) {
+  it("allows only the dashboard loopback origins for development images", async () => {
+    const policy = await getCspHeaders("development")
+    {
       const imgSrc = imageSource(policy)
       expect(imgSrc).toBe("img-src 'self' data: blob: https: http://localhost:* http://127.0.0.1:*")
       const connectSrc = connectSource(policy)
@@ -47,10 +44,7 @@ describe("next.config.mjs Content-Security-Policy", () => {
   })
 
   it("keeps production image sources byte-equivalent to the existing strict policy", async () => {
-    const { normal, frontman } = await getCspHeaders("production")
-    expect(imageSource(normal)).toBe("img-src 'self' data: blob: https:")
-    // Production does not emit the Frontman route, but its shared policy value
-    // is generated with the same production-only image source.
-    expect(frontman).toBe("")
+    const policy = await getCspHeaders("production")
+    expect(imageSource(policy)).toBe("img-src 'self' data: blob: https:")
   })
 })

@@ -1,0 +1,52 @@
+{
+  "acceptedAt": "2026-10-08T05:18:11.276623+00:00",
+  "scope": "authorized internal TestFlight rebuild/delivery; not device/provider acceptance",
+  "policyId": "sol61-all-v1",
+  "version": "1.0.0",
+  "build": "26",
+  "easBuildId": "f890bd7f-3910-4d6c-930f-a34dbd7a2c4f",
+  "appleBuildId": "581867ac-5da8-44d2-9f92-3f8f8291bf4b",
+  "appleDeliveryUuid": "581867ac-5da8-44d2-9f92-3f8f8291bf4b",
+  "processingState": "VALID",
+  "internalBuildState": "IN_BETA_TESTING",
+  "usesNonExemptEncryption": false,
+  "group": "Sawaa Internal",
+  "groupTesters": 1,
+  "notesVerifiedViaApiAndUiReload": true,
+  "ipaSha256": "581e228e0175d7c4c41425fe0376bb4c825147ade6a6ec279ffe8f074f83bd88",
+  "sourceManifestSha256": "66a1372894543b58425e26f30b96253346d08345acae349ddda2e46278744503",
+  "sourceMatchesInspectedArchive": true,
+  "originalUiSourcePreserved": true,
+  "validation": {
+    "suites": 222,
+    "tests": 1589,
+    "typecheck": {
+      "exit": 0,
+      "log": "typecheck-final.log"
+    },
+    "lint": {
+      "exit": 0,
+      "log": "lint-final.log"
+    },
+    "jest": {
+      "exit": 0,
+      "log": "jest-accepted.log",
+      "forceExit": true,
+      "openHandleLimitation": "TanStack timers remain after tests; no lifecycle-clean claim"
+    },
+    "review": "final-candidate-review.md",
+    "archive": "archive-verification.json",
+    "sourceUnchangedAfterBuildDispatch": true
+  },
+  "productionChanged": false,
+  "appReviewSubmitted": false,
+  "physicalDeviceProviderAcceptance": "unverified",
+  "knownLimits": [
+    "Dashboard smoke prior429 remains open; no provider sandbox transactions this task",
+    "214% keyboard/card placeholder issues remain for manual TestFlight verification",
+    "Full page/device/locale/theme/accessibility matrix unverified"
+  ],
+  "measurementScopeComplete": false,
+  "wholeTaskTokens": null,
+  "proofImageSha256": "d0b241d7d33716000233f1d0852eda018bddaf9cc73d6edeee8913f8bcbfb7f0"
+}

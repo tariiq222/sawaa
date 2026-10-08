@@ -9,7 +9,10 @@ jest.mock('react-native-reanimated', () => {
   return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
 const mockBack = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, push: jest.fn() }) }));
+const mockReplace = jest.fn();
+let mockHistory = true;
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => false }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => mockHistory, push: jest.fn() }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right' }) }));
@@ -31,7 +34,7 @@ jest.mock('@/components/features/settings/DeleteAccountButton', () => ({ DeleteA
 import ProfileScreen from '../profile';
 
 describe('client profile screen escape route', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); mockHistory = true; });
 
   it('exposes a back control that returns to the previous screen', () => {
     const screen = render(<ProfileScreen />);
@@ -43,4 +46,11 @@ describe('client profile screen escape route', () => {
     const screen = render(<ProfileScreen asTab />);
     expect(screen.queryByLabelText('a11y.buttonBack')).toBeNull();
   });
+});
+
+it('returns a cold link to the client account tab', () => {
+ mockHistory = false; const view = render(<ProfileScreen />);
+ fireEvent.press(view.getByLabelText('a11y.buttonBack'));
+ expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/account');
+ expect(mockBack).not.toHaveBeenCalled();
 });

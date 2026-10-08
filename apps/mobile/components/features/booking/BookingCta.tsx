@@ -10,9 +10,6 @@ import type { DirState } from '@/hooks/useDir';
 import { formatTime, type Slot } from './TimeSlotsGrid';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 
-const DAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-const DAYS_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 interface BookingCtaProps {
   selectedDay: Date;
   selectedSlot: Slot | null;
@@ -37,7 +34,7 @@ export function BookingCta({
 }: BookingCtaProps) {
   const colors = useSawaaColors();
   const { t } = useTranslation();
-  const dayLabel = dir.isRTL ? DAYS_AR[selectedDay.getDay()] : DAYS_EN_SHORT[selectedDay.getDay()];
+  const dayLabel = new Intl.DateTimeFormat(dir.isRTL ? 'ar-SA' : 'en-US', { calendar: 'gregory', weekday: 'short' }).format(selectedDay);
   const dayNum = dir.isRTL ? selectedDay.getDate().toLocaleString('ar-SA') : selectedDay.getDate();
   const price = chargedPrice != null && chargedPrice.trim() !== '' ? Number(chargedPrice) : NaN;
   const parts: string[] = [];

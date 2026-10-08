@@ -39,7 +39,7 @@ app/
   - Transient UI state (modals, form drafts, typing indicators) → component-level `useState`/`useReducer`.
 - **API**: Axios services in `services/` — one file per domain; `services/client/` and `services/employee/` hold role-specific endpoints.
 - **i18n**: `i18next` + `react-i18next` — translation files in `i18n/`; keys mirror dashboard/backend tokens.
-- **Theme**: `ThemeProvider` combines backend `PublicBranding`, the system/user color scheme, and Sawaa design tokens. The selected theme mode is stored in AsyncStorage; theme state is not in Redux. Never hardcode brand colors.
+- **Theme**: `ThemeProvider` accepts backend `PublicBranding` for compatibility and builds the fixed Sawaa token palette for the system/user color scheme. The selected theme mode is stored in AsyncStorage; theme state is not in Redux. Never hardcode brand colors.
 - **Components**: Reusable in `components/`, feature-specific stay in `app/`.
 
 ## Service Files (`services/`)
@@ -80,7 +80,9 @@ Backend, dashboard, and admin do not change.
 
 - `useBranding` query fetches `PublicBranding` for the Sawa deployment.
 - `ThemeProvider` consumes the result and exposes theme colors and mode to RN components.
-- All colors, logo, and typography flow from this — no hardcoded brand values anywhere.
+- The published Sawa app keeps its fixed Sawaa visual identity: `buildTheme` accepts PublicBranding for compatibility but ignores its color/font values; the bundled font and Sawaa tokens own appearance. This is observed deployment behavior, not runtime rebranding.
+- Use theme/Sawaa tokens for every color; do not add component-level brand values.
+- New actions use the shared `AppButton`, `PrimaryButton`, `SecondaryButton` or the compatible `ActionButton` contract (loading/disabled, accessibility, locale font/direction and scalable target). `ThemedButton` remains a deprecated compatibility export; do not remove unused exports speculatively.
 
 ## Terminology
 

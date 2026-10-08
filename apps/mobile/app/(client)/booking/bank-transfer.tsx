@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/useTheme';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Banknote, Upload } from 'lucide-react-native';
@@ -13,7 +11,10 @@ import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { AppButton } from '@/components/ui/AppButton';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -21,19 +22,20 @@ import { clientPaymentsService, type ReceiptUploadAsset } from '@/services/clien
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import { useBankTransferSettings, useClientInvoice } from '@/hooks/queries';
 import { getOutstandingHalalas } from '@/lib/invoice-outstanding';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { BankTransferAccountDetails } from '@/components/features/booking/BankTransferAccountDetails';
 
 export default function BankTransferScreen() {
   const colors = useSawaaColors();
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const bankTransferQuery = useBankTransferSettings();
   const { invoiceId, bookingId } = useLocalSearchParams<{
     invoiceId?: string;
@@ -45,7 +47,8 @@ export default function BankTransferScreen() {
   const [receipt, setReceipt] = useState<ReceiptUploadAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const uploaded = !!receipt;
+  const selected = !!receipt;
+  const readFailed = bankTransferQuery.isError || invoiceQuery.isError;
   // The transfer must match what the invoice still owes (total minus payments
   // already reserved), which the server enforces. Read it from the invoice
   // instead of trusting a price passed through the route, which ignores
@@ -60,7 +63,7 @@ export default function BankTransferScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert(dir.isRTL ? 'يلزم إذن المعرض' : 'Photo library permission required');
+      Alert.alert(t('payment.photoLibraryPermissionRequired'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -74,9 +77,9 @@ export default function BankTransferScreen() {
   };
 
   const submitReceipt = async () => {
-    if (!receipt || !invoiceId || !selectedAccount || submitting) return;
+    if (!receipt || !invoiceId || !selectedAccount || submitting || readFailed) return;
     if (!numericAmount || numericAmount <= 0) {
-      Alert.alert(dir.isRTL ? 'مبلغ غير صالح' : 'Invalid amount');
+      Alert.alert(t('payment.invalidAmount'));
       return;
     }
     setSubmitting(true);
@@ -93,7 +96,7 @@ export default function BankTransferScreen() {
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        dir.isRTL ? 'تعذّر رفع الإيصال' : 'Could not upload receipt',
+        t('payment.couldNotUploadReceipt'),
         error instanceof Error ? error.message : String(error),
       );
     } finally {
@@ -104,11 +107,11 @@ export default function BankTransferScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
+          <ScreenHeader title={t('payment.bankTransfer')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -117,11 +120,8 @@ export default function BankTransferScreen() {
               <Banknote size={22} color={colors.accent.amber} strokeWidth={1.75} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                {dir.isRTL ? 'التحويل البنكي' : 'Bank transfer'}
-              </Text>
               <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                {dir.isRTL ? 'حوّل المبلغ ثم ارفع الإيصال' : 'Transfer and upload receipt'}
+                {t('payment.transferAndUploadReceipt')}
               </Text>
             </View>
           </View>
@@ -129,6 +129,8 @@ export default function BankTransferScreen() {
 
         {bankTransferQuery.isLoading || invoiceQuery.isLoading ? (
           <Skeleton height={190} radius={sawaaRadius.xl} />
+        ) : bankTransferQuery.isError ? (
+          <ErrorState onRetry={() => void bankTransferQuery.refetch()} />
         ) : invoiceQuery.isError || outstanding === null ? (
           <EmptyState
             icon="alert"
@@ -142,14 +144,14 @@ export default function BankTransferScreen() {
             icon="information-circle-outline"
             title={t('payment.invoiceSettled')}
             actionLabel={t('common.back')}
-            onAction={() => router.back()}
+            onAction={() => goBackOrHome(router, '/(client)/(tabs)/home')}
           />
         ) : !selectedAccount ? (
           <EmptyState
             icon="information-circle-outline"
             title={t('payment.bankTransferUnavailable')}
             actionLabel={t('common.back')}
-            onAction={() => router.back()}
+            onAction={() => goBackOrHome(router, '/(client)/(tabs)/home')}
           />
         ) : (
           <>
@@ -165,29 +167,31 @@ export default function BankTransferScreen() {
         {/* Upload receipt */}
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'إيصال التحويل' : 'Transfer receipt'}
+            {t('payment.transferReceipt')}
           </Text>
           <Glass
-            variant={uploaded ? 'strong' : 'regular'}
+            variant={selected ? 'strong' : 'regular'}
             radius={sawaaRadius.xl}
             onPress={pickReceipt}
             interactive
+            accessibilityRole="button"
+            accessibilityLabel={t(selected ? 'payment.receiptSelected' : 'payment.tapToUploadReceiptImage')}
             style={styles.uploadCard}
           >
             <View style={styles.uploadInner}>
               <View style={[
                 styles.uploadIcon,
-                { backgroundColor: uploaded ? withAlpha(colors.teal[500], 0.18) : colors.glass.bgStrong },
+                { backgroundColor: selected ? withAlpha(colors.teal[500], 0.18) : colors.glass.bgStrong },
               ]}>
-                <Upload size={24} color={uploaded ? colors.teal[600] : colors.ink[500]} strokeWidth={1.75} />
+                <Upload size={24} color={selected ? colors.teal[600] : colors.ink[500]} strokeWidth={1.75} />
               </View>
               <Text style={[styles.uploadTitle, { fontFamily: f700 }]}>
-                {uploaded
-                  ? (dir.isRTL ? 'تم رفع الإيصال' : 'Receipt uploaded')
-                  : (dir.isRTL ? 'انقر لرفع صورة الإيصال' : 'Tap to upload receipt image')}
+                {selected
+                  ? t('payment.receiptSelected')
+                  : (t('payment.tapToUploadReceiptImage'))}
               </Text>
               <Text style={[styles.uploadSub, { fontFamily: f400, fontWeight: '400' }]}>
-                {dir.isRTL ? 'PNG, JPG · حتى ١٠ ميجا' : 'PNG, JPG · max 10 MB'}
+                {t('payment.receiptFileFormats')}
               </Text>
             </View>
           </Glass>
@@ -196,30 +200,16 @@ export default function BankTransferScreen() {
         )}
       </ScrollView>
 
-      <Animated.View
-        entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
-      >
-        <Pressable disabled={!uploaded || !selectedAccount || numericAmount <= 0 || submitting} onPress={submitReceipt}>
-          <LinearGradient
-            colors={theme.colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, (!uploaded || !selectedAccount || numericAmount <= 0 || submitting) && { opacity: 0.55 }]}
-          >
-            <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-              {submitting
-                ? (dir.isRTL ? 'جاري الإرسال…' : 'Sending…')
-                : (dir.isRTL ? 'إرسال للمراجعة' : 'Send for review')}
-            </Text>
-          </LinearGradient>
-        </Pressable>
-      </Animated.View>
+      <FloatingCta onHeightChange={setFooterHeight}>
+        <AppButton label={t(submitting ? 'payment.sending' : 'payment.sendForReview')}
+          disabled={!selected || !selectedAccount || numericAmount <= 0 || submitting || readFailed}
+          loading={submitting} onPress={submitReceipt} />
+      </FloatingCta>
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   titleRow: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.xs },
   titleIcon: {
@@ -266,21 +256,5 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
     color: colors.ink[500],
-  },
-  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
-  ctaBtn: {
-    borderRadius: sawaaRadius.pill,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.teal[600],
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: {
-    color: themeColors.primaryForeground,
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
   },
 });

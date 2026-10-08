@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListClientsDto } from './list-clients.dto';
-import { serializeClient } from './client.serializer';
+import { serializeClient, serializeEmployeeClient, employeeDashboardClientSelect } from './client.serializer';
+import { resolveClientReadEmployee, type ClientReadRequester } from './client-read-access.helper';
 
 /**
  * Normalizes a search term to the canonical Saudi local mobile suffix so a
@@ -20,7 +21,7 @@ function toPhoneSearch(term: string): string | null {
   return local || null;
 }
 
-export type ListClientsQuery = ListClientsDto & {
+export type ListClientsQuery = ListClientsDto & ClientReadRequester & {
   page: number;
   limit: number;
 };
@@ -32,7 +33,16 @@ export class ListClientsHandler {
   ) {}
 
   async execute(query: ListClientsQuery) {
+    const employeeId = await resolveClientReadEmployee(this.prisma, query);
+    const relatedBookings = employeeId
+      ? await this.prisma.booking.findMany({
+          where: { employeeId },
+          select: { clientId: true },
+          distinct: ['clientId'],
+        })
+      : undefined;
     const where = {
+      ...(relatedBookings ? { id: { in: relatedBookings.map((booking) => booking.clientId) } } : {}),
       deletedAt: null,
       isActive: query.isActive,
       gender: query.gender,
@@ -58,6 +68,7 @@ export class ListClientsHandler {
     const [items, total] = await Promise.all([
       this.prisma.client.findMany({
         where,
+        ...(employeeId ? { select: employeeDashboardClientSelect } : {}),
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
@@ -67,11 +78,12 @@ export class ListClientsHandler {
 
     const bookingSummaries = await this.loadBookingSummaries(
       items.map((c) => c.id),
+      employeeId,
     );
 
     return toListResponse(
       items.map((c) =>
-        serializeClient(c, {
+        (employeeId ? serializeEmployeeClient : serializeClient)(c, {
           lastBooking: bookingSummaries.last.get(c.id) ?? null,
           nextBooking: bookingSummaries.next.get(c.id) ?? null,
         }),
@@ -87,6 +99,7 @@ export class ListClientsHandler {
   // round-trips regardless of page size.
   private async loadBookingSummaries(
     clientIds: string[],
+    employeeId?: string,
   ) {
     const empty = {
       last: new Map<string, { id: string; date: string; status: string }>(),
@@ -100,6 +113,7 @@ export class ListClientsHandler {
       this.prisma.booking.findMany({
         where: {
           clientId: { in: clientIds },
+          ...(employeeId ? { employeeId } : {}),
           scheduledAt: { lte: now },
         },
         orderBy: { scheduledAt: 'desc' },
@@ -108,6 +122,7 @@ export class ListClientsHandler {
       this.prisma.booking.findMany({
         where: {
           clientId: { in: clientIds },
+          ...(employeeId ? { employeeId } : {}),
           scheduledAt: { gt: now },
         },
         orderBy: { scheduledAt: 'asc' },

@@ -2,8 +2,11 @@ import React from 'react';
 import { act, cleanup, render, waitFor } from '@testing-library/react-native';
 
 const mockReplace = jest.fn();
+const mockRouter = { replace: mockReplace };
+let mockFocused = true;
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => mockRouter,
+  useIsFocused: () => mockFocused,
 }));
 
 const mockUseAppSelector = jest.fn();
@@ -91,6 +94,7 @@ function setupSelector(token: string | null = null, user: User | null = null) {
 
 describe('HomeRoute /home alias', () => {
   beforeEach(() => {
+    mockFocused = true;
     mockReplace.mockReset();
     mockDispatch.mockReset();
     mockSetCredentials.mockClear();
@@ -143,6 +147,27 @@ describe('HomeRoute /home alias', () => {
     });
     expect(screen.queryByTestId('guest-home-rendered')).toBeNull();
     expect(mockedGetStoredTokens).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['client', clientUser, '/(client)/(tabs)/home'],
+    ['staff', employeeUser, '/(employee)/(tabs)/today'],
+  ] as const)('does not override foreground authentication for %s until home regains focus', async (_role, user, destination) => {
+    mockedGetStoredTokens.mockResolvedValue({ accessToken: null, refreshToken: null });
+    const screen = render(<HomeRoute />);
+    await waitFor(() => expect(screen.getByTestId('guest-home-rendered')).toBeTruthy());
+
+    // Pushed booking/authentication screens leave guest home mounted underneath.
+    mockFocused = false;
+    screen.rerender(<HomeRoute />);
+    setupSelector('new-session', user);
+    screen.rerender(<HomeRoute />);
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    mockFocused = true;
+    screen.rerender(<HomeRoute />);
+    expect(mockReplace).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith(destination);
   });
 
   it('shows bounded loading state while hydrating stored tokens and redirects client after profile resolves', async () => {

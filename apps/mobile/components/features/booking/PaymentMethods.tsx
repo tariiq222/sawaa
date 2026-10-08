@@ -1,7 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { Apple, Banknote, Building2, Check, CreditCard } from 'lucide-react-native';
+import { Banknote, Building2, Check, CreditCard } from 'lucide-react-native';
 
 import { Glass } from '@/theme/components/Glass';
 import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
@@ -12,41 +13,11 @@ import type { DirState } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import type { BookingPaymentMethod } from '@/features/booking/use-booking-payment';
 
-const META: Record<BookingPaymentMethod, {
-  icon: React.ReactNode;
-  labelAr: string;
-  labelEn: string;
-  subAr: string;
-  subEn: string;
-}> = {
-  card: {
-    icon: <CreditCard size={20} color="currentColor" strokeWidth={1.75} />,
-    labelAr: 'بطاقة ائتمانية',
-    labelEn: 'Credit card',
-    subAr: 'Visa · Mada · Mastercard',
-    subEn: 'Visa · Mada · Mastercard',
-  },
-  apple_pay: {
-    icon: <Apple size={20} color="currentColor" strokeWidth={1.75} />,
-    labelAr: 'Apple Pay',
-    labelEn: 'Apple Pay',
-    subAr: 'ادفع بلمسة واحدة',
-    subEn: 'Pay with one touch',
-  },
-  bank_transfer: {
-    icon: <Banknote size={20} color="currentColor" strokeWidth={1.75} />,
-    labelAr: 'تحويل بنكي',
-    labelEn: 'Bank transfer',
-    subAr: 'حوّل يدوياً وارفع الإيصال',
-    subEn: 'Transfer and upload receipt',
-  },
-  at_center: {
-    icon: <Building2 size={20} color="currentColor" strokeWidth={1.75} />,
-    labelAr: 'الدفع في المركز',
-    labelEn: 'Pay at the center',
-    subAr: 'أكّد موعدك الآن وادفع عند الحضور',
-    subEn: 'Confirm now and pay when you arrive',
-  },
+const META: Record<BookingPaymentMethod, { icon: React.ReactNode; label: string; description: string }> = {
+  card: { icon: <CreditCard size={20} color="currentColor" strokeWidth={1.75} />, label: 'nativePayment.cards', description: 'nativePayment.cardNetworks' },
+  apple_pay: { icon: null, label: 'payment.applePay', description: 'payment.oneTouch' },
+  bank_transfer: { icon: <Banknote size={20} color="currentColor" strokeWidth={1.75} />, label: 'payment.bankTransferLabel', description: 'payment.transferReceiptDescription' },
+  at_center: { icon: <Building2 size={20} color="currentColor" strokeWidth={1.75} />, label: 'payment.atCenter', description: 'payment.atCenterDescription' },
 };
 
 interface PaymentMethodsProps {
@@ -59,6 +30,7 @@ interface PaymentMethodsProps {
 /** Payment-method chooser for the new booking review step. */
 export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMethodsProps) {
   const colors = useSawaaColors();
+  const { t } = useTranslation();
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   const reduceMotion = useReduceMotion();
@@ -81,19 +53,20 @@ export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMeth
               onPress={() => onSelect(key)}
               interactive
               accessibilityRole="radio"
+              accessibilityLabel={t(meta.label)}
               accessibilityState={{ selected: isSelected }}
               style={[styles.methodCard, { borderWidth: 2, borderColor: isSelected ? roles.selection.fill : 'transparent' }]}
             >
               <View style={[styles.methodRow, { flexDirection: dir.row }]}>
-                <View style={[styles.methodIcon, { backgroundColor: withAlpha(colors.teal[600], 0.12) }]}>
+                {meta.icon ? <View style={[styles.methodIcon, { backgroundColor: withAlpha(colors.teal[600], 0.12) }]}>
                   {React.cloneElement(meta.icon as React.ReactElement<{ color?: string }>, { color: colors.teal[600] })}
-                </View>
+                </View> : null}
                 <View style={styles.methodMid}>
                   <Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? meta.labelAr : meta.labelEn}
+                    {t(meta.label)}
                   </Text>
                   <Text style={[styles.methodSub, { fontFamily: f400, textAlign: dir.textAlign }]}>
-                    {dir.isRTL ? meta.subAr : meta.subEn}
+                    {t(meta.description)}
                   </Text>
                 </View>
                 <View
@@ -114,7 +87,7 @@ export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMeth
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  methodCard: { padding: sawaaSpacing.md },
+  methodCard: { minHeight: 44, padding: sawaaSpacing.md },
   methodRow: { alignItems: 'center', gap: sawaaSpacing.md },
   methodIcon: {
     width: 44,
@@ -123,7 +96,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodMid: { flex: 1 },
+  methodMid: { flex: 1, minWidth: 0 },
   methodLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,

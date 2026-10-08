@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import { Thumb } from '@/components/ui/Thumb';
-import { sawaaRadius } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { DirState } from '@/hooks/useDir';
 import { useClinics } from '@/hooks/queries';
@@ -25,7 +25,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
   const [failedImages, setFailedImages] = React.useState<Record<string, string>>({});
   const clinicsQuery = useClinics();
   const clinics = (clinicsQuery.data ?? []).slice(0, 6);
-  if (clinicsQuery.isLoading || clinics.length === 0) return null;
+  if (clinics.length === 0) return null;
   return (
     <LocalizedHorizontalScroll dir={dir} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.list, { flexDirection: dir.row }]}>
       {clinics.map((clinic) => {
@@ -49,7 +49,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
               icon={Building2}
               onError={() => setFailedImages((previous) => ({ ...previous, [clinic.id]: clinic.imageUrl! }))}
             />
-            <Text numberOfLines={1} style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
+            <Text style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
             <Text numberOfLines={2} style={[styles.meta, { fontFamily: f600, color: colors.ink[500], textAlign: dir.textAlign }]}>{meta}</Text>
           </Pressable>
         );
@@ -60,6 +60,6 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
 const styles = StyleSheet.create({
   list: { gap: 12, paddingHorizontal: 2 },
   item: { width: PHOTO_W, gap: 4 },
-  name: { fontSize: 15, lineHeight: 22, marginTop: 4 },
-  meta: { fontSize: 13, lineHeight: 18 },
+  name: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, marginTop: 4 },
+  meta: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -22,6 +23,7 @@ const PHOTO = 148;
 /** Horizontal row of specialist photos with name and specialty. */
 export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsRowProps) {
   const colors = useSawaaColors();
+  const { t } = useTranslation();
   const router = useRouter();
   const [failedImages, setFailedImages] = React.useState<Record<string, string>>({});
 
@@ -29,7 +31,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
     return (
       <View style={[styles.empty, { backgroundColor: colors.glass.opaqueBg }]}>
         <Text style={[styles.emptyText, { fontFamily: f600, color: colors.ink[700], textAlign: dir.textAlign }]}>
-          {dir.isRTL ? 'لا يوجد معالجون متاحون حالياً' : 'No therapists available right now'}
+          {t('therapists.empty')}
         </Text>
       </View>
     );
@@ -61,7 +63,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
               accessibilityLabel={name}
               onError={() => setFailedImages((previous) => ({ ...previous, [t.id]: t.publicImageUrl! }))}
             />
-            <Text numberOfLines={1} style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
+            <Text style={[styles.name, { fontFamily: f700, color: colors.ink[900], textAlign: dir.textAlign }]}>{name}</Text>
             <Text numberOfLines={2} style={[styles.spec, { fontFamily: f400, color: colors.ink[500], textAlign: dir.textAlign }]}>{t.title || specialty}</Text>
           </Pressable>
         );
@@ -73,8 +75,8 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
 const styles = StyleSheet.create({
   hScrollContent: { gap: 12, paddingHorizontal: 2 },
   empty: { padding: 24, alignItems: 'center', borderRadius: sawaaRadius.xl },
-  emptyText: { fontSize: 14 },
+  emptyText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   item: { width: PHOTO, gap: 4 },
-  name: { fontSize: 15, lineHeight: 22, marginTop: 4 },
-  spec: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: 18 },
+  name: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, marginTop: 4 },
+  spec: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
 });

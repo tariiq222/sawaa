@@ -57,49 +57,6 @@ const securityHeaders = [
   },
 ]
 
-// Frontman (dev-only browser AI agent) serves its client UI from app.frontman.sh,
-// talks to its server over wss://api.frontman.sh, and embeds the dashboard in a
-// same-origin preview iframe. Production never emits these allowances — the
-// strict policy above remains the production surface.
-const frontmanCsp = [
-  "default-src 'self'",
-  `${scriptSrc} https://app.frontman.sh`,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://app.frontman.sh",
-  imgSrc,
-  "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.sawaa.sa https://api.sawaa.sa https://*.moyasar.com https://errors.webvue.pro https://api.frontman.sh wss://api.frontman.sh",
-  "frame-src https://*.moyasar.com 'self'",
-  "frame-ancestors 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join("; ")
-
-const frontmanHeaders = [
-  { key: "Content-Security-Policy", value: frontmanCsp },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-]
-
-// Frontman's web preview is a same-origin iframe of the dashboard; both
-// X-Frame-Options DENY and frame-ancestors 'none' would block even that.
-// Dev mode relaxes them to same-origin only; production keeps 'none' + DENY.
-const appSecurityHeaders = isProduction
-  ? securityHeaders
-  : securityHeaders.map((h) => {
-      if (h.key === "X-Frame-Options")
-        return { key: h.key, value: "SAMEORIGIN" }
-      if (h.key === "Content-Security-Policy") {
-        return {
-          key: h.key,
-          value: h.value.replace(
-            "frame-ancestors 'none'",
-            "frame-ancestors 'self'"
-          ),
-        }
-      }
-      return h
-    })
-
 /**
  * Turn NEXT_PUBLIC_API_URL into the backend origin used by the `/api/proxy`
  * rewrite. Accepts `http://host:port`, `http://host:port/api/v1`, and either
@@ -168,24 +125,11 @@ const nextConfig = {
         ""),
   },
   async headers() {
-    const frontmanRouteHeaders = isProduction
-      ? []
-      : [
-          {
-            source: "/frontman",
-            headers: frontmanHeaders,
-          },
-          {
-            source: "/frontman/:path*",
-            headers: frontmanHeaders,
-          },
-        ]
     return [
       {
         source: "/(.*)",
-        headers: appSecurityHeaders,
+        headers: securityHeaders,
       },
-      ...frontmanRouteHeaders,
       {
         source: "/_next/static/:path*",
         headers: [

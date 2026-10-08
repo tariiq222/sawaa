@@ -83,6 +83,11 @@ describe('mapBookingRow', () => {
     expect(result.serviceId).toBe('svc-1');
   });
 
+  it.each([true, false])('preserves pay-at-center intent %s without inventing a payment', (payAtClinic) => {
+    const result = mapBookingRow({ ...mockBooking, payAtClinic }, relations);
+    expect(result).toMatchObject({ payAtClinic, payment: null });
+  });
+
   it('maps package funding when the booking was funded by a package credit', () => {
     const funding = {
       creditId: 'credit-1',
@@ -680,4 +685,19 @@ describe('mapPaymentMethodForUi', () => {
   it('maps MADA → mada', () => expect(mapPaymentMethodForUi('MADA')).toBe('mada'));
   it('maps TABBY → tabby', () => expect(mapPaymentMethodForUi('TABBY')).toBe('tabby'));
   it('maps unknown → cash (fallback)', () => expect(mapPaymentMethodForUi('UNKNOWN')).toBe('cash'));
+});
+
+// A marker must be derived from immutable recording facts, not the session age.
+it('projects late recording provenance and preserves ordinary bookings', () => {
+  const relations = {clientsById:new Map(),employeesById:new Map(),servicesById:new Map(),paymentsByBookingId:new Map()};
+  const base = {id:'b',scheduledAt:new Date('2020-01-01'),endsAt:new Date('2020-01-02'),createdAt:new Date(),updatedAt:new Date(),status:'COMPLETED',bookingType:'INDIVIDUAL'} as Booking;
+  expect(mapBookingRow(base,relations)).toMatchObject({isLateEntry:false,lateEntryRecordedAt:null,lateEntryRecordedBy:null});
+  expect(mapBookingRow({...base,lateEntryRecordedAt:new Date('2026-10-05T00:00:00Z'),lateEntryRecordedBy:'staff'},relations)).toMatchObject({isLateEntry:true,lateEntryRecordedAt:'2026-10-05T00:00:00.000Z',lateEntryRecordedBy:'staff'});
+});
+
+it('exposes actual late cancellation/no-show facts and separates receipt audit dates', () => {
+  const recordedAt=new Date('2026-10-05T10:00:00Z'), actualAt=new Date('2026-09-01T10:00:00Z');
+  const row={id:'b',clientId:'c',employeeId:'e',scheduledAt:actualAt,endsAt:actualAt,createdAt:recordedAt,updatedAt:recordedAt,status:'CANCELLED',bookingType:'INDIVIDUAL',cancelReason:'OTHER',cancelNotes:'Client requested cancellation',noShowAt:actualAt,lateEntryRecordedAt:recordedAt,lateEntryRecordedBy:'staff'} as Booking;
+  const relations={clientsById:new Map(),employeesById:new Map(),servicesById:new Map(),paymentsByBookingId:new Map([['b',{id:'p',amount:15000,refundedAmount:0,method:'CASH',status:'COMPLETED',effectiveReceivedAt:actualAt,createdAt:recordedAt,processedAt:recordedAt}]])};
+  expect(mapBookingRow(row,relations)).toMatchObject({cancellationReason:'Client requested cancellation',noShowAt:actualAt.toISOString(),payment:{effectiveReceivedAt:actualAt.toISOString(),createdAt:recordedAt.toISOString(),collectionDate:actualAt.toISOString()}});
 });

@@ -12,10 +12,11 @@ function routeFiles(directory: string): string[] {
 const routes = routeFiles(appRoot);
 
 // Expo Router layout files configure navigation rather than painting a screen;
-// these routes redirect without presenting a screen of their own. The chat
-// route only redirects.
+// other exceptions redirect or reuse a screen checked separately by this scan.
+// The chat route only redirects.
 const backgroundExceptions = new Set([
   '(auth)/_layout.tsx',
+  '(auth)/register.tsx', // Re-exports email-entry.tsx, whose shared background is checked.
   '(client)/_layout.tsx',
   '(client)/(tabs)/_layout.tsx',
   '(employee)/_layout.tsx',
@@ -35,6 +36,7 @@ const backgroundExceptions = new Set([
 function paintsSharedBackground(source: string): boolean {
   return source.includes('<AquaBackground') ||
     source.includes('<SettingsScaffold') ||
+    source.includes('<AuthFormScaffold') ||
     source.includes('<VideoCallScreen');
 }
 
@@ -60,8 +62,12 @@ describe('route color migration safeguards', () => {
 
   it('settings save pairs an action fill with its on-action foreground', () => {
     const source = fs.readFileSync(path.join(appRoot, '../components/features/settings/SettingsProfileSection.tsx'), 'utf8');
-    expect(source).toContain('theme.colors.primaryFill');
-    expect(source).toContain('theme.colors.primaryForeground');
+    expect(source).toMatch(/<(AppButton|PrimaryButton)/);
+    expect(source).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(source).not.toMatch(/rgba?\(/i);
+    const button = fs.readFileSync(path.join(appRoot, '../components/ui/AppButton.tsx'), 'utf8');
+    expect(button).toContain('roles.action.foreground');
+    expect(button).toContain('roles.action.gradient');
     expect(source).not.toMatch(/#1D4ED8/i);
   });
 

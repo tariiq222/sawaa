@@ -78,20 +78,20 @@ function RootLayout() {
   const dirState = buildDirState(language);
 
   return (
-    <ReduxProvider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <QueryClientProvider client={queryClient}>
-          <ErrorBoundary>
+    <ErrorBoundary language={language}>
+      <ReduxProvider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <QueryClientProvider client={queryClient}>
             <PushBootstrap />
             <DirContext.Provider value={dirState}>
               <ThemeProvider language={language}>
                 <RootContent />
               </ThemeProvider>
             </DirContext.Provider>
-          </ErrorBoundary>
-        </QueryClientProvider>
-      </PersistGate>
-    </ReduxProvider>
+          </QueryClientProvider>
+        </PersistGate>
+      </ReduxProvider>
+    </ErrorBoundary>
   );
 }
 

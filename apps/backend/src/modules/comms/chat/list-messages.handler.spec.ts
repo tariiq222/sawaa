@@ -61,3 +61,13 @@ describe('ListMessagesHandler', () => {
     );
   });
 });
+
+
+describe('legacy message read ownership', () => {
+  it.each([['employee-b', 'user-a', false], ['employee-a', undefined, false], ['employee-a', 'user-a', true]])('checks assignment %s / %s', async (employeeId, requesterUserId, allowed) => {
+    const prisma = { employee: { findFirst: jest.fn().mockResolvedValue({ id: 'employee-a' }) }, chatConversation: { findFirst: jest.fn().mockResolvedValue({ id: 'conv-1', employeeId }) }, commsChatMessage: { findMany: jest.fn().mockResolvedValue([{ id: 'message' }]) } };
+    const action = new ListMessagesHandler(prisma as any).execute({ conversationId: 'conv-1', limit: 20, requesterRole: 'EMPLOYEE', requesterUserId } as any);
+    if (allowed) expect((await action).data).toEqual([{ id: 'message' }]);
+    else { await expect(action).rejects.toThrow(); expect(prisma.commsChatMessage.findMany).not.toHaveBeenCalled(); }
+  });
+});

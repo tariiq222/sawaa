@@ -412,6 +412,7 @@ export const arBookings: Record<string, string> = {
   "bookings.col.header.amount": "المبلغ",
   "bookings.amount.fromPackage": "مدفوع من الباقة",
   "bookings.col.header.paymentStatus": "حالة الدفع",
+  "bookings.payAtCenter": "الدفع في المركز",
   "bookings.col.paymentStatus.unpaid": "غير مدفوع",
   "bookings.col.paymentStatus.pending": "بانتظار الدفع",
   "bookings.col.paymentStatus.awaiting": "بانتظار الدفع",

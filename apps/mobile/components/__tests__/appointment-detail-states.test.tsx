@@ -7,6 +7,7 @@ jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
   return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 const mockRefetch = jest.fn();
 const mockQuery = jest.fn();
 const mockPush = jest.fn();
@@ -110,6 +111,19 @@ describe('appointment detail truthful states', () => {
 
     expect(screen.getByText('appointments.cancelAppointment')).toBeTruthy();
     expect(screen.queryByText('appointments.rate')).toBeNull();
+  });
+
+  it('lets the client keep the appointment after reviewing cancellation terms', () => {
+    mockQuery.mockReturnValue({ data: { ...booking, status: 'confirmed' } });
+    const screen = render(<AppointmentDetail />);
+    fireEvent.press(screen.getByText('appointments.cancelAppointment'));
+    expect(screen.getByText('cancellation.confirm')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('cancellation.keepAppointment'));
+
+    expect(screen.queryByText('cancellation.confirm')).toBeNull();
+    expect(screen.getByText('appointments.cancelAppointment')).toBeTruthy();
+    expect(mockCancel).not.toHaveBeenCalled();
   });
 
   it('places cancellation with the appointment content instead of pinning it below empty space', () => {
@@ -243,4 +257,12 @@ describe('appointment detail truthful states', () => {
     expect(mockCancel).not.toHaveBeenCalled();
   });
 
+});
+
+it('omits entering animations for reduced-motion users', () => {
+  mockQuery.mockReturnValue({ data: booking, isLoading: false, isError: false, refetch: mockRefetch });
+  const screen = render(<AppointmentDetail />);
+  const { View } = require('react-native') as typeof import('react-native');
+  const views = screen.UNSAFE_getAllByType(View);
+  expect(views.filter((view) => view.props.entering !== undefined)).toHaveLength(0);
 });

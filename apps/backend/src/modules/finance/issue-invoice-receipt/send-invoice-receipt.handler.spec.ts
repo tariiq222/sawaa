@@ -12,7 +12,8 @@ describe('SendInvoiceReceiptHandler', () => {
     emailFactory = { resolve: jest.fn().mockResolvedValue(emailProvider) };
     prisma = {
       client: { findUnique: jest.fn().mockResolvedValue({ email: 'f@example.com', firstName: 'فاطمة' }) },
-      invoice: { update: jest.fn() },
+      booking: {findUnique: jest.fn().mockResolvedValue(null)},
+      invoice: { findUnique: jest.fn().mockResolvedValue({bookingId: null}), update: jest.fn() },
     };
     storage = {
       getSignedUrl: jest.fn().mockResolvedValue('https://minio/presigned-7d'),
@@ -25,7 +26,15 @@ describe('SendInvoiceReceiptHandler', () => {
     );
   });
 
-  it('skips when client has no email', async () => {
+  it('suppresses a queued late-entry receipt before contacting a provider', async () => {
+    prisma.invoice.findUnique.mockResolvedValue({bookingId: 'b'});
+    prisma.booking.findUnique.mockResolvedValue({lateEntryRecordedAt: new Date()});
+    await handler.handle({payload: {invoiceId: 'i', clientId: 'c', pdfUrl: 'key', invoiceNumber: 1}} as never);
+    expect(emailFactory.resolve).not.toHaveBeenCalled();
+    expect(storage.getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('skips when client has no email' , async () => {
     prisma.client.findUnique.mockResolvedValue({ email: null, firstName: 'X' });
     await handler.handle({ payload: { invoiceId: 'inv-1', clientId: 'c1', pdfUrl: 'u', invoiceNumber: 1, organizationId: 'o' } } as any);
     expect(emailProvider.sendMail).not.toHaveBeenCalled();

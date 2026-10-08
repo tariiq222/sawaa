@@ -54,8 +54,8 @@ function isLockNotAvailable(error: unknown): boolean {
  *
  * Only permitted for terminal bookings (CANCELLED, COMPLETED, NO_SHOW,
  * EXPIRED) that carry no real money: a booking whose invoice has a payment in
- * COMPLETED, REFUNDED, or PENDING_VERIFICATION is rejected — cancel/refund it
- * first. Active bookings must be cancelled (state machine), never deleted.
+ * COMPLETED, PARTIALLY_REFUNDED, REFUNDED, or PENDING_VERIFICATION is rejected
+ * to preserve financial history. Active bookings must be cancelled, never deleted.
  *
  * Cleanup runs in one transaction. Booking has no FK to Invoice/StatusLog/
  * Rating/IntakeResponse (cross-BC plain-string refs), so they are removed
@@ -67,6 +67,7 @@ export class DeleteBookingHandler {
 
 	private static readonly BLOCKING_PAYMENT_STATUSES: PaymentStatus[] = [
 		PaymentStatus.COMPLETED,
+		PaymentStatus.PARTIALLY_REFUNDED,
 		PaymentStatus.REFUNDED,
 		PaymentStatus.PENDING_VERIFICATION,
 	];

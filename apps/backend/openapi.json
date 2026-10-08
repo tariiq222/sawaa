@@ -5553,6 +5553,197 @@
         ],
         "type": "object"
       },
+      "EmailEntryChallengeDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Opaque identifier of the delivered email ownership challenge",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Email challenge lifetime in seconds",
+            "enum": [
+              300
+            ],
+            "example": 300,
+            "type": "number"
+          },
+          "maskedEmail": {
+            "description": "Masked destination for the email ownership code",
+            "example": "p***@example.test",
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "description": "Minimum number of seconds before requesting another email code",
+            "enum": [
+              60
+            ],
+            "example": 60,
+            "type": "number"
+          }
+        },
+        "required": [
+          "challengeId",
+          "maskedEmail",
+          "expiresIn",
+          "retryAfterSeconds"
+        ],
+        "type": "object"
+      },
+      "EmailEntryContinueDto": {
+        "properties": {
+          "continuationToken": {
+            "description": "Opaque continuation secret held only in memory; never an access token",
+            "example": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "type": "string"
+          },
+          "email": {
+            "description": "Normalized email whose ownership has been proven",
+            "example": "person@example.test",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Maximum continuation lifetime in seconds; subsequent sends never extend it",
+            "enum": [
+              600
+            ],
+            "example": 600,
+            "type": "number"
+          },
+          "next": {
+            "description": "Required next step after successful email ownership proof",
+            "enum": [
+              "register",
+              "verify_phone"
+            ],
+            "example": "register",
+            "type": "string"
+          }
+        },
+        "required": [
+          "next",
+          "continuationToken",
+          "email",
+          "expiresIn"
+        ],
+        "type": "object"
+      },
+      "EmailEntryPhoneChallengeDto": {
+        "properties": {
+          "continuationToken": {
+            "description": "Rotated continuation secret replacing the previous value after accepted delivery",
+            "example": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Remaining phone challenge lifetime in seconds, capped by the original continuation expiry",
+            "example": 299,
+            "type": "number"
+          },
+          "maskedPhone": {
+            "description": "Masked destination of the phone ownership code",
+            "example": "+966***78",
+            "type": "string"
+          },
+          "phoneChallengeId": {
+            "description": "Opaque identifier of the current delivered phone challenge",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "description": "Minimum number of seconds before requesting another phone code",
+            "enum": [
+              60
+            ],
+            "example": 60,
+            "type": "number"
+          }
+        },
+        "required": [
+          "phoneChallengeId",
+          "continuationToken",
+          "maskedPhone",
+          "expiresIn",
+          "retryAfterSeconds"
+        ],
+        "type": "object"
+      },
+      "EmailEntrySessionDto": {
+        "properties": {
+          "next": {
+            "description": "Authenticated outcome discriminator",
+            "enum": [
+              "authenticated"
+            ],
+            "example": "authenticated",
+            "type": "string"
+          },
+          "sessionKind": {
+            "description": "Session namespace used to select the matching profile and app navigation",
+            "enum": [
+              "client",
+              "staff"
+            ],
+            "example": "client",
+            "type": "string"
+          },
+          "tokens": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailEntryTokensDto"
+              }
+            ],
+            "description": "Native access and refresh token pair",
+            "example": {
+              "accessToken": "synthetic-access-token",
+              "refreshToken": "synthetic-refresh-token"
+            }
+          }
+        },
+        "required": [
+          "next",
+          "tokens",
+          "sessionKind"
+        ],
+        "type": "object"
+      },
+      "EmailEntryTokensDto": {
+        "properties": {
+          "accessToken": {
+            "description": "Native access token for the returned session namespace",
+            "example": "synthetic-access-token",
+            "type": "string"
+          },
+          "refreshToken": {
+            "description": "Native refresh token to persist only after authenticated success",
+            "example": "synthetic-refresh-token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "EmailEntryUnavailableDto": {
+        "properties": {
+          "next": {
+            "description": "Generic outcome when this identity cannot continue through email entry",
+            "enum": [
+              "unavailable"
+            ],
+            "example": "unavailable",
+            "type": "string"
+          }
+        },
+        "required": [
+          "next"
+        ],
+        "type": "object"
+      },
       "EmployeeAvailabilityExceptionResponseDto": {
         "properties": {
           "endDate": {
@@ -6231,6 +6422,37 @@
           "type",
           "from",
           "to"
+        ],
+        "type": "object"
+      },
+      "GetLateSessionContextResponseDto": {
+        "properties": {
+          "paymentMethods": {
+            "description": "Enabled methods permitted for manual receipt recording",
+            "example": [
+              "CASH",
+              "BANK_TRANSFER"
+            ],
+            "items": {
+              "enum": [
+                "CASH",
+                "BANK_TRANSFER",
+                "MADA",
+                "TABBY"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "vatRate": {
+            "description": "Current VAT rate as a fraction, using the existing center policy",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "vatRate",
+          "paymentMethods"
         ],
         "type": "object"
       },
@@ -7519,6 +7741,29 @@
         ],
         "type": "object"
       },
+      "MobilePasswordLoginDto": {
+        "properties": {
+          "email": {
+            "description": "Client email address (provide either email or phone, not both)",
+            "example": "client@example.com",
+            "type": "string"
+          },
+          "password": {
+            "description": "Account password",
+            "example": "SecurePass123",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Saudi mobile number (any common format; normalized to E.164). Provide either email or phone, not both.",
+            "example": "+966501234567",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
       "MobileRateBookingDto": {
         "properties": {
           "comment": {
@@ -7911,6 +8156,323 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "NativeApplePayConfigDto": {
+        "properties": {
+          "countryCode": {
+            "description": "Merchant country code used for Apple Pay",
+            "enum": [
+              "SA"
+            ],
+            "example": "SA",
+            "type": "string"
+          },
+          "label": {
+            "description": "Merchant display name shown on the Apple Pay payment sheet",
+            "example": "Example Counseling Center",
+            "type": "string"
+          },
+          "merchantId": {
+            "description": "Apple Pay merchant identifier that must match the app entitlement",
+            "example": "merchant.sa.example.app",
+            "type": "string"
+          }
+        },
+        "required": [
+          "merchantId",
+          "label",
+          "countryCode"
+        ],
+        "type": "object"
+      },
+      "NativePackagePurchaseInitResponseDto": {
+        "properties": {
+          "config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NativePaymentConfigurationDto"
+              }
+            ],
+            "description": "Server-owned SDK configuration for this reserved payment attempt",
+            "example": {
+              "amount": 5000,
+              "applePay": null,
+              "currency": "SAR",
+              "description": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+              "enabled": true,
+              "givenId": "11111111-1111-4111-8111-111111111111",
+              "isLive": false,
+              "publishableKey": "pk_test_example000000000000000000000000",
+              "supportedNetworks": [
+                "mada",
+                "visa",
+                "mastercard"
+              ]
+            }
+          },
+          "invoiceId": {
+            "description": "Owned invoice UUID associated with the reserved payment",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "description": "Reserved internal payment UUID used for native reconciliation",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          },
+          "purchaseId": {
+            "description": "Package purchase UUID associated with the invoice and native payment attempt",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "invoiceId",
+          "config",
+          "purchaseId"
+        ],
+        "type": "object"
+      },
+      "NativePaymentCapabilitiesDto": {
+        "properties": {
+          "applePay": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NativeApplePayConfigDto"
+              }
+            ],
+            "description": "Server Apple Pay configuration, or null when unavailable; device capability is checked separately",
+            "example": {
+              "countryCode": "SA",
+              "label": "Example Counseling Center",
+              "merchantId": "merchant.sa.example.app"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "enabled": {
+            "description": "Whether online payments are enabled and a valid native publishable key is configured",
+            "example": true,
+            "type": "boolean"
+          },
+          "isLive": {
+            "description": "Whether the configured Moyasar account uses live mode instead of test mode",
+            "example": false,
+            "type": "boolean"
+          },
+          "supportedNetworks": {
+            "description": "Card networks supported by native checkout",
+            "example": [
+              "mada",
+              "visa",
+              "mastercard"
+            ],
+            "items": {
+              "enum": [
+                "mada",
+                "visa",
+                "mastercard"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "isLive",
+          "supportedNetworks",
+          "applePay"
+        ],
+        "type": "object"
+      },
+      "NativePaymentConfigurationDto": {
+        "properties": {
+          "amount": {
+            "description": "Server-owned payment amount in integer halalas",
+            "example": 5000,
+            "type": "number"
+          },
+          "applePay": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NativeApplePayConfigDto"
+              }
+            ],
+            "description": "Server Apple Pay configuration, or null when unavailable; device capability is checked separately",
+            "example": {
+              "countryCode": "SA",
+              "label": "Example Counseling Center",
+              "merchantId": "merchant.sa.example.app"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "currency": {
+            "description": "Currency code from the invoice for the reserved payment",
+            "example": "SAR",
+            "type": "string"
+          },
+          "description": {
+            "description": "Server-generated payment description identifying the invoice",
+            "example": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Whether online payments are enabled and a valid native publishable key is configured",
+            "example": true,
+            "type": "boolean"
+          },
+          "givenId": {
+            "description": "Server-reserved payment UUID passed to Moyasar as the payment identity",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isLive": {
+            "description": "Whether the configured Moyasar account uses live mode instead of test mode",
+            "example": false,
+            "type": "boolean"
+          },
+          "publishableKey": {
+            "description": "Public Moyasar SDK key matching the configured live or test mode",
+            "example": "pk_test_example000000000000000000000000",
+            "type": "string"
+          },
+          "supportedNetworks": {
+            "description": "Card networks supported by native checkout",
+            "example": [
+              "mada",
+              "visa",
+              "mastercard"
+            ],
+            "items": {
+              "enum": [
+                "mada",
+                "visa",
+                "mastercard"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "isLive",
+          "supportedNetworks",
+          "applePay",
+          "publishableKey",
+          "givenId",
+          "amount",
+          "currency",
+          "description"
+        ],
+        "type": "object"
+      },
+      "NativePaymentInitResponseDto": {
+        "properties": {
+          "config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NativePaymentConfigurationDto"
+              }
+            ],
+            "description": "Server-owned SDK configuration for this reserved payment attempt",
+            "example": {
+              "amount": 5000,
+              "applePay": null,
+              "currency": "SAR",
+              "description": "Invoice payment - 22222222-2222-4222-8222-222222222222",
+              "enabled": true,
+              "givenId": "11111111-1111-4111-8111-111111111111",
+              "isLive": false,
+              "publishableKey": "pk_test_example000000000000000000000000",
+              "supportedNetworks": [
+                "mada",
+                "visa",
+                "mastercard"
+              ]
+            }
+          },
+          "invoiceId": {
+            "description": "Owned invoice UUID associated with the reserved payment",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "description": "Reserved internal payment UUID used for native reconciliation",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "invoiceId",
+          "config"
+        ],
+        "type": "object"
+      },
+      "NativePaymentReconcileResponseDto": {
+        "properties": {
+          "canCreatePayment": {
+            "description": "True only after provider404 for a current payable native reservation",
+            "example": true,
+            "type": "boolean"
+          },
+          "invoiceId": {
+            "description": "Invoice UUID associated with the reconciled payment",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "description": "Owned internal payment UUID whose provider state was reconciled",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          },
+          "requiresReview": {
+            "description": "Whether the payment requires center review before the client proceeds or retries",
+            "example": false,
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Internal payment status after checking the authoritative provider state",
+            "enum": [
+              "PENDING",
+              "COMPLETED",
+              "FAILED",
+              "PARTIALLY_REFUNDED",
+              "REFUNDED"
+            ],
+            "example": "PENDING",
+            "type": "string"
+          },
+          "unavailableReason": {
+            "description": "Why a pending reservation cannot be resumed after provider404",
+            "enum": [
+              "BOOKING_EXPIRED",
+              "BOOKING_CLOSED",
+              "INVOICE_CLOSED"
+            ],
+            "example": "BOOKING_EXPIRED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "invoiceId",
+          "status",
+          "requiresReview"
+        ],
         "type": "object"
       },
       "NativeSessionDto": {
@@ -9246,6 +9808,137 @@
         ],
         "type": "object"
       },
+      "RecordLateSessionDto": {
+        "properties": {
+          "amountHalalas": {
+            "description": "Actual net amount in integer halalas",
+            "example": 40000,
+            "type": "number"
+          },
+          "branchId": {
+            "description": "Existing branch ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "cancellationReason": {
+            "description": "Actual cancellation reason",
+            "type": "string"
+          },
+          "cancelledAt": {
+            "description": "Actual cancellation time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Existing client ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "creationIdempotencyKey": {
+            "description": "Stable operation key",
+            "example": "late-session-123",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Actual delivery channel",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Actual session duration in minutes",
+            "example": 60,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Existing practitioner ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "noShowAt": {
+            "description": "Actual no-show determination time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Session notes",
+            "type": "string"
+          },
+          "paymentAmountHalalas": {
+            "description": "Amount received in integer halalas",
+            "example": 15000,
+            "type": "number"
+          },
+          "paymentMethod": {
+            "description": "Manual collection method",
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER",
+              "MADA",
+              "TABBY"
+            ],
+            "type": "string"
+          },
+          "paymentMode": {
+            "description": "Financial recording mode",
+            "enum": [
+              "UNPAID",
+              "PREVIOUSLY_RECEIVED",
+              "COLLECT_NOW"
+            ],
+            "type": "string"
+          },
+          "receiptEntryReason": {
+            "description": "Reason for documenting a previous receipt",
+            "type": "string"
+          },
+          "receiptEvidenceRef": {
+            "description": "Previous receipt evidence reference",
+            "type": "string"
+          },
+          "receivedAt": {
+            "description": "Actual previous receipt time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Actual session start",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Existing bound service ID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Recorded session status",
+            "enum": [
+              "COMPLETED",
+              "CONFIRMED",
+              "NO_SHOW",
+              "CANCELLED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "branchId",
+          "employeeId",
+          "serviceId",
+          "deliveryType",
+          "scheduledAt",
+          "durationMins",
+          "status",
+          "amountHalalas",
+          "paymentMode",
+          "creationIdempotencyKey"
+        ],
+        "type": "object"
+      },
       "RefreshTokenDto": {
         "properties": {
           "refreshToken": {
@@ -9438,6 +10131,53 @@
         ],
         "type": "object"
       },
+      "RequestEmailEntryDto": {
+        "properties": {
+          "email": {
+            "description": "Email to prove ownership of",
+            "example": "person@example.test",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "RequestEmailEntryPhoneDto": {
+        "properties": {
+          "continuationToken": {
+            "description": "Opaque ownership continuation; never an access token",
+            "example": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "type": "string"
+          },
+          "firstName": {
+            "description": "Required only for new registration",
+            "example": "Ali",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Required only for new registration",
+            "example": "Saleh",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Phone to verify",
+            "example": "+966512345678",
+            "type": "string"
+          },
+          "privacyAccepted": {
+            "description": "Explicit privacy consent required only for new registration",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "continuationToken",
+          "phone"
+        ],
+        "type": "object"
+      },
       "RequestMobileLoginOtpDto": {
         "properties": {
           "identifier": {
@@ -9547,6 +10287,25 @@
         },
         "required": [
           "apiKey"
+        ],
+        "type": "object"
+      },
+      "ResendEmailEntryPhoneDto": {
+        "properties": {
+          "continuationToken": {
+            "description": "Opaque ownership continuation; never an access token",
+            "example": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "type": "string"
+          },
+          "phoneChallengeId": {
+            "description": "Current phone challenge identifier",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "type": "string"
+          }
+        },
+        "required": [
+          "continuationToken",
+          "phoneChallengeId"
         ],
         "type": "object"
       },
@@ -12035,6 +12794,50 @@
         ],
         "type": "object"
       },
+      "VerifyEmailEntryDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Email challenge identifier",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "type": "string"
+          },
+          "code": {
+            "description": "Six-digit ownership code",
+            "example": "123456",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
+        ],
+        "type": "object"
+      },
+      "VerifyEmailEntryPhoneDto": {
+        "properties": {
+          "code": {
+            "description": "Six-digit phone ownership code",
+            "example": "123456",
+            "type": "string"
+          },
+          "continuationToken": {
+            "description": "Opaque ownership continuation; never an access token",
+            "example": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "type": "string"
+          },
+          "phoneChallengeId": {
+            "description": "Current phone challenge identifier",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "type": "string"
+          }
+        },
+        "required": [
+          "continuationToken",
+          "phoneChallengeId",
+          "code"
+        ],
+        "type": "object"
+      },
       "VerifyMobileOtpDto": {
         "properties": {
           "code": {
@@ -14104,6 +14907,16 @@
         "operationId": "DashboardBookingsController_listBookings_v1",
         "parameters": [
           {
+            "description": "Filter sessions entered through late recording",
+            "in": "query",
+            "name": "isLateEntry",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
             "description": "Filter by client",
             "in": "query",
             "name": "clientId",
@@ -14226,20 +15039,41 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "data": {
+                    "items": {
                       "items": {
+                        "properties": {
+                          "payAtClinic": {
+                            "description": "Client selected payment at the center; independent of financial payment status",
+                            "example": true,
+                            "type": "boolean"
+                          }
+                        },
                         "type": "object"
                       },
                       "type": "array"
                     },
-                    "page": {
-                      "type": "number"
-                    },
-                    "total": {
-                      "type": "number"
-                    },
-                    "totalPages": {
-                      "type": "number"
+                    "meta": {
+                      "properties": {
+                        "hasNextPage": {
+                          "type": "boolean"
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "type": "number"
+                        },
+                        "page": {
+                          "type": "number"
+                        },
+                        "total": {
+                          "type": "number"
+                        },
+                        "totalPages": {
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
                     }
                   },
                   "type": "object"
@@ -14519,6 +15353,11 @@
                     "id": {
                       "format": "uuid",
                       "type": "string"
+                    },
+                    "payAtClinic": {
+                      "description": "Client selected payment at the center; independent of financial payment status",
+                      "example": true,
+                      "type": "boolean"
                     },
                     "scheduledAt": {
                       "format": "date-time",
@@ -16307,6 +17146,182 @@
           }
         ],
         "summary": "Book an appointment by consuming session-package credit",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/late-entry": {
+      "post": {
+        "operationId": "DashboardBookingsController_recordLateSession_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordLateSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "booking": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "invoice": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "isLateEntry": {
+                      "enum": [
+                        true
+                      ],
+                      "type": "boolean"
+                    },
+                    "lateEntryRecordedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lateEntryRecordedBy": {
+                      "type": "string"
+                    },
+                    "outstanding": {
+                      "type": "integer"
+                    },
+                    "payment": {
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Session and financial facts recorded atomically"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a previous session and its actual financial facts",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/late-entry/context": {
+      "get": {
+        "operationId": "DashboardBookingsController_getLateSessionContext_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetLateSessionContextResponseDto"
+                }
+              }
+            },
+            "description": "Current VAT rate and enabled manual payment methods only"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get permitted late session VAT and manual payment context",
         "tags": [
           "Dashboard / Bookings"
         ]
@@ -28528,6 +29543,16 @@
         "operationId": "DashboardOrganizationSettingsController_listServicesEndpoint_v1",
         "parameters": [
           {
+            "description": "Include historical inactive/archived references for staff recording",
+            "in": "query",
+            "name": "historicalContext",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
             "description": "Filter by active status",
             "in": "query",
             "name": "isActive",
@@ -30052,6 +31077,16 @@
       "get": {
         "operationId": "DashboardPeopleController_listEmployeesEndpoint_v1",
         "parameters": [
+          {
+            "description": "Include historical inactive/archived references for staff recording",
+            "in": "query",
+            "name": "historicalContext",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
           {
             "description": "Search by name, email, or phone",
             "in": "query",
@@ -35278,6 +36313,379 @@
         ]
       }
     },
+    "/api/v1/mobile/auth/email-entry/request": {
+      "post": {
+        "operationId": "MobileEmailEntryController_requestEmail_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEmailEntryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailEntryChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Send a mobile email ownership code",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/email-entry/request-phone": {
+      "post": {
+        "operationId": "MobileEmailEntryController_requestPhoneCode_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEmailEntryPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailEntryPhoneChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Bind details and send a phone ownership code",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/email-entry/resend-phone": {
+      "post": {
+        "operationId": "MobileEmailEntryController_resendPhoneCode_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendEmailEntryPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailEntryPhoneChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Replace a mobile phone ownership challenge",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/email-entry/verify": {
+      "post": {
+        "operationId": "MobileEmailEntryController_verifyEmail_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailEntryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "propertyName": "next"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/EmailEntrySessionDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmailEntryContinueDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmailEntryUnavailableDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Verify email ownership and determine the next step",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/email-entry/verify-phone": {
+      "post": {
+        "operationId": "MobileEmailEntryController_verifyPhoneCode_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailEntryPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailEntrySessionDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Verify phone ownership and issue a client session",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
     "/api/v1/mobile/auth/logout": {
       "post": {
         "operationId": "MobileClientAuthController_logout_v1",
@@ -35338,6 +36746,105 @@
           }
         },
         "summary": "Revoke native mobile sessions",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/password-login": {
+      "post": {
+        "operationId": "MobileClientAuthController_loginWithPassword_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobilePasswordLoginDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "sessionKind": {
+                      "enum": [
+                        "client"
+                      ],
+                      "type": "string"
+                    },
+                    "tokens": {
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "accessToken",
+                        "refreshToken"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "sessionKind",
+                    "tokens"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Customer authenticated, native client tokens issued"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Log in a customer with email or phone and password",
         "tags": [
           "Mobile Client / Identity"
         ]
@@ -37569,6 +39076,228 @@
         ]
       }
     },
+    "/api/v1/mobile/client/payments/native/{paymentId}/reconcile": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_reconcileNativePayment_v1",
+        "parameters": [
+          {
+            "description": "Reserved native Payment UUID",
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentReconcileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reconcile an owned native payment with Moyasar",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/native/config": {
+      "get": {
+        "operationId": "MobileClientPaymentsController_getNativeConfig_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentCapabilitiesDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get native payment capabilities",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/native/init": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_initNativePayment_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitClientPaymentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentInitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve or resume a native invoice payment",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
     "/api/v1/mobile/client/payments/package-purchases/init": {
       "post": {
         "operationId": "MobileClientPaymentsController_initPackagePurchaseEndpoint_v1",
@@ -37665,6 +39394,83 @@
           }
         ],
         "summary": "Initialize a Moyasar payment to self-purchase a session package",
+        "tags": [
+          "Mobile Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/payments/package-purchases/native/init": {
+      "post": {
+        "operationId": "MobileClientPaymentsController_initNativePackagePurchase_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePackagePurchaseInitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve or resume a native package purchase payment",
         "tags": [
           "Mobile Client / Payments"
         ]
@@ -38318,6 +40124,16 @@
       "get": {
         "operationId": "MobileEmployeeBookingsController_listMyBookings_v1",
         "parameters": [
+          {
+            "description": "Filter sessions entered through late recording",
+            "in": "query",
+            "name": "isLateEntry",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
           {
             "description": "Filter by client",
             "in": "query",

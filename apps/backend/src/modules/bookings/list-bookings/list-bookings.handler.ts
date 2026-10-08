@@ -48,6 +48,7 @@ const BOOKING_LIST_SELECT = {
   bookingType: true,
   deliveryType: true,
   source: true,
+  payAtClinic: true,
   categoryNameSnapshot: true,
   branchNameSnapshot: true,
   durationMinutesSnapshot: true,
@@ -56,6 +57,8 @@ const BOOKING_LIST_SELECT = {
   endsAt: true,
   status: true,
   isHistoricalImport: true,
+  lateEntryRecordedAt: true,
+  lateEntryRecordedBy: true,
   checkedInAt: true,
   notes: true,
   zoomJoinUrl: true,
@@ -64,6 +67,8 @@ const BOOKING_LIST_SELECT = {
   zoomMeetingStatus: true,
   zoomMeetingError: true,
   cancelReason: true,
+  cancelNotes: true,
+  noShowAt: true,
   cancelledAt: true,
   confirmedAt: true,
   completedAt: true,
@@ -145,6 +150,7 @@ export class ListBookingsHandler {
       : query.clientTab === 'cancelled' ? { in: cancelledStatuses }
       : { notIn: [...pastStatuses, ...cancelledStatuses] };
     const where: Record<string, unknown> = {
+      ...(query.isLateEntry !== undefined ? { lateEntryRecordedAt: query.isLateEntry ? { not: null } : null } : {}),
       ...(query.clientTab ? { AND: [{ status: tabStatus }] } : {}),
       ...sourceClientWhere,
       ...(query.clientId ? { clientId: query.clientId } : {}),
@@ -246,6 +252,7 @@ async function loadRelations(
                 id: true,
                 amount: true,
                 refundedAmount: true,
+                effectiveReceivedAt:true, createdAt:true, processedAt:true, receiptRecordedBy:true, receiptEvidenceRef:true, receiptEntryReason:true,
                 method: true,
                 status: true,
               },
@@ -332,6 +339,7 @@ async function loadRelations(
             refundedAmount: Math.round(Number(p.refundedAmount)), // already halalas
             method: p.method as string,
             status: p.status as string,
+            effectiveReceivedAt:p.effectiveReceivedAt, createdAt:p.createdAt, processedAt:p.processedAt, receiptRecordedBy:p.receiptRecordedBy, receiptEvidenceRef:p.receiptEvidenceRef, receiptEntryReason:p.receiptEntryReason,
           },
         ] as const;
       }),

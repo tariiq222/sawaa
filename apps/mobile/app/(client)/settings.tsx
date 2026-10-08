@@ -1,11 +1,10 @@
 import { useCallback } from 'react';
-import { View, Alert, Linking, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Alert, Linking, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { Bell, ChevronLeft, ChevronRight, Info, Lock, Moon, Smartphone } from 'lucide-react-native';
+import { Bell, ChevronLeft, ChevronRight, Lock, Moon } from 'lucide-react-native';
 import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
@@ -15,10 +14,12 @@ import { SettingsScaffold } from '@/components/features/settings/SettingsScaffol
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { clientProfileService } from '@/services/client/profile';
+import { useUpdateClientProfile } from '@/hooks/queries/useClientProfile';
 import { LANGUAGE_KEY } from '@/hooks/language-preference';
 import { useDir } from '@/hooks/useDir';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
+import { AppButton } from '@/components/ui/AppButton';
+import { AboutSection } from '@/components/features/settings/AboutSection';
 import { usePushPreference } from '@/hooks/queries/usePushPreference';
 
 /** Purpose-built route: app-wide preferences — language, appearance, about. */
@@ -28,22 +29,15 @@ export default function SettingsScreen() {
   const dir = useDir();
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
   const { query: pushPreference, mutation: pushMutation } = usePushPreference();
+  const { mutateAsync: updateProfile } = useUpdateClientProfile();
   const pushEnabled = pushPreference.data?.enabled === true && pushPreference.data?.permitted === true;
-
-  const version = Constants.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '1.0.0';
-  const buildNumber =
-    Constants.nativeBuildVersion ??
-    Constants.expoConfig?.ios?.buildNumber ??
-    Constants.expoConfig?.android?.versionCode?.toString() ??
-    '1';
 
   const handleLanguageSelect = useCallback(
     async (lang: 'ar' | 'en') => {
       if (lang === language) return;
       await i18n.changeLanguage(lang);
       await AsyncStorage.setItem(LANGUAGE_KEY, lang);
-      clientProfileService
-        .updateProfile({ preferredLocale: lang })
+      updateProfile({ preferredLocale: lang })
         .catch((err) => console.warn('[Settings] Failed to sync locale to server:', err));
       Alert.alert(t('settings.languageChangeRestart'), '', [
         { text: t('settings.restartLater'), style: 'cancel' },
@@ -55,7 +49,7 @@ export default function SettingsScreen() {
         },
       ]);
     },
-    [language, i18n, t],
+    [language, i18n, t, updateProfile],
   );
 
   const handleTogglePush = useCallback(
@@ -105,6 +99,14 @@ export default function SettingsScreen() {
             accessibilityLabel={t('settings.pushNotifications')}
           />
         </View>
+        {pushPreference.isPending ? <View accessibilityLiveRegion="polite" style={styles.preferenceStatus}>
+          <ActivityIndicator color={theme.colors.primary} /><ThemedText>{t('common.loading')}</ThemedText>
+        </View> : pushPreference.isError ? <View style={styles.preferenceStatus}>
+          <ThemedText accessibilityRole="alert" color={theme.colors.error}>{t('settings.pushLoadError')}</ThemedText>
+          <AppButton label={t('common.retry')} variant="ghost" size="sm" onPress={() => void pushPreference.refetch()} />
+        </View> : pushPreference.data?.permitted === false ? <ThemedText accessibilityLiveRegion="polite" style={styles.preferenceStatus}>
+          {t('settings.pushPermissionRequired')}
+        </ThemedText> : null}
       </Glass>
 
       <Glass
@@ -122,51 +124,15 @@ export default function SettingsScreen() {
         </View>
       </Glass>
 
-      <View style={styles.section}>
-        <SectionHeader title={t('settings.about')} />
-        <Glass variant="strong" radius={sawaaRadius.lg} style={styles.group}>
-          <AboutRow icon={Info} label={t('settings.version')} value={version} />
-          <AboutRow icon={Smartphone} label={t('settings.buildNumber')} value={buildNumber} divided />
-        </Glass>
-      </View>
+      <AboutSection />
     </SettingsScaffold>
   );
 }
-
-function AboutRow({
-  icon: Icon,
-  label,
-  value,
-  divided,
-}: {
-  icon: typeof Info;
-  label: string;
-  value: string;
-  divided?: boolean;
-}) {
-  const { theme } = useTheme();
-  const dir = useDir();
-  return (
-    <View
-      style={[
-        styles.row,
-        divided && styles.divider,
-        { flexDirection: dir.row, borderTopColor: theme.colors.border },
-      ]}
-    >
-      <Icon size={22} color={theme.colors.primary} strokeWidth={1.75} />
-      <ThemedText variant="body" color={theme.colors.textSecondary} style={styles.rowLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText variant="body">{value}</ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   section: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
   group: { padding: 0, marginBottom: sawaaSpacing.xl },
   row: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.lg, minHeight: 56 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth },
-  rowLabel: { flex: 1 },
+  rowLabel: { flex: 1, minWidth: 0, flexShrink: 1 },
+  preferenceStatus: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: sawaaSpacing.md, gap: sawaaSpacing.sm },
 });

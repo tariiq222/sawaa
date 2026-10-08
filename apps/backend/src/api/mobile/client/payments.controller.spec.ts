@@ -1,3 +1,7 @@
+import { GetNativePaymentConfigHandler } from '../../../modules/finance/native-payments/get-native-payment-config/get-native-payment-config.handler';
+import { InitNativePaymentHandler } from '../../../modules/finance/native-payments/init-native-payment/init-native-payment.handler';
+import { ReconcileNativePaymentHandler } from '../../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
+import { InitNativePackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-native-package-purchase.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -23,6 +27,7 @@ describe('MobileClientPaymentsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileClientPaymentsController],
       providers: [
+        ...[GetNativePaymentConfigHandler,InitNativePaymentHandler,ReconcileNativePaymentHandler,InitNativePackagePurchaseHandler].map(provide=>({provide,useValue:{execute:jest.fn().mockResolvedValue({})}})),
         { provide: ListPaymentsHandler, useValue: mockListPayments },
         { provide: GetInvoiceHandler, useValue: mockGetInvoice },
         { provide: BankTransferUploadHandler, useValue: mockBankTransfer },
@@ -57,6 +62,18 @@ describe('MobileClientPaymentsController (e2e)', () => {
   });
 
   const invoiceId = '00000000-0000-4000-a000-000000000001';
+  it('exposes native capabilities as a static authenticated route',async()=>{
+    await request(app.getHttpServer()).get('/mobile/client/payments/native/config').expect(200);
+  });
+  it('initializes native checkout with identity from session',async()=>{
+    await request(app.getHttpServer()).post('/mobile/client/payments/native/init').send({invoiceId,method:'ONLINE_CARD'}).expect(201);
+  });
+  it('reconciles by persisted payment UUID only',async()=>{
+    await request(app.getHttpServer()).post(`/mobile/client/payments/native/${invoiceId}/reconcile`).send({}).expect(200);
+    await request(app.getHttpServer()).post('/mobile/client/payments/native/not-a-uuid/reconcile').send({}).expect(400);
+    for(const field of ['status','amount','providerId']) await request(app.getHttpServer()).post(`/mobile/client/payments/native/${invoiceId}/reconcile`).send({[field]:'spoofed'}).expect(400);
+  });
+
 
   describe('GET /mobile/client/payments', () => {
     it('returns 200 with paginated payments', async () => {

@@ -28,7 +28,7 @@ const buildPrisma = (
     findFirst: jest.fn().mockResolvedValue(employee),
   },
   user: {
-    findUnique: jest.fn().mockResolvedValue(actor),
+    findUnique: jest.fn(async ({ where }) => where.id === 'actor-1' ? (actor && { id: where.id, ...actor }) : { id: where.id, role: 'EMPLOYEE', isSuperAdmin: false }),
     update: jest.fn().mockResolvedValue(updatedUser ?? makeUpdatedUser()),
   },
 });
@@ -97,7 +97,7 @@ describe('UpdateEmployeeAccountHandler', () => {
 
     await expect(
       handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'user-1' }),
-    ).rejects.toThrow('Cannot change your own role');
+    ).rejects.toThrow('Cannot perform this action on your own account');
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 

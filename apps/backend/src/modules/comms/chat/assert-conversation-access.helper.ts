@@ -25,16 +25,24 @@ export async function assertConversationAccess(
   conversation: { employeeId: string | null },
   requester: { requesterRole?: string | null; requesterUserId?: string },
 ): Promise<void> {
-  if (requester.requesterRole !== 'EMPLOYEE' || !requester.requesterUserId) {
-    return;
+  const employeeId = await resolveConversationEmployeeId(prisma, requester);
+  if (employeeId && conversation.employeeId !== employeeId) {
+    throw new ForbiddenException('Conversation is not assigned to you');
   }
+}
+
+export async function resolveConversationEmployeeId(
+  prisma: Pick<PrismaService, 'employee'>,
+  requester: { requesterRole?: string | null; requesterUserId?: string },
+): Promise<string | undefined> {
+  if (requester.requesterRole !== 'EMPLOYEE') return undefined;
+  if (!requester.requesterUserId) throw new ForbiddenException('Employee identity is required');
 
   const employee = await prisma.employee.findFirst({
     where: { userId: requester.requesterUserId },
     select: { id: true },
   });
 
-  if (!employee || conversation.employeeId !== employee.id) {
-    throw new ForbiddenException('Conversation is not assigned to you');
-  }
+  if (!employee) throw new ForbiddenException('Employee identity is required');
+  return employee.id;
 }

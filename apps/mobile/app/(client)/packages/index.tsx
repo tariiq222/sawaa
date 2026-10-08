@@ -10,6 +10,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Glass } from '@/theme/components/Glass';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { usePackageFamilies } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
@@ -33,7 +34,7 @@ export default function PackagesIndexScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('packages.title')} onBack={() => router.back()} />
+        <ScreenHeader title={t('packages.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         <Text style={[styles.intro, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.intro')}</Text>
 
         <Glass
@@ -72,9 +73,9 @@ export default function PackagesIndexScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
-  intro: { fontSize: 15, lineHeight: 26 },
+  intro: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   balanceCard: { padding: sawaaSpacing.lg, minHeight: 56, justifyContent: 'center' },
   balanceRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  balanceLabel: { flex: 1, fontSize: sawaaType.body.fontSize + 1 },
+  balanceLabel: { flex: 1, fontSize: sawaaType.body.fontSize },
   message: { textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
 });
