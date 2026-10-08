@@ -74,6 +74,9 @@ importers:
       '@ai-sdk/openai':
         specifier: 4.0.83
         version: 4.0.83(zod@4.6.1)
+      '@e2e-dev/mobile':
+        specifier: 0.10.0
+        version: 0.10.0(ai@7.0.127(zod@4.6.1))(e2e@0.16.0(@ai-sdk/openai@4.0.83(zod@4.6.1))(ai@7.0.127(zod@4.6.1)))
       '@e2e-dev/web':
         specifier: ^0.11.2
         version: 0.11.2(e2e@0.16.0(@ai-sdk/openai@4.0.83(zod@4.6.1))(ai@7.0.127(zod@4.6.1)))(playwright@1.63.0)
@@ -1080,6 +1083,16 @@ packages:
   '@dotenvx/dotenvx@1.64.0':
     resolution: {integrity: sha512-6+xRpZaWuHXEqnhBjae+VmQI9Uaqw5Uzu/ScpO+W7ww9Zp3lHSNBoNjFcUxhrCyc7pRGQzyDjhKzloqrPHERiQ==}
     hasBin: true
+
+  '@e2e-dev/mobile@0.10.0':
+    resolution: {integrity: sha512-Oz6ePagl8S/WnCQlfw0WuABpGAgMKK0mTshzuO/p8XEdttwBfO9sJsAWG7PiRF9dwEyU1IkCu8eNdtv/pk3akA==}
+    engines: {node: ^22.22.3 || >=24.8.0}
+    peerDependencies:
+      ai: ^7.0.0
+      e2e: '>=0.15.0 <1'
+    peerDependenciesMeta:
+      ai:
+        optional: true
 
   '@e2e-dev/web@0.11.2':
     resolution: {integrity: sha512-2JzH42fklbKFxmg1Pp8EnZJC/Y+6lDNnYm2+d71CTaHjx6NGTWi6SjpPVW8zAyRsj1hLFliQcURI+pBJMXNFoA==}
@@ -4689,6 +4702,16 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
+
+  agent-device@0.21.22:
+    resolution: {integrity: sha512-ndUh5b+lZ2fRzzY80TTl/KmxR4bh+3FezSH0UGCjPCpN//1trSqtzzNUWunc4woY/vW3DEiPx5xYIwG+fBOXWA==}
+    engines: {node: '>=22.12'}
+    hasBin: true
+    peerDependencies:
+      ai: ^6.0.0 || ^7.0.0
+    peerDependenciesMeta:
+      ai:
+        optional: true
 
   ai@7.0.127:
     resolution: {integrity: sha512-JNsNPk4ZvRGEJuqdVo2lYFkm7uAuf3p/RwKFWn1Wh/+IK3U1RyFWw2GXoFnhzqNfxEuj7XJB4WpIUhl1sHToWg==}
@@ -10188,6 +10211,15 @@ snapshots:
       which: 4.0.0
       yocto-spinner: 1.1.0
 
+  '@e2e-dev/mobile@0.10.0(ai@7.0.127(zod@4.6.1))(e2e@0.16.0(@ai-sdk/openai@4.0.83(zod@4.6.1))(ai@7.0.127(zod@4.6.1)))':
+    dependencies:
+      agent-device: 0.21.22(ai@7.0.127(zod@4.6.1))
+      e2e: 0.16.0(@ai-sdk/openai@4.0.83(zod@4.6.1))(ai@7.0.127(zod@4.6.1))
+      pngjs: 7.0.0
+      zod: 4.6.1
+    optionalDependencies:
+      ai: 7.0.127(zod@4.6.1)
+
   '@e2e-dev/web@0.11.2(e2e@0.16.0(@ai-sdk/openai@4.0.83(zod@4.6.1))(ai@7.0.127(zod@4.6.1)))(playwright@1.63.0)':
     dependencies:
       e2e: 0.16.0(@ai-sdk/openai@4.0.83(zod@4.6.1))(ai@7.0.127(zod@4.6.1))
@@ -13788,7 +13820,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(jsdom@20.0.3)(msw@2.14.2(@types/node@25.6.0)(typescript@5.9.3))(vite@8.1.0(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.23.14)(yaml@2.8.3))
+      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(msw@2.14.2(@types/node@25.6.0)(typescript@5.9.3))(vite@8.1.0(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.23.14)(yaml@2.8.3))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -13979,6 +14011,10 @@ snapshots:
       - supports-color
 
   agent-base@7.1.4: {}
+
+  agent-device@0.21.22(ai@7.0.127(zod@4.6.1)):
+    optionalDependencies:
+      ai: 7.0.127(zod@4.6.1)
 
   ai@7.0.127(zod@4.6.1):
     dependencies:

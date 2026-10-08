@@ -3,7 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => require('@/test-utils/translation').translatedTestMessage(key) }) }));
+
 const mockReplace = jest.fn();
+const mockPush = jest.fn();
 const mockCreate = jest.fn();
 const mockInit = jest.fn();
 const mockBrowser = jest.fn();
@@ -18,7 +21,7 @@ jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativeP
 let mockBankEnabled = false;
 const mockBankQuery = jest.fn((..._args: unknown[]) => ({ data: { enabled: mockBankEnabled, accounts: mockBankEnabled ? [{ id: 'bank-1' }] : [] }, isLoading: false, isError: false, refetch: jest.fn() }));
 const mockStorage = new Map<string, string>();
-jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace }) }));
+jest.mock('expo-router', () => ({ useFocusEffect: () => {}, useRouter: () => ({ replace: mockReplace, push: mockPush }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: false }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockUserId }));
 jest.mock('@/hooks/queries', () => ({
@@ -79,14 +82,15 @@ describe('new booking payment retries', () => {
     expect(mockQueryClient.getQueryState(['portal', 'home'])?.isInvalidated).toBe(false);
   });
 
-  it('routes to native checkout without launching hosted payment or claiming success', async () => {
+  it('keeps confirmation in the back stack when opening the selected card form', async () => {
     const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockInit).not.toHaveBeenCalled();
     expect(mockBrowser).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: {
-      invoiceId: 'invoice-1', bookingId: 'booking-1', method: 'ONLINE_CARD',
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: {
+      invoiceId: 'invoice-1', bookingId: 'booking-1', method: 'ONLINE_CARD', fromBookingConfirm: 'true',
     } });
   });
 
@@ -107,9 +111,32 @@ describe('new booking payment retries', () => {
     const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     act(() => result.current.setMethod('apple_pay'));
     await act(async () => { await result.current.pay(); });
-    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: {
-      invoiceId: 'invoice-1', bookingId: 'booking-1', method: 'APPLE_PAY',
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: {
+      invoiceId: 'invoice-1', bookingId: 'booking-1', method: 'APPLE_PAY', fromBookingConfirm: 'true',
     } });
+  });
+
+  it('prepares Apple Pay on the review screen without opening another route and reuses the booking', async () => {
+    mockAppleAvailable = true;
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    let prepared: unknown;
+    await act(async () => { prepared = await result.current.prepareApplePay(); });
+    expect(prepared).toEqual(expect.objectContaining({ bookingId: 'booking-1', invoiceId: 'invoice-1' }));
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+    await act(async () => { await result.current.prepareApplePay(); });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a direct Apple action once admin capability is removed, while center stays usable', async () => {
+    mockAppleAvailable = true;
+    const { result, rerender } = renderHook(() => useBookingPayment(input), { wrapper });
+    mockAppleAvailable = false; mockNativeEnabled = false;
+    rerender({});
+    await act(async () => { await result.current.prepareApplePay(); });
+    expect(mockCreate).not.toHaveBeenCalled();
+    await act(async () => { await result.current.pay('at_center'); });
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ payAtClinic: true }));
   });
 
   it('resumes the saved invoice after remounting instead of creating again', async () => {
@@ -141,7 +168,8 @@ describe('new booking payment retries', () => {
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockInit).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it('routes a completed saved booking to its result without charging again', async () => {
@@ -154,13 +182,20 @@ describe('new booking payment retries', () => {
     expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { bookingId: 'booking-1', invoiceId: 'invoice-1' } });
   });
 
-  it('keeps an existing invoice in the resume flow when pay-at-center is selected on retry', async () => {
+  it('keeps the existing payment choice visible and explains an online invoice when pay-at-center is selected on retry', async () => {
     const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     act(() => { result.current.setMethod('at_center'); });
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/payment', params: { bookingId: 'booking-1', invoiceId: 'invoice-1', amount: '45000', currency: 'SAR' } });
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(result.current.method).toBe('at_center');
+    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.stringMatching(/invoice|فاتورة/));
+    act(() => { result.current.setMethod('card'); });
+    await act(async () => { await result.current.pay(); });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(client)/payments/native-checkout', params: { bookingId: 'booking-1', invoiceId: 'invoice-1', method: 'ONLINE_CARD', fromBookingConfirm: 'true' } });
   });
 
   it('keeps the authenticated bank-settings query disabled for a guest', () => {
