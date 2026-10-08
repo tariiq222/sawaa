@@ -413,3 +413,50 @@ it('verifyPayable waits for a reconciliation that is already running', async () 
   expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(2);
   unmount();
 });
+
+describe('verifyPayable provider configuration gate', () => {
+  const appleInput = { ...input, method: 'APPLE_PAY' as const };
+  const pendingOk = { paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true } as const;
+  async function ready() {
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue(pendingOk);
+    const hook = renderHook(() => useNativePaymentCheckout(appleInput), { wrapper });
+    await waitFor(() => expect(hook.result.current.phase).toBe('ready'));
+    jest.mocked(clientPaymentsService.initNativePayment).mockClear();
+    return hook;
+  }
+  it('re-runs initialization and accepts the unchanged configuration for the same attempt', async () => {
+    const { result, unmount } = await ready();
+    let ok = false;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(true);
+    expect(clientPaymentsService.initNativePayment).toHaveBeenCalledWith('invoice', 'APPLE_PAY');
+    unmount();
+  });
+  it('fails closed when the provider configuration was rotated while Wallet was open', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', config: { ...config, publishableKey: 'pk_test_rotated' } } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    unmount();
+  });
+  it('fails closed when the Apple Pay merchant configuration changed', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', config: { ...config, applePay: { merchantId: 'merchant.other', label: 'Other', countryCode: 'SA' } } } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    unmount();
+  });
+  it('fails closed on a configuration-changed conflict or a different payment identity', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_CONFIGURATION_CHANGED' } } });
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'other-payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    unmount();
+  });
+});

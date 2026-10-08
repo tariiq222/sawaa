@@ -21,6 +21,14 @@ interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentCo
 interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string; failed?: boolean }
 const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false, canRetryInit: true };
 
+// Mirrors the backend attempt fingerprint (publishable key, mode, Apple Pay) plus the attempt terms.
+function sameAttemptConfig(a: NativePaymentConfiguration, b: NativePaymentConfiguration): boolean {
+  const pick = (c: NativePaymentConfiguration) => JSON.stringify([
+    c.publishableKey, c.isLive, c.applePay ?? null, c.givenId, c.amount, c.currency, c.supportedNetworks,
+  ]);
+  return pick(a) === pick(b);
+}
+
 function errorKey(error: unknown): string {
   const code = (error as { response?: { data?: { code?: string; message?: string } } })?.response?.data?.code;
   if (['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS', 'PAYMENT_CONFIGURATION_CHANGED'].includes(code ?? '')) return 'nativePayment.conflict';
@@ -50,6 +58,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let terminalUnavailable = false;
     let canInitialize = true;
     let payable = false;
+    let readyConfig: NativePaymentConfiguration | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
     const valid = () => active && currentScope.current === scope;
@@ -178,6 +187,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         if (!valid()) return;
         attempt += 1;
         terminalFailure = false; terminalResult = false; resultReceived = false;
+        readyConfig = result.config;
         update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
       } catch (error) {
         if (!valid()) return;
@@ -211,7 +221,16 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (busy || !valid() || !paymentId || terminalResult || terminalUnavailable) return false;
       payable = false;
       await reconcile();
-      return valid() && payable;
+      if (!valid() || !payable || !method || !readyConfig) return false;
+      // The backend compares the attempt fingerprint only at initialization, so re-run it:
+      // a rotated Moyasar/Apple Pay configuration rejects here and must not reach the token.
+      try {
+        const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
+        return valid() && fresh.invoiceId === invoiceId && fresh.paymentId === paymentId
+          && sameAttemptConfig(fresh.config, readyConfig);
+      } catch {
+        return false;
+      }
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
       if (!valid() || !paymentId || renderedAttempt !== attempt || terminalResult || terminalUnavailable || resultReceived) return;
