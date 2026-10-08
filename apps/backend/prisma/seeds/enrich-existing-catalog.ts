@@ -41,10 +41,10 @@ export async function enrichExistingCatalog(prisma: PrismaClient): Promise<void>
     }
   }
 
-  // Employee.publicImageUrl must be an absolute URL (see
-  // people/employees/public/public-image-url.ts): unlike category/package
-  // imageUrl (an object key signed at read time), a bare key is dropped by the
-  // public employees handler. For this local demo we serve the object straight
+  // Employee.publicImageUrl must be an absolute URL here (see
+  // media/owned-image.resolver.ts): a bare key is only signed when it matches a
+  // File row owned by that employee, otherwise the public employees handler
+  // drops it. For this local demo we serve the object straight
   // from MinIO with an anonymous-download bucket policy.
   // Match MinioService's existing public signing endpoint contract: public
   // settings are independent of the internal upload host and TLS setting.

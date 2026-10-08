@@ -34,6 +34,27 @@ describe('OwnedImageResolver', () => {
       expect(getSignedUrl).not.toHaveBeenCalled();
     },
   );
+  // Hardening carried over from the removed normalizePublicImageUrl helper:
+  // public surfaces (website next/image, mobile) only receive absolute http(s)
+  // or root-relative URLs; anything else (bare legacy keys, script/data URIs)
+  // becomes null so no consumer crashes or renders an unsafe source.
+  it.each(['javascript:alert(1)', 'data:image/png;base64,AAAA', 'ftp://example.com/photo.png', 'photo.jpg', ''])(
+    'rejects a non-URL or unsafe image value %s', async (value) => {
+      const { resolver, getSignedUrl } = setup();
+      expect(await resolver.resolve('employee', 'employee-1', value)).toBeNull();
+      expect(getSignedUrl).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps root-relative public assets unchanged', async () => {
+    const { resolver } = setup();
+    expect(await resolver.resolve('employee', 'employee-1', '/images/team/photo.webp')).toBe('/images/team/photo.webp');
+  });
+  it('keeps the mobile self-avatar public API URL so mobile photos keep resolving', async () => {
+    const { resolver, getSignedUrl } = setup();
+    const url = 'https://api.sawaa.sa/api/v1/public/employees/images/00000000-0000-4000-a000-000000000001';
+    expect(await resolver.resolve('employee', 'employee-1', url)).toBe(url);
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
   it('preserves external legacy images without signing unrelated storage', async () => {
     const { resolver, getSignedUrl } = setup();
     expect(await resolver.resolve('employee', 'employee-1', 'https://cdn.example.com/photo.jpg')).toBe('https://cdn.example.com/photo.jpg');

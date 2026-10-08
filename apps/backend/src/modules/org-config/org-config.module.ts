@@ -18,6 +18,7 @@ import { AssignEmployeeToBranchHandler } from './branches/assign-employee-to-bra
 import { UnassignEmployeeFromBranchHandler } from './branches/unassign-employee-from-branch.handler';
 import { GetPublicBranchesHandler } from './branches/public/get-public-branches.handler';
 import { GetPublicBranchHandler } from './branches/public/get-public-branch.handler';
+import { MediaModule } from '../media/media.module';
 import { ListPublicBranchEmployeesHandler } from './branches/public/list-public-branch-employees.handler';
 import { CreateDepartmentHandler } from './departments/create-department.handler';
 import { UpdateDepartmentHandler } from './departments/update-department.handler';
@@ -57,7 +58,7 @@ const hoursHandlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule],
+  imports: [DatabaseModule, MessagingModule, MediaModule],
   controllers: [
     DashboardOrganizationBranchesController,
     DashboardOrganizationDepartmentsController,

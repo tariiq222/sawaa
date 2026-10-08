@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { Prisma } from '@prisma/client';
 import { UpdateSelfProfileDto } from './self-profile.dto';
+import { OwnedImageResolver } from '../../../media/owned-image.resolver';
 
 // The request never accepts an employee ID; ownership is resolved from the live account.
 export async function ownEmployee(db: Pick<Prisma.TransactionClient, 'employee' | 'user'>, userId: string) {
@@ -19,8 +20,13 @@ export function profileResult({ employee, user }: Awaited<ReturnType<typeof ownE
 }
 @Injectable()
 export class GetSelfProfileHandler {
-  constructor(private readonly prisma: PrismaService) {}
-  async execute(userId: string) { return profileResult(await ownEmployee(this.prisma, userId)); }
+  constructor(private readonly prisma: PrismaService, private readonly images: OwnedImageResolver) {}
+  async execute(userId: string) {
+    const owner = await ownEmployee(this.prisma, userId);
+    const result = profileResult(owner);
+    // Dashboard uploads store a private storage key; sign it like every other employee image read.
+    return { ...result, avatarUrl: await this.images.resolve('employee', owner.employee.id, result.avatarUrl) };
+  }
 }
 @Injectable()
 export class UpdateSelfProfileHandler {
