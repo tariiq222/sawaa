@@ -47,3 +47,5 @@ export { useEmployeeClient, useEmployeeClientHistory, employeeClientKeys } from 
 export { useEmployeeAvailability, useUpdateEmployeeAvailability, employeeAvailabilityKeys } from './useEmployeeAvailability';
 export { useClientProfile, useUpdateClientProfile, clientProfileKeys } from './useClientProfile';
 export type { AvailableDaysParams } from './useAvailableDays';
+
+export { useEmployeeProfile, useUpdateEmployeeProfile, useUploadEmployeeAvatar, useRemoveEmployeeAvatar, useRequestEmployeeContact, useVerifyEmployeeContact, employeeProfileKeys } from './useEmployeeProfile';

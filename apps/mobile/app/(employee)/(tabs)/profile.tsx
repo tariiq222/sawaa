@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
+  PencilLine,
   Shield,
   LogOut,
   ChevronLeft,
@@ -181,6 +182,7 @@ export default function EmployeeProfileScreen() {
         >
           <MenuGroup
             entries={[
+              { icon: PencilLine, label: t('employeeSelfProfile.title'), onPress: () => router.push('/(employee)/edit-profile') },
               { icon: Clock, label: t('availability.hours'), onPress: () => router.push('/(employee)/availability') },
               { icon: Shield, label: t('profile.privacy'), onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
             ]}

@@ -1,3 +1,5 @@
+import { GetSelfProfileHandler, UpdateSelfProfileHandler } from './employees/self-profile/self-profile.handler';
+import { ChangeSelfAvatarHandler } from './employees/self-profile/self-avatar.handler';
 import { forwardRef, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -48,6 +50,7 @@ import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
 import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
 const handlers = [
+  GetSelfProfileHandler, UpdateSelfProfileHandler, ChangeSelfAvatarHandler,
   CreateClientHandler, UpdateClientHandler, ListClientsHandler, GetClientHandler, DeleteClientHandler,
   SetClientActiveHandler, LogActivityHandler,
   ListEmployeeClientsHandler, GetEmployeeClientHistoryHandler, GetEmployeeClientHandler, ResolveEmployeeIdHandler,

@@ -26,7 +26,7 @@ jest.mock('react-native-reanimated', () => {
   const animation = { delay: () => animation, duration: () => animation, easing: () => animation };
   return { __esModule: true, default: { View: native.View, Text: native.Text }, FadeIn: animation, FadeInDown: animation, FadeInUp: animation, Easing: { out: () => undefined, cubic: undefined } };
 });
-jest.mock('lucide-react-native', () => ({ Clock: () => null, ChevronLeft: () => null, ChevronRight: () => null }));
+jest.mock('lucide-react-native', () => ({ Clock: () => null, ChevronLeft: () => null, ChevronRight: () => null, Eye: () => null, EyeOff: () => null }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('@/theme', () => ({ Glass: ({ children }: React.PropsWithChildren) => <>{children}</> }));
 jest.mock('@/theme/components/Glass', () => ({ Glass: ({ children }: React.PropsWithChildren) => <>{children}</> }));

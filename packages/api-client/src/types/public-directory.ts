@@ -17,6 +17,8 @@ export interface PublicEmployee {
   specialtyAr: string | null
   publicBioAr: string | null
   publicBioEn: string | null
+  experience?: number | null
+  languages?: string[]
   publicImageUrl: string | null
   gender: string | null
   employmentType: string
