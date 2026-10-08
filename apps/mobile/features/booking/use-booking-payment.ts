@@ -11,6 +11,7 @@ import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useBankTransferSettings, usePublicPaymentMethods } from '@/hooks/queries';
 import { clientBookingsService } from '@/services/client/bookings';
+import { clientPaymentsService } from '@/services/client/payments';
 import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
 import {
@@ -21,12 +22,28 @@ import {
 } from '@/features/booking/payment-resume-state';
 import type { DeliveryType } from '@/types/booking-enums';
 
-/** A saved native attempt reserves the invoice unless the server reported it failed. */
+/**
+ * A saved native attempt reserves the invoice unless the server reports it failed. The local
+ * failed marker is only a cache: an attempt that failed while the app was closed is confirmed
+ * (and marked) here, and any doubt or error keeps the invoice reserved.
+ */
 async function hasReservingNativeAttempt(userId: string, invoiceId: string): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(`sawaa.native-payment:${userId}:${invoiceId}`);
+  const key = `sawaa.native-payment:${userId}:${invoiceId}`;
+  const raw = await AsyncStorage.getItem(key);
   if (!raw) return false;
+  let stored: { paymentId?: unknown; invoiceId?: unknown; failed?: boolean };
   try {
-    return (JSON.parse(raw) as { failed?: boolean }).failed !== true;
+    stored = JSON.parse(raw);
+  } catch {
+    return true;
+  }
+  if (stored.failed === true) return false;
+  if (typeof stored.paymentId !== 'string' || !stored.paymentId) return true;
+  try {
+    const result = await clientPaymentsService.reconcileNativePayment(stored.paymentId);
+    if (result.paymentId !== stored.paymentId || result.invoiceId !== invoiceId || result.status !== 'FAILED') return true;
+    await AsyncStorage.setItem(key, JSON.stringify({ ...stored, failed: true }));
+    return false;
   } catch {
     return true;
   }
