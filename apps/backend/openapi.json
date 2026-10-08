@@ -43846,6 +43846,72 @@
         ]
       }
     },
+    "/api/v1/public/employees/images/{fileId}": {
+      "get": {
+        "operationId": "PublicEmployeeAvatarController_get_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000001",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Read the current explicitly public employee profile photo",
+        "tags": [
+          "Public / Employees"
+        ]
+      }
+    },
     "/api/v1/public/intake-forms/applicable": {
       "get": {
         "operationId": "PublicIntakeFormsController_applicable_v1",

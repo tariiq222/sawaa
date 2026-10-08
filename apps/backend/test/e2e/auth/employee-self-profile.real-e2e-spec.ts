@@ -6,12 +6,14 @@ import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
+import { Readable } from 'node:stream';
 import request from 'supertest';
 import { AppModule } from '../../../src/app.module';
 import { PrismaService } from '../../../src/infrastructure/database';
 import { RedisService } from '../../../src/infrastructure/cache/redis.service';
 import { TokenService } from '../../../src/modules/identity/shared/token.service';
 import { MobileEmailDelivery } from '../../../src/modules/identity/mobile-email-entry/mobile-email-delivery';
+import { MinioService } from '../../../src/infrastructure/storage/minio.service';
 import { configureHttpContract } from '../../../src/common/bootstrap/configure-http-contract';
 import { getRealE2eDatabaseUrl } from '../../helpers/create-real-e2e-app';
 
@@ -41,6 +43,12 @@ describeReal('Employee own profile — persisted HTTP acceptance', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(RedisService).useValue({ getClient: () => redis, buildOptions: () => ({ host: '127.0.0.1', port: Number(redisPort) }) })
       .overrideProvider(MobileEmailDelivery).useValue({ send: async (_channel: string, identifier: string, code: string) => { codes.set(identifier, code); } })
+      .overrideProvider(MinioService).useValue({
+        uploadFile: async (bucket: string, key: string) => `http://minio:9000/${bucket}/${key}`,
+        deleteFile: async () => undefined,
+        getSignedUrl: async () => 'http://127.0.0.1/internal-signed',
+        getFileStream: async () => Readable.from(png),
+      })
       .compile();
     app = module.createNestApplication();
     configureHttpContract(app, 'production');
@@ -102,7 +110,17 @@ describeReal('Employee own profile — persisted HTTP acceptance', () => {
     const f = await account();
     const upload = () => request(app.getHttpServer()).post(endpoint + '/avatar').set('Authorization', `Bearer ${f.token}`).attach('file', png, { filename: 'photo.png', contentType: 'image/png' });
     const first = await upload().expect(200);
+    const firstPath = new URL(first.body.avatarUrl).pathname;
+    expect(firstPath).toMatch(/^\/api\/v1\/public\/employees\/images\//);
+    await request(app.getHttpServer()).get(firstPath).expect(200).expect('Content-Type', /image\/png/).expect('Cache-Control', 'no-store');
+    const storedFirst = await prisma.file.findFirstOrThrow({ where: { uploadedBy: f.user.id } });
+    await prisma.file.update({ where: { id: storedFirst.id }, data: { visibility: 'PRIVATE' } });
+    await request(app.getHttpServer()).get(firstPath).expect(404);
+    await prisma.file.update({ where: { id: storedFirst.id }, data: { visibility: 'PUBLIC' } });
     const second = await upload().expect(200);
+    await request(app.getHttpServer()).get(firstPath).expect(404);
+    const secondPath = new URL(second.body.avatarUrl).pathname;
+    await request(app.getHttpServer()).get(secondPath).expect(200);
     expect(second.body.avatarUrl).not.toBe(first.body.avatarUrl);
     const user = await prisma.user.findUniqueOrThrow({ where: { id: f.user.id } });
     expect(user.avatarUrl).toBe(second.body.avatarUrl);
@@ -112,6 +130,7 @@ describeReal('Employee own profile — persisted HTTP acceptance', () => {
     await request(app.getHttpServer()).post(endpoint + '/avatar').set('Authorization', `Bearer ${f.token}`).attach('file', Buffer.alloc(1048577), { filename: 'large.png', contentType: 'image/png' }).expect(413);
     const removed = await request(app.getHttpServer()).delete(endpoint + '/avatar').set('Authorization', `Bearer ${f.token}`).expect(200);
     expect(removed.body.avatarUrl).toBeNull();
+    await request(app.getHttpServer()).get(secondPath).expect(404);
     expect((await prisma.employee.findUniqueOrThrow({ where: { id: f.employee!.id } })).publicImageUrl).toBeNull();
     expect((await prisma.user.findUniqueOrThrow({ where: { id: f.user.id } })).avatarUrl).toBeNull();
   });
