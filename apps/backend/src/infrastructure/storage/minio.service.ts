@@ -105,6 +105,10 @@ export class MinioService implements IStorageService, OnModuleInit {
     await this.client.removeObject(bucket, key);
   }
 
+  async getFileStream(bucket: string, key: string) {
+    return this.client.getObject(bucket, key);
+  }
+
   async getSignedUrl(bucket: string, key: string, expiry = 3600): Promise<string> {
     return this.signClient.presignedGetObject(bucket, key, expiry);
   }

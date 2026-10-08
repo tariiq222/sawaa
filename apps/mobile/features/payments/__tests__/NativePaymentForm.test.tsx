@@ -38,7 +38,7 @@ it('uses official cards for the chosen card method and discards raw SDK callback
   const callback = jest.fn();
   const screen = render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={callback} />);
   fireEvent.press(screen.getByText('official-card'));
-  expect(callback).toHaveBeenCalledWith(); expect(screen.queryByText('official-apple')).toBeNull();
+  expect(callback).toHaveBeenCalledWith('submitted'); expect(screen.queryByText('official-apple')).toBeNull();
 });
 it('lets the SDK card button grow with scaled text while keeping its minimum touch height', () => {
   render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={jest.fn()} />);
@@ -82,4 +82,40 @@ it('passes the current app language through the documented local SDK extension',
   mockAppLanguage = 'en';
   view.rerender(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={jest.fn()} />);
   expect(mockCardLanguage).toHaveBeenLastCalledWith('en');
+});
+
+describe('SDK result classification', () => {
+  const press = (result: unknown) => {
+    const callback = jest.fn();
+    render(<NativePaymentForm config={config} method="ONLINE_CARD" applePayAvailable={false} onResult={callback} />);
+    mockCardProps.mock.calls.at(-1)?.[0].onPaymentResult(result);
+    return callback;
+  };
+  it('reports a card-field validation rejection as rejected', () => {
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', message: 'bad card', errors: { number: ['is invalid'] } } })).toHaveBeenCalledWith('rejected');
+  });
+  it('keeps an invalid-request response without field errors verification-only', () => {
+    // For example an already-used given_id: the provider payment may exist and must be reconciled.
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', message: 'given_id already used' } })).toHaveBeenCalledWith('submitted');
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: {} } })).toHaveBeenCalledWith('submitted');
+  });
+  it.each([
+    { name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: { given_id: ['has already been taken'] } } },
+    { name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: { number: ['is invalid'], amount: ['is invalid'] } } },
+    { name: 'MoyasarNetworkEndpointError', error: { type: 'api_error' } },
+    { name: 'MoyasarNetworkEndpointError', error: {} },
+    { name: 'MoyasarGeneralError' },
+    { status: 'failed' },
+    null,
+    undefined,
+  ])('keeps %p verification-only', (result) => {
+    expect(press(result)).toHaveBeenCalledWith('submitted');
+  });
+});
+
+it('keeps Apple Pay callbacks verification-only even for invalid-request errors with field errors', () => {
+  const callback = jest.fn();
+  render(<NativePaymentForm config={{ ...config, applePay: { merchantId: 'merchant.sa.sawa', label: 'Sawa', countryCode: 'SA' } }} method="APPLE_PAY" applePayAvailable onResult={callback} />);
+  mockAppleProps.mock.calls.at(-1)?.[0].onPaymentResult({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: { amount: ['is invalid'] } } });
+  expect(callback).toHaveBeenCalledWith('submitted');
 });

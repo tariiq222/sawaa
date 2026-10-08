@@ -90,6 +90,24 @@ index 941dbe42d891bdc5019fc40fd278e0c81f90d4e3..fc651cb9097bc22469572cc09d11b560
            resolve(true);
          });
          return;
+diff --git a/lib/module/react_native_apple_pay/PaymentRequest/PaymentResponse.js b/lib/module/react_native_apple_pay/PaymentRequest/PaymentResponse.js
+index 74e77111e25fb51246c69ac062e3999030561664..dd6c6ef9bd98f3aa27f5cd26ab53abbf0e05cf61 100644
+--- a/lib/module/react_native_apple_pay/PaymentRequest/PaymentResponse.js
++++ b/lib/module/react_native_apple_pay/PaymentRequest/PaymentResponse.js
+@@ -59,11 +59,8 @@ export default class PaymentResponse {
+       throw new Error('InvalidStateError');
+     }
+     this._completeCalled = true;
+-    return new Promise((resolve, reject) => {
+-      return NativePayments.complete(paymentStatus, () => {
+-        return resolve(undefined);
+-      });
+-    });
++    // The bridge returns a Promise; it does not accept a completion callback.
++    return NativePayments.complete(paymentStatus).then(() => undefined);
+   }
+ }
+ //# sourceMappingURL=PaymentResponse.js.map
 diff --git a/lib/module/services/credit_card_payment_service.js b/lib/module/services/credit_card_payment_service.js
 index ae22414122ad6db7b5a2bcd40634114495bba0ea..f258fd3b3b0ca45f17f974024fcca0a0389a94e2 100644
 --- a/lib/module/services/credit_card_payment_service.js
@@ -451,6 +469,23 @@ index 580fafd0f0db127b57be150fc6f3416e910b19bb..54c640a0b48a30887862945138f47490
          );
  
          return;
+diff --git a/src/react_native_apple_pay/PaymentRequest/PaymentResponse.js b/src/react_native_apple_pay/PaymentRequest/PaymentResponse.js
+index 6ac8415f70f2b9ef6dc1b08cb408513040ba6ea7..d58de92cb415cf614e15740030c38a9d8f4db9f8 100644
+--- a/src/react_native_apple_pay/PaymentRequest/PaymentResponse.js
++++ b/src/react_native_apple_pay/PaymentRequest/PaymentResponse.js
+@@ -74,10 +74,7 @@ export default class PaymentResponse {
+ 
+     this._completeCalled = true;
+ 
+-    return new Promise((resolve, reject) => {
+-      return NativePayments.complete(paymentStatus, () => {
+-        return resolve(undefined);
+-      });
+-    });
++    // The bridge returns a Promise; it does not accept a completion callback.
++    return NativePayments.complete(paymentStatus).then(() => undefined);
+   }
+ }
 diff --git a/src/services/credit_card_payment_service.ts b/src/services/credit_card_payment_service.ts
 index 284123e9ba280b0f4b68e91b79edbe4c6b2b740a..f12391b459869b777fb5a7bb0320f44f3a9835b2 100644
 --- a/src/services/credit_card_payment_service.ts

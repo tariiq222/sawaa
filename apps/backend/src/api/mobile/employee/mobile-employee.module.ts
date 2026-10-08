@@ -1,3 +1,5 @@
+import { IdentityModule } from '../../../modules/identity/identity.module';
+import { MobileEmployeeProfileController } from './profile.controller';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../../infrastructure/database';
 import { BookingsModule } from '../../../modules/bookings/bookings.module';
@@ -9,8 +11,9 @@ import { MobileEmployeeEarningsController } from './earnings.controller';
 import { MobileEmployeeBookingsController } from './bookings.controller';
 
 @Module({
-  imports: [DatabaseModule, BookingsModule, PeopleModule, FinanceModule],
+  imports: [IdentityModule, DatabaseModule, BookingsModule, PeopleModule, FinanceModule],
   controllers: [
+    MobileEmployeeProfileController,
     MobileEmployeeScheduleController,
     MobileEmployeeClientsController,
     MobileEmployeeEarningsController,

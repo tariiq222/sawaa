@@ -273,6 +273,12 @@ export class UploadAvatarResponseDto {
 // ── Public employee ─────────────────────────────────────────────────────────
 
 export class PublicEmployeeResponseDto {
+  @ApiProperty({ description: 'Spoken languages', type: [String], example: ['العربية', 'English'] })
+  languages!: string[];
+
+  @ApiProperty({ description: 'Years of experience', example: 8 })
+  experience!: number;
+
   @ApiProperty({ description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   id!: string;
 

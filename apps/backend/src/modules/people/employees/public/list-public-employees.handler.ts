@@ -40,6 +40,7 @@ export interface PublicEmployeeItem {
   rating: number;
   reviewCount: number;
   experience: number;
+  languages: string[];
 }
 
 @Injectable()
@@ -64,6 +65,7 @@ export class ListPublicEmployeesHandler {
         gender: true,
         employmentType: true,
         experience: true,
+        languages: true,
       },
     });
 
