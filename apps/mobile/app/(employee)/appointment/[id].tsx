@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import { useTheme } from '@/theme/useTheme';
 import { View, ScrollView, Linking, Alert } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -67,6 +67,8 @@ export default function DoctorAppointmentDetailScreen() {
   const startSession = useStartEmployeeBookingSession();
   const cancelBooking = useCancelEmployeeBooking();
   const requestCancelBooking = useRequestCancelEmployeeBooking();
+  const actionBusy = startSession.isPending || markCompleted.isPending || cancelBooking.isPending || requestCancelBooking.isPending;
+  const [footerHeight, setFooterHeight] = useState(220);
   const booking = bookingQuery.isError ? null : (bookingQuery.data ?? null);
   // Exact timing and the host link come from the dedicated start-meeting
   // endpoint; the detail payload carries neither. Skipped while video calls are
@@ -231,7 +233,7 @@ export default function DoctorAppointmentDetailScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + (hasBarActions ? 220 : sawaaSpacing.xl) },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: hasBarActions ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -274,11 +276,13 @@ export default function DoctorAppointmentDetailScreen() {
       </ScrollView>
 
       {hasBarActions && (
-        <FloatingCta>
+        <FloatingCta onHeightChange={setFooterHeight}>
           {canStartSession && (
             <PrimaryButton
               label={t('doctor.startSession')}
               onPress={handleStartSession}
+              disabled={actionBusy}
+              loading={startSession.isPending}
               fontFamily={f600}
               icon={<Check size={16} color={theme.colors.primaryForeground} />}
             />
@@ -287,6 +291,8 @@ export default function DoctorAppointmentDetailScreen() {
             <PrimaryButton
               label={t('doctor.markCompleted')}
               onPress={handleMarkComplete}
+              disabled={actionBusy}
+              loading={markCompleted.isPending}
               fontFamily={f600}
               icon={<Check size={16} color={theme.colors.primaryForeground} />}
             />
@@ -294,6 +300,8 @@ export default function DoctorAppointmentDetailScreen() {
           {cancellationMode !== 'none' && (
             <OutlineButton
               tone="neutral"
+              disabled={actionBusy}
+              loading={cancelBooking.isPending || requestCancelBooking.isPending}
               onPress={cancellationMode === 'direct_cancel' ? handleEmployeeCancel : handleRequestCancel}
               label={cancellationMode === 'direct_cancel' ? t('doctor.cancelBooking') : t('appointments.requestCancel')}
             />

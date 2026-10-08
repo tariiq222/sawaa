@@ -25,6 +25,7 @@ import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientsService, type ClientRecord, type EmployeeClientVisit } from '@/services/clients';
+import { goBackOrHome } from '@/lib/navigation';
 import { getStatusLabel } from '@/lib/status-helpers';
 
 export default function DoctorClientRecordScreen() {
@@ -33,6 +34,7 @@ export default function DoctorClientRecordScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const router = useRouter();
+  const handleBack = () => goBackOrHome(router, '/(employee)/(tabs)/clients');
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
@@ -61,7 +63,7 @@ export default function DoctorClientRecordScreen() {
     return (
       <AquaBackground>
         <View style={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md }]}>
-          <Skeleton width={44} height={44} radius={sawaaRadius.pill} style={styles.loaderBlock} />
+          <ScreenHeader title={t('doctor.clientRecord')} onBack={handleBack} />
           <Skeleton width="50%" height={24} radius={sawaaRadius.sm} style={styles.loaderBlock} />
           <Skeleton height={104} radius={sawaaRadius.xl} style={styles.loaderBlock} />
           {[0, 1, 2].map((i) => (
@@ -75,13 +77,14 @@ export default function DoctorClientRecordScreen() {
   if (error || !client) {
     return (
       <AquaBackground>
-        <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <View style={[styles.scroll, { flex: 1, paddingTop: insets.top + sawaaSpacing.md }]}>
+          <ScreenHeader title={t('doctor.clientRecord')} onBack={handleBack} />
           <EmptyState
             icon="alert-circle-outline"
             tone="danger"
             title={error ?? t('doctor.clientNotFound')}
             actionLabel={t('common.back')}
-            onAction={() => router.back()}
+            onAction={handleBack}
           />
         </View>
       </AquaBackground>
@@ -105,14 +108,14 @@ export default function DoctorClientRecordScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('doctor.clientRecord')} onBack={() => router.back()} />
+        <ScreenHeader title={t('doctor.clientRecord')} onBack={handleBack} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
           <Glass variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.lg}>
             <View style={[styles.profileRow, { flexDirection: dir.row }]}>
               <Thumb uri={client.avatarUrl} width={64} height={64} radius={sawaaRadius.pill} />
               <View style={styles.profileMid}>
-                <Text numberOfLines={2} style={[styles.profileName, textStyle, { fontFamily: f700 }]}>
+                <Text style={[styles.profileName, textStyle, { fontFamily: f700 }]}>
                   {fullName}
                 </Text>
                 {visits.length > 0 ? (
@@ -133,7 +136,7 @@ export default function DoctorClientRecordScreen() {
                     style={[styles.contactRow, { flexDirection: dir.row }]}
                   >
                     <Icon size={22} strokeWidth={1.75} color={colors.teal[700]} />
-                    <Text style={[styles.contactText, textStyle, { fontFamily: f400 }]}>{value}</Text>
+                    <Text style={[styles.contactText, textStyle, { fontFamily: f400, writingDirection: 'ltr' }]}>{value}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -156,7 +159,7 @@ export default function DoctorClientRecordScreen() {
               return (
                 <Animated.View
                   key={v.id}
-                  entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
+                  entering={reduceMotion ? undefined : FadeInDown.delay(240 + Math.min(index, 6) * 70).duration(600).easing(Easing.out(Easing.cubic))}
                 >
                   <Glass variant="base" radius={sawaaRadius.lg}>
                     <Pressable
@@ -169,7 +172,7 @@ export default function DoctorClientRecordScreen() {
                         <CalendarDays size={22} strokeWidth={1.75} color={colors.teal[700]} />
                       </View>
                       <View style={styles.visitMid}>
-                        <Text numberOfLines={1} style={[styles.visitTitle, textStyle, { fontFamily: f700 }]}>
+                        <Text style={[styles.visitTitle, textStyle, { fontFamily: f700 }]}>
                           {dateLabel} · {timeLabel}
                         </Text>
                         <Text style={[styles.visitSub, textStyle, { fontFamily: f400 }]}>
@@ -191,14 +194,12 @@ export default function DoctorClientRecordScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
-  centered: { flex: 1, justifyContent: 'center' },
   loaderBlock: { marginBottom: sawaaSpacing.md },
   loaderRow: { marginBottom: sawaaSpacing.sm },
   profileRow: { alignItems: 'center', gap: sawaaSpacing.lg },
-  profileMid: { flex: 1, gap: sawaaSpacing.sm },
+  profileMid: { flex: 1, minWidth: 0, flexShrink: 1, gap: sawaaSpacing.sm },
   profileName: {
-    fontSize: sawaaType.subheading.fontSize + 2,
-    lineHeight: sawaaType.subheading.lineHeight + 2,
+    fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
   contactList: {
@@ -210,17 +211,16 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   contactRow: { alignItems: 'center', gap: sawaaSpacing.md, minHeight: 44 },
   contactText: {
     flex: 1,
-    fontSize: 15,
-    lineHeight: sawaaType.body.lineHeight + 2,
+    fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
+    minWidth: 0, flexShrink: 1,
     color: colors.ink[900],
   },
   visitList: { gap: sawaaSpacing.sm },
-  visitRow: { alignItems: 'center', gap: sawaaSpacing.md, padding: sawaaSpacing.md, minHeight: 68 },
+  visitRow: { flexWrap: 'wrap', alignItems: 'center', gap: sawaaSpacing.md, padding: sawaaSpacing.md, minHeight: 68 },
   visitIcon: { width: 44, height: 44, borderRadius: sawaaRadius.md, alignItems: 'center', justifyContent: 'center' },
-  visitMid: { flex: 1, gap: 2 },
+  visitMid: { flexGrow: 1, flexBasis: 120, minWidth: 0, flexShrink: 1, gap: 2 },
   visitTitle: {
-    fontSize: 15,
-    lineHeight: sawaaType.subheading.lineHeight,
+    fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
     color: colors.ink[900],
   },
   visitSub: {

@@ -11,6 +11,7 @@ import {
   AquaBackground,
   sawaaRadius,
   sawaaSpacing,
+  sawaaType,
 } from '@/theme/sawaa';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -79,7 +80,7 @@ export default function CalendarScreen() {
         ItemSeparatorComponent={() => <View style={{ height: sawaaSpacing.sm }} />}
         renderItem={({ item, index }) => (
           <Animated.View
-            entering={reduceMotion ? undefined : FadeInDown.delay(240 + index * 70).duration(600).easing(Easing.out(Easing.cubic))}
+            entering={reduceMotion ? undefined : FadeInDown.delay(240 + Math.min(index, 6) * 70).duration(600).easing(Easing.out(Easing.cubic))}
           >
             <EmployeeAppointmentCard
               booking={item}
@@ -128,8 +129,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   list: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 140 },
   header: { gap: sawaaSpacing.lg, marginBottom: sawaaSpacing.md },
   title: {
-    fontSize: 28,
-    lineHeight: 38,
+    fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
   },
   skeletonList: { gap: sawaaSpacing.sm },

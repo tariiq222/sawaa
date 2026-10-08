@@ -15,6 +15,8 @@ import {
   sawaaType,
 } from '@/theme/sawaa';
 import { FloatingCta } from '@/components/ui/FloatingCta';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { goBackOrHome } from '@/lib/navigation';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -28,11 +30,6 @@ import type { AvailabilityDayGroup, AvailabilityException, EmployeeAvailability 
 type DaySchedule = EmployeeAvailability;
 
 type DayScheduleGroup = AvailabilityDayGroup;
-
-const DEFAULT_SCHEDULE: DayScheduleGroup[] = Array.from({ length: 7 }, (_, i) => ({
-  dayOfWeek: i,
-  windows: i <= 4 ? [{ dayOfWeek: i, startTime: '08:00', endTime: '17:00', isActive: true }] : [],
-}));
 
 function groupSchedule(windows: DaySchedule[]): DayScheduleGroup[] {
   return Array.from({ length: 7 }, (_, dayOfWeek) => ({
@@ -51,29 +48,37 @@ export default function AvailabilityScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
+  const [schedule, setSchedule] = useState<DayScheduleGroup[]>([]);
   const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(160);
+  const handleBack = () => goBackOrHome(router, '/(employee)/(tabs)/profile');
 
 
   const toggleDay = useCallback((dayIndex: number) => {
     setSchedule((prev) => toggleAvailabilityDay(prev, dayIndex));
   }, []);
 
-  useEffect(() => {
-    employeesService.getAvailabilitySchedule().then((result) => {
+  const loadSchedule = useCallback(async () => {
+    setLoading(true);
+    setLoadFailed(false);
+    try {
+      const result = await employeesService.getAvailabilitySchedule();
       setSchedule(groupSchedule(result.windows));
       setExceptions(result.exceptions);
-    }).catch(() => {
-      setSchedule(groupSchedule([]));
+    } catch {
       setLoadFailed(true);
-      Alert.alert(t('common.error'), t('availability.saveError'));
-    }).finally(() => setLoading(false));
-  }, [t]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadSchedule(); }, [loadSchedule]);
 
   const handleSave = async () => {
+    if (loading || loadFailed || saving) return;
     setSaving(true);
     try {
       await employeesService.updateAvailabilitySchedule({
@@ -81,7 +86,7 @@ export default function AvailabilityScreen() {
         exceptions,
       });
       Alert.alert(t('common.saved'), t('availability.saveSuccess'));
-      router.back();
+      handleBack();
     } catch {
       Alert.alert(t('common.error'), t('availability.saveError'));
     } finally {
@@ -95,11 +100,11 @@ export default function AvailabilityScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: !loading && !loadFailed ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('availability.hours')} onBack={() => router.back()} />
+        <ScreenHeader title={t('availability.hours')} onBack={handleBack} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
@@ -113,6 +118,10 @@ export default function AvailabilityScreen() {
               <Skeleton key={i} height={60} radius={sawaaRadius.lg} />
             ))}
           </View>
+        ) : loadFailed ? (
+          <EmptyState icon="cloud-offline-outline" tone="danger" title={t('availability.loadError')}
+            description={t('availability.loadErrorHint')} actionLabel={t('common.retry')}
+            onAction={() => { void loadSchedule(); }} />
         ) : (
           <View style={styles.dayList}>
             {schedule.map((day, index) => (
@@ -138,11 +147,11 @@ export default function AvailabilityScreen() {
                       {day.windows.filter((window) => window.isActive !== false).map((window) => (
                         <View key={`${window.startTime}-${window.endTime}`} style={[styles.windowRow, { flexDirection: dir.row }]}>
                           <View style={[styles.timeBox, { borderColor: colors.teal[700] }]}>
-                            <Text style={[styles.timeText, { fontFamily: f600 }]}>{window.startTime}</Text>
+                            <Text style={[styles.timeText, { fontFamily: f600, writingDirection: 'ltr' }]}>{window.startTime}</Text>
                           </View>
                           <Text style={[styles.toText, { fontFamily: f400 }]}>{t('availability.to')}</Text>
                           <View style={[styles.timeBox, { borderColor: colors.teal[700] }]}>
-                            <Text style={[styles.timeText, { fontFamily: f600 }]}>{window.endTime}</Text>
+                            <Text style={[styles.timeText, { fontFamily: f600, writingDirection: 'ltr' }]}>{window.endTime}</Text>
                           </View>
                         </View>
                       ))}
@@ -160,11 +169,12 @@ export default function AvailabilityScreen() {
       </ScrollView>
 
       {!loading && !loadFailed && (
-        <FloatingCta>
+        <FloatingCta onHeightChange={setFooterHeight}>
           <PrimaryButton
             label={t('availability.save')}
             onPress={handleSave}
             disabled={saving}
+            loading={saving}
             fontFamily={f600}
           />
         </FloatingCta>
@@ -176,8 +186,7 @@ export default function AvailabilityScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   subtitle: {
-    fontSize: sawaaType.body.fontSize + 1,
-    lineHeight: sawaaType.body.lineHeight + 4,
+    fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
     color: colors.ink[700],
   },
   skeletonList: { gap: sawaaSpacing.sm },
@@ -185,12 +194,11 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   dayRow: { alignItems: 'center', justifyContent: 'space-between', gap: sawaaSpacing.md, minHeight: 44 },
   dayLabel: {
     flex: 1,
-    fontSize: sawaaType.subheading.fontSize - 2,
-    lineHeight: sawaaType.subheading.lineHeight,
+    fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
   windows: { gap: sawaaSpacing.sm, marginTop: sawaaSpacing.sm },
-  windowRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  windowRow: { flexWrap: 'wrap', alignItems: 'center', gap: sawaaSpacing.md },
   timeBox: {
     minWidth: 84,
     minHeight: 44,
@@ -201,8 +209,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     paddingHorizontal: sawaaSpacing.md,
   },
   timeText: {
-    fontSize: sawaaType.body.fontSize + 1,
-    lineHeight: sawaaType.body.lineHeight + 2,
+    fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
     color: colors.teal[700],
   },
   toText: {
