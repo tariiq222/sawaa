@@ -109,233 +109,87 @@ it('verifyPayable waits for a reconciliation that is already running', async () 
   unmount();
 });
 
-const realNow = Date.now();
-describe('verifyPayable provider configuration gate', () => {
-  afterEach(() => { jest.spyOn(Date, 'now').mockRestore(); });
+describe('post-Wallet verification and initialization conflicts', () => {
   const appleInput = { ...input, method: 'APPLE_PAY' as const };
   const pendingOk = { paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true } as const;
+  const inProgress = (code: string, paymentId?: string) => ({ response: { data: { code, ...(paymentId ? { paymentId, invoiceId: 'invoice' } : {}) } } });
   async function ready() {
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue(pendingOk);
     const hook = renderHook(() => useNativePaymentCheckout(appleInput), { wrapper });
     await waitFor(() => expect(hook.result.current.phase).toBe('ready'));
     jest.mocked(clientPaymentsService.initNativePayment).mockClear();
-    // Past the freshness window the post-Wallet check re-runs the throttled initialization.
-    jest.spyOn(Date, 'now').mockReturnValue(realNow + 60_000);
     return hook;
   }
-  it('re-runs initialization and accepts the unchanged configuration for the same attempt', async () => {
+  it('authorizes only from a fresh reconciliation and never re-initializes (native/init is throttled)', async () => {
     const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
     let ok = false;
     await act(async () => { ok = await result.current.verifyPayable(); });
     expect(ok).toBe(true);
-    expect(clientPaymentsService.initNativePayment).toHaveBeenCalledWith('invoice', 'APPLE_PAY');
-    unmount();
-  });
-  it('fails closed when the provider configuration was rotated while Wallet was open', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', config: { ...config, publishableKey: 'pk_test_rotated' } } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    expect(result.current.phase).toBe('error');
-    expect(result.current.config).toBeNull();
-    unmount();
-  });
-  it('fails closed when the Apple Pay merchant configuration changed', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', config: { ...config, applePay: { merchantId: 'merchant.other', label: 'Other', countryCode: 'SA' } } } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    unmount();
-  });
-  it('applies terminal init results after Wallet: an expired booking becomes unavailable', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'BOOKING_EXPIRED' } } });
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    expect(result.current.phase).toBe('unavailable');
-    expect(result.current.unavailableReason).toBe('BOOKING_EXPIRED');
-    unmount();
-  });
-  it('adopts the completed payment identity when another flow completed it during verification', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_ALREADY_COMPLETED', paymentId: 'completed-payment', invoiceId: 'invoice' } } });
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'completed-payment', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: false });
-    jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'confirmed' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenLastCalledWith('completed-payment');
-    expect(result.current.phase).toBe('completed');
-    unmount();
-  });
-  it('adopts a legitimate replacement attempt instead of treating it as a configuration conflict', async () => {
-    const { result, unmount } = await ready();
-    const replacement = { ...config, givenId: 'b0000000-0000-4000-8000-000000000002' };
-    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', config: replacement } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    expect(result.current.phase).toBe('ready');
-    expect(result.current.paymentId).toBe('replacement');
-    expect(result.current.config).toEqual(replacement);
-    expect(result.current.canRetryInit).toBe(true);
-    expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).paymentId).toBe('replacement');
-    unmount();
-  });
-  it('does not run another reconciliation in parallel while the post-Wallet initialization is in flight', async () => {
-    const { result, unmount } = await ready();
-    let finish!: (value: Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>) => void;
-    jest.mocked(clientPaymentsService.initNativePayment).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
-    let verifying!: Promise<boolean>;
-    await act(async () => { verifying = result.current.verifyPayable(); });
-    // A foreground/poll reconciliation arriving now must not overlap the authoritative check.
-    await act(async () => { await result.current.reconcile(); });
     expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(1);
-    let ok = false;
-    await act(async () => { finish({ paymentId: 'payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>); ok = await verifying; });
-    expect(ok).toBe(true);
-    unmount();
-  });
-  it('queues a check requested during initialization and does not authorize when it finds the target closed', async () => {
-    const { result, unmount } = await ready();
-    let finish!: (value: Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>) => void;
-    jest.mocked(clientPaymentsService.initNativePayment).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
-    let verifying!: Promise<boolean>;
-    await act(async () => { verifying = result.current.verifyPayable(); });
-    // A foreground/poll check arrives while initialization is in flight; the target closes meanwhile.
-    await act(async () => { await result.current.reconcile(); });
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
-    let ok = true;
-    await act(async () => { finish({ paymentId: 'payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>); ok = await verifying; });
-    expect(ok).toBe(false);
-    expect(result.current.phase).toBe('unavailable');
-    expect(result.current.config).toBeNull();
-    unmount();
-  });
-  it.each(['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS'])('keeps %s in verification mode instead of offering Retry', async (code) => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code, paymentId: 'payment', invoiceId: 'invoice' } } });
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    // verification continues (own check plus the one for the in-flight payment) and Retry stays hidden
-    expect(jest.mocked(clientPaymentsService.reconcileNativePayment).mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(result.current.canRetryInit).toBe(false);
-    expect(result.current.canResume).toBe(false);
-    unmount();
-  });
-  it('skips the throttled re-initialization when the attempt was initialized moments ago', async () => {
-    const { result, unmount } = await ready();
-    jest.spyOn(Date, 'now').mockReturnValue(realNow + 1_000);
-    jest.mocked(clientPaymentsService.initNativePayment).mockClear();
-    let ok = false;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(true);
     expect(clientPaymentsService.initNativePayment).not.toHaveBeenCalled();
     unmount();
   });
-  it('reports a throttled initialization (HTTP 429) as a temporary error without blocking later retries', async () => {
+  it('runs a check requested during its own check and refuses when that check finds the target closed', async () => {
     const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { status: 429, data: {} } });
+    let finish!: (value: Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>) => void;
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
+    let verifying!: Promise<boolean>;
+    await act(async () => { verifying = result.current.verifyPayable(); });
+    await act(async () => { await result.current.reconcile(); }); // arrives while ours is in flight
     let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
+    await act(async () => { finish(pendingOk); ok = await verifying; });
     expect(ok).toBe(false);
-    expect(result.current.phase).toBe('error');
-    expect(result.current.error).toBe('nativePayment.tryAgainShortly');
-    expect(result.current.canRetryInit).toBe(true);
+    expect(result.current.phase).toBe('unavailable');
+    expect(result.current.config).toBeNull();
     unmount();
   });
-  it('replaces a stale payment identity with the in-progress one returned by initialization', async () => {
+  it.each(['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS'])('%s on retry blocks initialization, keeps its message across checks and keeps verifying', async (code) => {
     const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'NATIVE_PAYMENT_IN_PROGRESS', paymentId: 'replacement', invoiceId: 'invoice' } } });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ ...pendingOk, canCreatePayment: false });
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress(code));
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
-    await act(async () => { await result.current.verifyPayable(); });
-    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenLastCalledWith('replacement');
-    expect(result.current.paymentId).toBe('replacement');
+    await act(() => result.current.retryInitialization());
+    expect(result.current.canRetryInit).toBe(false);
+    expect(result.current.canResume).toBe(false);
+    expect(result.current.error).toBe('nativePayment.conflict');
+    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalled();
+    await act(() => result.current.reconcile());
+    expect(result.current.error).toBe('nativePayment.conflict');
     unmount();
   });
-  it('re-enables initialization when the adopted replacement attempt itself fails', async () => {
+  it('adopts and persists the in-progress identity returned on retry, replacing a stale local one', async () => {
     const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'NATIVE_PAYMENT_IN_PROGRESS', paymentId: 'replacement', invoiceId: 'invoice' } } });
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress('NATIVE_PAYMENT_IN_PROGRESS', 'replacement'));
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
-    await act(async () => { await result.current.verifyPayable(); });
+    await act(() => result.current.retryInitialization());
+    expect(result.current.paymentId).toBe('replacement');
+    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenLastCalledWith('replacement');
+    expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).paymentId).toBe('replacement');
+    unmount();
+  });
+  it('re-enables initialization only when the adopted replacement itself fails', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress('NATIVE_PAYMENT_IN_PROGRESS', 'replacement'));
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+    await act(() => result.current.retryInitialization());
     expect(result.current.canRetryInit).toBe(false);
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
     await act(() => result.current.reconcile());
     expect(result.current.canRetryInit).toBe(true);
-    jest.mocked(clientPaymentsService.initNativePayment).mockClear();
-    await act(() => result.current.retryInitialization());
-    expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
     unmount();
   });
-  it('keeps initialization blocked even if the stale attempt later reports FAILED', async () => {
+  it('keeps initialization blocked when only the stale attempt reports FAILED', async () => {
     const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'HOSTED_PAYMENT_IN_PROGRESS' } } });
-    await act(async () => { await result.current.verifyPayable(); });
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress('HOSTED_PAYMENT_IN_PROGRESS'));
+    await act(() => result.current.retryInitialization());
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
     await act(() => result.current.reconcile());
     expect(result.current.canRetryInit).toBe(false);
     unmount();
   });
-  it('fails closed on a configuration-changed conflict or a different payment identity', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_CONFIGURATION_CHANGED' } } });
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    // The prepared configuration is revoked and the conflict is explicit, not silently back to ready.
-    expect(result.current.phase).toBe('error');
-    expect(result.current.error).toBe('nativePayment.conflict');
-    expect(result.current.config).toBeNull();
-    expect(result.current.canRetryInit).toBe(false);
-    // A later reconcile that still allows creation must not re-offer the retry that hits the same
-    // conflict, and must keep the explicit conflict message instead of "awaiting verification".
-    await act(() => result.current.reconcile());
-    expect(result.current.canRetryInit).toBe(false);
-    expect(result.current.canResume).toBe(false);
-    expect(result.current.error).toBe('nativePayment.conflict');
-    unmount();
-  });
-  it('fails closed on a mismatched invoice from the fresh initialization', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'other-invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
-    let ok = true;
-    await act(async () => { ok = await result.current.verifyPayable(); });
-    expect(ok).toBe(false);
-    expect(result.current.phase).toBe('error');
-    unmount();
-  });
-  it('does not schedule a poll that would overwrite a revoked error', async () => {
-    jest.useFakeTimers();
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { status: 429, data: {} } });
-    await act(async () => { await result.current.verifyPayable(); });
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
-    await act(async () => { jest.advanceTimersByTime(10_000); });
-    expect(clientPaymentsService.reconcileNativePayment).not.toHaveBeenCalled();
-    expect(result.current.error).toBe('nativePayment.tryAgainShortly');
-    unmount(); jest.useRealTimers();
-  });
-  it('persists an adopted in-progress identity so a restart restores the live payment', async () => {
-    const { result, unmount } = await ready();
-    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'NATIVE_PAYMENT_IN_PROGRESS', paymentId: 'replacement', invoiceId: 'invoice' } } });
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
-    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
-    await act(async () => { await result.current.verifyPayable(); });
-    expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).paymentId).toBe('replacement');
-    unmount();
-  });
 });
-
 it('treats a configuration conflict during initialization retry as non-retryable', async () => {
   await AsyncStorage.setItem('sawaa.native-payment:client:invoice', JSON.stringify({ clientId: 'client', invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment' }));
   jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true });

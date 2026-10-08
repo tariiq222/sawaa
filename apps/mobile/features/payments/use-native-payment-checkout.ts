@@ -21,15 +21,6 @@ interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentCo
 interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string }
 const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false, canRetryInit: true };
 
-// Mirrors the backend attempt fingerprint (publishable key, mode, Apple Pay) plus the attempt terms.
-function sameAttemptConfig(a: NativePaymentConfiguration, b: NativePaymentConfiguration): boolean {
-  const pick = (c: NativePaymentConfiguration) => JSON.stringify([
-    c.publishableKey, c.isLive, c.applePay ?? null, c.givenId, c.amount, c.currency, c.supportedNetworks,
-  ]);
-  return pick(a) === pick(b);
-}
-
-
 export function useNativePaymentCheckout(input: CheckoutInput) {
   const { clientId, invoiceId, bookingId, purchaseId, method } = input;
   const queryClient = useQueryClient();
@@ -57,7 +48,6 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let initBlocked = false;
     let adoptedId: string | null = null; // replacement identity adopted from an in-progress conflict
     let verifying = false;
-    let lastInitAt = 0;
     let recheckRequested = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
@@ -163,7 +153,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (!valid()) return false;
       attempt += 1;
       terminalFailure = false; terminalResult = false; resultReceived = false;
-      readyConfig = result.config; lastInitAt = Date.now();
+      readyConfig = result.config;
       update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
       return true;
     };
@@ -244,74 +234,23 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         update({ phase: 'error', error: 'nativePayment.verificationError' });
       } finally { busy = false; }
     };
-    // Authoritative pre-submission check: a fresh server verdict that this same
-    // reserved attempt can still be paid. Any doubt or error fails closed.
+    // Authoritative pre-submission check: a fresh server verdict that this same reserved attempt
+    // can still be paid (PENDING with canCreatePayment). Any doubt, error or newer check fails
+    // closed. Provider configuration is validated by the server at initialization; a rotation
+    // while Wallet is open invalidates the old key at the provider rather than here.
     const verifyPayable = async (): Promise<boolean> => {
       const deadline = Date.now() + 10000;
       while (busy && Date.now() < deadline) await new Promise((done) => setTimeout(done, 25));
-      if (busy || !valid() || !paymentId || terminalResult || terminalUnavailable) return false;
-      payable = false;
-      await reconcile();
-      if (!valid() || !payable || !method || !readyConfig) return false;
-      // The backend compares the attempt fingerprint only at initialization, so re-run it:
-      // a rotated Moyasar/Apple Pay configuration rejects here and must not reach the token.
-      // Any failure revokes the prepared configuration and surfaces an explicit state, so the
-      // UI never keeps offering a Wallet action that would only be dismissed again.
-      let revoked = false;
-      const revoke = (error: string, conflict = false) => {
-        readyConfig = null; revoked = true;
-        // Every re-init hits the stored-fingerprint conflict while the rotation is active: not retryable.
-        if (conflict) { initBlocked = true; canInitialize = false; }
-        update({ phase: 'error', config: null, canResume: false, error });
-        return false;
-      };
+      if (busy || !valid() || !paymentId || closed() || !readyConfig) return false;
       const startConfig = readyConfig;
-      // Exclusive slot: no poll or reconcile may overlap, so no newer verdict lands after this one.
-      busy = true; verifying = true; recheckRequested = false;
-      clearTimeout(timer);
-      const run = async (): Promise<boolean> => {
-      // native/init is throttled (3/min): a just-initialized attempt already carries the current config.
-      if (Date.now() - lastInitAt < 20_000) return valid() && !closed() && readyConfig === startConfig;
-      try {
-          const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
-          if (!valid()) return false;
-          if (fresh.invoiceId === invoiceId && fresh.paymentId && fresh.paymentId !== paymentId) {
-            // The backend legitimately replaces an attempt it saw FAILED. The Wallet authorization
-            // belongs to the old attempt, so revoke it but adopt and persist the replacement.
-            await adoptAttempt(fresh);
-            return false;
-          }
-          if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
-            || !sameAttemptConfig(fresh.config, startConfig)) return revoke('nativePayment.conflict', true);
-          return valid() && !closed() && readyConfig === startConfig;
-        } catch (error) {
-          if (!valid()) return false;
-          // Closure, completion and configuration results are authoritative, exactly as in initialize().
-          if (await handleInitError(error)) return false;
-          // A throttled request is temporary: fail closed with a clear message, keep retry available.
-          if ((error as { response?: { status?: number } })?.response?.status === 429) return revoke('nativePayment.tryAgainShortly');
-          return revoke('nativePayment.verificationError');
-        }
+      const check = async () => {
+        payable = false; verifying = true; recheckRequested = false;
+        try { await reconcile(); } finally { verifying = false; }
+        return valid() && payable && !closed() && readyConfig === startConfig;
       };
-      let ok = false;
-      try {
-        ok = await run();
-      } finally {
-        busy = false; verifying = false;
-        if (valid() && !closed() && !revoked) schedule();
-        if (queuedResult) {
-          queuedResult = false;
-          if (valid() && !closed()) await reconcile();
-        }
-      }
-      // A check requested while initialization was in flight must give its verdict before
-      // the token may be authorized.
-      if (ok && recheckRequested) {
-        recheckRequested = false;
-        payable = false;
-        await reconcile();
-        ok = valid() && payable && !closed() && readyConfig === startConfig;
-      }
+      let ok = await check();
+      // A check requested while ours was running must give its own verdict before authorizing.
+      if (ok && recheckRequested) ok = await check();
       return ok;
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
