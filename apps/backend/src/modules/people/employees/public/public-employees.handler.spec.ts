@@ -1,3 +1,4 @@
+import { OwnedImageResolver } from '../../../media/owned-image.resolver';
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
@@ -28,6 +29,7 @@ describe('Public employees handlers', () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
+        { provide: OwnedImageResolver, useValue: { resolve: jest.fn(async (_type, _id, value) => value && /^(https?:\/\/|\/)/.test(value) ? value : null) } },
         ListPublicEmployeesHandler,
         GetPublicEmployeeHandler,
         {

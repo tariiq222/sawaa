@@ -1,3 +1,4 @@
+import { MediaModule } from '../media/media.module';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
@@ -115,7 +116,7 @@ const mobileHomeCardHandlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule],
+  imports: [MediaModule, DatabaseModule, MessagingModule],
   controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController, DashboardPackageFamiliesController, DashboardMobileHomeCardsController],
   providers: [
     ...serviceHandlers,

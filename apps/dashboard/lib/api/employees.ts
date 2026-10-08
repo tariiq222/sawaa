@@ -146,6 +146,12 @@ export async function uploadEmployeeAvatar(
   )
 }
 
+export async function uploadEmployeePublicImage(employeeId: string, file: File): Promise<{ url: string }> {
+  const formData = new FormData()
+  formData.append("file", file)
+  return api.postForm<{ url: string }>(`/dashboard/people/employees/${employeeId}/public-image`, formData)
+}
+
 /* ─── Employee Account ─── */
 
 export type EmployeeAccountRole = 'SUPER_ADMIN' | 'ADMIN' | 'RECEPTIONIST' | 'ACCOUNTANT' | 'EMPLOYEE' | 'CLIENT'

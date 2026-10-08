@@ -26,11 +26,11 @@ describe('mapEmployeeRow', () => {
       employmentType: 'FULL_TIME' as const,
       onboardingStatus: 'COMPLETED' as const,
       isActive: true,
-      isPublic: false,
-      slug: null,
-      publicBioAr: null,
-      publicBioEn: null,
-      publicImageUrl: null,
+      isPublic: true,
+      slug: 'khalid',
+      publicBioAr: 'نبذة عامة',
+      publicBioEn: 'Public bio',
+      publicImageUrl: 'org/public.png',
       commissionRate: new Prisma.Decimal('1.0'),
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-02'),
@@ -42,6 +42,7 @@ describe('mapEmployeeRow', () => {
     const result = mapEmployeeRow(employee, { avg: 4.5, count: 10 }, 25);
 
     expect(result.id).toBe('e1');
+    expect(result).toMatchObject({ isPublic: true, slug: 'khalid', publicBioAr: 'نبذة عامة', publicBioEn: 'Public bio', publicImageUrl: 'org/public.png' });
     expect(result.branchIds).toEqual(['b1']);
     expect(result.serviceIds).toEqual(['s1']);
     expect(result.availability).toHaveLength(1);

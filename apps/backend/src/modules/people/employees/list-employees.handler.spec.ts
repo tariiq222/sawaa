@@ -1,3 +1,4 @@
+import { OwnedImageResolver } from '../../media/owned-image.resolver';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListEmployeesHandler } from './list-employees.handler';
@@ -26,6 +27,7 @@ describe('ListEmployeesHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: OwnedImageResolver, useValue: { resolve: jest.fn(async (_type, _id, value) => value && /^(https?:\/\/|\/)/.test(value) ? value : null) } },
         ListEmployeesHandler,
         { provide: PrismaService, useValue: prisma },
       ],

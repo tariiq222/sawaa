@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import type { PublicEmployeeItem } from './list-public-employees.handler';
-import { normalizePublicImageUrl } from './public-image-url';
+import { OwnedImageResolver } from '../../../media/owned-image.resolver';
 
 @Injectable()
 export class GetPublicEmployeeHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly images: OwnedImageResolver) {}
 
   async execute(key: string, options: { includeDirectClinics?: boolean } = {}): Promise<PublicEmployeeItem> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
@@ -96,7 +96,7 @@ export class GetPublicEmployeeHandler {
     const firstName = tokens.length > 0 ? tokens[0] : '';
     const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
 
-    const publicImageUrl = normalizePublicImageUrl(row.publicImageUrl);
+    const publicImageUrl = await this.images.resolve('employee', row.id, row.publicImageUrl);
     return {
       ...row,
       publicImageUrl,

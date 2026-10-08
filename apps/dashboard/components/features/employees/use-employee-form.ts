@@ -223,7 +223,8 @@ export function useEmployeeForm({
         experience: data.experience,
         education: data.education || undefined,
         educationAr: data.educationAr || undefined,
-        avatarUrl: data.avatarUrl || undefined,
+        // Only the upload endpoint persists images; previews and signed read URLs are temporary.
+        avatarUrl: data.avatarUrl === "" && !data.avatarFile ? null : undefined,
         isActive: data.isActive,
         isPublic: data.isPublic,
       })
@@ -351,7 +352,8 @@ export function useEmployeeForm({
         experience: data.experience,
         education: data.education || undefined,
         educationAr: data.educationAr || undefined,
-        avatarUrl: data.avatarUrl || undefined,
+        // Selected images are persisted after the employee exists.
+        avatarUrl: undefined,
         isActive: data.isActive,
         isPublic: data.isPublic,
       })

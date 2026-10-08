@@ -3,6 +3,12 @@ import type { PaginatedResponse, PaginationParams } from './api'
 export interface EmployeeListItem {
   id: string
   isActive: boolean
+  isPublic?: boolean
+  slug?: string | null
+  publicBioAr?: string | null
+  publicBioEn?: string | null
+  publicImageUrl?: string | null
+  avatarUrl?: string | null
   rating: number
   reviewCount: number
   experience: number

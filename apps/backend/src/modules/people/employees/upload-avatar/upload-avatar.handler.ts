@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
+import { MEDIA_IMAGE_URL_EXPIRY_SECONDS } from '../../../media/media-image-url.helper';
 import { PrismaService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
 
@@ -11,6 +13,7 @@ const ALLOWED_AVATAR_MIMETYPES: ReadonlySet<string> = new Set([
 
 export type UploadAvatarCommand = {
   employeeId: string;
+  target?: 'avatar' | 'public';
   filename: string;
   mimetype: string;
   size: number;
@@ -21,6 +24,7 @@ export class UploadAvatarHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadFile: UploadFileHandler,
+    private readonly storage: MinioService,
   ) {}
 
   async execute(
@@ -55,11 +59,13 @@ export class UploadAvatarHandler {
       buffer,
     );
 
-    const { url } = file;
+    const url = await this.storage.getSignedUrl(file.bucket, file.storageKey, MEDIA_IMAGE_URL_EXPIRY_SECONDS);
 
     await this.prisma.employee.update({
       where: { id: cmd.employeeId },
-      data: { avatarUrl: url },
+      data: cmd.target === 'public'
+        ? { publicImageUrl: file.storageKey }
+        : { avatarUrl: file.storageKey },
     });
 
     return { fileId: file.id, url };

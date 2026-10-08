@@ -174,6 +174,21 @@ export class EmployeeResponseDto {
   @ApiProperty({ description: 'Whether the employee is active', example: true })
   isActive!: boolean;
 
+  @ApiProperty({ description: 'Whether the employee appears in the public directory' })
+  isPublic!: boolean;
+
+  @ApiPropertyOptional({ description: 'Public profile slug', nullable: true })
+  slug!: string | null;
+
+  @ApiPropertyOptional({ description: 'Arabic public bio', nullable: true })
+  publicBioAr!: string | null;
+
+  @ApiPropertyOptional({ description: 'English public bio', nullable: true })
+  publicBioEn!: string | null;
+
+  @ApiPropertyOptional({ description: 'Public profile image read URL', nullable: true })
+  publicImageUrl!: string | null;
+
   @ApiProperty({ description: 'Average rating (0–5)', example: 4.7, nullable: true })
   averageRating!: number | null;
 
