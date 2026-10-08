@@ -25,11 +25,15 @@
     "openapi:sync": "pnpm --filter=backend run openapi:export && pnpm --filter=dashboard run openapi:generate",
     "e2e:dashboard": "pnpm --filter dashboard e2e",
     "e2e": "E2E_TELEMETRY_DISABLED=1 e2e run",
+    "e2e:smoke": "E2E_TELEMETRY_DISABLED=1 e2e run --tag smoke --exclude-tag agent",
     "e2e:website": "E2E_TELEMETRY_DISABLED=1 e2e run --target website",
-    "e2e:ta-dashboard": "E2E_TELEMETRY_DISABLED=1 e2e run --target dashboard"
+    "e2e:ta-dashboard": "E2E_TELEMETRY_DISABLED=1 e2e run --target dashboard",
+    "e2e:local:stack": "node e2e/local/stack.mjs",
+    "e2e:local:safety": "node --test e2e/local/safety.test.mjs"
   },
   "devDependencies": {
     "@ai-sdk/openai": "4.0.83",
+    "@e2e-dev/mobile": "0.10.0",
     "@e2e-dev/web": "^0.11.2",
     "ai": "^7.0.127",
     "e2e": "^0.16.0",
