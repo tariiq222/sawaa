@@ -1,10 +1,11 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { authService } from '@/services/auth';
 import { DeleteAccountButton } from './DeleteAccountButton';
 
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => false }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/services/auth', () => ({ authService: { requestAccountDeletion: jest.fn() } }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(null, mockScheme), scheme: mockScheme, isRTL: true, language: 'ar' }) }));
@@ -57,7 +58,7 @@ describe('DeleteAccountButton', () => {
       fireEvent.press(confirm);
     });
     expect(requestClosure).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState).toMatchObject({ disabled: true, busy: true });
 
     await act(async () => { resolveClosure?.(); });
     expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState.disabled).toBe(false);
@@ -79,8 +80,17 @@ function contrast(first: string, second: string) {
 it.each(['light', 'dark'] as const)('keeps destructive labels readable in %s appearance', (scheme) => {
   mockScheme = scheme;
   const screen = openSheet();
-  const { StyleSheet } = require('react-native');
   const labelColor = StyleSheet.flatten(screen.getByText('profile.deleteAccountAction').props.style).color;
-  const fill = StyleSheet.flatten(screen.getByLabelText('profile.deleteAccountAction').props.style).backgroundColor;
-  expect(contrast(labelColor, fill)).toBeGreaterThanOrEqual(4.5);
+  const fill = screen.getByLabelText('profile.deleteAccountAction').findAllByType(View)
+    .map((node: { props: { style?: StyleProp<ViewStyle> } }) => StyleSheet.flatten(node.props.style)?.backgroundColor)
+    .find((color: unknown): color is string => typeof color === 'string');
+  expect(fill).toBeDefined();
+  expect(contrast(labelColor, fill as string)).toBeGreaterThanOrEqual(4.5);
+});
+
+it('closes on backdrop without requesting deletion', () => {
+ const view = openSheet();
+ fireEvent.press(view.getByTestId('delete-account-backdrop', { includeHiddenElements: true }));
+ expect(view.queryByText('profile.deleteAccountSheetTitle')).toBeNull();
+ expect(requestClosure).not.toHaveBeenCalled();
 });

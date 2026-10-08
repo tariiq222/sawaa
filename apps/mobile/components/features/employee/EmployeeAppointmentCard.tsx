@@ -46,7 +46,7 @@ export function EmployeeAppointmentCard({ booking, onPress, labelPrefix }: Emplo
         style={({ pressed }) => [styles.row, { flexDirection: dir.row, opacity: pressed ? 0.7 : 1 }]}
       >
         <View style={[styles.timeCol, { borderColor: colors.ink[400] }, dir.isRTL ? styles.dividerStart : styles.dividerEnd]}>
-          <Text style={[styles.time, { color: colors.teal[700], fontFamily: getFontName(dir.locale, '700') }]}>
+          <Text style={[styles.time, { writingDirection: 'ltr', color: colors.teal[700], fontFamily: getFontName(dir.locale, '700') }]}>
             {booking.startTime}
           </Text>
           {duration !== null ? (
@@ -56,28 +56,29 @@ export function EmployeeAppointmentCard({ booking, onPress, labelPrefix }: Emplo
           ) : null}
         </View>
         <View style={styles.mid}>
-          <Text numberOfLines={1} style={[styles.name, textStyle, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}>
+          <Text style={[styles.name, textStyle, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}>
             {clientName}
           </Text>
-          <Text numberOfLines={1} style={[styles.sub, textStyle, { color: colors.ink[500], fontFamily: getFontName(dir.locale, '400') }]}>
+          <Text style={[styles.sub, textStyle, { color: colors.ink[500], fontFamily: getFontName(dir.locale, '400') }]}>
             {subtitle}
           </Text>
         </View>
-        <StatusPill status={booking.status} label={statusLabel} />
+        <View style={styles.status}><StatusPill status={booking.status} label={statusLabel} /></View>
       </Pressable>
     </Glass>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: 'center', gap: sawaaSpacing.md, minHeight: 56 },
+  row: { flexWrap: 'wrap', alignItems: 'center', gap: sawaaSpacing.md, minHeight: 56 },
   timeCol: { minWidth: 64, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: 2 },
   // The divider sits on the side of the time column that faces the client name.
   dividerStart: { borderLeftWidth: StyleSheet.hairlineWidth, paddingLeft: sawaaSpacing.md },
   dividerEnd: { borderRightWidth: StyleSheet.hairlineWidth, paddingRight: sawaaSpacing.md },
-  time: { fontSize: sawaaType.subheading.fontSize - 2, lineHeight: sawaaType.subheading.lineHeight },
+  time: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   duration: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight },
-  mid: { flex: 1, gap: 2 },
-  name: { fontSize: sawaaType.subheading.fontSize - 2, lineHeight: sawaaType.subheading.lineHeight },
+  status: { minWidth: 0, flexShrink: 1, maxWidth: '100%' },
+  mid: { flexGrow: 1, flexBasis: 120, minWidth: 0, flexShrink: 1, gap: 2 },
+  name: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   sub: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

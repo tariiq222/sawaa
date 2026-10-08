@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import { Clock } from 'lucide-react-native';
 
@@ -82,4 +83,11 @@ describe('redesign primitives', () => {
     const screen = render(<FloatingCta><Pill label="احجز" /></FloatingCta>);
     expect(screen.getByText('احجز')).toBeTruthy();
   });
+});
+
+it('reports changing footer height including its full wrapper', () => {
+  const onHeightChange = jest.fn();
+  const view = render(<FloatingCta onHeightChange={onHeightChange}><Text>Continue</Text></FloatingCta>);
+  for (const height of [140, 200, 0]) fireEvent(view.getByTestId('floating-cta'), 'layout', { nativeEvent: { layout: { width: 320, height, x: 0, y: 0 } } });
+  expect(onHeightChange.mock.calls).toEqual([[140], [200]]);
 });

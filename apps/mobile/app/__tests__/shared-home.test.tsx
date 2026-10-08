@@ -28,6 +28,7 @@ jest.mock('@/hooks/use-redux', () => ({
 }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ teal: { 600: 'teal', 700: 'teal' }, ink: { 900: 'black' }, glass: { opaqueBg: 'white' } }) }));
 jest.mock('@/theme/sawaa', () => ({ AquaBackground: ({ children }: { children: React.ReactNode }) => children }));
 jest.mock('@/theme/components/Glass', () => ({ Glass: ({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) => onPress ? <>{children}</> : <>{children}</> }));
@@ -68,7 +69,7 @@ describe('shared home', () => {
     mockHome.mockReturnValue({ data: undefined, isLoading: false, refetch: jest.fn() });
     mockCardRefetch.mockReset();
     mockCards.mockReset();
-    mockCards.mockReturnValue({ data: [], refetch: mockCardRefetch });
+    mockCards.mockReturnValue({ data: [{ id: 'fixture-card' }], refetch: mockCardRefetch });
     mockPush.mockClear();
   });
 
@@ -82,7 +83,7 @@ describe('shared home', () => {
 
   it('shows private upcoming data for signed-in clients', () => {
     mockSignedIn = true;
-    mockHome.mockReturnValue({ data: { upcomingBookings: [], unreadNotifications: [] }, isLoading: true, refetch: jest.fn() });
+    mockHome.mockReturnValue({ data: { upcomingBookings: [{ id: 'fixture-booking' }], unreadNotifications: [] }, isLoading: false, refetch: jest.fn() });
     const screen = render(<HomeScreen />);
     expect(mockHome).toHaveBeenCalledWith(true);
     expect(screen.getByText('up-next')).toBeTruthy();

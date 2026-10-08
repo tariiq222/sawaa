@@ -4,10 +4,11 @@ import { ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { AquaBackground } from '../AquaBackground';
 
 let mockScheme = 'light';
-jest.mock('../../useTheme', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
+let mockIsHydrated: boolean | undefined;
+jest.mock('../../useTheme', () => ({ useTheme: () => ({ scheme: mockScheme, isHydrated: mockIsHydrated }) }));
 
 describe('AquaBackground appearance', () => {
-  beforeEach(() => { mockScheme = 'light'; });
+  beforeEach(() => { mockScheme = 'light'; mockIsHydrated = undefined; });
 
   it('restores the light wave image with a noninteractive readability wash', () => {
     const screen = render(<AquaBackground><Text>المحتوى</Text></AquaBackground>);
@@ -35,6 +36,21 @@ describe('AquaBackground appearance', () => {
     expect(screen.UNSAFE_getAllByType(View).some((view) =>
       StyleSheet.flatten(view.props.style)?.backgroundColor === 'rgba(255, 255, 255, 0.18)',
     )).toBe(false);
+  });
+
+  it.each(['aqua', 'dark'] as const)('defers %s decoration until hydration while keeping content visible', variant => {
+    mockIsHydrated = false;
+    const screen = render(<AquaBackground variant={variant}><Text>المحتوى</Text></AquaBackground>);
+    expect(screen.UNSAFE_queryByType(ImageBackground)).toBeNull();
+    expect(screen.UNSAFE_getAllByType(View).some(view =>
+      StyleSheet.flatten(view.props.style)?.backgroundColor === 'rgba(255, 255, 255, 0.18)',
+    )).toBe(false);
+    expect(screen.getByText('المحتوى')).toBeTruthy();
+    mockScheme = 'dark';
+    mockIsHydrated = true;
+    screen.rerender(<AquaBackground variant={variant}><Text>المحتوى</Text></AquaBackground>);
+    expect(screen.UNSAFE_getByType(ImageBackground).props.source).toEqual(require('../../../assets/bg-aqua-dark.png'));
+    expect(screen.getByText('المحتوى')).toBeTruthy();
   });
 
   it('honors an explicit dark appearance while the system theme is light', () => {

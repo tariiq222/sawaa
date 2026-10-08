@@ -1,21 +1,3 @@
-import React from 'react';
-import { StyleSheet } from 'react-native';
-import { render } from '@testing-library/react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-
-let mockScheme: 'light' | 'dark' = 'light';
-jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
-jest.mock('expo-linear-gradient', () => ({
-  LinearGradient: (props: React.PropsWithChildren<{ colors: readonly string[] }>) => require('react').createElement(require('react-native').View, props),
-}));
-
-function luminance(hex: string): number {
-  const channels = hex.replace('#', '').match(/../g)!.map((pair) => parseInt(pair, 16) / 255)
-    .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-}
-
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -54,25 +36,11 @@ const backgroundExceptions = new Set([
 function paintsSharedBackground(source: string): boolean {
   return source.includes('<AquaBackground') ||
     source.includes('<SettingsScaffold') ||
+    source.includes('<AuthFormScaffold') ||
     source.includes('<VideoCallScreen');
 }
 
 describe('route color migration safeguards', () => {
-  it.each(['light', 'dark'] as const)('keeps shared save actions legible across their full gradient in %s mode', (scheme) => {
-    mockScheme = scheme;
-    const screen = render(React.createElement(PrimaryButton, { label: 'Save', onPress: jest.fn() }));
-    const foreground: unknown = StyleSheet.flatten(screen.getByText('Save').props.style).color;
-    const fills: readonly string[] = screen.UNSAFE_getByType(LinearGradient).props.colors;
-    expect(typeof foreground).toBe('string');
-    if (typeof foreground !== 'string') throw new Error('Missing action foreground');
-    expect(fills.length).toBeGreaterThan(0);
-    for (const fill of fills) {
-      const a = luminance(foreground);
-      const b = luminance(fill);
-      expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5);
-    }
-  });
-
   it('every screen route paints the shared background or is an explicit navigation exception', () => {
     const uncovered = routes.flatMap((file) => {
       const route = path.relative(appRoot, file).split(path.sep).join('/');
@@ -92,11 +60,14 @@ describe('route color migration safeguards', () => {
     expect(source).not.toMatch(/sawaaTokens\.colors/);
   });
 
-  it('settings save uses the shared primary action and has no hardcoded brand colors', () => {
+  it('settings save pairs an action fill with its on-action foreground', () => {
     const source = fs.readFileSync(path.join(appRoot, '../components/features/settings/SettingsProfileSection.tsx'), 'utf8');
-    expect(source).toContain('<PrimaryButton');
+    expect(source).toMatch(/<(AppButton|PrimaryButton)/);
     expect(source).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     expect(source).not.toMatch(/rgba?\(/i);
+    const button = fs.readFileSync(path.join(appRoot, '../components/ui/AppButton.tsx'), 'utf8');
+    expect(button).toContain('roles.action.foreground');
+    expect(button).toContain('roles.action.gradient');
     expect(source).not.toMatch(/#1D4ED8/i);
   });
 

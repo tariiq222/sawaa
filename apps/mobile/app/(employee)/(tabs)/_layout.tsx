@@ -1,6 +1,5 @@
 import React from 'react';
 import { useDir } from '@/hooks/useDir';
-import { getFontName } from '@/theme/fonts';
 import { useTranslation } from 'react-i18next';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
@@ -32,7 +31,7 @@ export default function EmployeeTabsLayout() {
   ];
 
   return (
-    <NativeTabs labelStyle={{ fontFamily: getFontName(dir.locale, '500') }} minimizeBehavior="onScrollDown" {...tabBar}>
+    <NativeTabs minimizeBehavior="onScrollDown" {...tabBar}>
       {dir.isRTL ? [...tabs].reverse() : tabs}
     </NativeTabs>
   );

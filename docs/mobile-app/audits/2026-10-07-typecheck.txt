@@ -1,0 +1,10 @@
+
+> sawaa-mobile@1.0.0 typecheck /Users/tariq/code/sawaa/apps/mobile
+> tsc --noEmit
+
+features/payments/__tests__/native-payment-config.test.ts(5,31): error TS2307: Cannot find module 'react-native-moyasar-sdk' or its corresponding type declarations.
+features/payments/__tests__/native-sdk-apple-result.test.tsx(16,71): error TS2307: Cannot find module 'react-native-moyasar-sdk' or its corresponding type declarations.
+features/payments/__tests__/native-sdk-presentation.test.tsx(13,63): error TS2307: Cannot find module 'react-native-moyasar-sdk' or its corresponding type declarations.
+features/payments/native-payment-config.ts(1,65): error TS2307: Cannot find module 'react-native-moyasar-sdk' or its corresponding type declarations.
+features/payments/NativePaymentForm.tsx(6,38): error TS2307: Cannot find module 'react-native-moyasar-sdk' or its corresponding type declarations.
+ ELIFECYCLE  Command failed with exit code 2.

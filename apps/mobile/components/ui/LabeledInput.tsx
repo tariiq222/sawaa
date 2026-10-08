@@ -1,96 +1,68 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TextStyle, View } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
-
-import { sawaaTokens } from '@/theme/sawaa/tokens';
+import { useTranslation } from 'react-i18next';
+import { getSawaaRoles, sawaaTokens } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useTheme } from '@/theme/useTheme';
 import type { DirState } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 
-interface LabeledInputProps {
+interface LabeledInputProps extends Omit<TextInputProps, 'style' | 'value' | 'onChangeText'> {
   label: string;
   value: string;
   onChangeText: (next: string) => void;
-  placeholder?: string;
   error?: string;
-  keyboardType?: KeyboardTypeOptions;
-  maxLength?: number;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  secureTextEntry?: boolean;
+  disabled?: boolean;
+  inputStyle?: StyleProp<TextStyle>;
   showVisibilityToggle?: boolean;
   isVisible?: boolean;
   onToggleVisibility?: () => void;
   dir: DirState;
+  /** Compatibility slot for the unconsumed ThemedInput adapter. */
+  suffixIcon?: React.ReactNode;
+  onSuffixPress?: () => void;
 }
 
-export function LabeledInput({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  error,
-  keyboardType,
-  maxLength,
-  autoCapitalize,
-  secureTextEntry,
-  showVisibilityToggle,
-  isVisible,
-  onToggleVisibility,
-  dir,
-}: LabeledInputProps) {
-  const sawaaColors = useSawaaColors();
-  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
-  return (
-    <View style={styles.field}>
-      <Text style={[styles.label, { textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>{label}</Text>
-      <View style={[styles.input, error ? styles.inputError : undefined, { flexDirection: dir.row }]}>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          accessibilityLabel={label}
-          placeholderTextColor={sawaaColors.ink[500]}
-          keyboardType={keyboardType}
-          maxLength={maxLength}
-          autoCapitalize={autoCapitalize}
-          secureTextEntry={secureTextEntry && !isVisible}
-          style={[styles.inputText, { textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
-        />
-        {showVisibilityToggle ? (
-          <Pressable
-            onPress={onToggleVisibility}
-            style={styles.eyeBtn}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-          >
-            {isVisible ? (
-              <Eye size={20} color={sawaaColors.ink[500]} strokeWidth={1.75} />
-            ) : (
-              <EyeOff size={20} color={sawaaColors.ink[500]} strokeWidth={1.75} />
-            )}
-          </Pressable>
-        ) : null}
-      </View>
-      {error ? <Text style={[styles.error, { textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>{error}</Text> : null}
+export function LabeledInput({ label, value, onChangeText, error, disabled, inputStyle,
+  secureTextEntry, showVisibilityToggle, isVisible, onToggleVisibility, dir,
+  suffixIcon, onSuffixPress, onFocus, onBlur, editable: nativeEditable, readOnly, ...inputProps }: LabeledInputProps) {
+  const colors = useSawaaColors();
+  const { theme, scheme } = useTheme();
+  const { t } = useTranslation();
+  const [focused, setFocused] = useState(false);
+  const editable = !disabled && nativeEditable !== false && readOnly !== true;
+  const direction = { textAlign: dir.textAlign, writingDirection: dir.writingDirection };
+  const fontFamily = getFontName(dir.locale);
+  return <View style={styles.field}>
+    {label ? <Text style={[styles.label, direction, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700') }]}>{label}</Text> : null}
+    <View style={[styles.input, { backgroundColor: colors.glass.opaqueBg, flexDirection: dir.row,
+      borderColor: error ? theme.colors.error : focused ? getSawaaRoles(scheme).focus : colors.teal[200] }]}>
+      <TextInput {...inputProps} value={value} onChangeText={onChangeText} editable={editable} readOnly={!editable}
+        accessibilityLabel={inputProps.accessibilityLabel ?? label}
+        placeholderTextColor={inputProps.placeholderTextColor ?? colors.ink[500]}
+        secureTextEntry={secureTextEntry && !isVisible}
+        onFocus={event => { setFocused(true); onFocus?.(event); }}
+        onBlur={event => { setFocused(false); onBlur?.(event); }}
+        style={[styles.inputText, { color: colors.ink[900], fontFamily }, direction, inputStyle]} />
+      {showVisibilityToggle ? <Pressable accessibilityRole="button"
+        accessibilityLabel={t(isVisible ? 'common.hidePassword' : 'common.showPassword')}
+        accessibilityState={{ disabled: !editable || !onToggleVisibility, checked: Boolean(isVisible) }}
+        disabled={!editable || !onToggleVisibility} onPress={onToggleVisibility} style={styles.eyeBtn}>
+        {isVisible ? <Eye size={20} color={colors.ink[500]} strokeWidth={1.75} />
+          : <EyeOff size={20} color={colors.ink[500]} strokeWidth={1.75} />}
+      </Pressable> : suffixIcon ? <Pressable accessibilityRole={onSuffixPress ? 'button' : undefined}
+        disabled={!editable || !onSuffixPress} onPress={onSuffixPress} style={styles.eyeBtn}>{suffixIcon}</Pressable> : null}
     </View>
-  );
+    {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite"
+      style={[styles.error, direction, { color: theme.colors.error, fontFamily }]}>{error}</Text> : null}
+  </View>;
 }
-
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
+const styles = StyleSheet.create({
   field: { gap: 8 },
-  label: { fontSize: 14, lineHeight: 20, fontFamily: getFontName('ar', '700'), color: sawaaColors.ink[900] },
-  input: {
-    minHeight: 56,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    borderRadius: sawaaTokens.radius.lg,
-    borderWidth: 1,
-    borderColor: sawaaColors.teal[200],
-    backgroundColor: sawaaColors.glass.opaqueBg,
-  },
-  inputError: { borderColor: sawaaColors.accent.coral },
-  inputText: { flex: 1, minHeight: 54, fontSize: 16, fontFamily: getFontName('ar'), color: sawaaColors.ink[900] },
+  label: { fontSize: 14, lineHeight: 20 },
+  input: { minHeight: 56, paddingHorizontal: 16, alignItems: 'center', borderRadius: sawaaTokens.radius.lg, borderWidth: 1 },
+  inputText: { flex: 1, minWidth: 0, minHeight: 54, fontSize: 16, paddingVertical: 12 },
   eyeBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  error: { fontSize: 12, fontFamily: getFontName('ar'), color: sawaaColors.accent.coral },
+  error: { fontSize: 12, lineHeight: 18 },
 });

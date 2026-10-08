@@ -20,7 +20,6 @@ jest.mock('expo-router/unstable-native-tabs', () => {
   return { NativeTabs };
 });
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => ({ teal: { 600: 'brand-teal' }, ink: { 700: 'idle-ink' } }),
 }));
@@ -28,6 +27,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
 let mockIsRTL = true;
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: mockIsRTL, locale: mockIsRTL ? 'ar' : 'en' }) }));
 
+import { getFontName } from '@/theme/fonts';
 import GuestTabsLayout from '../_layout';
 
 describe('guest tab navigation', () => {
@@ -50,8 +50,14 @@ describe('guest tab navigation', () => {
     render(<GuestTabsLayout />);
     expect(mockTriggerNames).toEqual(['home', 'appointments', 'explore', 'guest-account']);
     expect(mockNativeTabOptions).toHaveBeenCalledWith(expect.objectContaining({
+      labelStyle: { fontFamily: getFontName(mockIsRTL ? 'ar' : 'en', '500') },
       tintColor: 'brand-teal',
       iconColor: { default: 'idle-ink', selected: 'brand-teal' },
     }));
   });
+});
+
+it.each([true, false])('uses locale font from the shared tab hook: RTL=%s', rtl => {
+ mockIsRTL = rtl; render(<GuestTabsLayout />);
+ expect(mockNativeTabOptions).toHaveBeenLastCalledWith(expect.objectContaining({ labelStyle: { fontFamily: getFontName(rtl ? 'ar' : 'en', '500') } }));
 });

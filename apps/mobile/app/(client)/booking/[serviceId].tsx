@@ -5,7 +5,7 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Building2, Check, ChevronRight, Video } from 'lucide-react-native';
+import { Building2, Check, ChevronLeft, ChevronRight, Video } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import {
   AquaBackground,
@@ -68,6 +68,7 @@ export default function BookingTypeScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const Arrow = dir.isRTL ? ChevronLeft : ChevronRight;
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
@@ -135,7 +136,7 @@ export default function BookingTypeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader {...bookingStep('time', steps)} title={t('booking.chooseAppointment')} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader {...bookingStep('time', steps)} title={t('booking.chooseAppointment')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/(tabs)/home' : '/(guest)/home')} />
         </Animated.View>
 
         {loading ? (
@@ -195,7 +196,7 @@ export default function BookingTypeScreen() {
                             <Check size={13} color={roles.selection.foreground} strokeWidth={3} />
                           </View>
                         ) : (
-                          <ChevronRight size={16} color={colors.ink[400]} strokeWidth={2} />
+                          <Arrow size={16} color={colors.ink[400]} strokeWidth={2} />
                         )}
                       </View>
                     </View>
@@ -290,9 +291,9 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     borderRadius: sawaaRadius.pill,
     alignItems: 'center', justifyContent: 'center',
   },
-  typeMid: { flex: 1 },
-  typeEnd: { alignItems: 'center', gap: sawaaSpacing.xs, flexDirection: 'row' },
-  checkCircle: { width: 22, height: 22, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  typeMid: { flex: 1, minWidth: 0 },
+  typeEnd: { alignItems: 'center', gap: sawaaSpacing.xs, flexDirection: 'row', flexWrap: 'wrap', flexShrink: 1 },
+  checkCircle: { width: 22, height: 22, borderRadius: sawaaRadius.pill, alignItems: 'center', justifyContent: 'center' },
   typeLabel: {
     fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
     color: colors.ink[900],

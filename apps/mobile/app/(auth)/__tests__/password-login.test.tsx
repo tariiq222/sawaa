@@ -18,6 +18,7 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(null, 'light'), scheme: 'light', isRTL: true, language: 'ar' }) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -101,7 +102,7 @@ it('defaults to masked password with a visibility control and retains identifier
 it('validates empty password and shows a generic failure for rejected credentials', async () => {
   const ui = render(<LoginScreen />);
   fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), 'sara@example.test');
-  fireEvent.press(ui.getByText('auth.loginNow'));
+  await act(async () => { fireEvent.press(ui.getByText('auth.loginNow')); });
   expect(ui.getByText('auth.passwordRequired')).toBeTruthy(); expect(login).not.toHaveBeenCalled();
   fill(ui); login.mockRejectedValueOnce(new Error('private backend details'));
   fireEvent.press(ui.getByText('auth.loginNow'));

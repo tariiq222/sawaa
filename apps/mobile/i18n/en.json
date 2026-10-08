@@ -62,7 +62,8 @@
       "emailLabel": "Email",
       "submit": "Send Code",
       "back": "Back to Sign In",
-      "linkLabel": "Create or reset password"
+      "linkLabel": "Create or reset password",
+      "remembered": "Remember your password?"
     },
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
@@ -109,7 +110,11 @@
       "success": "Password reset successful. Please sign in.",
       "invalidCode": "Invalid or expired code",
       "weakPassword": "Use 8–200 characters, including an uppercase letter and a number.",
-      "failed": "Could not reset your password"
+      "failed": "Could not reset your password",
+      "verifyTitle": "Verify code",
+      "newTitle": "New password",
+      "confirmPasswordLabel": "Confirm password",
+      "mismatch": "Passwords do not match"
     },
     "emailEntry": {
       "title": "Continue with email",
@@ -199,7 +204,8 @@
     "nextAvailable": "Next Available",
     "sar": "﷼",
     "from": "from",
-    "rating": "rating"
+    "rating": "rating",
+    "sectionLoadError": "Could not load this section"
   },
   "clinics": {
     "title": "Clinics",
@@ -467,7 +473,9 @@
     "detailAppointment": "Appointment",
     "detailService": "Service",
     "detailDuration": "Duration",
-    "detailType": "Type"
+    "detailType": "Type",
+    "clientsLoadFailed": "Could not load clients",
+    "clientsLoadFailedHint": "Try again to load the search results."
   },
   "profile": {
     "title": "My Account",
@@ -506,7 +514,11 @@
     "version": "Version {{version}}",
     "sessions": "Sessions",
     "lastVisit": "Last visit",
-    "outstanding": "Outstanding"
+    "outstanding": "Outstanding",
+    "summarySessions": "Sessions",
+    "summaryLastVisit": "Last visit",
+    "summaryOutstanding": "Outstanding",
+    "summaryLoadError": "Could not load account summary"
   },
   "chat": {
     "headerTitle": "Sawaa",
@@ -592,7 +604,10 @@
     "noSlotsForDay": "No appointments available on this day",
     "chooseAnotherDay": "Try picking another day from the calendar",
     "noOptionsAvailable": "No options available",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "viewAppointments": "View my appointments",
+    "slotsEmpty": "No appointments available on this day",
+    "slotsEmptyHint": "Try picking another day from the calendar"
   },
   "payment": {
     "methodsLoading": "Loading payment methods…",
@@ -706,7 +721,10 @@
     },
     "privacySecurity": "Privacy & Security",
     "privacyPolicy": "Privacy Policy",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "pushLoadError": "Could not load notification preferences",
+    "pushPermissionRequired": "Notification permission is not enabled on this device",
+    "verificationError": "Could not send the verification link. Try again."
   },
   "notifications": {
     "title": "Notifications",
@@ -761,7 +779,10 @@
     "bannerTitle": "Verify your email to access all services",
     "resend": "Resend verification link",
     "requiredTitle": "Email Verification Required",
-    "requiredMessage": "Please verify your email before booking or making payments. Check your inbox"
+    "requiredMessage": "Please verify your email before booking or making payments. Check your inbox",
+    "sent": "Verification link sent",
+    "sendError": "Could not send the verification link. Try again.",
+    "dismiss": "Dismiss verification reminder"
   },
   "common": {
     "loading": "Loading...",
@@ -785,7 +806,10 @@
     "appName": "Sawaa",
     "viewAll": "View All",
     "comingSoon": "Coming Soon",
-    "saved": "Saved"
+    "saved": "Saved",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "success": "Success"
   },
   "chatbot": {
     "title": "AI Assistant",
@@ -885,7 +909,9 @@
     "manage": "Manage availability hours",
     "subtitle": "Set the days and hours when you take appointments.",
     "from": "From",
-    "to": "To"
+    "to": "To",
+    "loadError": "Could not load availability",
+    "loadErrorHint": "Retry before editing your schedule."
   },
   "days": {
     "0": "Sunday",
@@ -911,7 +937,8 @@
     "profileLogout": "Logout button",
     "filterOpen": "Open filters",
     "sortOpen": "Open sort options",
-    "rateStars": "Rate {{count}} stars"
+    "rateStars": "Rate {{count}} stars",
+    "timeSlot": "Time {{time}}"
   },
   "guest": {
     "loadError": "Could not load this information. Please try later.",
@@ -933,7 +960,8 @@
     "chooseTherapist": "Choose a specialist to continue booking",
     "chooseService": "Choose a service to continue booking",
     "signInToBook": "Sign in or create an account to schedule an appointment.",
-    "empty": "No services are available right now."
+    "empty": "No services are available right now.",
+    "viewDetails": "View details"
   },
   "welcome": {
     "brand": "سَواء",

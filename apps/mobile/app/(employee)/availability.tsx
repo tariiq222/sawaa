@@ -15,6 +15,7 @@ import {
   sawaaType,
 } from '@/theme/sawaa';
 import { FloatingCta } from '@/components/ui/FloatingCta';
+import { goBackOrHome } from '@/lib/navigation';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
@@ -55,6 +56,9 @@ export default function AvailabilityScreen() {
   const saveInFlight = useRef(false);
   const loading = availability.isPending;
   const saving = updateAvailability.isPending;
+  const [footerHeight, setFooterHeight] = useState(160);
+  const handleBack = () => goBackOrHome(router, '/(employee)/(tabs)/profile');
+
 
   const toggleDay = useCallback((dayIndex: number) => {
     setDirty(true);
@@ -76,7 +80,7 @@ export default function AvailabilityScreen() {
         exceptions,
       });
       Alert.alert(t('common.saved'), t('availability.saveSuccess'));
-      router.back();
+      handleBack();
     } catch {
       Alert.alert(t('common.error'), t('availability.saveError'));
     } finally {
@@ -90,11 +94,11 @@ export default function AvailabilityScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: !loading && !availability.isError && schedule ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('availability.hours')} onBack={() => router.back()} />
+        <ScreenHeader title={t('availability.hours')} onBack={handleBack} />
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
@@ -109,7 +113,8 @@ export default function AvailabilityScreen() {
             ))}
           </View>
         ) : availability.isError ? (
-          <ErrorState onRetry={() => { void availability.refetch(); }} />
+          <ErrorState title={t('availability.loadError')} description={t('availability.loadErrorHint')}
+            retryLabel={t('common.retry')} onRetry={() => { void availability.refetch(); }} />
         ) : (
           <View style={styles.dayList}>
             {(schedule ?? []).map((day, index) => (
@@ -136,11 +141,11 @@ export default function AvailabilityScreen() {
                       {day.windows.filter((window) => window.isActive !== false).map((window) => (
                         <View key={`${window.startTime}-${window.endTime}`} style={[styles.windowRow, { flexDirection: dir.row }]}>
                           <View style={[styles.timeBox, { borderColor: colors.teal[700] }]}>
-                            <Text style={[styles.timeText, { fontFamily: f600 }]}>{window.startTime}</Text>
+                            <Text style={[styles.timeText, { fontFamily: f600, writingDirection: 'ltr' }]}>{window.startTime}</Text>
                           </View>
                           <Text style={[styles.toText, { fontFamily: f400 }]}>{t('availability.to')}</Text>
                           <View style={[styles.timeBox, { borderColor: colors.teal[700] }]}>
-                            <Text style={[styles.timeText, { fontFamily: f600 }]}>{window.endTime}</Text>
+                            <Text style={[styles.timeText, { fontFamily: f600, writingDirection: 'ltr' }]}>{window.endTime}</Text>
                           </View>
                         </View>
                       ))}
@@ -158,11 +163,12 @@ export default function AvailabilityScreen() {
       </ScrollView>
 
       {!loading && !availability.isError && schedule && (
-        <FloatingCta>
+        <FloatingCta onHeightChange={setFooterHeight}>
           <PrimaryButton
             label={t('availability.save')}
             onPress={handleSave}
             disabled={saving}
+            loading={saving}
             fontFamily={f600}
           />
         </FloatingCta>
@@ -174,8 +180,7 @@ export default function AvailabilityScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   subtitle: {
-    fontSize: sawaaType.body.fontSize + 1,
-    lineHeight: sawaaType.body.lineHeight + 4,
+    fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
     color: colors.ink[700],
   },
   skeletonList: { gap: sawaaSpacing.sm },
@@ -183,12 +188,11 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   dayRow: { alignItems: 'center', justifyContent: 'space-between', gap: sawaaSpacing.md, minHeight: 44 },
   dayLabel: {
     flex: 1,
-    fontSize: sawaaType.subheading.fontSize - 2,
-    lineHeight: sawaaType.subheading.lineHeight,
+    fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
   windows: { gap: sawaaSpacing.sm, marginTop: sawaaSpacing.sm },
-  windowRow: { alignItems: 'center', gap: sawaaSpacing.md },
+  windowRow: { flexWrap: 'wrap', alignItems: 'center', gap: sawaaSpacing.md },
   timeBox: {
     minWidth: 84,
     minHeight: 44,
@@ -199,8 +203,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     paddingHorizontal: sawaaSpacing.md,
   },
   timeText: {
-    fontSize: sawaaType.body.fontSize + 1,
-    lineHeight: sawaaType.body.lineHeight + 2,
+    fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight,
     color: colors.teal[700],
   },
   toText: {

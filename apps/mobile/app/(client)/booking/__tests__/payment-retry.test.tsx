@@ -126,7 +126,7 @@ describe('booking payment retry for an existing booking', () => {
     await waitFor(() => expect(mockGetBooking).toHaveBeenCalledWith('booking-1'));
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('booking-payment-submit'));
+      fireEvent.press(screen.getByRole('button', { name: 'Pay 450.00 SAR' }));
     });
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());

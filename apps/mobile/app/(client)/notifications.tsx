@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, Calendar, Check, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
 
-import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaType, withAlpha } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
@@ -18,6 +18,9 @@ import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { useNotifications } from '@/hooks/use-notifications';
 import { resolveNotificationHref } from '@/utils/notification-deeplink';
+import { AppButton } from '@/components/ui/AppButton';
+import { goBackOrHome } from '@/lib/navigation';
+import { useTheme } from '@/theme/useTheme';
 import type { Notification } from '@/types/models';
 
 interface IconConfig {
@@ -91,6 +94,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const { theme } = useTheme();
   const router = useRouter();
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
@@ -140,7 +144,7 @@ export default function NotificationsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.teal[600]} />}
       >
-        <ScreenHeader title={t('notifications.title')} onBack={() => router.back()} />
+        <ScreenHeader title={t('notifications.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')} />
 
         {!loading && !loadError ? (
           <View style={[styles.summaryRow, { flexDirection: dir.row }]}>
@@ -230,28 +234,13 @@ export default function NotificationsScreen() {
 
         {loadError ? (
           <View style={styles.paginationStatus}>
-            <Text accessibilityRole="alert" style={[styles.paginationError, { fontFamily: f400 }, localizedText]}>{t('notifications.loadError')}</Text>
-            <Pressable accessibilityRole="button" onPress={loadMore} disabled={loadingMore} style={styles.paginationButton}>
-              <Text style={[styles.paginationAction, { fontFamily: f700 }, localizedText]}>{t('common.retry')}</Text>
-            </Pressable>
+            <Text accessibilityRole="alert" style={[styles.paginationError, { fontFamily: f400, color: theme.colors.error }, localizedText]}>{t('notifications.loadError')}</Text>
+            <AppButton label={t('common.retry')} variant="ghost" size="sm" onPress={loadMore} disabled={loadingMore} loading={loadingMore} />
           </View>
         ) : null}
         {hasMore && !loadError ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={loadMore}
-            disabled={loadingMore}
-            style={styles.loadMore}
-          >
-            {loadingMore ? (
-              <View style={[styles.loadingMore, { flexDirection: dir.row }]}>
-                <ActivityIndicator color={colors.teal[700]} />
-                <Text style={[styles.paginationAction, { fontFamily: f400 }, localizedText]}>{t('notifications.loadingMore')}</Text>
-              </View>
-            ) : (
-              <Text style={[styles.paginationAction, { fontFamily: f700 }, localizedText]}>{t('notifications.loadMore')}</Text>
-            )}
-          </Pressable>
+          <AppButton label={t('notifications.loadMore')}
+            variant="secondary" onPress={loadMore} disabled={loadingMore} loading={loadingMore} />
         ) : null}
       </ScrollView>
     </AquaBackground>
@@ -260,16 +249,16 @@ export default function NotificationsScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 12 },
-  summaryRow: { alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  summaryRow: { flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   markAll: { minHeight: 44, justifyContent: 'center' },
-  markAllText: { fontSize: 14, color: colors.teal[700] },
+  markAllText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.teal[700] },
   card: { padding: 16 },
   row: { gap: 12, alignItems: 'flex-start' },
   iconBox: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   body: { flex: 1, minWidth: 0, gap: 2 },
-  itemTitle: { fontSize: 16, lineHeight: 22, color: colors.ink[900] },
-  itemBody: { fontSize: 14, lineHeight: 20, color: colors.ink[700] },
-  when: { fontSize: 13, lineHeight: 18, color: colors.ink[500], marginTop: 4 },
+  itemTitle: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[900] },
+  itemBody: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700] },
+  when: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.ink[500], marginTop: 4 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.teal[500], marginTop: 6, flexShrink: 0 },
   empty: { alignItems: 'center', gap: 10, paddingTop: 48 },
   emptyCircle: {
@@ -281,19 +270,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     backgroundColor: withAlpha(colors.teal[500], 0.14),
     marginBottom: 6,
   },
-  emptyTitle: { fontSize: 18, lineHeight: 24, color: colors.ink[900] },
-  emptyText: { fontSize: 14, lineHeight: 20, color: colors.ink[700] },
-  paginationButton: { alignSelf: 'center', paddingHorizontal: 20, minHeight: 44, justifyContent: 'center' },
+  emptyTitle: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight, color: colors.ink[900] },
+  emptyText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700] },
   paginationStatus: { alignItems: 'center', gap: 8, paddingVertical: 12 },
-  loadMore: {
-    minHeight: 56,
-    borderRadius: sawaaRadius.pill,
-    borderWidth: 1,
-    borderColor: colors.teal[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingMore: { alignItems: 'center', gap: 8 },
-  paginationError: { fontSize: 13, color: colors.accent.coral },
-  paginationAction: { fontSize: 16, color: colors.teal[700] },
+  paginationError: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
 });

@@ -1,6 +1,11 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
+import type { Program } from '@/services/client/group-sessions';
+import type { ClientPackageFamily } from '@/services/client/packages';
+const mockProgram: Program = {id:'program-1',ref:1,title:'برنامج',nameAr:'برنامج',nameEn:'Program',descriptionAr:null,descriptionEn:null,publicDescriptionAr:null,publicDescriptionEn:null,departmentId:'department-1',branchId:'branch-1',startDate:null,daysCount:1,hoursPerDay:1,minParticipants:1,maxParticipants:10,enrolledCount:10,price:'10000',currency:'SAR',depositEnabled:false,depositAmount:null,status:'PUBLISHED',isPublic:true,isFull:true,spotsLeft:0};
+const mockFamily: ClientPackageFamily = {id:'family-1',nameAr:'باقة',nameEn:'Package',descriptionAr:null,descriptionEn:null,isStandalone:false,options:[{id:'offer-1',nameAr:'خيار',nameEn:'Option',sessionCount:4,price:{finalPrice:70000},displayGroups:[]} as unknown as ClientPackageFamily['options'][number]]};
+let mockRichLists = false;
 let mockSignedIn = false;
 let mockCanGoBack = false;
 let mockParams: Record<string, string> = { kind: 'clinics' };
@@ -25,7 +30,8 @@ jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => ({ AquaBackground: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 jest.mock('@/theme/components/Glass', () => ({
   Glass: ({ children, onPress, accessibilityLabel }: { children: React.ReactNode; onPress?: () => void; accessibilityLabel?: string }) => {
-    const { Pressable } = require('react-native');
+    const { Pressable, View } = require('react-native');
+    if (!onPress) return <View>{children}</View>;
     return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>{children}</Pressable>;
   },
 }));
@@ -35,8 +41,8 @@ jest.mock('@/hooks/queries', () => ({
   useServicePriceFloors: () => ({}),
   useClinics: () => ({ data: mockNoData ? undefined : mockClinics, isLoading: false, isError: mockFailed.includes('clinics'), refetch: mockRefetch.clinics }),
   useTherapists: () => ({ data: mockNoData ? undefined : mockTherapists, isLoading: false, isError: mockFailed.includes('therapists'), refetch: mockRefetch.therapists }),
-  useGroupSessions: () => ({ data: mockNoData ? undefined : [], isLoading: false, isError: mockFailed.includes('programs'), refetch: mockRefetch.programs }),
-  usePackageFamilies: () => ({ data: mockNoData ? undefined : [], isLoading: false, isError: mockFailed.includes('packages'), refetch: mockRefetch.packages }),
+  useGroupSessions: () => ({ data: mockNoData ? undefined : mockRichLists ? [mockProgram] : [], isLoading: false, isError: mockFailed.includes('programs'), refetch: mockRefetch.programs }),
+  usePackageFamilies: () => ({ data: mockNoData ? undefined : mockRichLists ? [mockFamily] : [], isLoading: false, isError: mockFailed.includes('packages'), refetch: mockRefetch.packages }),
 }));
 
 import PublicListScreen from '../public-list/[kind]';
@@ -78,6 +84,7 @@ it('keeps clinic and selected service context when opening a guest practitioner 
 
 beforeEach(() => {
   mockFailed = [];
+  mockRichLists = false;
   mockNoData = false;
   mockParams = { kind: 'clinics' };
   jest.clearAllMocks();
@@ -128,4 +135,16 @@ it('keeps cached cards visible with a retry when refreshing fails', () => {
   expect(screen.getByRole('button', { name: 'عيادة' })).toBeTruthy();
   expect(screen.getByText('guest.loadError')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'common.retry' })).toBeTruthy();
+});
+
+it('shows package option prices and opens the original family', () => {
+  mockRichLists=true;mockParams={kind:'packages'};mockPush.mockClear();
+  const screen=render(<PublicListScreen />);expect(screen.getByText('٧٠٠٫٠٠ ر.س')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button',{name:'packages.buy'}));
+  expect(mockPush).toHaveBeenCalledWith({pathname:'/public-detail/[kind]/[id]',params:{kind:'package',id:'family-1'}});
+});
+it('keeps a full public program detail reachable', () => {
+  mockRichLists=true;mockParams={kind:'programs'};mockPush.mockClear();
+  const screen=render(<PublicListScreen />);fireEvent.press(screen.getByRole('button',{name:'guest.viewDetails'}));
+  expect(mockPush).toHaveBeenCalledWith({pathname:'/public-detail/[kind]/[id]',params:{kind:'program',id:'program-1'}});
 });

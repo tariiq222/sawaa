@@ -9,6 +9,7 @@ interface Props extends ScrollViewProps {
 /** Keep both short and overflowing carousels anchored at the locale's start. */
 export function LocalizedHorizontalScroll({ dir, contentContainerStyle, onContentSizeChange, ...props }: Props) {
   const scroll = useRef<ScrollView>(null);
+  const initializedLocale = useRef<string | null>(null);
   return (
     <ScrollView
       {...props}
@@ -20,7 +21,10 @@ export function LocalizedHorizontalScroll({ dir, contentContainerStyle, onConten
         contentContainerStyle,
       ]}
       onContentSizeChange={(width, height) => {
-        scroll.current?.scrollTo({ x: dir.isRTL ? width : 0, animated: false });
+        if (initializedLocale.current !== dir.locale && width > 0 && scroll.current) {
+          scroll.current.scrollTo({ x: dir.isRTL ? width : 0, animated: false });
+          initializedLocale.current = dir.locale;
+        }
         onContentSizeChange?.(width, height);
       }}
     />

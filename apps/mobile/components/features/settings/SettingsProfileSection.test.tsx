@@ -21,6 +21,7 @@ jest.mock('@/hooks/use-redux', () => ({
 jest.mock('@/services/native-session-state', () => ({ getSessionEpoch: () => 1, isSessionCurrent: () => true }));
 jest.mock('@/services/client', () => ({ clientProfileService: { updateProfile: (body: unknown) => mockUpdate(body) } }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: true, language: 'ar' }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => jest.requireActual('@/hooks/useDir').buildDirState('ar') }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), NotificationFeedbackType: { Success: 'success', Error: 'error' } }));
 
 let queryClient: QueryClient;
@@ -100,4 +101,14 @@ it('rejects malformed phone without invoking the update mutation', async () => {
   await act(async () => { fireEvent.press(screen.getByText('settings.saveProfile')); });
   expect(mockUpdate).not.toHaveBeenCalled();
   expect(screen.getByText('settings.errors.invalidPhone')).toBeTruthy();
+});
+
+it('keeps save unavailable during the existing save request', async () => {
+  let finish!: (value: typeof baseUser) => void;
+  mockUpdate.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  const view = render(<Profile />);
+  fireEvent.changeText(view.getByLabelText('settings.fullName'), 'Sara New');
+  await act(async () => { fireEvent.press(view.getByText('settings.saveProfile')); });
+  expect(view.getByRole('button', { name: 'settings.saveProfile' }).props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+  await act(async () => finish(baseUser));
 });

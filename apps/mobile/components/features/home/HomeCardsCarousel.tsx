@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -8,7 +7,7 @@ import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import type { PublicMobileHomeCard, MobileHomeDestination } from '@/services/mobile-home-cards';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { getSawaaRoles, withAlpha } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { Glass } from '@/theme/components/Glass';
 import { getFontName } from '@/theme/fonts';
@@ -119,11 +118,7 @@ export function HomeCardsCarousel({ cards, signedIn = false }: HomeCardsCarousel
   const canShowImage = Boolean(activeCard.imageUrl && failedImages[activeCard.id] !== activeCard.imageUrl);
   const route = activeCard.destination ? destinationRoutes[activeCard.destination] : undefined;
   const onPress = route ? () => router.push(signedIn ? route.client : route.guest) : undefined;
-  const imageTextShadow = canShowImage ? {
-    textShadowColor: withAlpha(roles.backdrop.base, 0.48),
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  } : undefined;
+
 
   return (
     <View style={styles.container}>
@@ -158,23 +153,14 @@ export function HomeCardsCarousel({ cards, signedIn = false }: HomeCardsCarousel
                   resizeMode="cover"
                   onError={() => setFailedImages((previous) => ({ ...previous, [activeCard.id]: activeCard.imageUrl! }))}
                 />
-                <LinearGradient
-                  colors={[withAlpha(roles.backdrop.base, 0.02), withAlpha(roles.backdrop.base, 0.06), withAlpha(roles.backdrop.base, 0.16)]}
-                  locations={[0, 0.48, 1]}
-                  start={dir.isRTL ? { x: 0, y: 0 } : { x: 1, y: 0 }}
-                  end={dir.isRTL ? { x: 1, y: 1 } : { x: 0, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                  pointerEvents="none"
-                  testID="home-card-scrim"
-                />
               </>
             ) : null}
-            <View style={[styles.copy, canShowImage ? styles.imageCopy : styles.fallbackCopy, { alignItems: dir.alignStart, ...(canShowImage ? { alignSelf: dir.alignStart } : {}) }]}>
-              <Text style={[styles.title, { color: canShowImage ? roles.action.foreground : colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }, imageTextShadow]}>
+            <View style={[styles.copy, { backgroundColor: roles.surface, padding: sawaaSpacing.md, alignItems: dir.alignStart }]}>
+              <Text style={[styles.title, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                 {title}
               </Text>
               {description ? (
-                <Text style={[styles.description, { color: canShowImage ? roles.action.foreground : colors.ink[700], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }, imageTextShadow]}>
+                <Text style={[styles.description, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '400'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
                   {description}
                 </Text>
               ) : null}
@@ -210,10 +196,8 @@ const styles = StyleSheet.create({
   cardContent: { width: '100%', minHeight: 180, position: 'relative', justifyContent: 'flex-end', overflow: 'hidden' },
   backgroundImage: { ...StyleSheet.absoluteFillObject },
   copy: { gap: 4 },
-  imageCopy: { paddingHorizontal: 18, paddingVertical: 20, maxWidth: '88%' },
-  fallbackCopy: { padding: 16 },
-  title: { fontSize: 18, lineHeight: 26, flexShrink: 1 },
-  description: { fontSize: 14, lineHeight: 21, flexShrink: 1 },
+  title: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight, flexShrink: 1 },
+  description: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, flexShrink: 1 },
   pagination: { alignItems: 'center', justifyContent: 'center' },
   pageButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'transparent', borderWidth: 1 },

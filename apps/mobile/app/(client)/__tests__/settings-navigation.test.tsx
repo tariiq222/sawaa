@@ -5,6 +5,8 @@ import { Linking } from 'react-native';
 
 const mockPush = jest.fn();
 const mockSetThemeMode = jest.fn();
+const mockRefetch = jest.fn();
+let mockPushQuery = { data: { enabled: false, permitted: true }, isPending: false, isError: false, refetch: mockRefetch };
 const mockMutatePush = jest.fn().mockResolvedValue(undefined);
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -32,7 +34,7 @@ jest.mock('@/components/ui/GlassSwitch', () => ({ GlassSwitch: ({ value, disable
 } }));
 jest.mock('expo-haptics', () => ({ ImpactFeedbackStyle: { Light: 'light' }, impactAsync: jest.fn() }));
 jest.mock('@/hooks/queries/usePushPreference', () => ({ usePushPreference: () => ({
-  query: { data: { enabled: false, permitted: true }, isPending: false, isError: false },
+  query: mockPushQuery,
   mutation: { mutateAsync: mockMutatePush, isPending: false },
 }) }));
 jest.mock('@/components/features/settings/DeleteAccountButton', () => ({ DeleteAccountButton: () => null }));
@@ -65,4 +67,28 @@ it('changes the saved appearance mode from the settings switch', () => {
   const screen = render(<SettingsScreen />, { wrapper: queries.wrapper });
   fireEvent.press(screen.getByRole('switch', { name: 'settings.darkMode' }));
   expect(mockSetThemeMode).toHaveBeenCalledWith('dark');
+});
+
+beforeEach(() => { jest.clearAllMocks(); mockPushQuery = { data: { enabled: false, permitted: true }, isPending: false, isError: false, refetch: mockRefetch }; });
+it('explains failed preference reading and retries the read only', () => {
+ mockPushQuery.isError = true; const view = render(<SettingsScreen />, { wrapper: queries.wrapper });
+ expect(view.getByText('settings.pushLoadError')).toBeTruthy();
+ expect(view.getByRole('switch', { name: 'settings.pushNotifications' }).props.accessibilityState.disabled).toBe(true);
+ fireEvent.press(view.getByRole('button', { name: 'common.retry' }));
+ expect(mockRefetch).toHaveBeenCalledTimes(1); expect(mockMutatePush).not.toHaveBeenCalled();
+});
+it('explains a pending preference read', () => {
+ mockPushQuery.isPending = true; const view = render(<SettingsScreen />, { wrapper: queries.wrapper });
+ expect(view.getByText('common.loading')).toBeTruthy();
+ expect(view.getByRole('switch', { name: 'settings.pushNotifications' }).props.accessibilityState.disabled).toBe(true);
+});
+it('distinguishes a successfully off preference', () => {
+ const view = render(<SettingsScreen />, { wrapper: queries.wrapper });
+ expect(view.queryByText('settings.pushLoadError')).toBeNull();
+ expect(view.getByRole('switch', { name: 'settings.pushNotifications' }).props.accessibilityState.checked).toBe(false);
+});
+it('explains unavailable device permission without writing a preference', () => {
+ mockPushQuery.data.permitted = false; const view = render(<SettingsScreen />, { wrapper: queries.wrapper });
+ expect(view.getByText('settings.pushPermissionRequired')).toBeTruthy();
+ expect(mockMutatePush).not.toHaveBeenCalled();
 });

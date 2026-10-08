@@ -65,6 +65,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
 jest.mock('@/hooks/useDir', () => ({
   useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right', alignStart: 'flex-end', writingDirection: 'rtl' }),
 }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', language: 'ar' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
   useRequestLoginOtp: () => ({ mutateAsync: jest.fn(), isPending: false }),

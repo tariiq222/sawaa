@@ -1,0 +1,27 @@
+PASS theme/__tests__/accessible-controls.test.tsx
+PASS components/ui/__tests__/state-components.test.tsx
+PASS components/ui/__tests__/redesign-primitives.test.tsx
+PASS theme/sawaa/__tests__/arabic-layout.test.tsx
+PASS components/__tests__/dark-mode-primitives.test.tsx
+PASS components/ui/__tests__/GlassSegmented.test.tsx
+PASS theme/sawaa/__tests__/AquaBackground.test.tsx
+PASS theme/__tests__/ThemeProvider.test.tsx
+PASS components/ui/__tests__/GlassSwitch.test.tsx
+PASS theme/sawaa/__tests__/GlassSurface.test.tsx
+PASS components/__tests__/light-mode-status-pill.test.tsx
+PASS theme/__tests__/arabic-typography.test.tsx
+PASS components/features/packages/__tests__/package-theme.test.tsx
+PASS components/ui/__tests__/BackButton.test.tsx
+PASS theme/__tests__/light-mode-roles.test.ts
+PASS theme/sawaa/__tests__/contrast.test.ts
+PASS theme/__tests__/tokens.test.ts
+PASS theme/sawaa/__tests__/palette.test.ts
+PASS theme/__tests__/dark-mode.test.ts
+PASS __tests__/theme-tokens.test.ts
+PASS theme/sawaa/__tests__/selection-contrast.test.ts
+
+Test Suites: 21 passed, 21 total
+Tests:       124 passed, 124 total
+Snapshots:   0 total
+Time:        2.064 s
+Ran all test suites matching /theme|components\/ui\/__tests__|components\/__tests__\/dark-mode-primitives.test.tsx|components\/__tests__\/light-mode-status-pill.test.tsx/i.

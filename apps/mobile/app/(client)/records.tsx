@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AquaBackground } from '@/theme/sawaa';
+import { AquaBackground, sawaaType } from '@/theme/sawaa';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -49,7 +49,7 @@ export default function RecordsScreen() {
       >
         <ScreenHeader title={t('records.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')} />
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={{ fontFamily: getFontName(dir.locale, '400'), fontSize: 13, color: colors.ink[500], textAlign: dir.textAlign }}>{t('records.subtitle')}</Text>
+          <Text style={{ fontFamily: getFontName(dir.locale, '400'), fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, color: colors.ink[500], textAlign: dir.textAlign }}>{t('records.subtitle')}</Text>
         </Animated.View>
         {isPending ? (
           <View style={styles.skeletons}>{[0, 1, 2].map((index) => <Skeleton key={index} height={110} />)}</View>

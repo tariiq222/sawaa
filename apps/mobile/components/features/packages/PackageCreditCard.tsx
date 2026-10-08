@@ -34,9 +34,9 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
       </View>
       <Text style={[styles.duration, { fontFamily: f400, textAlign: dir.textAlign }]}>{dir.isRTL ? credit.durationLabelAr : credit.durationLabelEn ?? credit.durationLabelAr}</Text>
       {canBook ? (
-        <PrimaryButton label={t('packages.book')} onPress={() => onBook(credit)} fontFamily={f600} height={44} style={styles.bookButton} />
+        <PrimaryButton label={t('packages.book')} onPress={() => onBook(credit)} fontFamily={f600} height={44} style={[styles.bookButton, { alignSelf: dir.alignStart }]} />
       ) : (
-        <Text style={[styles.locked, { fontFamily: f400 }]}>
+        <Text style={[styles.locked, { fontFamily: f400, textAlign: dir.textAlign }]}>
           {reason === 'depleted' ? t('packages.locked.depleted') : reason === 'unsupported' || !concrete ? t('packages.locked.support') : t('packages.locked.unavailable')}
         </Text>
       )}
@@ -46,7 +46,7 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   credit: { borderTopWidth: 1, borderTopColor: sawaaColors.glass.borderSoft, paddingTop: sawaaSpacing.md, gap: sawaaSpacing.xs },
-  creditHeader: { justifyContent: 'space-between', alignItems: 'center' },
+  creditHeader: { gap: sawaaSpacing.sm, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' },
   creditName: { flex: 1, color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize },
   remaining: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize },
   duration: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },

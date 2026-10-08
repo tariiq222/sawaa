@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,9 @@ import { usePublicCatalog } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { HomeSectionState } from './HomeSectionState';
 import { Glass } from '@/theme/components/Glass';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { getAssessmentServices } from '@/lib/assessment-services';
 
@@ -21,16 +23,10 @@ export function HomeAssessmentServices() {
   const regular = getFontName(dir.locale, '400');
   const Arrow = dir.isRTL ? ChevronLeft : ChevronRight;
   return (
-    <View style={styles.section}>
+    <HomeSectionState loading={catalog.isLoading} error={catalog.isError} hasData={services.length > 0} onRetry={() => { void catalog.refetch(); }}><View style={styles.section}>
       <SectionHeader title={t('home.assessmentServices')} />
-      {catalog.isLoading ? <ActivityIndicator color={colors.teal[700]} /> : catalog.isError ? (
-        <Glass padding={14} onPress={() => { void catalog.refetch(); }} accessibilityLabel={t('common.retry')}>
-          <Text style={{ fontFamily: regular, color: colors.ink[700], textAlign: dir.textAlign }}>{t('guest.loadError')} · {t('common.retry')}</Text>
-        </Glass>
-      ) : services.length === 0 ? (
-        <Text style={{ fontFamily: regular, color: colors.ink[700], textAlign: dir.textAlign }}>{t('home.assessmentServicesEmpty')}</Text>
-      ) : services.map((service) => (
-        <Glass key={service.id} variant="strong" radius={20} padding={16} interactive
+      {services.map((service) => (
+        <Glass key={service.id} variant="strong" radius={sawaaRadius.lg} padding={sawaaSpacing.lg} interactive
           accessibilityLabel={dir.isRTL ? service.nameAr : service.nameEn ?? service.nameAr}
           onPress={() => router.push({ pathname: '/public-detail/[kind]/[id]', params: { kind: 'service', id: service.id } })}>
           <View style={[styles.row, { flexDirection: dir.row }]}>
@@ -40,11 +36,11 @@ export function HomeAssessmentServices() {
           </View>
         </Glass>
       ))}
-    </View>
+    </View></HomeSectionState>
   );
 }
 const styles = StyleSheet.create({
   section: { gap: 12 },
   row: { alignItems: 'center', gap: 10, minHeight: 24 },
-  name: { flex: 1, fontSize: 15, lineHeight: 22 },
+  name: { flex: 1, fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

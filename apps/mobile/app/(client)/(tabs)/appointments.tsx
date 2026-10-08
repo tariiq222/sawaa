@@ -57,9 +57,9 @@ export default function AppointmentsScreen() {
     refetch();
   };
 
-  const renderItem = useCallback(({ item: b, index: i }: { item: ClientBookingRow; index: number }) => (
+  const renderItem = useCallback(({ item: b }: { item: ClientBookingRow; index: number }) => (
     <Animated.View
-      entering={reduceMotion ? undefined : FadeInDown.delay(120 + Math.min(i, 6) * 60).duration(500).easing(Easing.out(Easing.cubic))}
+      entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}
       style={styles.cardWrap}
     >
       <AppointmentRowCard
@@ -139,12 +139,12 @@ export default function AppointmentsScreen() {
           <View style={[styles.pageControls, { flexDirection: dir.row }]}>
             {page > 1 && (
               <Pressable accessibilityRole="button" onPress={() => setPage((value) => value - 1)} style={styles.pageButton}>
-                <Text style={styles.pageButtonText}>{t('common.back')}</Text>
+                <Text style={[styles.pageButtonText, { fontFamily: getFontName(dir.locale, '600') }]}>{t('common.back')}</Text>
               </Pressable>
             )}
             {data?.meta.hasNextPage && (
               <Pressable accessibilityRole="button" onPress={() => setPage((value) => value + 1)} style={styles.pageButton}>
-                <Text style={styles.pageButtonText}>{t('common.next')}</Text>
+                <Text style={[styles.pageButtonText, { fontFamily: getFontName(dir.locale, '600') }]}>{t('common.next')}</Text>
               </Pressable>
             )}
           </View>

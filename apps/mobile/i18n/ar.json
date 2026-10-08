@@ -62,7 +62,8 @@
       "emailLabel": "البريد الإلكتروني",
       "submit": "إرسال الرمز",
       "back": "العودة لتسجيل الدخول",
-      "linkLabel": "إنشاء أو استعادة كلمة المرور"
+      "linkLabel": "إنشاء أو استعادة كلمة المرور",
+      "remembered": "تذكرت كلمة المرور؟"
     },
     "noAccount": "ليس لديك حساب؟",
     "hasAccount": "لديك حساب بالفعل؟",
@@ -109,7 +110,11 @@
       "success": "تم إعادة تعيين كلمة المرور. الرجاء تسجيل الدخول.",
       "invalidCode": "رمز غير صالح أو منتهي الصلاحية",
       "weakPassword": "استخدم 8 إلى 200 حرف، تتضمن حرفًا إنجليزيًا كبيرًا ورقمًا.",
-      "failed": "تعذّر تغيير كلمة المرور"
+      "failed": "تعذّر تغيير كلمة المرور",
+      "verifyTitle": "التحقق من الرمز",
+      "newTitle": "كلمة مرور جديدة",
+      "confirmPasswordLabel": "تأكيد كلمة المرور",
+      "mismatch": "كلمتا المرور غير متطابقتين"
     },
     "emailEntry": {
       "title": "المتابعة بالبريد الإلكتروني",
@@ -199,7 +204,8 @@
     "nextAvailable": "أقرب موعد",
     "sar": "﷼",
     "from": "من",
-    "rating": "تقييم"
+    "rating": "تقييم",
+    "sectionLoadError": "تعذر تحميل هذا القسم"
   },
   "clinics": {
     "title": "العيادات",
@@ -467,7 +473,9 @@
     "detailAppointment": "الموعد",
     "detailService": "الخدمة",
     "detailDuration": "المدة",
-    "detailType": "النوع"
+    "detailType": "النوع",
+    "clientsLoadFailed": "تعذر تحميل العملاء",
+    "clientsLoadFailedHint": "حاول مرة أخرى لتحميل نتائج البحث."
   },
   "profile": {
     "title": "حسابي",
@@ -506,7 +514,11 @@
     "version": "الإصدار {{version}}",
     "sessions": "جلسات",
     "lastVisit": "آخر زيارة",
-    "outstanding": "مبلغ مستحق"
+    "outstanding": "مبلغ مستحق",
+    "summarySessions": "جلسة",
+    "summaryLastVisit": "آخر زيارة",
+    "summaryOutstanding": "مبلغ مستحق",
+    "summaryLoadError": "تعذر تحميل ملخص الحساب"
   },
   "chat": {
     "headerTitle": "سَواء",
@@ -592,7 +604,10 @@
     "noSlotsForDay": "لا مواعيد متاحة في هذا اليوم",
     "chooseAnotherDay": "جرب اختيار يوم آخر من التقويم",
     "noOptionsAvailable": "لا توجد خيارات متاحة",
-    "tryAgain": "إعادة المحاولة"
+    "tryAgain": "إعادة المحاولة",
+    "viewAppointments": "عرض مواعيدي",
+    "slotsEmpty": "لا مواعيد متاحة في هذا اليوم",
+    "slotsEmptyHint": "جرب اختيار يوم آخر من التقويم"
   },
   "payment": {
     "methodsLoading": "جارٍ تحميل طرق الدفع…",
@@ -706,7 +721,10 @@
     },
     "privacySecurity": "الخصوصية والأمان",
     "privacyPolicy": "سياسة الخصوصية",
-    "appearance": "المظهر"
+    "appearance": "المظهر",
+    "pushLoadError": "تعذر تحميل تفضيلات الإشعارات",
+    "pushPermissionRequired": "إذن الإشعارات غير مفعّل على الجهاز",
+    "verificationError": "تعذر إرسال رابط التحقق. حاول مرة أخرى"
   },
   "notifications": {
     "title": "الإشعارات",
@@ -761,7 +779,10 @@
     "bannerTitle": "فعّل بريدك الإلكتروني للاستفادة من كامل الخدمات",
     "resend": "إعادة إرسال رابط التفعيل",
     "requiredTitle": "تفعيل البريد مطلوب",
-    "requiredMessage": "يجب تفعيل بريدك الإلكتروني قبل حجز الموعد أو الدفع. تحقق من بريدك الوارد"
+    "requiredMessage": "يجب تفعيل بريدك الإلكتروني قبل حجز الموعد أو الدفع. تحقق من بريدك الوارد",
+    "sent": "تم إرسال رابط التحقق",
+    "sendError": "تعذر إرسال رابط التحقق. حاول مرة أخرى.",
+    "dismiss": "إغلاق تذكير التحقق"
   },
   "common": {
     "loading": "جاري التحميل...",
@@ -785,7 +806,10 @@
     "appName": "سواء",
     "viewAll": "عرض الكل",
     "comingSoon": "قريباً",
-    "saved": "تم الحفظ"
+    "saved": "تم الحفظ",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "success": "تم بنجاح"
   },
   "chatbot": {
     "title": "المساعد الذكي",
@@ -885,7 +909,9 @@
     "manage": "إدارة أوقات التوفر",
     "subtitle": "حدد الأيام والساعات التي تستقبل فيها المواعيد.",
     "from": "من",
-    "to": "إلى"
+    "to": "إلى",
+    "loadError": "تعذر تحميل جدول التوفر",
+    "loadErrorHint": "أعد المحاولة قبل تعديل الجدول."
   },
   "days": {
     "0": "الأحد",
@@ -911,7 +937,8 @@
     "profileLogout": "زر تسجيل الخروج",
     "filterOpen": "فتح المرشحات",
     "sortOpen": "فتح خيارات الفرز",
-    "rateStars": "تقييم {{count}} نجوم"
+    "rateStars": "تقييم {{count}} نجوم",
+    "timeSlot": "وقت {{time}}"
   },
   "guest": {
     "loadError": "تعذّر تحميل المعلومات حاليًا. حاول لاحقًا.",
@@ -933,7 +960,8 @@
     "chooseTherapist": "اختر المختص لإكمال الحجز",
     "chooseService": "اختر الخدمة لإكمال الحجز",
     "signInToBook": "لتحديد موعد، سجّل الدخول أو أنشئ حسابًا.",
-    "empty": "لا توجد خدمات متاحة حاليًا."
+    "empty": "لا توجد خدمات متاحة حاليًا.",
+    "viewDetails": "عرض التفاصيل"
   },
   "welcome": {
     "brand": "سَواء",

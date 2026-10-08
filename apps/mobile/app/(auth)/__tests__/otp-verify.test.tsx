@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, TextInput } from 'react-native';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
@@ -147,8 +147,9 @@ describe('OtpVerifyScreen Autofill & Auto-submit', () => {
   });
 
   it('uses one four-character input for native SMS autofill', () => {
-    const { getByLabelText } = render(<OtpVerifyScreen />);
-    const input = getByLabelText('auth.otp.code');
+    const view = render(<OtpVerifyScreen />);
+    expect(view.UNSAFE_getAllByType(TextInput)).toHaveLength(1);
+    const input = view.getByLabelText('auth.otp.code');
     expect(input.props.textContentType).toBe('oneTimeCode');
     expect(input.props.autoComplete).toBe('sms-otp');
     expect(input.props.keyboardType).toBe('number-pad');

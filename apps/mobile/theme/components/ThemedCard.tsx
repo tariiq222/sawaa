@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { useTheme } from '../useTheme';
 import { sawaaRadius } from '../sawaa/tokens';
 
@@ -24,6 +25,7 @@ export function ThemedCard({
   selected,
   onPress,
 }: ThemedCardProps) {
+  const reduceMotion = useReduceMotion();
   const { theme } = useTheme();
 
   const cardStyle: ViewStyle = {
@@ -43,7 +45,7 @@ export function ThemedCard({
         accessibilityState={{ selected: Boolean(selected) }}
         style={({ pressed }) => [
           cardStyle,
-          { transform: [{ scale: pressed ? 0.98 : 1 }] },
+          { transform: [{ scale: pressed && !reduceMotion ? 0.98 : 1 }] },
           style,
         ]}
       >

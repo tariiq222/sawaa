@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Glass } from '@/theme/components/Glass';
-import { sawaaRadius, getSawaaRoles, withAlpha } from '@/theme/sawaa/tokens';
+import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { DirState } from '@/hooks/useDir';
@@ -101,24 +101,25 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, action: ReturnT
   hero: { overflow: 'hidden' },
   loading: { alignItems: 'center', justifyContent: 'center', minHeight: 96 },
   empty: { alignItems: 'center' },
-  emptyText: { fontSize: 15, color: colors.ink[700] },
+  emptyText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700] },
   emptyCta: { minHeight: 44, justifyContent: 'center' },
-  emptyCtaText: { fontSize: 15, color: colors.teal[700] },
-  label: { fontSize: 13, color: withAlpha(action.foreground, 0.85) },
+  emptyCtaText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.teal[700] },
+  label: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, color: withAlpha(action.foreground, 0.85) },
   row: { alignItems: 'center', gap: 12 },
   dateBox: {
     width: 56,
-    height: 56,
+    minHeight: 56,
+    paddingVertical: sawaaSpacing.sm,
     borderRadius: sawaaRadius.md,
     backgroundColor: colors.teal[50],
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateDay: { fontSize: 20, lineHeight: 24, color: colors.teal[700] },
-  dateWeekday: { fontSize: 12, lineHeight: 16, color: colors.teal[700] },
+  dateDay: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, color: colors.teal[700] },
+  dateWeekday: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.teal[700] },
   mid: { flex: 1, gap: 2 },
-  time: { fontSize: 18, lineHeight: 24, color: action.foreground },
-  detail: { fontSize: 14, lineHeight: 20, color: withAlpha(action.foreground, 0.9) },
+  time: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight, color: action.foreground },
+  detail: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: withAlpha(action.foreground, 0.9) },
   go: {
     width: 44,
     height: 44,

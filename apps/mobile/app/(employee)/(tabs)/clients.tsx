@@ -16,8 +16,8 @@ import {
 } from '@/theme/sawaa';
 import { Pill } from '@/components/ui/Pill';
 import { Thumb } from '@/components/ui/Thumb';
+import { AppButton } from '@/components/ui/AppButton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
@@ -64,7 +64,7 @@ export default function ClientsScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data, isLoading, isError, refetch } = useEmployeeClients({ search: debouncedSearch });
+  const { data, isLoading, isFetching, isError, isPlaceholderData, refetch } = useEmployeeClients({ search: debouncedSearch });
 
   const clients = useMemo<ClientItem[]>(
     () =>
@@ -84,7 +84,12 @@ export default function ClientsScreen() {
     debounceRef.current = setTimeout(() => setDebouncedSearch(text), 400);
   };
 
-  const showSkeleton = isLoading && clients.length === 0;
+  const hasCurrentData = data !== undefined && !isPlaceholderData;
+  const displayedClients = hasCurrentData ? clients : [];
+  const retry = () => { void refetch(); };
+  const firstReadError = isError && !hasCurrentData;
+  const retainedReadError = isError && hasCurrentData;
+  const showSkeleton = !hasCurrentData && (isLoading || isFetching || isPlaceholderData);
 
   return (
     <AquaBackground>
@@ -115,24 +120,28 @@ export default function ClientsScreen() {
           </Glass>
         </Animated.View>
 
+        {retainedReadError && (
+          <View accessibilityRole="alert" style={styles.retryNotice}>
+            <Text style={[styles.clientMeta, { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>{t('doctor.clientsLoadFailed')}</Text>
+            <AppButton variant="ghost" size="sm" label={t('common.retry')} onPress={retry} />
+          </View>
+        )}
         {showSkeleton ? (
           <View style={styles.skeletonList}>
             {[0, 1, 2, 3].map((i) => (
               <ClientRowSkeleton key={i} />
             ))}
           </View>
-        ) : isError ? (
-          <ErrorState onRetry={() => { void refetch(); }} />
         ) : (
           <FlatList
-            data={clients}
+            data={displayedClients}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={{ height: sawaaSpacing.sm }} />}
             renderItem={({ item, index }) => (
               <Animated.View
-                entering={reduceMotion ? undefined : FadeInDown.delay(180 + index * 60).duration(600).easing(Easing.out(Easing.cubic))}
+                entering={reduceMotion ? undefined : FadeInDown.delay(180 + Math.min(index, 6) * 60).duration(600).easing(Easing.out(Easing.cubic))}
               >
                 <Pressable
                   accessibilityRole="button"
@@ -150,7 +159,6 @@ export default function ClientsScreen() {
                       <Thumb uri={item.avatarUrl} width={52} height={52} radius={sawaaRadius.pill} />
                       <View style={styles.clientMid}>
                         <Text
-                          numberOfLines={1}
                           style={[styles.clientName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
                         >
                           {item.name}
@@ -173,10 +181,14 @@ export default function ClientsScreen() {
               </Animated.View>
             )}
             ListEmptyComponent={
-              <EmptyState
-                icon="people-outline"
-                title={debouncedSearch ? t('common.noResults') : t('doctor.noClients')}
-              />
+              firstReadError ? (
+                <EmptyState icon="cloud-offline-outline" tone="danger"
+                  title={t('doctor.clientsLoadFailed')} description={t('doctor.clientsLoadFailedHint')}
+                  actionLabel={t('common.retry')} onAction={retry} />
+              ) : hasCurrentData ? (
+                <EmptyState icon="people-outline"
+                  title={debouncedSearch ? t('common.noResults') : t('doctor.noClients')} />
+              ) : null
             }
           />
         )}
@@ -188,8 +200,7 @@ export default function ClientsScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   container: { flex: 1, paddingHorizontal: sawaaSpacing.lg },
   title: {
-    fontSize: 28,
-    lineHeight: 38,
+    fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight,
     color: colors.ink[900],
     marginBottom: sawaaSpacing.lg,
   },
@@ -208,10 +219,9 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   list: { paddingBottom: 100 },
   clientRow: { alignItems: 'center', gap: sawaaSpacing.md },
-  clientMid: { flex: 1, gap: sawaaSpacing.xs },
+  clientMid: { flex: 1, minWidth: 0, flexShrink: 1, gap: sawaaSpacing.xs },
   clientName: {
-    fontSize: sawaaType.subheading.fontSize - 2,
-    lineHeight: sawaaType.subheading.lineHeight,
+    fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight,
     color: colors.ink[900],
   },
   clientMeta: {
@@ -221,5 +231,6 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: sawaaSpacing.md },
   skeletonLines: { flex: 1, gap: sawaaSpacing.sm },
+  retryNotice: { gap: sawaaSpacing.xs, marginBottom: sawaaSpacing.sm },
   skeletonList: { gap: sawaaSpacing.sm },
 });

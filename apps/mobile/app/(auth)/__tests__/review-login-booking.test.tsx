@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 const mockReplace = jest.fn();
 let mockBooking: string | undefined;
 let mockRedirect: string | undefined;
@@ -17,7 +17,8 @@ jest.mock('@/theme/sawaa', () => {
 jest.mock('@/theme/components/ThemedText', () => ({ ThemedText: require('react-native').Text }));
 jest.mock('@/components/ui/BackButton', () => ({ BackButton: () => null }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
-jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ alignStart: 'flex-start' }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => jest.requireActual('@/hooks/useDir').buildDirState('ar') }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', language: 'ar' }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppDispatch: () => jest.fn() }));
 jest.mock('@/stores/slices/auth-slice', () => ({ setCredentials: jest.fn() }));
 jest.mock('@/services/auth', () => ({
@@ -49,4 +50,18 @@ describe('review login booking continuation', () => {
     signIn();
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/payment', params: { bookingId: 'booking-1', invoiceId: 'invoice-1' } }));
   });
+});
+
+it('keeps native credential hints and disables both inputs while the existing submit is pending', async () => {
+ let finish!: (value: unknown) => void;
+ const { loginReviewAccount } = jest.requireMock('@/services/auth');
+ loginReviewAccount.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+ const view = render(<ReviewLoginScreen />);
+ expect(view.getByLabelText('auth.email').props.textContentType).toBe('username');
+ fireEvent.changeText(view.getByLabelText('auth.email'), 'review@example.test');
+ fireEvent.changeText(view.getByLabelText('auth.password'), 'test-only');
+ await act(async () => { fireEvent(view.getByLabelText('auth.password'), 'submitEditing'); });
+ expect(view.getByLabelText('auth.email').props.editable).toBe(false);
+ expect(view.getByLabelText('auth.password').props.editable).toBe(false);
+ await act(async () => finish({ sessionEpoch: 1, tokens: { accessToken: 'test' } }));
 });

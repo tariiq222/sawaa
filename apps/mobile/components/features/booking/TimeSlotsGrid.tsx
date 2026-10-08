@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatTimeOfDay } from '@/lib/session-format';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
@@ -19,6 +20,13 @@ export interface Slot {
 
 export function formatTime(iso: string, isRTL: boolean): string {
   return formatTimeOfDay(iso, isRTL) ?? '—';
+}
+
+export function slotGridLayout(width: number, fontScale: number): { columns: number; cellWidth: number } {
+  const available = Math.max(0, width);
+  const desired = fontScale >= 1.5 ? 2 : 3;
+  const columns = Math.max(1, Math.min(desired, Math.floor((available + sawaaSpacing.sm) / (88 + sawaaSpacing.sm))));
+  return { columns, cellWidth: Math.max(0, (available - (columns - 1) * sawaaSpacing.sm) / columns) };
 }
 
 const SKELETON_SLOTS = 6;
@@ -48,15 +56,19 @@ export function TimeSlotsGrid({
   reduceMotion = false,
   onRetry,
 }: TimeSlotsGridProps) {
-  const sawaaColors = useSawaaColors();
   const { t } = useTranslation();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const [width, setWidth] = useState(Math.max(0, windowWidth - 2 * sawaaSpacing.lg));
+  const { cellWidth } = slotGridLayout(width, fontScale);
+  const onLayout = (event: import('react-native').LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
+  const sawaaColors = useSawaaColors();
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   if (loading) {
     return (
-      <View style={[styles.slotsGrid, { flexDirection: dir.row }]}>
+      <View onLayout={onLayout} style={[styles.slotsGrid, { flexDirection: dir.row }]}>
         {Array.from({ length: SKELETON_SLOTS }).map((_, i) => (
-          <View key={i} style={styles.slotWrap}>
+          <View key={i} style={{ width: cellWidth }}>
             <Skeleton height={SLOT_SKELETON_HEIGHT} radius={sawaaRadius.md} />
           </View>
         ))}
@@ -70,7 +82,7 @@ export function TimeSlotsGrid({
         icon="cloud-offline-outline"
         tone="danger"
         title={error}
-        actionLabel={onRetry ? (t('common.retry')) : undefined}
+        actionLabel={onRetry ? t('common.retry') : undefined}
         onAction={onRetry}
       />
     );
@@ -88,6 +100,7 @@ export function TimeSlotsGrid({
 
   return (
     <Animated.View
+      onLayout={onLayout}
       entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))}
       style={[styles.slotsGrid, { flexDirection: dir.row }]}
     >
@@ -100,11 +113,11 @@ export function TimeSlotsGrid({
               Haptics.selectionAsync();
               onSelect(i);
             }}
-            style={[styles.slotWrap, styles.slot, {
+            style={[styles.slot, { width: cellWidth,
               backgroundColor: isSelected ? roles.selection.fill : roles.surface,
               borderColor: isSelected ? roles.selection.fill : roles.surfaceHigh,
             }]}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityLabel={t('booking.slotTime', { time: formatTime(s.startTime, dir.isRTL) })}
             accessibilityState={{ selected: isSelected }}
           >
@@ -116,6 +129,7 @@ export function TimeSlotsGrid({
             >
               {formatTime(s.startTime, dir.isRTL)}
             </Text>
+            {isSelected ? <Check size={14} color={roles.selection.foreground} /> : null}
           </Pressable>
         );
       })}
@@ -125,15 +139,17 @@ export function TimeSlotsGrid({
 
 const styles = StyleSheet.create({
   slotsGrid: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
-  slotWrap: { width: '31.5%' },
   slot: {
     minHeight: 48,
+    paddingHorizontal: sawaaSpacing.sm,
+    paddingVertical: sawaaSpacing.sm,
     borderRadius: sawaaRadius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   slotText: {
+    flexShrink: 1,
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
     textAlign: 'center',

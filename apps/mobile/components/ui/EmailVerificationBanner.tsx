@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Pressable, Alert, StyleSheet } from 'react-native';
 import { Mail, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 
+import { AppButton } from './AppButton';
+import { useDir } from '@/hooks/useDir';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { withAlpha } from '@/theme/sawaa/tokens';
@@ -23,34 +25,45 @@ interface EmailVerificationBannerProps {
 export function EmailVerificationBanner({ onDismiss }: EmailVerificationBannerProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const dir = useDir();
+  const pendingRef = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [outcome, setOutcome] = useState<'sent' | 'sendError' | null>(null);
   const user = useAppSelector((s) => s.auth.user);
 
   if (!user || user.role === 'CLIENT' || user.emailVerified) return null;
 
   const handleResend = async () => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    setOutcome(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await authService.sendVerificationEmail();
+      setOutcome('sent');
     } catch {
-      // Silent — don't block UX
+      setOutcome('sendError');
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
     }
   };
 
   return (
-    <View style={[styles.banner, { backgroundColor: withAlpha(theme.colors.warning, 0.08) }]}>
+    <View style={[styles.banner, { backgroundColor: withAlpha(theme.colors.warning, 0.08), flexDirection: dir.row }]}>
       <Mail size={18} strokeWidth={1.5} color={theme.colors.warning} />
       <View style={styles.textWrap}>
         <ThemedText variant="bodySm" style={{ fontWeight: '500' }}>
           {t('verification.bannerTitle')}
         </ThemedText>
-        <Pressable onPress={handleResend}>
-          <ThemedText variant="caption" color={theme.colors.info} style={{ fontWeight: '600' }}>
-            {t('verification.resend')}
-          </ThemedText>
-        </Pressable>
+        <AppButton label={t('verification.resend')} onPress={handleResend} loading={pending} variant="ghost" size="sm" />
+        {outcome ? <ThemedText variant="caption" accessibilityLiveRegion="polite"
+          accessibilityRole={outcome === 'sendError' ? 'alert' : undefined}
+          color={outcome === 'sendError' ? theme.colors.error : theme.colors.textSecondary}>{t(`verification.${outcome}`)}</ThemedText> : null}
       </View>
       {onDismiss && (
-        <Pressable onPress={onDismiss} style={styles.closeBtn}>
+        <Pressable onPress={onDismiss} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel={t('verification.dismiss')}>
           <X size={16} strokeWidth={1.5} color={theme.colors.textMuted} />
         </Pressable>
       )}
@@ -84,6 +97,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
-  textWrap: { flex: 1, gap: 2 },
-  closeBtn: { padding: 4 },
+  textWrap: { flex: 1, minWidth: 0, gap: 2 },
+  closeBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

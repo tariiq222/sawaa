@@ -23,7 +23,7 @@ it('updates unselected day text and surfaces while preserving selected contrast 
   view.rerender(React.cloneElement(element));
   expect(view.getByText('5')).toHaveStyle({ color: getSawaaColors('dark').ink[900] });
   expect(view.getByText('4')).toHaveStyle({ color: getSawaaRoles('dark').selection.foreground });
-  const buttons = view.getAllByRole('button');
+  const buttons = view.getAllByRole('radio');
   expect(buttons[1]).toHaveStyle({ backgroundColor: getSawaaRoles('dark').surface });
   expect(buttons[0]).toHaveStyle({ backgroundColor: getSawaaRoles('dark').selection.fill });
   fireEvent.press(buttons[1]);
@@ -43,7 +43,7 @@ it('does not allow selecting a day with no slots for the chosen booking', () => 
       f700="System"
     />,
   );
-  const buttons = view.getAllByRole('button');
+  const buttons = view.getAllByRole('radio');
   expect(buttons[0]).toHaveProp('accessibilityState', { disabled: false, selected: true });
   expect(buttons[1]).toHaveProp('accessibilityState', { disabled: true, selected: false });
   fireEvent.press(buttons[1]);

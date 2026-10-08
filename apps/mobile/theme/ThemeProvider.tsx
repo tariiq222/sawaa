@@ -12,6 +12,7 @@ interface ThemeContextValue {
   isRTL: boolean;
   language: 'ar' | 'en';
   scheme: 'light' | 'dark';
+  isHydrated: boolean;
   mode: ThemeMode;
   setThemeMode: (next: ThemeMode) => void;
 }
@@ -23,6 +24,7 @@ const ThemeContext = createContext<ThemeContextValue>({
   isRTL: true,
   language: 'ar',
   scheme: 'light',
+  isHydrated: true,
   mode: 'system',
   setThemeMode: () => {},
 });
@@ -38,13 +40,19 @@ export function ThemeProvider({ children, language = 'ar' }: ThemeProviderProps)
 
   const systemScheme = useColorScheme();
   const [mode, setMode] = useState<ThemeMode>('system');
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const userSelectedMode = useRef(false);
   useEffect(() => {
     let active = true;
     void AsyncStorage.getItem(THEME_MODE_KEY).then((v) => {
-      if (active && !userSelectedMode.current && (v === 'light' || v === 'dark' || v === 'system')) setMode(v);
-    }).catch(() => { /* Keep system appearance if local storage is unavailable. */ });
+      if (!active) return;
+      if (!userSelectedMode.current && (v === 'light' || v === 'dark' || v === 'system')) setMode(v);
+      setIsHydrated(true);
+    }).catch(() => {
+      // Keep system appearance if local storage is unavailable.
+      if (active) setIsHydrated(true);
+    });
     return () => { active = false; };
   }, []);
 
@@ -69,7 +77,7 @@ export function ThemeProvider({ children, language = 'ar' }: ThemeProviderProps)
   }, [mode, scheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, isRTL, language, scheme, mode, setThemeMode }}>
+    <ThemeContext.Provider value={{ theme, isRTL, language, scheme, isHydrated, mode, setThemeMode }}>
       {children}
     </ThemeContext.Provider>
   );

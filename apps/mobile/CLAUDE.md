@@ -82,7 +82,7 @@ Backend, dashboard, and admin do not change.
 - `ThemeProvider` consumes the result and exposes theme colors and mode to RN components.
 - The published Sawa app keeps its fixed Sawaa visual identity: `buildTheme` accepts PublicBranding for compatibility but ignores its color/font values; the bundled font and Sawaa tokens own appearance. This is observed deployment behavior, not runtime rebranding.
 - Use theme/Sawaa tokens for every color; do not add component-level brand values.
-- New actions use `PrimaryButton`, `SecondaryButton` or the shared `ActionButton` contract (loading/disabled, accessibility, locale font/direction and scalable target). `ThemedButton` remains a deprecated compatibility export; do not remove unused exports speculatively.
+- New actions use the shared `AppButton`, `PrimaryButton`, `SecondaryButton` or the compatible `ActionButton` contract (loading/disabled, accessibility, locale font/direction and scalable target). `ThemedButton` remains a deprecated compatibility export; do not remove unused exports speculatively.
 
 ## Terminology
 

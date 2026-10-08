@@ -1,14 +1,11 @@
+import { AuthFormScaffold } from '@/components/features/auth/AuthFormScaffold';
+import { LabeledInput } from '@/components/ui/LabeledInput';
+import { AppButton } from '@/components/ui/AppButton';
 import { useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { ThemedText } from '@/theme/components/ThemedText';
-import { BackButton } from '@/components/ui/BackButton';
-import { sawaaTokens } from '@/theme/sawaa/tokens';
-import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { getFontName } from '@/theme/fonts';
 import { useDir } from '@/hooks/useDir';
 import { useAppDispatch } from '@/hooks/use-redux';
 import { setCredentials } from '@/stores/slices/auth-slice';
@@ -20,10 +17,7 @@ import { decodeRedirect } from '@/lib/navigation';
 export default function ReviewLoginScreen() {
   const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
   const { t } = useTranslation();
-  const colors = useSawaaColors();
-  const styles = createStyles(colors);
   const dir = useDir();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const pending = useRef(false);
@@ -67,30 +61,14 @@ export default function ReviewLoginScreen() {
     }
   }
 
-  return (
-    <AquaBackground>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
-          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
-          <ThemedText variant="heading">{t('auth.review.title')}</ThemedText>
-          <ThemedText>{t('auth.review.subtitle')}</ThemedText>
-          <View style={styles.field}>
-            <ThemedText>{t('auth.email')}</ThemedText>
-            <TextInput accessibilityLabel={t('auth.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="username" style={styles.input} editable={!loading} />
-          </View>
-          <View style={styles.field}>
-            <ThemedText>{t('auth.password')}</ThemedText>
-            <TextInput accessibilityLabel={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="password" textContentType="password" style={styles.input} editable={!loading} onSubmitEditing={submit} />
-          </View>
-          <PrimaryButton label={loading ? t('common.loading') : t('auth.review.submit')} onPress={submit} disabled={loading || !email.trim() || !password} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </AquaBackground>
-  );
+  return <AuthFormScaffold title={t('auth.review.title')} onBack={() => router.back()}>
+    <ThemedText>{t('auth.review.subtitle')}</ThemedText>
+    <LabeledInput label={t('auth.email')} value={email} onChangeText={setEmail} dir={dir}
+      keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email"
+      textContentType="username" editable={!loading} inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }} />
+    <LabeledInput label={t('auth.password')} value={password} onChangeText={setPassword} dir={dir}
+      secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="password"
+      textContentType="password" editable={!loading} onSubmitEditing={submit} />
+    <AppButton label={t('auth.review.submit')} loading={loading} disabled={loading || !email.trim() || !password} onPress={submit} />
+  </AuthFormScaffold>;
 }
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  flex: { flex: 1, direction: 'ltr' },
-  content: { paddingHorizontal: 24, gap: 24 },
-  field: { gap: 8 },
-  input: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: colors.teal[200], borderRadius: sawaaTokens.radius.md, backgroundColor: colors.glass.opaqueBg, color: colors.ink[900], fontFamily: getFontName('ar', '400'), fontSize: 16, textAlign: 'left', writingDirection: 'ltr' },
-});

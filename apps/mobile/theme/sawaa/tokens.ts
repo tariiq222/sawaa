@@ -78,6 +78,7 @@ export const sawaaType = {
   displaySm: { fontSize: 28, lineHeight: 35, weight: '700' },
   heading: { fontSize: 24, lineHeight: 30, weight: '700' },
   subheading: { fontSize: 18, lineHeight: 24, weight: '600' },
+  action: { fontSize: 17, lineHeight: 24, weight: '600' },
   body: { fontSize: 14, lineHeight: 20, weight: '400' },
   bodySm: { fontSize: 13, lineHeight: 20, weight: '400' },
   caption: { fontSize: 12, lineHeight: 16, weight: '500' },
@@ -126,6 +127,7 @@ export function getSawaaColors(scheme: 'light' | 'dark'): SawaaColors {
 const lightRoles = {
   background: '#EAF8F4', surface: '#F7F9FB', surfaceLow: '#F2F4F6', surfaceHigh: '#E6E8EA',
   accent: '#E7DBC4', focus: '#098a7d',
+  danger: { fill: '#991B1B', foreground: '#FFFFFF' },
   action: { fill: '#087a6f', gradient: ['#087a6f', '#066962'] as const, foreground: '#FFFFFF', sheen: 'rgba(255,255,255,0.06)' },
   destructive: { fill: '#B42318', foreground: '#FFFFFF' },
   /**
@@ -148,6 +150,7 @@ const darkRoles = {
   accent: '#dfc89f', focus: darkSawaaColors.teal[600],
   action: lightRoles.action,
   destructive: { fill: darkSawaaColors.accent.coral, foreground: sawaaColors.ink[900] },
+  danger: { fill: darkSawaaColors.accent.coral, foreground: darkSawaaColors.teal[50] },
   selection: { fill: darkSawaaColors.teal[600], foreground: darkSawaaColors.teal[50] },
   switch: {
     trackOff: '#27564F',
@@ -160,7 +163,8 @@ const darkRoles = {
 };
 
 export function getSawaaRoles(scheme: 'light' | 'dark') {
-  return scheme === 'dark' ? darkRoles : lightRoles;
+  const roles = scheme === 'dark' ? darkRoles : lightRoles;
+  return { ...roles, scrim: withAlpha(roles.backdrop.base, 0.72) };
 }
 
 /** Shared aqua optical treatment for every iOS glass surface. */

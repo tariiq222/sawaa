@@ -7,7 +7,10 @@ import { useTranslation } from 'react-i18next';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { ClinicCard, filterClinics } from '@/components/features/directory/ClinicCard';
 import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
-import { ServiceRow } from '@/components/features/directory/ServiceRow';
+import { PackageCard } from '@/components/features/packages/PackageCard';
+import { GroupCard } from '@/components/features/groups/GroupCard';
+import type { ClientPackageFamily } from '@/services/client/packages';
+import type { Program } from '@/services/client/group-sessions';
 import { TherapistCard } from '@/components/features/directory/TherapistCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useClinics, useTherapists, useGroupSessions, usePackageFamilies, useServicePriceFloors } from '@/hooks/queries';
@@ -26,7 +29,8 @@ import { useAppSelector } from '@/hooks/use-redux';
 type Entry =
   | { key: string; kind: 'clinic'; clinic: ClinicEntry }
   | { key: string; kind: 'therapist'; therapist: PublicEmployeeItem }
-  | { key: string; kind: 'package' | 'program'; id: string; title: string; subtitle: string | null };
+  | { key: string; kind: 'package'; family: ClientPackageFamily }
+  | { key: string; kind: 'program'; group: Program };
 
 export default function PublicListScreen() {
   const { kind, clinicId, serviceId, steps } = useLocalSearchParams<{ kind?: string; clinicId?: string; serviceId?: string; steps?: string }>();
@@ -58,22 +62,10 @@ export default function PublicListScreen() {
       return applyTherapistFilters(visibleTherapists, query, null).map((therapist) => ({ key: `therapist-${therapist.id}`, kind: 'therapist', therapist }));
     }
     if (kind === 'packages') {
-      return (families.data ?? []).map((item) => ({
-        key: `package-${item.id}`,
-        kind: 'package',
-        id: item.id,
-        title: (dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr) ?? '',
-        subtitle: (dir.isRTL ? item.descriptionAr : item.descriptionEn ?? item.descriptionAr) ?? null,
-      }));
+      return (families.data ?? []).map((family) => ({ key: `package-${family.id}`, kind: 'package', family }));
     }
     if (kind === 'programs') {
-      return (programs.data ?? []).map((item) => ({
-        key: `program-${item.id}`,
-        kind: 'program',
-        id: item.id,
-        title: (dir.isRTL ? item.nameAr : item.nameEn ?? item.nameAr) ?? '',
-        subtitle: null,
-      }));
+      return (programs.data ?? []).map((group) => ({ key: `program-${group.id}`, kind: 'program', group }));
     }
     return [];
   })();
@@ -146,7 +138,8 @@ export default function PublicListScreen() {
         />
       );
     }
-    return <ServiceRow title={item.title} subtitle={item.subtitle} onPress={() => openDetail(item.kind, item.id)} />;
+    if (item.kind === 'package') return <PackageCard family={item.family} onPress={() => openDetail('package', item.family.id)} />;
+    return <GroupCard group={item.group} publicPreview onOpen={() => openDetail('program', item.group.id)} />;
   };
 
   return (

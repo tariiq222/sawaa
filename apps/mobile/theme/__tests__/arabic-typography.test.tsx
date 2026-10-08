@@ -53,3 +53,16 @@ it('gives explicit style final precedence and uses the canonical heading scale',
   expect(screen.getByText('Override')).toHaveStyle({ color: 'blue', fontFamily: getFontName('ar', '700') });
   expect(screen.getByText('Heading')).toHaveStyle({ fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight });
 });
+
+it.each(['bodySm', 'label'] as const)('honors explicit %s color', variant => {
+  const view = render(<ThemedText variant={variant} color="rebeccapurple">Explicit</ThemedText>);
+  expect(view.getByText('Explicit')).toHaveStyle({ color: 'rebeccapurple' });
+});
+it('forwards native announcement semantics', () => {
+  const view = render(<ThemedText accessibilityRole="alert" accessibilityLiveRegion="polite">Offline</ThemedText>);
+  expect(view.getByRole('alert').props.accessibilityLiveRegion).toBe('polite');
+});
+it('gives caller style color precedence over explicit color', () => {
+  const view = render(<ThemedText color="red" style={{ color: 'blue' }}>Styled</ThemedText>);
+  expect(view.getByText('Styled')).toHaveStyle({ color: 'blue' });
+});

@@ -15,7 +15,7 @@ import type { PublicCatalogRaw, PublicService } from '@/services/client/catalog'
 import type { PublicEmployeeItem } from '@/services/client/employees';
 import { getFontName } from '@/theme/fonts';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-import { getSawaaRoles, sawaaSpacing } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 
@@ -28,12 +28,12 @@ type ProfileTab = 'about' | 'services';
 interface TherapistProfileViewProps {
   employee: PublicEmployeeItem | undefined;
   loading: boolean;
+  employeeError?: boolean;
+  onRetryEmployee?: () => void;
+  catalogError?: boolean;
+  onRetryCatalog?: () => void;
   catalog: PublicCatalogRaw | undefined;
   catalogLoading: boolean;
-  employeeError?: boolean;
-  catalogError?: boolean;
-  onRetryEmployee?: () => void;
-  onRetryCatalog?: () => void;
   /** Scope carried from clinic discovery; never widened here (see the clinic/service contract). */
   clinicId?: string;
   serviceId?: string;
@@ -58,6 +58,7 @@ export function TherapistProfileView({
   const insets = useSafeAreaInsets();
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
+  const [footerHeight, setFooterHeight] = useState(180);
   const [tab, setTab] = useState<ProfileTab | null>(null);
   const [chosenServiceId, setChosenServiceId] = useState<string | null>(null);
 
@@ -143,7 +144,7 @@ export function TherapistProfileView({
           ))}
         </View>
       ) : null}
-      {services.length === 0 ? (
+      {services.length === 0 && !catalogError ? (
         <Text style={[styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
           {loading || catalogLoading ? t('therapists.loading') : t('employeeProfile.noServices')}
         </Text>
@@ -164,7 +165,7 @@ export function TherapistProfileView({
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 180 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: employee ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title={t('employeeProfile.profileTitle')} onBack={onBack} />
@@ -191,14 +192,14 @@ export function TherapistProfileView({
               </Text>
             ) : servicesTab}
           </>
-        ) : (
+        ) : !employeeError ? (
           <Text style={[styles.body, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
-            {loading ? t('therapists.loading') : t('guest.loadError')}
+            {loading ? t('therapists.loading') : t('guest.empty')}
           </Text>
-        )}
+        ) : null}
       </ScrollView>
       {employee && !employeeError ? (
-        <FloatingCta>
+        <FloatingCta onHeightChange={setFooterHeight}>
           {hint ? <Text style={[styles.hint, { color: colors.ink[700], fontFamily: f400 }]}>{hint}</Text> : null}
           <PrimaryButton
             label={needsChoice ? t('employeeProfile.chooseToContinue') : t('employeeProfile.bookAppointment')}
@@ -218,8 +219,8 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
   section: { gap: sawaaSpacing.xl },
   group: { gap: sawaaSpacing.md },
-  groupLabel: { fontSize: 15, lineHeight: 22 },
-  about: { fontSize: 15, lineHeight: 26 },
-  body: { fontSize: 15, lineHeight: 22 },
-  hint: { fontSize: 13, textAlign: 'center' },
+  groupLabel: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  about: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  body: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  hint: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, textAlign: 'center' },
 });

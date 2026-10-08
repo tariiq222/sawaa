@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { PublicBranchSummary } from '@/services/client';
+import { AppButton } from '@/components/ui/AppButton';
+import { Check } from 'lucide-react-native';
 import { Glass } from '@/theme/components/Glass';
 import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
@@ -32,9 +34,7 @@ export function PackageBranchPicker({ branches, branchId, loading, error, onSele
       {error ? (
         <View style={styles.errorRow}>
           <Text style={[styles.message, { fontFamily: f400 }]}>{t('packages.branchError')}</Text>
-          <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel={t('packages.retry')} style={styles.retryAction}>
-            <Text style={[styles.retry, { fontFamily: f600 }]}>{t('packages.retry')}</Text>
-          </Pressable>
+          <AppButton label={t('packages.retry')} variant="secondary" size="sm" onPress={onRetry} />
         </View>
       ) : null}
       {!loading && !error && branches.length === 0 ? <Text style={[styles.message, { fontFamily: f400 }]}>{t('packages.branchUnavailable')}</Text> : null}
@@ -42,10 +42,11 @@ export function PackageBranchPicker({ branches, branchId, loading, error, onSele
         {branches.map((branch) => {
           const selected = branch.id === branchId;
           return (
-            <Glass key={branch.id} radius={sawaaRadius.sm} variant={selected ? 'strong' : 'regular'} accessibilityRole="radio" accessibilityLabel={dir.isRTL ? branch.nameAr : branch.nameEn} accessibilityState={{ selected }} onPress={() => onSelect(branch.id)} style={[styles.branch, selected && styles.selected]}>
-              <Text style={[styles.branchName, { fontFamily: f600, textAlign: dir.textAlign }]}>{dir.isRTL ? branch.nameAr : branch.nameEn}</Text>
+            <Pressable key={branch.id} onPress={() => onSelect(branch.id)} accessibilityRole="radio" accessibilityLabel={dir.isRTL ? branch.nameAr : branch.nameEn ?? branch.nameAr} accessibilityState={{ selected }}><Glass radius={sawaaRadius.sm} variant={selected ? 'strong' : 'regular'} style={[styles.branch, selected && styles.selected]}>
+              <Text style={[styles.branchName, { fontFamily: f600, textAlign: dir.textAlign }]}>{dir.isRTL ? branch.nameAr : branch.nameEn ?? branch.nameAr}</Text>
               {branch.city ? <Text style={[styles.city, { fontFamily: f400, textAlign: dir.textAlign }]}>{branch.city}</Text> : null}
-            </Glass>
+              {selected ? <Check size={18} color={sawaaColors.teal[700]} /> : null}
+            </Glass></Pressable>
           );
         })}
       </View>

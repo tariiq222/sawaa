@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,8 @@ import { PackageBookingAction } from '@/components/features/packages/PackageBook
 import { DaySelector } from '@/components/features/booking/DaySelector';
 import { TimeSlotsGrid, type Slot } from '@/components/features/booking/TimeSlotsGrid';
 import type { DeliveryType } from '@/types/booking-enums';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { goBackOrHome } from '@/lib/navigation';
 
 function dateOnly(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
@@ -104,11 +105,8 @@ export default function PackageBookScreen() {
 
   return (
     <AquaBackground>
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: 140 }]}>
-        <View style={[styles.header, { flexDirection: dir.row }]}>
-          <BackButton onPress={() => router.back()} />
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.bookTitle')}</Text>
-        </View>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: insets.bottom + sawaaSpacing.lg }]}>
+        <ScreenHeader title={t('packages.bookTitle')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.bookSubtitle')}</Text>
         {!params.employeeId || !params.serviceId ? (
           <Text style={[styles.warning, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.locked.support')}</Text>

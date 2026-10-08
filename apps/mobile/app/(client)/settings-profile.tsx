@@ -11,7 +11,7 @@ export default function ProfileSettingsScreen() {
   const { t } = useTranslation();
 
   return (
-    <SettingsScaffold title={t('settings.profile')}>
+    <SettingsScaffold title={t('settings.profile')} keyboardSafe>
       <UnverifiedEmailBanner />
       <SettingsProfileSection />
       <DeleteAccountButton />
