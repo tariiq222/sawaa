@@ -126,7 +126,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         } else if (result.status === 'FAILED') {
           terminalResult = true; settling = false;
           terminalFailure = true;
-          canInitialize = true;
+          canInitialize = !initBlocked;
           // Only an authoritative failure reopens initialization after a submitted result.
           resultReceived = false;
           try {
@@ -180,7 +180,8 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (code === 'NATIVE_PAYMENT_IN_PROGRESS' || code === 'HOSTED_PAYMENT_IN_PROGRESS') {
         // A provider payment is already in flight: stop initializing and keep verifying it.
         initBlocked = true; canInitialize = false; readyConfig = null;
-        if (!paymentId && conflict?.invoiceId === invoiceId && typeof conflict.paymentId === 'string' && conflict.paymentId) {
+        // The returned identity is authoritative and replaces a retained (possibly failed) one.
+        if (conflict?.invoiceId === invoiceId && typeof conflict.paymentId === 'string' && conflict.paymentId) {
           paymentId = conflict.paymentId;
         }
         update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict', ...(paymentId ? { paymentId } : {}) });
@@ -266,8 +267,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       busy = true; verifying = true; recheckRequested = false;
       clearTimeout(timer);
       const run = async (): Promise<boolean> => {
-      // native/init is throttled (3 per minute); an attempt initialized moments ago already carries
-      // the current configuration, and the reconciliation above covers closure and completion.
+      // native/init is throttled (3/min): a just-initialized attempt already carries the current config.
       if (Date.now() - lastInitAt < 20_000) return valid() && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
       try {
           const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);

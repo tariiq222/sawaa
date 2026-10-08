@@ -252,6 +252,26 @@ describe('verifyPayable provider configuration gate', () => {
     expect(result.current.canRetryInit).toBe(true);
     unmount();
   });
+  it('replaces a stale payment identity with the in-progress one returned by initialization', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'NATIVE_PAYMENT_IN_PROGRESS', paymentId: 'replacement', invoiceId: 'invoice' } } });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+    await act(async () => { await result.current.verifyPayable(); });
+    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenLastCalledWith('replacement');
+    expect(result.current.paymentId).toBe('replacement');
+    unmount();
+  });
+  it('keeps initialization blocked even if the stale attempt later reports FAILED', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'HOSTED_PAYMENT_IN_PROGRESS' } } });
+    await act(async () => { await result.current.verifyPayable(); });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+    await act(() => result.current.reconcile());
+    expect(result.current.canRetryInit).toBe(false);
+    unmount();
+  });
   it('fails closed on a configuration-changed conflict or a different payment identity', async () => {
     const { result, unmount } = await ready();
     jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_CONFIGURATION_CHANGED' } } });
