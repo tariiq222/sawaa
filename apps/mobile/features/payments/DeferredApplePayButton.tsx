@@ -106,6 +106,6 @@ export function DeferredApplePayButton({ disabled, prepare, onError }: {
     accessibilityState={{ disabled: locked, busy }} pointerEvents={locked ? 'none' : 'auto'}
     onAccessibilityTap={() => { void handlePress(); }} style={{ width: '100%', height: 50 }}>
     <ApplePayButton type="inStore" style={scheme === 'dark' ? 'white' : 'black'}
-      width="100%" height={50} cornerRadius={11} onPress={() => { void handlePress(); }} />
+      width="100%" height={50} cornerRadius={25} onPress={() => { void handlePress(); }} />
   </View>;
 }
