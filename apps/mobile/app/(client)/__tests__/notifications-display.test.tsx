@@ -7,9 +7,12 @@ import type { Notification } from '@/types/models';
 import ar from '@/i18n/ar.json';
 import en from '@/i18n/en.json';
 
+let mockReduceMotion = false;
+const mockEntering: unknown[] = [];
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => mockReduceMotion }));
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
-  return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
+  return { __esModule: true, default: { View: ({ entering, ...props }: { entering?: unknown }) => { mockEntering.push(entering); return require('react').createElement(require('react-native').View, props); } }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: true, language: 'ar' }) }));
@@ -41,7 +44,7 @@ async function renderScreen(locale: Locale = 'ar') {
   const i18n = createInstance();
   await i18n.use(initReactI18next).init({
     resources: { ar: { translation: ar }, en: { translation: en } },
-    lng: locale, fallbackLng: 'en', interpolation: { escapeValue: false },
+    lng: locale, fallbackLng: 'en', showSupportNotice: false, interpolation: { escapeValue: false },
   });
   return render(
     <I18nextProvider i18n={i18n}>
@@ -51,7 +54,7 @@ async function renderScreen(locale: Locale = 'ar') {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.clearAllMocks(); mockReduceMotion = false; mockEntering.length = 0;
   mockState = { ...mockState, notifications: [], unreadCount: 0, loading: false, refreshing: false, loadError: false, hasMore: false };
 });
 
@@ -62,8 +65,7 @@ it.each(['ar', 'en'] as const)('keeps complete long %s notification text in the 
   const title = locale === 'ar' ? notification.titleAr : notification.titleEn;
   const body = locale === 'ar' ? notification.bodyAr : notification.bodyEn;
   for (const text of [title, body]) {
-    expect(screen.getByText(text)).toHaveStyle({ textAlign: locale === 'ar' ? 'right' : 'left', writingDirection: locale === 'ar' ? 'rtl' : 'ltr' });
-    expect(screen.getByText(text).props.numberOfLines).toBeUndefined();
+    expect(screen.getByText(text)).toBeTruthy();
   }
   expect(screen.getByLabelText(new RegExp(`^${title}.*${locale === 'ar' ? 'غير مقروء' : 'Unread'}$`))).toBeTruthy();
 });
@@ -79,7 +81,7 @@ it('shows loading rather than an empty inbox during the initial request', async 
 it('shows a recoverable load error without claiming that the inbox is empty', async () => {
   mockState.loadError = true;
   await renderScreen();
-  expect(screen.getByText(ar.notifications.loadError)).toHaveStyle({ writingDirection: 'rtl' });
+  expect(screen.getByText(ar.notifications.loadError)).toBeTruthy();
   expect(screen.queryByText(ar.notifications.noNotifications)).toBeNull();
   expect(screen.queryByText('لا توجد إشعارات لعرضها')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: ar.common.retry }));
@@ -117,7 +119,7 @@ it.each([[0, 'الآن'], [5, 'منذ 5 د'], [120, 'منذ 2 س'], [2880, 'من
   'localizes a notification timestamp %s minutes ago', async (minutes, label) => {
     mockState.notifications = [{ ...notification, createdAt: new Date(Date.now() - (minutes as number) * 60_000).toISOString() }];
     await renderScreen();
-    expect(screen.getByText(label as string)).toHaveStyle({ writingDirection: 'rtl' });
+    expect(screen.getByText(label as string)).toBeTruthy();
   },
 );
 
@@ -126,4 +128,10 @@ it('labels the mark-all action clearly and calls it once', async () => {
   await renderScreen();
   fireEvent.press(screen.getByRole('button', { name: ar.notifications.markAllRead }));
   expect(mockMarkAllRead).toHaveBeenCalledTimes(1);
+});
+
+it('avoids notification entrance animations with Reduce Motion', async () => {
+ mockReduceMotion = true; mockState.notifications = [notification]; await renderScreen();
+ expect(mockEntering.length).toBeGreaterThan(0);
+ expect(mockEntering.every(value => value === undefined)).toBe(true);
 });

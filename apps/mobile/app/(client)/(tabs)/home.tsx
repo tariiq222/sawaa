@@ -12,6 +12,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { getPrimaryRole } from '@/types/auth';
 import { getFontName } from '@/theme/fonts';
 import { useHome, useMobileHomeCards, useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
+import { HomeSectionState } from '@/components/features/home/HomeSectionState';
 import { HomeAssessmentServices } from '@/components/features/home/HomeAssessmentServices';
 import { HomeDiscoveryCards } from '@/components/features/home/HomeDiscoveryCards';
 import { HomeCardsCarousel } from '@/components/features/home/HomeCardsCarousel';
@@ -86,13 +87,13 @@ export default function HomeScreen() {
           greeting={firstName ? `${greeting}${dir.isRTL ? '،' : ','} ${firstName}` : greeting}
         />
 
-        {isClient && (loading || nextBooking) ? (
+        {isClient ? (
           <Animated.View entering={fade(60)}>
-            <UpNextCard loading={loading} booking={nextBooking} dir={dir} f600={f600} f700={f700} />
+            <HomeSectionState loading={loading} error={homeQuery.isError} hasData={Boolean(nextBooking)} onRetry={() => { void homeQuery.refetch(); }}><UpNextCard loading={false} booking={nextBooking} dir={dir} f600={f600} f700={f700} /></HomeSectionState>
           </Animated.View>
         ) : null}
 
-        <HomeCardsCarousel cards={mobileHomeCardsQuery.data ?? []} signedIn={isClient} />
+        <HomeSectionState loading={mobileHomeCardsQuery.isLoading} error={mobileHomeCardsQuery.isError} hasData={Boolean(mobileHomeCardsQuery.data?.length)} onRetry={() => { void mobileHomeCardsQuery.refetch(); }}><HomeCardsCarousel cards={mobileHomeCardsQuery.data ?? []} signedIn={isClient} /></HomeSectionState>
         {isClient ? <PackageBalanceCard /> : null}
 
         <View style={styles.section}>
@@ -100,19 +101,19 @@ export default function HomeScreen() {
           <HomeDiscoveryCards signedIn={isClient} />
         </View>
 
-        {(therapistsQuery.data?.length ?? 0) > 0 ? (
+        <HomeSectionState loading={therapistsQuery.isLoading} error={therapistsQuery.isError} hasData={Boolean(therapistsQuery.data?.length)} onRetry={() => { void therapistsQuery.refetch(); }}>
           <View style={styles.section}>
             <SectionHeader title={t('guest.therapists')} actionLabel={t('home.seeAll')} onActionPress={() => router.push(therapistsHref)} />
             <TherapistsRow therapists={therapistsQuery.data ?? []} dir={dir} f400={getFontName(dir.locale, '400')} f600={f600} f700={f700} />
           </View>
-        ) : null}
+        </HomeSectionState>
 
-        {(clinicsQuery.data?.length ?? 0) > 0 ? (
+        <HomeSectionState loading={clinicsQuery.isLoading} error={clinicsQuery.isError} hasData={Boolean(clinicsQuery.data?.length)} onRetry={() => { void clinicsQuery.refetch(); }}>
           <View style={styles.section}>
             <SectionHeader title={t('clinics.title')} actionLabel={t('home.seeAll')} onActionPress={() => router.push(clinicsHref)} />
             <FeaturedClinics dir={dir} f600={f600} f700={f700} />
           </View>
-        ) : null}
+        </HomeSectionState>
 
         <HomeAssessmentServices />
       </ScrollView>

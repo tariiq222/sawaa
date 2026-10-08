@@ -7,11 +7,14 @@ jest.mock('react-native-reanimated', () => {
   return { __esModule: true, default: { View: require('react-native').View }, FadeInDown: animation, Easing: { out: jest.fn(), cubic: jest.fn() } };
 });
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
+let mockHistory = true;
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => false }));
 const mockPush = jest.fn();
 const mockMarkAsRead = jest.fn();
 let mockNotifications: import('@/types/models').Notification[] = [];
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack, push: mockPush }),
+  useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => mockHistory, push: mockPush }),
   useFocusEffect: jest.fn(),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
@@ -35,7 +38,7 @@ jest.mock('@/utils/notification-deeplink', () => ({ resolveNotificationHref: () 
 import NotificationsScreen from '../notifications';
 
 describe('notifications screen escape route', () => {
-  beforeEach(() => { jest.clearAllMocks(); mockNotifications = []; });
+  beforeEach(() => { jest.clearAllMocks(); mockNotifications = []; mockHistory = true; });
 
   it('shows notification content and marks the selected notification read before navigation', () => {
     mockNotifications = [{
@@ -57,4 +60,11 @@ describe('notifications screen escape route', () => {
     fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
+});
+
+it('returns a cold link to the client account tab', () => {
+ jest.clearAllMocks(); mockHistory = false; const view = render(<NotificationsScreen />);
+ fireEvent.press(view.getByLabelText('a11y.buttonBack'));
+ expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/account');
+ expect(mockBack).not.toHaveBeenCalled();
 });

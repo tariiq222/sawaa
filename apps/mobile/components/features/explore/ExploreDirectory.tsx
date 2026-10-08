@@ -1,9 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
+import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { sawaaRadius, sawaaType } from '@/theme/sawaa/tokens';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { BackButton } from '@/components/ui/BackButton';
 import { useClinics, useGroupSessions, usePackageFamilies, usePublicCatalog, useTherapists } from '@/hooks/queries';
@@ -88,17 +91,7 @@ export function ExploreDirectory() {
 
   return (
     <View style={styles.directory}>
-      <Glass variant="strong" radius={16}>
-      <TextInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder={t('explore.searchPlaceholder')}
-        placeholderTextColor={colors.ink[500]}
-        accessibilityLabel={t('common.search')}
-        testID="explore-search"
-        style={[styles.search, { fontFamily: font, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}
-      />
-      </Glass>
+      <DirectorySearch value={search} onChangeText={setSearch} placeholder={t('explore.searchPlaceholder')} accessibilityLabel={t('common.search')} testID="explore-search" />
 
       {filter !== null ? (
         <BackButton onPress={() => { setFilter(null); setSearch(''); }} style={{ alignSelf: dir.alignStart }} />
@@ -110,7 +103,7 @@ export function ExploreDirectory() {
             <Glass
               key={category.id}
               variant="strong"
-              radius={18}
+              radius={sawaaRadius.lg}
               interactive
               accessibilityRole="button"
               accessibilityLabel={t(category.labelKey)}
@@ -138,12 +131,7 @@ export function ExploreDirectory() {
         </View>
       ) : null}
       {!isCategoryHome && failed ? (
-        <View style={styles.errorState}>
-          <Text style={[styles.stateText, { fontFamily: font, textAlign: dir.textAlign }]}>{t('guest.loadError')}</Text>
-          <Pressable accessibilityRole="button" onPress={retry} style={styles.retry}>
-            <Text style={[styles.retryText, { fontFamily: bold }]}>{t('common.retry')}</Text>
-          </Pressable>
-        </View>
+        <EmptyState icon="cloud-offline-outline" tone="danger" title={t('guest.loadError')} actionLabel={t('common.retry')} onAction={retry} />
       ) : null}
       {!isCategoryHome && !loading && !failed && results.length === 0 ? (
         <Text style={[styles.stateText, styles.empty, { fontFamily: font }]}>{t('common.noResults')}</Text>
@@ -154,7 +142,7 @@ export function ExploreDirectory() {
             <Glass
               key={`${result.kind}-${result.id}`}
               variant="strong"
-              radius={18}
+              radius={sawaaRadius.lg}
               interactive
               onPress={() => openResult(result)}
               accessibilityRole="button"
@@ -176,19 +164,19 @@ export function ExploreDirectory() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   directory: { gap: 14 },
-  search: { minHeight: 50, borderRadius: 16, paddingHorizontal: 16, color: colors.ink[900], fontSize: 15 },
+  search: { minHeight: 50, borderRadius: 16, paddingHorizontal: 16, color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   categories: { gap: 10 },
   category: { minHeight: 64, paddingHorizontal: 16, justifyContent: 'center' },
   categoryRow: { alignItems: 'center', gap: 12 },
-  categoryText: { color: colors.ink[900], fontSize: 15 },
+  categoryText: { color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   state: { alignItems: 'center', justifyContent: 'center', gap: 10, padding: 16 },
-  stateText: { color: colors.ink[500], fontSize: 14 },
+  stateText: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   errorState: { alignItems: 'center', gap: 10, padding: 14, borderRadius: 16, backgroundColor: colors.glass.opaqueBg },
   retry: { minHeight: 40, paddingHorizontal: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.teal[700] },
-  retryText: { color: colors.glass.opaqueBg, fontSize: 13 },
+  retryText: { color: colors.glass.opaqueBg, fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
   empty: { textAlign: 'center', padding: 18 },
   results: { gap: 10 },
   result: { minHeight: 68, justifyContent: 'center', gap: 4, padding: 15 },
-  resultTitle: { color: colors.ink[900], fontSize: 15 },
-  resultDetail: { color: colors.ink[500], fontSize: 13 },
+  resultTitle: { color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  resultDetail: { color: colors.ink[500], fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
 });

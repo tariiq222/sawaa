@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { Banknote, Check, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react-native';
+import { Banknote, Check, CreditCard } from 'lucide-react-native';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { AppButton } from '@/components/ui/AppButton';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -36,7 +38,7 @@ export default function BookingPaymentScreen() {
   const native = useNativePaymentCapabilities();
   const inFlight = useRef(false);
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
@@ -54,6 +56,7 @@ export default function BookingPaymentScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const { data: bankTransferSettings } = useBankTransferSettings();
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
@@ -65,7 +68,6 @@ export default function BookingPaymentScreen() {
   const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
   const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
-  const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
   const total = params.amount ? Number(params.amount) : 0;
   const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods = useMemo<Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }>>(() => [
@@ -192,17 +194,14 @@ export default function BookingPaymentScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
+          <ScreenHeader title={t('booking.paymentMethod')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-            {dir.isRTL ? 'اختر طريقة الدفع' : 'Choose payment'}
-          </Text>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {dir.isRTL ? `المبلغ الإجمالي ${formatMoney(total)}` : `Total ${formatMoney(total)}`}
           </Text>
@@ -210,7 +209,7 @@ export default function BookingPaymentScreen() {
 
         {native.isError ? <View accessibilityRole="alert" style={{ gap: sawaaSpacing.sm }}>
           <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('payment.methodsError')}</Text>
-          <Pressable accessibilityRole="button" onPress={native.refetch}><Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('common.retry')}</Text></Pressable>
+          <AppButton variant="secondary" size="sm" onPress={native.refetch} label={t('common.retry')} />
         </View> : null}
         {availableMethods.map((m, i) => {
           const isSelected = method === m.key;
@@ -227,6 +226,8 @@ export default function BookingPaymentScreen() {
                   setMethod(m.key);
                 }}
                 interactive
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
                 style={[
                   styles.methodCard,
                   isSelected && { borderWidth: 2, borderColor: m.color },
@@ -253,36 +254,17 @@ export default function BookingPaymentScreen() {
           );
         })}
       </ScrollView>
-
-      <Animated.View
-        entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
-      >
-        <Pressable testID="booking-payment-submit" onPress={handlePay} disabled={!canPay}>
-          <LinearGradient
-            colors={theme.colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, !canPay && { opacity: 0.6 }]}
-          >
-            {submitting ? (
-              <ActivityIndicator color={theme.colors.primaryForeground} />
-            ) : (
-              <>
-                <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-                  {dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`}
-                </Text>
-                <GoIcon size={16} color={theme.colors.primaryForeground} strokeWidth={2} />
-              </>
-            )}
-          </LinearGradient>
-        </Pressable>
-      </Animated.View>
+      <FloatingCta onHeightChange={setFooterHeight}>
+        <View testID="booking-payment-submit"><AppButton
+          label={dir.isRTL ? `ادفع ${formatMoney(total)}` : `Pay ${formatMoney(total)}`}
+          onPress={handlePay} disabled={!canPay} loading={submitting}
+        /></View>
+      </FloatingCta>
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.md },
   title: {
     fontSize: sawaaType.heading.fontSize,
@@ -307,7 +289,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodMid: { flex: 1 },
+  methodMid: { flex: 1, minWidth: 0 },
   methodLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,
@@ -325,23 +307,5 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
     borderRadius: sawaaRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
-  ctaBtn: {
-    borderRadius: sawaaRadius.pill,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: sawaaSpacing.sm,
-    shadowColor: colors.teal[600],
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: {
-    color: themeColors.primaryForeground,
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
   },
 });

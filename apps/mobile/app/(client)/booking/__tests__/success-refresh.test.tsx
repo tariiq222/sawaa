@@ -85,7 +85,7 @@ describe('booking success verification', () => {
 
   it('rechecks the booking along with the invoice when the user taps Check again', async () => {
     const screen = render(<BookingSuccessScreen />);
-    await act(async () => { fireEvent.press(screen.getByText('Check again')); });
+    await act(async () => { fireEvent.press(screen.getByText('booking.checkAgain')); });
     expect(mockCheckAgain).toHaveBeenCalledTimes(1);
     expect(mockRefetchBooking).toHaveBeenCalledTimes(1);
   });
@@ -95,7 +95,7 @@ describe('booking success verification', () => {
     mockBookingError = true;
     const screen = render(<BookingSuccessScreen />);
     expect(screen.queryByText('Appointment confirmed')).toBeNull();
-    expect(screen.getByText('Check again')).toBeTruthy();
+    expect(screen.getByText('booking.checkAgain')).toBeTruthy();
   });
 
   it('can show confirmation after a successful booking refresh', async () => {
@@ -106,7 +106,7 @@ describe('booking success verification', () => {
       screen.rerender(<BookingSuccessScreen />);
       return { data: mockBooking };
     });
-    await act(async () => { fireEvent.press(screen.getByText('Check again')); });
+    await act(async () => { fireEvent.press(screen.getByText('booking.checkAgain')); });
     await waitFor(() => expect(screen.getByText('Appointment confirmed')).toBeTruthy());
   });
 
@@ -122,7 +122,7 @@ describe('booking success verification', () => {
   it('retries payment against the existing booking and invoice', () => {
     mockPhase = 'failed';
     const screen = render(<BookingSuccessScreen />);
-    fireEvent.press(screen.getByText('Try again'));
+    fireEvent.press(screen.getByText('booking.tryAgain'));
 
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: '/(client)/booking/payment',

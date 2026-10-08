@@ -18,6 +18,7 @@ interface TestNode {
   props: {
     children?: unknown;
     accessibilityRole?: string;
+    accessibilityState?: { disabled?: boolean; busy?: boolean };
     onPress?: () => void;
   };
 }
@@ -129,6 +130,10 @@ describe('mobile package journey screens', () => {
 
     act(() => renderer.update(<PackageBookingAction enabled pending onPress={onPress} fontFamily="System" />));
     const text = renderer.root.findAll((node: TestNode) => node.type === 'Text' && typeof node.props.children === 'string').map((node) => node.props.children as string).join(' ');
-    expect(text).toContain('Booking');
+    expect(text).toContain('Confirm booking');
+    const pendingButton = renderer.root.findAll((node) => node.props?.accessibilityRole === 'button')[0];
+    expect(pendingButton.props.accessibilityState).toEqual({ disabled: true, busy: true });
+    act(() => pendingButton.props.onPress?.());
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

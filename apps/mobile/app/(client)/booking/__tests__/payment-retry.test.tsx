@@ -116,7 +116,7 @@ describe('booking payment retry for an existing booking', () => {
     await waitFor(() => expect(mockGetBooking).toHaveBeenCalledWith('booking-1'));
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('booking-payment-submit'));
+      fireEvent.press(screen.getByRole('button', { name: 'Pay 450.00 SAR' }));
     });
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());
@@ -142,6 +142,6 @@ it('offers an in-place capability retry for an online-only invoice', async () =>
   expect(mockCapabilityRefetch).toHaveBeenCalled();
   mockCapabilityError = false;
   screen.rerender(<BookingPaymentScreen />);
-  await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Pay 450.00 SAR' })).not.toBeDisabled());
   expect(screen.queryByText('payment.methodsError')).toBeNull();
 });

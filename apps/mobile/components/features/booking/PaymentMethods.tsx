@@ -116,7 +116,7 @@ export function PaymentMethods({ methods, selected, onSelect, dir }: PaymentMeth
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  methodCard: { padding: sawaaSpacing.md },
+  methodCard: { minHeight: 44, padding: sawaaSpacing.md },
   methodRow: { alignItems: 'center', gap: sawaaSpacing.md },
   methodIcon: {
     width: 44,
@@ -125,7 +125,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodMid: { flex: 1 },
+  methodMid: { flex: 1, minWidth: 0 },
   methodLabel: {
     fontSize: sawaaType.body.fontSize,
     lineHeight: sawaaType.body.lineHeight,

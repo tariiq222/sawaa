@@ -37,6 +37,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
 let mockIsRTL = true;
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ isRTL: mockIsRTL, locale: mockIsRTL ? 'ar' : 'en' }) }));
 
+import { getFontName } from '@/theme/fonts';
 import ClientTabsLayout from '../_layout';
 
 describe('client tab navigation', () => {
@@ -57,6 +58,7 @@ describe('client tab navigation', () => {
   it('keeps native layout and uses the brand color for the selected tab', () => {
     render(<ClientTabsLayout />);
     expect(mockNativeTabOptions).toHaveBeenCalledWith({
+      labelStyle: { fontFamily: getFontName(mockIsRTL ? 'ar' : 'en', '500') },
       tintColor: 'brand-teal',
       iconColor: { default: 'idle-ink', selected: 'brand-teal' },
     });
@@ -67,4 +69,9 @@ describe('client tab navigation', () => {
     render(<ClientTabsLayout />);
     expect(mockTriggerNames).toEqual(['home', 'appointments', 'explore', 'account']);
   });
+});
+
+it.each([true, false])('uses locale font from the shared tab hook: RTL=%s', rtl => {
+ mockIsRTL = rtl; render(<ClientTabsLayout />);
+ expect(mockNativeTabOptions).toHaveBeenLastCalledWith(expect.objectContaining({ labelStyle: { fontFamily: getFontName(rtl ? 'ar' : 'en', '500') } }));
 });

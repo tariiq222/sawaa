@@ -129,7 +129,7 @@ export default function BookingServiceScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 48 }]}
         showsVerticalScrollIndicator={false}
       >
-        <BookingStepHeader step={step} total={total} title={t('booking.chooseService')} onBack={() => goBackOrHome(router)} />
+        <BookingStepHeader step={step} total={total} title={t('booking.chooseService')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/(tabs)/home' : '/(guest)/home')} />
         {renderList()}
       </ScrollView>
     </AquaBackground>
@@ -139,8 +139,8 @@ export default function BookingServiceScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
   list: { gap: sawaaSpacing.md },
-  body: { fontSize: sawaaType.body.fontSize + 1, lineHeight: 22 },
+  body: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   requestState: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.sm, padding: sawaaSpacing.md },
   retryButton: { minHeight: 44, paddingHorizontal: sawaaSpacing.lg, justifyContent: 'center' },
-  retryText: { fontSize: 14, textDecorationLine: 'underline' },
+  retryText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textDecorationLine: 'underline' },
 });

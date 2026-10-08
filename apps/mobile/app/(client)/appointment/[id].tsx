@@ -15,6 +15,7 @@ import {
 
 import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useBooking } from '@/hooks/queries';
@@ -39,6 +40,7 @@ export default function AppointmentDetailScreen() {
   const handleBack = () => goBackOrHome(router, '/(client)/(tabs)/appointments');
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const f400 = getFontName(dir.locale, '400');
   const f500 = getFontName(dir.locale, '500');
   const f700 = getFontName(dir.locale, '700');
@@ -124,7 +126,7 @@ export default function AppointmentDetailScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + sawaaSpacing['3xl'] }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.summary}>
             <View style={{ alignItems: dir.alignEnd }}>
               <StatusPill
@@ -135,7 +137,7 @@ export default function AppointmentDetailScreen() {
             <View style={[styles.summaryTop, { flexDirection: dir.row }]}>
               <DateBox iso={booking.scheduledAt} fallback={t('appointments.toBeScheduled')} />
               <View style={styles.summaryMid}>
-                <Text numberOfLines={1} style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
+                <Text style={[styles.time, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
                   {scheduledTime ?? t('appointments.toBeScheduled')}
                 </Text>
                 {serviceName ? (
@@ -162,7 +164,7 @@ export default function AppointmentDetailScreen() {
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(500).easing(Easing.out(Easing.cubic))} style={styles.section}>
           <InfoRows rows={rows} layout="stacked" />
           {isOnline ? (
             <Text style={[styles.hint, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
@@ -205,8 +207,8 @@ const styles = StyleSheet.create({
   summaryTop: { alignItems: 'center', gap: sawaaSpacing.md },
   summaryMid: { flex: 1, minWidth: 0, gap: sawaaSpacing.xs },
   time: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
-  service: { fontSize: 16, lineHeight: sawaaType.subheading.lineHeight },
+  service: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   therapist: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   section: { gap: sawaaSpacing.sm },
-  hint: { fontSize: 13, lineHeight: 18, paddingHorizontal: sawaaSpacing.xs },
+  hint: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, paddingHorizontal: sawaaSpacing.xs },
 });

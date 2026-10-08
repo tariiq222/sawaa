@@ -36,11 +36,11 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
       </View>
       <Text style={[styles.duration, { fontFamily: f400, textAlign: dir.textAlign }]}>{dir.isRTL ? credit.durationLabelAr : credit.durationLabelEn ?? credit.durationLabelAr}</Text>
       {canBook ? (
-        <Pressable onPress={() => onBook(credit)} style={styles.bookButton} accessibilityRole="button">
+        <Pressable onPress={() => onBook(credit)} style={[styles.bookButton, { alignSelf: dir.alignStart }]} accessibilityRole="button">
           <Text style={[styles.bookText, { fontFamily: f600 }]}>{t('packages.book')}</Text>
         </Pressable>
       ) : (
-        <Text style={[styles.locked, { fontFamily: f400 }]}>
+        <Text style={[styles.locked, { fontFamily: f400, textAlign: dir.textAlign }]}>
           {reason === 'depleted' ? t('packages.locked.depleted') : reason === 'unsupported' || !concrete ? t('packages.locked.support') : t('packages.locked.unavailable')}
         </Text>
       )}
@@ -50,11 +50,11 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
 
 const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
   credit: { borderTopWidth: 1, borderTopColor: sawaaColors.glass.borderSoft, paddingTop: sawaaSpacing.md, gap: sawaaSpacing.xs },
-  creditHeader: { justifyContent: 'space-between', alignItems: 'center' },
+  creditHeader: { gap: sawaaSpacing.sm, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' },
   creditName: { flex: 1, color: sawaaColors.ink[900], fontSize: sawaaType.body.fontSize },
   remaining: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize },
   duration: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
-  bookButton: { alignSelf: 'flex-start', backgroundColor: action.fill, borderRadius: sawaaRadius.sm, paddingHorizontal: sawaaSpacing.lg, paddingVertical: sawaaSpacing.sm, marginTop: sawaaSpacing.xs },
+  bookButton: { minHeight: 44, justifyContent: 'center', backgroundColor: action.fill, borderRadius: sawaaRadius.sm, paddingHorizontal: sawaaSpacing.lg, paddingVertical: sawaaSpacing.sm, marginTop: sawaaSpacing.xs },
   bookText: { color: action.foreground, fontSize: sawaaType.caption.fontSize },
   locked: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
 });

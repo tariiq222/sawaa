@@ -107,8 +107,8 @@ describe('booking success after the client closed the card gateway', () => {
     await advance(6000);
 
     expect(screen.getByText('Payment not completed')).toBeTruthy();
-    expect(screen.queryByText('Check again')).toBeNull();
-    fireEvent.press(screen.getByText('Try again'));
+    expect(screen.queryByText('booking.checkAgain')).toBeNull();
+    fireEvent.press(screen.getByText('booking.tryAgain'));
 
     expect(mockBack).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith({
@@ -126,8 +126,8 @@ describe('booking success after the client closed the card gateway', () => {
     await advance(0);
 
     expect(screen.getByText('Payment processing')).toBeTruthy();
-    expect(screen.getByText('Check again')).toBeTruthy();
-    expect(screen.queryByText('Try again')).toBeNull();
+    expect(screen.getByText('booking.checkAgain')).toBeTruthy();
+    expect(screen.queryByText('booking.tryAgain')).toBeNull();
   });
 
   it('falls back to going back when the booking identity is missing', async () => {
@@ -136,7 +136,7 @@ describe('booking success after the client closed the card gateway', () => {
     const screen = render(<BookingSuccessScreen />);
     await advance(6000);
 
-    fireEvent.press(screen.getByText('Try again'));
+    fireEvent.press(screen.getByText('booking.tryAgain'));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
   });

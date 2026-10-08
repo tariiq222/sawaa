@@ -2,6 +2,9 @@ import React from 'react';
 import { fireEvent, render, within } from '@testing-library/react-native';
 import { decodeRedirect } from '@/lib/navigation';
 
+const mockTherapistsRetry = jest.fn();
+let mockTherapistsError = false;
+const mockReplace = jest.fn();
 const mockPush = jest.fn();
 let mockSignedIn = false;
 let mockKind = 'service';
@@ -14,7 +17,7 @@ let mockBookingMode = 'SERVICES';
 let mockPackageExtra: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, back: jest.fn(), canGoBack: () => false, replace: mockReplace }),
   useLocalSearchParams: () => ({ kind: mockKind, id: mockId, clinicId: mockClinicId, serviceId: mockServiceId, steps: mockSteps }),
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
@@ -38,7 +41,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
 }));
 jest.mock('@/hooks/queries', () => ({
   usePublicCatalog: () => ({ data: { categories: [{ id: 'clinic-42', kind: mockCategoryKind, bookingMode: mockBookingMode, nameAr: 'عيادة', nameEn: mockCategoryKind === 'SERVICE_GROUP' ? 'Assessments' : 'Clinic' }], services: [{ id: 'service-1', categoryId: 'clinic-42', nameAr: 'خدمة', nameEn: 'Service', price: 10000, isActive: true, isHidden: mockBookingMode === 'DIRECT' }] }, isLoading: false }),
-  useTherapists: () => ({ data: [{ id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }], isLoading: false }),
+  useTherapists: () => ({ isError: mockTherapistsError, refetch: mockTherapistsRetry, data: [{ id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }], isLoading: false }),
   useTherapist: () => ({ data: { id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }, isLoading: false }),
   usePackageFamily: () => ({ data: mockKind === 'package' ? { id: mockId, nameAr: 'باقة', nameEn: 'Package', options: [], ...mockPackageExtra } : null, isLoading: false }),
   useGroupSession: () => ({ data: mockKind === 'program' ? { id: mockId, nameAr: 'برنامج', nameEn: 'Program', price: 10000 } : null, isLoading: false }),
@@ -47,7 +50,7 @@ jest.mock('@/hooks/queries', () => ({
 import PublicDetailScreen from '../[kind]/[id]';
 
 describe('public appointment discovery', () => {
-  beforeEach(() => { mockPush.mockClear(); mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockSteps = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; });
+  beforeEach(() => { mockPush.mockClear(); mockTherapistsRetry.mockClear(); mockReplace.mockClear(); mockTherapistsError = false; mockSignedIn = false; mockKind = 'service'; mockId = 'service-1'; mockClinicId = undefined; mockServiceId = undefined; mockSteps = undefined; mockCategoryKind = 'CLINIC'; mockBookingMode = 'SERVICES'; mockPackageExtra = {}; });
 
   it('lets a guest choose a specialist and enter booking without signing in', () => {
     const screen = render(<PublicDetailScreen />);
@@ -157,4 +160,16 @@ describe('public appointment discovery', () => {
     expect(screen.getByText(priceLine)).toBeTruthy();
     expect(Boolean(screen.queryByText('packages.vatIncluded'))).toBe(showsNote);
   });
+});
+
+it('shows practitioner read failure without claiming a successful empty result', () => {
+  mockKind='service';mockId='service-1';mockTherapistsError=true;mockTherapistsRetry.mockClear();
+  const screen=render(<PublicDetailScreen />);expect(screen.queryByText('guest.empty')).toBeNull();
+  fireEvent.press(screen.getByRole('button',{name:'common.retry'}));expect(mockTherapistsRetry).toHaveBeenCalledTimes(1);
+  mockTherapistsError=false;
+});
+it('returns a direct public detail entry to guest home', () => {
+  mockKind='service';mockId='service-1';mockReplace.mockClear();
+  const screen=render(<PublicDetailScreen />);fireEvent.press(screen.getByRole('button',{name:'a11y.buttonBack'}));
+  expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
 });

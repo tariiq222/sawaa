@@ -1,10 +1,10 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles } from '@/theme/sawaa/tokens';
+import { AppButton } from '@/components/ui/AppButton';
+import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/ThemeProvider';
 import type { PackagePaymentState } from '@/lib/package-utils';
 
 interface Props {
@@ -36,11 +36,9 @@ const DESCRIPTION_KEYS = {
   unconfirmed: 'packages.paymentUnconfirmedDescription',
 } as const;
 
-export function PackagePaymentStatus({ state, error = false, onBack, onRetry, onTryAgain, tryingAgain = false, dir, f400, f600, f700 }: Props) {
+export function PackagePaymentStatus({ state, error = false, onBack, onRetry, onTryAgain, tryingAgain = false, dir, f400, f700 }: Props) {
   const sawaaColors = useSawaaColors();
-  const { scheme } = useTheme();
-  const action = getSawaaRoles(scheme).action;
-  const styles = React.useMemo(() => createStyles(sawaaColors, action), [sawaaColors, action]);
+  const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const { t } = useTranslation();
   const pending = state === 'pending';
   const canCheckAgain = Boolean(onRetry) && (error || state === 'unconfirmed');
@@ -54,38 +52,17 @@ export function PackagePaymentStatus({ state, error = false, onBack, onRetry, on
       <Text style={[styles.description, { fontFamily: f400, textAlign: dir.textAlign }]}>
         {error ? t('packages.paymentErrorDescription') : t(DESCRIPTION_KEYS[state])}
       </Text>
-      {canTryAgain ? (
-        <Pressable
-          onPress={onTryAgain}
-          disabled={tryingAgain}
-          style={[styles.cta, tryingAgain && styles.disabled]}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: tryingAgain }}
-        >
-          <Text style={[styles.ctaText, { fontFamily: f600 }]}>{tryingAgain ? t('packages.purchasing') : t('packages.tryPaymentAgain')}</Text>
-        </Pressable>
-      ) : null}
-      {canCheckAgain ? (
-        <Pressable onPress={onRetry} style={styles.retry} accessibilityRole="button">
-          <Text style={[styles.retryText, { fontFamily: f600 }]}>{t(error ? 'packages.retry' : 'packages.checkAgain')}</Text>
-        </Pressable>
-      ) : null}
-      <Pressable onPress={onBack} style={canTryAgain ? styles.retry : styles.cta} accessibilityRole="button">
-        <Text style={[canTryAgain ? styles.retryText : styles.ctaText, { fontFamily: f600 }]}>{t('packages.backToBalance')}</Text>
-      </Pressable>
+      {canTryAgain ? <AppButton label={t('packages.tryPaymentAgain')} onPress={onTryAgain} loading={tryingAgain} /> : null}
+      {canCheckAgain ? <AppButton variant="secondary" label={t(error ? 'packages.retry' : 'packages.checkAgain')} onPress={onRetry} /> : null}
+      <AppButton variant={canTryAgain ? 'secondary' : 'primary'} label={t('packages.backToBalance')} onPress={onBack} />
       {pending ? <Text style={[styles.note, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.paymentPolling')}</Text> : null}
     </View>
   );
 }
 
-const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>, action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
+const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { alignItems: 'center', justifyContent: 'center', gap: sawaaSpacing.lg },
   title: { color: sawaaColors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   description: { color: sawaaColors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
   note: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
-  cta: { backgroundColor: action.fill, borderRadius: sawaaRadius.md, paddingHorizontal: sawaaSpacing['2xl'], paddingVertical: sawaaSpacing.lg, marginTop: sawaaSpacing.md },
-  ctaText: { color: action.foreground, fontSize: sawaaType.body.fontSize },
-  retry: { paddingHorizontal: sawaaSpacing.lg, paddingVertical: sawaaSpacing.sm },
-  retryText: { color: sawaaColors.teal[700], fontSize: sawaaType.body.fontSize },
-  disabled: { opacity: 0.6 },
 });

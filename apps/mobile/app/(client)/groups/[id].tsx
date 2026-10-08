@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,10 +14,11 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useBookGroupSession, useGroupSession } from '@/hooks/queries';
 import { resolveEnrollmentNextStep } from '@/services/client/group-sessions';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { formatHalalasPrice, formatWeekdayDateTime } from '@/lib/session-format';
 import { getFontName } from '@/theme/fonts';
-import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing } from '@/theme/sawaa';
+import { AquaBackground, PrimaryButton, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 
 export default function GroupDetailScreen() {
@@ -26,6 +27,7 @@ export default function GroupDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const [footerHeight, setFooterHeight] = useState(180);
   const { t } = useTranslation();
   const groupQuery = useGroupSession(id);
   const book = useBookGroupSession();
@@ -76,10 +78,10 @@ export default function GroupDetailScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 160 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: group ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('groups.title')} onBack={() => router.back()} />
+        <ScreenHeader title={t('groups.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
 
         {groupQuery.isLoading ? (
           <Skeleton height={180} radius={sawaaRadius.xl} />
@@ -96,7 +98,7 @@ export default function GroupDetailScreen() {
             <Glass variant="strong" radius={sawaaRadius.xl} style={styles.hero}>
               <View style={[styles.heroTop, { flexDirection: dir.row }]}>
                 <Text style={[styles.heroTitle, { color: colors.ink[900], fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {group.title}
+                  {dir.isRTL ? group.nameAr : group.nameEn ?? group.nameAr}
                 </Text>
                 <Pill
                   tone={isClosed ? 'muted' : 'brand'}
@@ -110,7 +112,7 @@ export default function GroupDetailScreen() {
               ) : null}
             </Glass>
 
-            <InfoRows
+            <InfoRows layout="stacked"
               rows={[
                 { icon: CalendarDays, label: t('groups.dateLabel'), value: when ?? t('groups.dateTba') },
                 { icon: Clock, label: t('groups.durationLabel'), value: t('groups.duration', { count: group.durationMins ?? 0 }) },
@@ -123,8 +125,8 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {group ? (
-        <FloatingCta>
-          <PrimaryButton label={ctaLabel} onPress={onJoin} disabled={book.isPending} fontFamily={f700} />
+        <FloatingCta onHeightChange={setFooterHeight}>
+          <PrimaryButton label={ctaLabel} onPress={onJoin} disabled={book.isPending} loading={book.isPending} fontFamily={f700} />
         </FloatingCta>
       ) : null}
     </AquaBackground>
@@ -135,6 +137,6 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
   hero: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
   heroTop: { alignItems: 'flex-start', justifyContent: 'space-between', gap: sawaaSpacing.md },
-  heroTitle: { flex: 1, fontSize: 22, lineHeight: 30 },
-  description: { fontSize: 15, lineHeight: 24 },
+  heroTitle: { flex: 1, fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
+  description: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

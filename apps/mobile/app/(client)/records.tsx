@@ -15,20 +15,20 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  CalendarCheck,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
   Video,
 } from 'lucide-react-native';
 
-import { AquaBackground, sawaaRadius, withAlpha } from '@/theme/sawaa';
+import { AquaBackground, sawaaRadius, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useClientBookings } from '@/hooks/queries';
 import { goBackOrHome } from '@/lib/navigation';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { resolveDeliveryType } from '@/types/booking-enums';
 
 // status filter is uppercased by the service layer; backend mobile DTO
@@ -57,6 +57,7 @@ export default function RecordsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const router = useRouter();
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
@@ -98,7 +99,7 @@ export default function RecordsScreen() {
           title={t('records.title')}
           onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')}
         />
-        <Animated.View entering={FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {t('records.subtitle')}
           </Text>
@@ -116,27 +117,10 @@ export default function RecordsScreen() {
             ))}
           </View>
         ) : isError ? (
-          <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
-            <ClipboardList size={40} color={colors.accent.coral} strokeWidth={1.5} />
-            <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
-              {t('records.loadError')}
-            </Text>
-            <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.retryBtn}>
-              <Text style={[styles.retryText, { fontFamily: f600, fontWeight: '600' }]}>
-                {t('common.retry')}
-              </Text>
-            </Pressable>
-          </Animated.View>
+          <EmptyState icon="clipboard-outline" title={t('records.loadError')} tone="danger"
+            actionLabel={t('common.retry')} onAction={onRefresh} />
         ) : items.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
-            <CalendarCheck size={40} color={colors.ink[400]} strokeWidth={1.5} />
-            <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
-              {t('records.empty')}
-            </Text>
-            <Text style={[styles.emptyHint, { fontFamily: f400, fontWeight: '400' }]}>
-              {t('records.emptyHint')}
-            </Text>
-          </Animated.View>
+          <EmptyState icon="calendar-outline" title={t('records.empty')} description={t('records.emptyHint')} />
         ) : (
           items.map((b, i) => {
             const gradient = theme.colors.primaryGradient;
@@ -152,12 +136,14 @@ export default function RecordsScreen() {
             return (
               <Animated.View
                 key={b.id}
-                entering={FadeInDown.delay(120 + i * 60)
+                entering={reduceMotion ? undefined : FadeInDown.delay(Math.min(i, 6) * 40)
                   .duration(550)
                   .easing(Easing.out(Easing.cubic))}
               >
                 <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={[therapistName, serviceName, formatDate(b.scheduledAt, dir.isRTL), formatTime(b.scheduledAt, dir.isRTL)].filter(Boolean).join('. ')}
                     onPress={() => router.push(`/(client)/appointment/${b.id}`)}
                     style={styles.cardInner}
                   >
@@ -187,7 +173,6 @@ export default function RecordsScreen() {
                               styles.service,
                               { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign },
                             ]}
-                            numberOfLines={1}
                           >
                             {serviceName}
                           </Text>
@@ -229,7 +214,7 @@ export default function RecordsScreen() {
                         <View
                           style={[
                             styles.tag,
-                            { backgroundColor: `${colors.teal[600]}1e` },
+                            { backgroundColor: withAlpha(colors.teal[600], 0.12) },
                           ]}
                         >
                           <Video
@@ -262,24 +247,13 @@ export default function RecordsScreen() {
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 14 },
   subtitle: {
-    fontSize: 12.5,
+    fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight,
     color: colors.ink[500],
     marginTop: 2,
     paddingHorizontal: 4,
   },
   skeletonWrap: { gap: 12, marginTop: 8 },
   skeletonCard: { height: 110, opacity: 0.55 },
-  empty: { alignItems: 'center', paddingVertical: 64, gap: 10 },
-  emptyText: { fontSize: 14, color: colors.ink[700] },
-  emptyHint: { fontSize: 12, color: colors.ink[500] },
-  retryBtn: {
-    marginTop: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: `${colors.teal[600]}26`,
-  },
-  retryText: { fontSize: 12.5, color: colors.teal[700] },
   card: { padding: 0 },
   cardInner: { padding: 14, gap: 12 },
   cardTop: { alignItems: 'center', gap: 12 },
@@ -291,14 +265,14 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     justifyContent: 'center',
   },
   avatarText: { fontSize: 18, color: colors.ink[900] },
-  cardMid: { flex: 1 },
-  therapist: { fontSize: 14, color: colors.ink[900] },
-  service: { fontSize: 11.5, color: colors.ink[500], marginTop: 3 },
+  cardMid: { flex: 1, minWidth: 0, flexShrink: 1 },
+  therapist: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[900] },
+  service: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight, color: colors.ink[500], marginTop: 3 },
   divider: { height: 0.5, backgroundColor: withAlpha(colors.ink[900], 0.1) },
-  cardBottom: { alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  dateCol: { gap: 2 },
-  dateLabel: { fontSize: 10.5, color: colors.ink[400] },
-  dateValue: { fontSize: 12.5, color: colors.ink[900] },
+  cardBottom: { flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  dateCol: { gap: 2, flexShrink: 1, minWidth: 0 },
+  dateLabel: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.ink[400] },
+  dateValue: { fontSize: sawaaType.caption.fontSize, lineHeight: sawaaType.caption.lineHeight, color: colors.ink[900] },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,5 +281,5 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
     paddingVertical: 5,
     borderRadius: 12,
   },
-  tagText: { fontSize: 10.5 },
+  tagText: { fontSize: sawaaType.micro.fontSize, lineHeight: sawaaType.micro.lineHeight },
 });

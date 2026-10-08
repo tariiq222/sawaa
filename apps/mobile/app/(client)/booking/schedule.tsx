@@ -91,7 +91,7 @@ export default function BookingScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BookingStepHeader step={1} total={2} title={t('booking.selectDate')} onBack={() => goBackOrHome(router)} />
+          <BookingStepHeader step={1} total={2} title={t('booking.selectDate')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/(tabs)/home' : '/(guest)/home')} />
         </Animated.View>
 
         <SectionHeader title={dir.isRTL ? 'اليوم' : 'Day'} />
@@ -114,7 +114,7 @@ export default function BookingScheduleScreen() {
           </Text>
         ) : slots.daysError ? (
           <EmptyState icon="cloud-offline-outline" tone="danger" title={slots.daysError}
-            actionLabel={dir.isRTL ? 'إعادة المحاولة' : 'Retry'} onAction={slots.handleRetryDays} />
+            actionLabel={t('common.retry')} onAction={slots.handleRetryDays} />
         ) : noOpenings ? (
           <EmptyState icon="calendar-outline"
             title={dir.isRTL ? 'لا مواعيد متاحة لهذا الحجز خلال ٣٠ يومًا' : 'No openings for this booking in the next 30 days'} />

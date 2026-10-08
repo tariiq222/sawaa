@@ -50,7 +50,7 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) =>
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', alignStart: 'flex-start', writingDirection: 'ltr' }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => true }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
-jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
 jest.mock('@/theme/sawaa', () => ({
   ...jest.requireActual('@/theme/sawaa/tokens'),
   AquaBackground: require('react-native').View,
@@ -107,4 +107,19 @@ describe('bank transfer screen', () => {
     const screen = render(<BankTransferScreen />);
     expect(screen.getByTestId('empty').props.children).toBe('common.error');
   });
+});
+
+it('blocks repeated upload while the receipt is pending and announces busy state', async () => {
+  jest.clearAllMocks();
+  mockInvoice = {data:{id:'inv-1',status:'ISSUED',total:'15000',payments:[]},isLoading:false,isError:false,refetch:jest.fn()};
+  let resolveUpload: ((result: {id:string}) => void) | undefined;
+  mockUpload.mockImplementation(() => new Promise<{id:string}>((resolve) => {resolveUpload = resolve;}));
+  const screen = render(<BankTransferScreen />);
+  fireEvent.press(screen.getByText('Tap to upload receipt image'));
+  await waitFor(() => expect(screen.getByText('Receipt uploaded')).toBeTruthy());
+  fireEvent.press(screen.getByRole('button', {name:'Send for review'}));
+  const button = screen.getByRole('button', {name:'Send for review'});
+  expect(button.props.accessibilityState).toMatchObject({disabled:true,busy:true});
+  fireEvent.press(button); expect(mockUpload).toHaveBeenCalledTimes(1);
+  await require('@testing-library/react-native').act(async () => { resolveUpload?.({id:'pay-1'}); });
 });

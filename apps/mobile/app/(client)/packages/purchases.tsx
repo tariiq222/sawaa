@@ -14,7 +14,8 @@ import { getFontName } from '@/theme/fonts';
 import { formatHalalas } from '@/lib/package-utils';
 import { purchaseChargedHalalas } from '@/lib/package-vat';
 import { PackageCreditCard } from '@/components/features/packages/PackageCreditCard';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { goBackOrHome } from '@/lib/navigation';
 
 export default function PackagePurchasesScreen() {
   const colors = useSawaaColors();
@@ -31,10 +32,7 @@ export default function PackagePurchasesScreen() {
   return (
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
-        <View style={[styles.header, { flexDirection: dir.row }]}>
-          <BackButton onPress={() => router.back()} />
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>{t('packages.balance')}</Text>
-        </View>
+        <ScreenHeader title={t('packages.balance')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
         {!query.isLoading && query.isError ? (
           <>
@@ -91,7 +89,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   purchase: { padding: sawaaSpacing.lg, gap: sawaaSpacing.sm },
   purchaseName: { color: colors.ink[900], fontSize: sawaaType.subheading.fontSize },
-  purchaseMeta: { justifyContent: 'space-between' },
+  purchaseMeta: { flexWrap: 'wrap', gap: sawaaSpacing.sm, justifyContent: 'space-between' },
   metaText: { color: colors.ink[500], fontSize: sawaaType.caption.fontSize },
   refund: { color: colors.accent.amber, fontSize: sawaaType.caption.fontSize },
 });

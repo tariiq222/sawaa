@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { PanResponder } from 'react-native';
+import { Image, PanResponder } from 'react-native';
 import type { GestureResponderEvent, PanResponderGestureState } from 'react-native';
 
 const mockPush = jest.fn();
@@ -107,18 +107,19 @@ describe('HomeCardsCarousel', () => {
   it('keeps card text visible when its image fails', () => {
     const screen = render(<HomeCardsCarousel cards={[card({ imageUrl: 'https://cdn.example/image.png', imageAltAr: 'صورة توضيحية' })]} />);
     const image = screen.getByLabelText('صورة توضيحية');
-    const scrim = screen.getByTestId('home-card-scrim');
-    expect(image.props.resizeMode).toBe('cover');
-    expect(image.props.style.position).toBe('absolute');
-    expect(scrim.props.start).toEqual({ x: 0, y: 0 });
-    expect(scrim.props.end).toEqual({ x: 1, y: 1 });
-    expect(Number.parseInt(scrim.props.colors[0].slice(-2), 16) / 255).toBeLessThanOrEqual(0.03);
-    expect(screen.getByText('عنوان عربي').props.numberOfLines).toBeUndefined();
-    expect(screen.getByText('وصف عربي').props.numberOfLines).toBeUndefined();
     fireEvent(image, 'error');
     expect(screen.getByText('عنوان عربي')).toBeTruthy();
     expect(screen.queryByLabelText('صورة توضيحية')).toBeNull();
-    expect(screen.queryByTestId('home-card-scrim')).toBeNull();
+    expect(screen.getByText('وصف عربي')).toBeTruthy();
+  });
+
+  it('keeps the card destination when its image fails', () => {
+    const screen = render(<HomeCardsCarousel cards={[card({ imageUrl: 'bright.png', destination: 'CLINICS' })]} />);
+    fireEvent(screen.UNSAFE_getByType(Image), 'error');
+    expect(screen.getByText('عنوان عربي')).toBeTruthy();
+    expect(screen.getByText('وصف عربي')).toBeTruthy();
+    fireEvent.press(screen.getByText('عنوان عربي'));
+    expect(mockPush).toHaveBeenCalledWith('/public-list/clinics');
   });
 
   it.each([

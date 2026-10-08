@@ -1,6 +1,7 @@
 import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
@@ -64,7 +65,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
                 onSelect(i);
               }}
               disabled={!canSelect}
-              accessibilityRole="button"
+              accessibilityRole="radio"
               accessibilityState={{ selected: isActive, disabled: !canSelect }}
               style={[
                 styles.dayCell,
@@ -81,6 +82,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
               <Text style={[styles.dayNum, { fontFamily: f700, color: isActive ? roles.selection.foreground : colors.ink[900] }]}>
                 {dir.isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate()}
               </Text>
+              {isActive ? <Check size={14} color={roles.selection.foreground} /> : null}
             </Pressable>
           );
         })}
@@ -91,7 +93,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
 
 const styles = StyleSheet.create({
   wrap: { gap: sawaaSpacing.sm },
-  month: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight + 2 },
+  month: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
   daysRow: { gap: sawaaSpacing.sm },
   dayCell: {
     width: 60,
@@ -102,6 +104,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayName: { fontSize: sawaaType.caption.fontSize + 1, lineHeight: sawaaType.caption.lineHeight, textAlign: 'center' },
+  dayName: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.caption.lineHeight, textAlign: 'center' },
   dayNum: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight, marginTop: sawaaSpacing.xs, textAlign: 'center' },
 });

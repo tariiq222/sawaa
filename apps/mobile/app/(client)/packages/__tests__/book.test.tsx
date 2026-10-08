@@ -16,7 +16,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ creditId: 'credit-1', serviceId: 'service-1', employeeId: 'employee-1', durationOptionId: 'duration-1', deliveryType: 'IN_PERSON' }),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, args?: {time:string}) => key === 'a11y.timeSlot' ? `Time ${args?.time}` : key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', writingDirection: 'ltr' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => ({ ...jest.requireActual('@/theme/sawaa/tokens'), AquaBackground: require('react-native').View }));
@@ -123,7 +123,7 @@ it('preserves branch and slots retries and reports a failed booking', async () =
   mockSlotsError = true;
   screen.rerender(<PackageBookScreen />);
   expect(screen.getByText('packages.slotsError')).toBeOnTheScreen();
-  fireEvent.press(screen.getByText('Retry'));
+  fireEvent.press(screen.getByText('common.retry'));
   expect(mockRefetch).toHaveBeenCalledTimes(1);
   mockSlotsError = false;
   screen.rerender(<PackageBookScreen />);
@@ -148,7 +148,7 @@ it.each([
   expect(screen.getByRole('button', { name: 'packages.confirmBooking' })).toBeDisabled();
   fireEvent.press(screen.getByRole('button', { name: 'packages.confirmBooking' }));
   expect(mockBook).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByText('Retry'));
+  fireEvent.press(screen.getByText('common.retry'));
   expect(mockRefetch).toHaveBeenCalledTimes(1);
 
   mockSlotsError = false;

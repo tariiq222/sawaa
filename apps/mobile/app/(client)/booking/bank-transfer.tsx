@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { useTheme } from '@/theme/useTheme';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Banknote, Upload } from 'lucide-react-native';
@@ -13,7 +11,10 @@ import { useTranslation } from 'react-i18next';
 
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { FloatingCta } from '@/components/ui/FloatingCta';
+import { AppButton } from '@/components/ui/AppButton';
+import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -27,13 +28,13 @@ import { BankTransferAccountDetails } from '@/components/features/booking/BankTr
 
 export default function BankTransferScreen() {
   const colors = useSawaaColors();
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
+  const [footerHeight, setFooterHeight] = useState(180);
   const bankTransferQuery = useBankTransferSettings();
   const { invoiceId, bookingId } = useLocalSearchParams<{
     invoiceId?: string;
@@ -104,11 +105,11 @@ export default function BankTransferScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: footerHeight + sawaaSpacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
-          <BackButton onPress={() => router.back()} style={{ alignSelf: dir.alignStart }} />
+          <ScreenHeader title={t('payment.bankTransfer')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
@@ -117,9 +118,6 @@ export default function BankTransferScreen() {
               <Banknote size={22} color={colors.accent.amber} strokeWidth={1.75} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                {dir.isRTL ? 'التحويل البنكي' : 'Bank transfer'}
-              </Text>
               <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                 {dir.isRTL ? 'حوّل المبلغ ثم ارفع الإيصال' : 'Transfer and upload receipt'}
               </Text>
@@ -142,14 +140,14 @@ export default function BankTransferScreen() {
             icon="information-circle-outline"
             title={t('payment.invoiceSettled')}
             actionLabel={t('common.back')}
-            onAction={() => router.back()}
+            onAction={() => goBackOrHome(router, '/(client)/(tabs)/home')}
           />
         ) : !selectedAccount ? (
           <EmptyState
             icon="information-circle-outline"
             title={t('payment.bankTransferUnavailable')}
             actionLabel={t('common.back')}
-            onAction={() => router.back()}
+            onAction={() => goBackOrHome(router, '/(client)/(tabs)/home')}
           />
         ) : (
           <>
@@ -196,30 +194,16 @@ export default function BankTransferScreen() {
         )}
       </ScrollView>
 
-      <Animated.View
-        entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
-      >
-        <Pressable disabled={!uploaded || !selectedAccount || numericAmount <= 0 || submitting} onPress={submitReceipt}>
-          <LinearGradient
-            colors={theme.colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.ctaBtn, (!uploaded || !selectedAccount || numericAmount <= 0 || submitting) && { opacity: 0.55 }]}
-          >
-            <Text style={[styles.ctaBtnText, { fontFamily: f700 }]}>
-              {submitting
-                ? (dir.isRTL ? 'جاري الإرسال…' : 'Sending…')
-                : (dir.isRTL ? 'إرسال للمراجعة' : 'Send for review')}
-            </Text>
-          </LinearGradient>
-        </Pressable>
-      </Animated.View>
+      <FloatingCta onHeightChange={setFooterHeight}>
+        <AppButton label={dir.isRTL ? 'إرسال للمراجعة' : 'Send for review'}
+          disabled={!uploaded || !selectedAccount || numericAmount <= 0 || submitting}
+          loading={submitting} onPress={() => { void submitReceipt(); }} />
+      </FloatingCta>
     </AquaBackground>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: ReturnType<typeof useTheme>['theme']['colors']) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   titleRow: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.xs },
   titleIcon: {
@@ -266,21 +250,5 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, themeColors: Re
     fontSize: sawaaType.micro.fontSize,
     lineHeight: sawaaType.micro.lineHeight,
     color: colors.ink[500],
-  },
-  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
-  ctaBtn: {
-    borderRadius: sawaaRadius.pill,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.teal[600],
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  ctaBtnText: {
-    color: themeColors.primaryForeground,
-    fontSize: sawaaType.body.fontSize,
-    lineHeight: sawaaType.body.lineHeight,
   },
 });
