@@ -89,7 +89,9 @@ async function vacantMetro() {
 }
 
 async function main() {
-  const [device, app] = process.argv.slice(2);
+  const [device, app, suite = 'booking', resumeBookingId] = process.argv.slice(2);
+  if (!['booking', 'payment'].includes(suite)) throw new Error('Mobile suite must be booking or payment');
+  if (resumeBookingId && (suite !== 'payment' || !/^[0-9a-f-]{36}$/i.test(resumeBookingId))) throw new Error('Resume requires an explicit payment booking UUID');
   const run = isolatedRun();
   const input = verifiedInput(device, app);
   const attestationPath = resolve(run.runDir, 'mobile-runtime.json');
@@ -141,8 +143,8 @@ async function main() {
     if (selected.state !== 'Booted') execFileSync('xcrun', ['simctl', 'boot', device]);
     execFileSync('xcrun', ['simctl', 'bootstatus', device, '-b']);
     execFileSync('xcrun', ['simctl', 'keychain', device, 'reset']);
-    const env = { ...process.env, E2E_MOBILE_ATTESTATION: attestationPath, E2E_IOS_DEVICE: device, E2E_IOS_APP_PATH: input.appPath };
-    runner = spawn('pnpm', ['exec', 'e2e', 'run', '--config', 'e2e.mobile.config.ts', '--output', '.e2e/phase2-mobile'], { cwd: root, env, stdio: 'inherit' });
+    const env = { ...process.env, ...(resumeBookingId ? { E2E_RESUME_BOOKING_ID: resumeBookingId } : {}), E2E_MOBILE_ATTESTATION: attestationPath, E2E_IOS_DEVICE: device, E2E_IOS_APP_PATH: input.appPath };
+    runner = spawn('pnpm', ['exec', 'e2e', 'run', '--config', suite === 'payment' ? 'e2e.mobile-payment.config.ts' : 'e2e.mobile.config.ts', '--output', suite === 'payment' ? '.e2e/phase3-mobile-payment' : '.e2e/phase2-mobile'], { cwd: root, env, stdio: 'inherit' });
     const code = await new Promise((yes, no) => { runner.once('error', no); runner.once('exit', code => yes(code ?? 1)); });
     process.exitCode = stopping || metroFailure ? 1 : code;
   } finally {
