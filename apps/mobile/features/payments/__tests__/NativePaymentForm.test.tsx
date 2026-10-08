@@ -110,3 +110,10 @@ describe('SDK result classification', () => {
     expect(press(result)).toHaveBeenCalledWith('submitted');
   });
 });
+
+it('keeps Apple Pay callbacks verification-only even for invalid-request errors with field errors', () => {
+  const callback = jest.fn();
+  render(<NativePaymentForm config={{ ...config, applePay: { merchantId: 'merchant.sa.sawa', label: 'Sawa', countryCode: 'SA' } }} method="APPLE_PAY" applePayAvailable onResult={callback} />);
+  mockAppleProps.mock.calls.at(-1)?.[0].onPaymentResult({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: { amount: ['is invalid'] } } });
+  expect(callback).toHaveBeenCalledWith('submitted');
+});

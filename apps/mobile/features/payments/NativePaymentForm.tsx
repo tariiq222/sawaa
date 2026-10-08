@@ -16,9 +16,11 @@ export type SdkOutcome = 'submitted' | 'rejected';
  * Only a card-field validation rejection from Moyasar (invalid_request_error that names the
  * invalid fields) is known to happen before any payment exists. Other invalid-request responses
  * (for example a reused given_id), transport errors and failed payments are ambiguous and stay
- * verification-only; the payload itself is never retained.
+ * verification-only; the payload itself is never retained. Apple Pay callbacks are always
+ * verification-only: its errors are not card-input fields and a reserved attempt must be reconciled.
  */
-function classifySdkResult(result: unknown): SdkOutcome {
+function classifySdkResult(result: unknown, method: NativePaymentMethod): SdkOutcome {
+  if (method !== 'ONLINE_CARD') return 'submitted';
   const value = result as { name?: unknown; error?: { type?: unknown; errors?: unknown } } | null | undefined;
   const fields = value?.error?.errors;
   const hasFieldErrors = typeof fields === 'object' && fields !== null && Object.keys(fields).length > 0;
@@ -42,7 +44,7 @@ export function NativePaymentForm({ config, method, applePayAvailable, onResult,
   const colors = useSawaaColors();
   const action = getSawaaRoles(scheme).action;
   // Server reconciliation owns the outcome; the SDK payload is only classified, never stored.
-  const resultReceived = (result: unknown) => onResult(classifySdkResult(result));
+  const resultReceived = (result: unknown) => onResult(classifySdkResult(result, method));
   const appleReady = applePayAvailable && config.applePay
     && config.applePay.merchantId === Constants.expoConfig?.extra?.applePayMerchantId
     && canUseApplePay(config.supportedNetworks);
