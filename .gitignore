@@ -185,3 +185,7 @@ docs/architecture/*
 
 # Agentic E2E reports, traces, sessions and replay cache.
 .e2e/
+
+# Continued local E2E acceptance plan and evidence summary.
+!docs/testing/e2e-phase3-plan.md
+!docs/testing/e2e-phase3-acceptance.md

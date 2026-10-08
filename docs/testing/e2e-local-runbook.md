@@ -68,3 +68,65 @@ SW-M01 يعيد تثبيت التطبيق ويمسح Keychain على المحا�
 أوقف stack بـ Ctrl-C بعد انتهاء الاختبارات؛ يوقف عملياته وCompose project الخاص به، ويحتفظ بالـvolumes والأدلة. wrapper التطبيق يوقف Metro الذي أنشأه ويزيل attestation تلقائيًا. لا حذف تلقائي لبيانات أو volumes أو أجهزة المستخدم، ولا commit أو نشر ضمن هذه الأوامر.
 
 حد نسخة المحاكي المستخدمة في دليل 2026-10-08: artifact من 2026-10-05 مع JavaScript الحالي من Metro. ظهر أن native Intl يعرض التاريخ الهجري رغم خيار الميلادي في المصدر؛ الاختبار يقبل الاسم الكامل لليوم نفسه بالتقويمين ثم يطابق ISO الدقيق في قاعدة البيانات. هذا لا يثبت صحة عرض التقويم الميلادي أو توافق بناء iOS جديد، ويحتاج تحققًا على بناء حديث منفصل.
+
+## Phase 3: financial contracts and native payment UI
+
+Run `node e2e/local/contracts.mjs` for seven selected existing backend contract
+suites. This creates its own loopback Postgres on 55861, migrates it, runs Jest
+serially and removes only its owned container. It retains the data volume. The
+provider/Redis/queue mocks from `test/setup-e2e.ts` still apply: this lane proves
+HTTP/database contracts, not real webhook delivery or native UI.
+
+For native card payment, start a fresh `node e2e/local/stack.mjs` run and enable
+Sandbox with the existing private-file setup. Run the ordinary mobile wrapper
+with an additional final `payment` argument; it selects
+`e2e.mobile-payment.config.ts` and writes `.e2e/phase3-mobile-payment`.
+The reserved payment client must have no bookings before the scenario starts.
+If a run stops after creation, inspect its existing booking/payment before any
+retry; do not automatically create another booking.
+
+For real webhook delivery, run `node e2e/local/with-env.mjs <runDir> node
+e2e/local/webhook.mjs` before submitting a test payment. The owned HTTPS tunnel
+exposes only a random webhook path on a separate local proxy. It authenticates
+the shared secret, forwards only payments belonging to the fixture's clients,
+and records no raw payloads. It registers only payment_paid/payment_failed using
+the test secret key. Stop it with SIGINT/SIGTERM to delete that exact subscription
+and close the tunnel; verify `webhook-receipt.json.deleted` is true. A registration
+network failure can be ambiguous: use the private registration URL to investigate
+before retrying; never delete another webhook.
+
+After an actual paid delivery, `webhook-replay.mjs` checks invalid signature and
+signed duplicate replay without changing the paid invoice or its payment rows.
+This distinguishes provider-delivered evidence from locally replayed evidence.
+
+`stack.mjs --apple-pay` explicitly enables the owned fixture's merchant capability
+using `merchant.sa.sawa.app`. It still starts with Moyasar disabled until Sandbox
+credentials have been validated. Physical device builds must use a private-network
+Debug API address and matching merchant entitlement. The Simulator wrapper remains
+bound to loopback and does not authorize a physical-device claim.
+
+### Phase 3 package UI fixture and verification
+
+After the fresh card suite has passed, create one isolated public two-session
+package through the staff API:
+
+```sh
+node e2e/local/with-env.mjs <runDir> node e2e/local/package-fixture.mjs
+```
+
+In the native app as the synthetic `payment` client, purchase the package with
+Moyasar Sandbox, book the first credit at `fixture.appointments.mobile`, then run:
+
+```sh
+node e2e/local/with-env.mjs <runDir> node e2e/local/verify-package.mjs reserved
+```
+
+With the local cancellation policy configured by `cancellation.mjs`, cancel that
+package appointment in the native UI, then verify returned credit:
+
+```sh
+node e2e/local/with-env.mjs <runDir> node e2e/local/verify-package.mjs cancelled
+```
+
+These verification scripts assert real persisted state; they do not drive the UI.
+Retain the native interaction recording as separate evidence.
