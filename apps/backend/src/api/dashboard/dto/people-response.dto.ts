@@ -135,6 +135,21 @@ export class CreateClientResponseDto extends ClientResponseDto {
 // ── Employee ────────────────────────────────────────────────────────────────
 
 export class EmployeeResponseDto {
+  @ApiPropertyOptional({ description: 'Public directory slug', type: String, nullable: true })
+  slug?: string | null;
+
+  @ApiPropertyOptional({ description: 'Whether the employee is published in the directory' })
+  isPublic?: boolean;
+
+  @ApiPropertyOptional({ description: 'Public biography in Arabic', type: String, nullable: true })
+  publicBioAr?: string | null;
+
+  @ApiPropertyOptional({ description: 'Public biography in English', type: String, nullable: true })
+  publicBioEn?: string | null;
+
+  @ApiPropertyOptional({ description: 'Readable selected public portrait URL', type: String, nullable: true })
+  publicImageUrl?: string | null;
+
   @ApiProperty({ description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   id!: string;
 
@@ -173,21 +188,6 @@ export class EmployeeResponseDto {
 
   @ApiProperty({ description: 'Whether the employee is active', example: true })
   isActive!: boolean;
-
-  @ApiProperty({ description: 'Whether the employee appears in the public directory' })
-  isPublic!: boolean;
-
-  @ApiPropertyOptional({ description: 'Public profile slug', nullable: true })
-  slug!: string | null;
-
-  @ApiPropertyOptional({ description: 'Arabic public bio', nullable: true })
-  publicBioAr!: string | null;
-
-  @ApiPropertyOptional({ description: 'English public bio', nullable: true })
-  publicBioEn!: string | null;
-
-  @ApiPropertyOptional({ description: 'Public profile image read URL', nullable: true })
-  publicImageUrl!: string | null;
 
   @ApiProperty({ description: 'Average rating (0–5)', example: 4.7, nullable: true })
   averageRating!: number | null;

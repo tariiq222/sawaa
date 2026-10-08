@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { GetPublicEmployeeImageHandler } from '../../modules/people/employees/public/get-public-employee-image.handler';
+import { Controller, Get, Param, Query, Header, Redirect } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { PublicEmployeeResponseDto } from '../dashboard/dto/people-response.dto';
@@ -14,7 +15,21 @@ export class PublicEmployeesController {
   constructor(
     private readonly listHandler: ListPublicEmployeesHandler,
     private readonly getHandler: GetPublicEmployeeHandler,
+    private readonly getImage: GetPublicEmployeeImageHandler,
   ) {}
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 120 } })
+  @Get(':key/image')
+  @Header('Cache-Control', 'no-store, max-age=0')
+  @Redirect('', 302)
+  @ApiOperation({ summary: 'Read the selected portrait of an active public employee' })
+  @ApiParam({ name: 'key', description: 'Public slug or employee UUID' })
+  @ApiResponse({ status: 302, description: 'Redirect to a freshly signed private image URL' })
+  @ApiNotFoundResponse({ description: 'Public employee or selected image not found' })
+  async image(@Param('key') key: string) {
+    return { url: await this.getImage.execute(key) };
+  }
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 30 } })

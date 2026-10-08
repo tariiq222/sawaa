@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
@@ -29,7 +30,7 @@ function buildOrderBy(
 export class ListEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly images: OwnedImageResolver,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(query: ListEmployeesQuery) {
@@ -89,8 +90,7 @@ export class ListEmployeesHandler {
     return toListResponse(
       await Promise.all(items.map(async (e) => ({
         ...mapEmployeeRow(e, ratingsByEmployee.get(e.id), bookingsByEmployee.get(e.id)),
-        avatarUrl: await this.images.resolve('employee', e.id, e.avatarUrl),
-        publicImageUrl: await this.images.resolve('employee', e.id, e.publicImageUrl),
+        avatarUrl: await this.images.execute({ employeeId: e.id, reference: e.avatarUrl }),
       }))),
       total,
       query.page,

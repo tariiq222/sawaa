@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ResolveEmployeeImageHandler } from '../../../media/files/resolve-employee-image.handler';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { MEDIA_IMAGE_URL_EXPIRY_SECONDS } from '../../../media/media-image-url.helper';
 import { PrismaService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
@@ -25,6 +26,7 @@ export class UploadAvatarHandler {
     private readonly prisma: PrismaService,
     private readonly uploadFile: UploadFileHandler,
     private readonly storage: MinioService,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(
@@ -42,7 +44,7 @@ export class UploadAvatarHandler {
 
     const employee = await this.prisma.employee.findUnique({
       where: { id: cmd.employeeId },
-      select: { id: true },
+      select: { id: true, avatarUrl: true, publicImageUrl: true },
     });
     if (!employee) {
       throw new NotFoundException(`Employee ${cmd.employeeId} not found`);
@@ -59,15 +61,25 @@ export class UploadAvatarHandler {
       buffer,
     );
 
-    const url = await this.storage.getSignedUrl(file.bucket, file.storageKey, MEDIA_IMAGE_URL_EXPIRY_SECONDS);
+    const [previousAvatar, previousPublic] = await Promise.all([
+      this.images.execute({ employeeId: employee.id, reference: employee.avatarUrl, format: 'key' }),
+      this.images.execute({ employeeId: employee.id, reference: employee.publicImageUrl, format: 'key' }),
+    ]);
+    const followsAvatar = !employee.publicImageUrl || employee.publicImageUrl === employee.avatarUrl
+      || (!!previousAvatar && previousAvatar === previousPublic)
+      || employee.publicImageUrl === cmd.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
     await this.prisma.employee.update({
       where: { id: cmd.employeeId },
       data: cmd.target === 'public'
         ? { publicImageUrl: file.storageKey }
-        : { avatarUrl: file.storageKey },
+        : {
+            avatarUrl: file.storageKey,
+            ...(followsAvatar ? { publicImageUrl: file.storageKey } : {}),
+          },
     });
 
+    const url = await this.storage.getSignedUrl(file.bucket, file.storageKey, 300);
     return { fileId: file.id, url };
   }
 }

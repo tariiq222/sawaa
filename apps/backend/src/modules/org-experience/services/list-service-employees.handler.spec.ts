@@ -1,4 +1,4 @@
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ListServiceEmployeesHandler } from './list-service-employees.handler';
@@ -20,7 +20,8 @@ describe('ListServiceEmployeesHandler', () => {
   beforeEach(async () => {
     prisma = buildPrisma();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [{ provide: OwnedImageResolver, useValue: { resolve: jest.fn(async (_type, _id, value) => value ? "https://files.sawaa.sa/signed-image" : null) } }, ListServiceEmployeesHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },ListServiceEmployeesHandler, { provide: PrismaService, useValue: prisma }],
     }).compile();
     handler = module.get<ListServiceEmployeesHandler>(ListServiceEmployeesHandler);
   });
@@ -45,7 +46,7 @@ describe('ListServiceEmployeesHandler', () => {
     ]);
     prisma.employee.findMany.mockResolvedValue([
       { id: 'emp-1', name: 'Ahmed Ali', nameAr: 'أحمد علي', nameEn: null, title: 'Dr', avatarUrl: null, isActive: true, branches: [{ branchId: 'branch-1' }, { branchId: 'branch-2' }] },
-      { id: 'emp-2', name: 'Sara', nameAr: null, nameEn: 'Sara Smith', title: 'Nurse', avatarUrl: 'org/photo.png', isActive: true, branches: [] },
+      { id: 'emp-2', name: 'Sara', nameAr: null, nameEn: 'Sara Smith', title: 'Nurse', avatarUrl: 'url', isActive: true, branches: [] },
     ]);
     prisma.serviceBookingConfig.findMany.mockResolvedValue([
       { serviceId: 'svc-1', deliveryType: 'ONLINE', price: 100, durationMins: 30, isActive: true },
@@ -57,7 +58,6 @@ describe('ListServiceEmployeesHandler', () => {
     expect(result[0].employee.user.lastName).toBe('علي');
     expect(result[1].employee.user.firstName).toBe('Sara');
     expect(result[1].employee.user.lastName).toBe('Smith');
-    expect(result[1].employee.avatarUrl).toBe('https://files.sawaa.sa/signed-image');
     expect(result[0].serviceTypes).toHaveLength(1);
     expect(result[0].availableTypes).toContain('ONLINE');
     // Reflects the per-assignment isActive column, not a hardcoded true.

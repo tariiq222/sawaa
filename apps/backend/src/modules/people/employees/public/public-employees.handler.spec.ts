@@ -1,4 +1,4 @@
-import { OwnedImageResolver } from '../../../media/owned-image.resolver';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
@@ -29,7 +29,7 @@ describe('Public employees handlers', () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
-        { provide: OwnedImageResolver, useValue: { resolve: jest.fn(async (_type, _id, value) => value && /^(https?:\/\/|\/)/.test(value) ? value : null) } },
+        { provide: ConfigService, useValue: new ConfigService({ API_PUBLIC_URL: 'https://api.sawaa.test' }) },
         ListPublicEmployeesHandler,
         GetPublicEmployeeHandler,
         {

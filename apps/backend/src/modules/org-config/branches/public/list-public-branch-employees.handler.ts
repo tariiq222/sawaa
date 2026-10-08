@@ -1,6 +1,7 @@
+import { ConfigService } from '@nestjs/config';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
-import { OwnedImageResolver } from '../../../media/owned-image.resolver';
+import { normalizePublicImageUrl } from '../../../people/employees/public/public-image-url';
 
 export interface PublicBranchEmployee {
   id: string;
@@ -19,7 +20,7 @@ export interface PublicBranchEmployee {
 export class ListPublicBranchEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly images: OwnedImageResolver,
+    private readonly config: ConfigService,
   ) {}
 
   async execute(branchId: string): Promise<PublicBranchEmployee[]> {
@@ -55,7 +56,7 @@ export class ListPublicBranchEmployeesHandler {
       .filter((l) => l.employee.isPublic && l.employee.isActive)
       .map(async (l) => {
         const { isPublic: _ip, isActive: _ia, ...e } = l.employee;
-        return { ...e, publicImageUrl: await this.images.resolve('employee', e.id, e.publicImageUrl) };
+        return { ...e, publicImageUrl: normalizePublicImageUrl(e.publicImageUrl, e.id, this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get<number>('PORT') || 5200}`) };
       }));
   }
 }

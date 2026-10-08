@@ -6210,7 +6210,7 @@
             "type": "boolean"
           },
           "isPublic": {
-            "description": "Whether the employee appears in the public directory",
+            "description": "Whether the employee is published in the directory",
             "type": "boolean"
           },
           "name": {
@@ -6242,19 +6242,19 @@
             "type": "object"
           },
           "publicBioAr": {
-            "description": "Arabic public bio",
+            "description": "Public biography in Arabic",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "publicBioEn": {
-            "description": "English public bio",
+            "description": "Public biography in English",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "publicImageUrl": {
-            "description": "Public profile image read URL",
+            "description": "Readable selected public portrait URL",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "ratingCount": {
             "description": "Total rating count",
@@ -6269,9 +6269,9 @@
             "type": "array"
           },
           "slug": {
-            "description": "Public profile slug",
+            "description": "Public directory slug",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "specialty": {
             "description": "Specialty label",
@@ -6304,7 +6304,6 @@
           "employmentType",
           "onboardingStatus",
           "isActive",
-          "isPublic",
           "averageRating",
           "ratingCount",
           "bookingCount",
@@ -43967,6 +43966,54 @@
           }
         },
         "summary": "Get single public employee by slug or id",
+        "tags": [
+          "Public / Employees"
+        ]
+      }
+    },
+    "/api/v1/public/employees/{key}/image": {
+      "get": {
+        "operationId": "PublicEmployeesController_image_v1",
+        "parameters": [
+          {
+            "description": "Public slug or employee UUID",
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to a freshly signed private image URL"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Public employee or selected image not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Read the selected portrait of an active public employee",
         "tags": [
           "Public / Employees"
         ]
