@@ -1,4 +1,4 @@
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { resolveEffectiveDurations } from './set-employee-durations/set-employee-durations.handler';
@@ -16,7 +16,7 @@ export interface ListServiceEmployeesQuery {
 export class ListServiceEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly images: OwnedImageResolver,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(query: ListServiceEmployeesQuery) {
@@ -141,7 +141,7 @@ export class ListServiceEmployeesHandler {
             id: e.id,
             nameAr: e.nameAr,
             title: e.title,
-            avatarUrl: await this.images.resolve('employee', e.id, e.avatarUrl),
+            avatarUrl: await this.images.execute({ employeeId: e.id, reference: e.avatarUrl }),
             isActive: e.isActive,
             branchIds: (e.branches ?? []).map((b) => b.branchId),
             user: { firstName, lastName },

@@ -4734,6 +4734,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/employees/{key}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the selected portrait of an active public employee */
+        get: operations["PublicEmployeesController_image_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/employees/images/{fileId}": {
         parameters: {
             query?: never;
@@ -9414,8 +9431,8 @@ export interface components {
              * @example true
              */
             isActive: boolean;
-            /** @description Whether the employee appears in the public directory */
-            isPublic: boolean;
+            /** @description Whether the employee is published in the directory */
+            isPublic?: boolean;
             /**
              * @description Full display name
              * @example Dr. Khalid Al-Otaibi
@@ -9441,12 +9458,12 @@ export interface components {
              * @example +966501234567
              */
             phone?: Record<string, never> | null;
-            /** @description Arabic public bio */
-            publicBioAr?: Record<string, never> | null;
-            /** @description English public bio */
-            publicBioEn?: Record<string, never> | null;
-            /** @description Public profile image read URL */
-            publicImageUrl?: Record<string, never> | null;
+            /** @description Public biography in Arabic */
+            publicBioAr?: string | null;
+            /** @description Public biography in English */
+            publicBioEn?: string | null;
+            /** @description Readable selected public portrait URL */
+            publicImageUrl?: string | null;
             /**
              * @description Total rating count
              * @example 32
@@ -9454,8 +9471,8 @@ export interface components {
             ratingCount: number;
             /** @description Assigned service UUIDs */
             serviceIds: string[];
-            /** @description Public profile slug */
-            slug?: Record<string, never> | null;
+            /** @description Public directory slug */
+            slug?: string | null;
             /**
              * @description Specialty label
              * @example Family Therapy
@@ -36282,6 +36299,52 @@ export interface operations {
                 };
             };
             /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicEmployeesController_image_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public slug or employee UUID */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to a freshly signed private image URL */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Public employee or selected image not found */
             404: {
                 headers: {
                     [name: string]: unknown;

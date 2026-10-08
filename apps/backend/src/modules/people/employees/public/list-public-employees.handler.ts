@@ -1,6 +1,7 @@
+import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
-import { OwnedImageResolver } from '../../../media/owned-image.resolver';
+import { normalizePublicImageUrl } from './public-image-url';
 
 export interface PublicEmployeeItem {
   id: string;
@@ -45,7 +46,7 @@ export interface PublicEmployeeItem {
 
 @Injectable()
 export class ListPublicEmployeesHandler {
-  constructor(private readonly prisma: PrismaService, private readonly images: OwnedImageResolver) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   async execute(options: { includeDirectClinics?: boolean } = {}): Promise<PublicEmployeeItem[]> {
     const rows = await this.prisma.employee.findMany({
@@ -175,7 +176,7 @@ export class ListPublicEmployeesHandler {
       const tokens = display.trim().split(/\s+/).filter(Boolean);
       const firstName = tokens.length > 0 ? tokens[0] : '';
       const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
-      const publicImageUrl = await this.images.resolve('employee', r.id, r.publicImageUrl);
+      const publicImageUrl = normalizePublicImageUrl(r.publicImageUrl, r.id, this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get<number>('PORT') || 5200}`);
       return {
         ...r,
         publicImageUrl,

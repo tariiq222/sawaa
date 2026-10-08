@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { parseEntityRef } from '../../../common/parse-entity-ref';
@@ -12,7 +13,7 @@ export interface GetEmployeeQuery {
 export class GetEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly images: OwnedImageResolver,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(query: GetEmployeeQuery) {
@@ -46,8 +47,12 @@ export class GetEmployeeHandler {
         { avg: ratingAgg._avg.score, count: ratingAgg._count._all },
         bookingCount,
       ),
-      avatarUrl: await this.images.resolve('employee', employee.id, employee.avatarUrl),
-      publicImageUrl: await this.images.resolve('employee', employee.id, employee.publicImageUrl),
+      avatarUrl: await this.images.execute({ employeeId: employee.id, reference: employee.avatarUrl }),
+      slug: employee.slug,
+      isPublic: employee.isPublic,
+      publicBioAr: employee.publicBioAr,
+      publicBioEn: employee.publicBioEn,
+      publicImageUrl: await this.images.execute({ employeeId: employee.id, reference: employee.publicImageUrl }),
       exceptions: employee.exceptions,
     };
   }

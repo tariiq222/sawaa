@@ -1,4 +1,4 @@
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { paymentCollectionDateSql } from '../../finance/payment-collection-date.helper';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -21,7 +21,7 @@ export interface TopPerformer {
 export class GetTopPerformersHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly images: OwnedImageResolver,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(_cmd: TopPerformersCommand): Promise<TopPerformer[]> {
@@ -58,7 +58,7 @@ export class GetTopPerformersHandler {
     return Promise.all(rows.map(async (r) => ({
       employeeId: r.employeeId,
       displayName: r.displayName,
-      avatarUrl: await this.images.resolve('employee', r.employeeId, r.avatarUrl),
+      avatarUrl: await this.images.execute({ employeeId: r.employeeId, reference: r.avatarUrl }),
       bookingsCount: Number(r.bookingsCount),
       revenue: Number(r.revenue),
     })));

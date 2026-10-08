@@ -51,8 +51,11 @@ import { DashboardPeopleController } from '../../api/dashboard/people.controller
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
 import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
+import { GetPublicEmployeeImageHandler } from './employees/public/get-public-employee-image.handler';
+
 const handlers = [
   GetSelfProfileHandler, UpdateSelfProfileHandler, ChangeSelfAvatarHandler,
+  GetPublicEmployeeImageHandler,
   CreateClientHandler, UpdateClientHandler, ListClientsHandler, GetClientHandler, DeleteClientHandler,
   SetClientActiveHandler, LogActivityHandler,
   ListEmployeeClientsHandler, GetEmployeeClientHistoryHandler, GetEmployeeClientHandler, ResolveEmployeeIdHandler,

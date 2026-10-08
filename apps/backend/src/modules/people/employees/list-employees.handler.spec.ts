@@ -1,4 +1,4 @@
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListEmployeesHandler } from './list-employees.handler';
@@ -27,7 +27,7 @@ describe('ListEmployeesHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        { provide: OwnedImageResolver, useValue: { resolve: jest.fn(async (_type, _id, value) => value && /^(https?:\/\/|\/)/.test(value) ? value : null) } },
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn().mockResolvedValue('https://files.test/fresh-avatar') } },
         ListEmployeesHandler,
         { provide: PrismaService, useValue: prisma },
       ],
@@ -53,6 +53,7 @@ describe('ListEmployeesHandler', () => {
 
     const result = await handler.execute({ page: 1, limit: 20 });
     expect(result.items).toHaveLength(1);
+    expect(result.items[0].avatarUrl).toBe('https://files.test/fresh-avatar');
     expect(result.meta.total).toBe(1);
     expect(prisma.employee.findMany).toHaveBeenCalledWith(expect.objectContaining({
       orderBy: { createdAt: 'desc' },

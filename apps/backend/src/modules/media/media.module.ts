@@ -12,8 +12,11 @@ import { GeneratePresignedUrlHandler } from './files/generate-presigned-url.hand
 import { MAX_FILE_SIZE_BYTES } from './files/upload-file.handler';
 import { DashboardMediaController } from '../../api/dashboard/media.controller';
 
+import { ResolveEmployeeImageHandler } from './files/resolve-employee-image.handler';
+
 const handlers = [
   OwnedImageResolver,
+  ResolveEmployeeImageHandler,
   UploadFileHandler,
   GetFileHandler,
   DeleteFileHandler,

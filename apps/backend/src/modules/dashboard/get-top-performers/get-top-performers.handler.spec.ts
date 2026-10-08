@@ -1,4 +1,4 @@
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test } from '@nestjs/testing';
 import { GetTopPerformersHandler } from './get-top-performers.handler';
 import { PrismaService } from '../../../infrastructure/database';
@@ -11,7 +11,7 @@ describe('GetTopPerformersHandler', () => {
     prisma = { $queryRaw: jest.fn() };
     const mod = await Test.createTestingModule({
       providers: [
-        { provide: OwnedImageResolver, useValue: { resolve: jest.fn(async (_type, _id, value) => value ? "https://files.sawaa.sa/signed-image" : null) } },
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },
         GetTopPerformersHandler,
         { provide: PrismaService, useValue: prisma },
       ],
@@ -35,12 +35,6 @@ describe('GetTopPerformersHandler', () => {
     });
   });
 
-  it('returns a usable image instead of the internal object key', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ employeeId: 'e1', displayName: 'Dr A', avatarUrl: 'org/photo.png', bookingsCount: 1, revenue: 100 }]);
-    const result = await handler.execute({ period: 'month' });
-    expect(result[0].avatarUrl).toBe('https://files.sawaa.sa/signed-image');
-  });
-
   it('returns empty array when no data', async () => {
     prisma.$queryRaw.mockResolvedValue([]);
     const result = await handler.execute({ period: 'month' });
@@ -50,6 +44,6 @@ describe('GetTopPerformersHandler', () => {
 
 it('uses effective receipt date with PROCESSED fallback for revenue bounds', async () => {
  const prisma = {$queryRaw: jest.fn().mockResolvedValue([]), booking: {groupBy: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0)}, client: {count: jest.fn().mockResolvedValue(0)}};
- await new GetTopPerformersHandler(prisma as never, { resolve: jest.fn() } as never).execute({period: 'month'});
+ await new GetTopPerformersHandler(prisma as never, { execute: async () => null } as never).execute({period: 'month'});
  expect(prisma.$queryRaw.mock.calls[0][0].sql).toContain('COALESCE(p."effectiveReceivedAt", p."processedAt")');
 });

@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -33,6 +34,7 @@ export class UpdateEmployeeHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(cmd: UpdateEmployeeCommand) {
@@ -42,9 +44,15 @@ export class UpdateEmployeeHandler {
     if (!employee) throw new NotFoundException('Employee not found');
 
     const wasActive = employee.isActive;
-    const { employeeId: _e, actorUserId, avatarUrl, email: rawEmail, ...rest } = cmd;
+    const { employeeId: _e, actorUserId, avatarUrl, publicImageUrl, email: rawEmail, ...rest } = cmd;
     const data: Record<string, unknown> = { ...rest };
-    if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
+    // Local previews belong to the browser; a pending upload must not replace the stored portrait.
+    for (const [field, reference] of Object.entries({ avatarUrl, publicImageUrl })) {
+      if (reference === undefined || reference?.startsWith('blob:')) continue;
+      data[field] = reference
+        ? await this.images.execute({ employeeId: employee.id, reference, format: 'key' }) ?? reference
+        : null;
+    }
     if (cmd.nameAr || cmd.nameEn) {
       data.name = cmd.nameAr ?? cmd.nameEn ?? employee.name;
     }
