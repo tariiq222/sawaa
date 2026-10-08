@@ -61,6 +61,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let readyConfig: NativePaymentConfiguration | null = null;
     let initBlocked = false;
     let verifying = false;
+    let lastInitAt = 0;
     let recheckRequested = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
@@ -230,7 +231,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         if (!valid()) return;
         attempt += 1;
         terminalFailure = false; terminalResult = false; resultReceived = false;
-        readyConfig = result.config;
+        readyConfig = result.config; lastInitAt = Date.now();
         update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
       } catch (error) {
         if (!valid()) return;
@@ -265,6 +266,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       busy = true; verifying = true; recheckRequested = false;
       clearTimeout(timer);
       const run = async (): Promise<boolean> => {
+      // native/init is throttled (3 per minute); an attempt initialized moments ago already carries
+      // the current configuration, and the reconciliation above covers closure and completion.
+      if (Date.now() - lastInitAt < 20_000) return valid() && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
       try {
           const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
           if (!valid()) return false;
@@ -278,7 +282,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
             if (!valid()) return false;
             attempt += 1;
             terminalFailure = false; terminalResult = false; resultReceived = false;
-            readyConfig = fresh.config;
+            readyConfig = fresh.config; lastInitAt = Date.now();
             update({ attempt, phase: 'ready', config: fresh.config, paymentId, canResume: true });
             return false;
           }
@@ -289,6 +293,8 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           if (!valid()) return false;
           // Closure, completion and configuration results are authoritative, exactly as in initialize().
           if (await handleInitError(error)) return false;
+          // A throttled request is temporary: fail closed with a clear message, keep retry available.
+          if ((error as { response?: { status?: number } })?.response?.status === 429) return revoke('nativePayment.tryAgainShortly');
           return revoke('nativePayment.verificationError');
         }
       };

@@ -32,8 +32,8 @@ jest.mock('@/constants/config', () => ({ APP_SCHEME: 'sawa' }));
 jest.mock('@/services/client/bookings', () => ({ clientBookingsService: {
   create: (...args: unknown[]) => mockCreate(...args), getById: (...args: unknown[]) => mockGetBooking(...args),
 } }));
-const mockReconcile = jest.fn();
-jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initPayment: (...args: unknown[]) => mockInit(...args), reconcileNativePayment: (...args: unknown[]) => mockReconcile(...args) } }));
+const mockGetInvoice = jest.fn();
+jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initPayment: (...args: unknown[]) => mockInit(...args), getInvoice: (...args: unknown[]) => mockGetInvoice(...args) } }));
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: (...args: unknown[]) => mockBrowser(...args) }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), NotificationFeedbackType: { Success: 'success' } }));
 jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true, default: {
@@ -257,84 +257,39 @@ it('shows capability fetch failure, keeps Apple selected and retries in place de
   expect(result.current.canPay).toBe(true);
 });
 
-it('does not route to bank transfer once a native payment attempt reserved the invoice', async () => {
-  mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
-  mockCreate.mockResolvedValue({ id: 'reserved-booking', invoiceId: 'reserved-invoice' });
-  mockGetBooking.mockResolvedValue({ id: 'reserved-booking', invoiceId: 'reserved-invoice', status: 'pending' });
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
-  await act(async () => { await result.current.pay('card'); });
-  expect(mockPush).toHaveBeenCalledTimes(1);
-  // Checkout init stores the reserved attempt for this invoice before the user returns.
-  mockStorage.set('sawaa.native-payment:user-1:reserved-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'reserved-invoice', paymentId: 'payment' }));
-  mockReconcile.mockResolvedValue({ paymentId: 'payment', invoiceId: 'reserved-invoice', status: 'PENDING', requiresReview: false });
-  await act(async () => { await result.current.pay('bank_transfer'); });
-  expect(mockCreate).toHaveBeenCalledTimes(1);
-  expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
-  expect(alert).toHaveBeenCalled();
-  alert.mockRestore();
-});
-
-it('allows bank transfer when the saved native attempt authoritatively failed', async () => {
-  mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
-  mockCreate.mockResolvedValue({ id: 'failed-booking', invoiceId: 'failed-invoice' });
-  mockGetBooking.mockResolvedValue({ id: 'failed-booking', invoiceId: 'failed-invoice', status: 'pending' });
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
-  await act(async () => { await result.current.pay('card'); });
-  mockStorage.set('sawaa.native-payment:user-1:failed-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'failed-invoice', paymentId: 'payment', failed: true }));
-  mockReconcile.mockResolvedValue({ paymentId: 'payment', invoiceId: 'failed-invoice', status: 'FAILED', requiresReview: false });
-  await act(async () => { await result.current.pay('bank_transfer'); });
-  expect(alert).not.toHaveBeenCalled();
-  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/bank-transfer', params: { invoiceId: 'failed-invoice', amount: '45000', bookingId: 'failed-booking' } });
-  alert.mockRestore();
-});
-
-describe('stored native attempt is verified with the server before blocking bank transfer', () => {
-  async function setup(reconcile: () => Promise<unknown>) {
+describe('bank transfer on a resumed booking checks the invoice reservations on the server', () => {
+  async function resume(invoice: () => Promise<unknown>) {
     mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
-    mockCreate.mockResolvedValue({ id: 'stale-booking', invoiceId: 'stale-invoice' });
-    mockGetBooking.mockResolvedValue({ id: 'stale-booking', invoiceId: 'stale-invoice', status: 'pending' });
-    mockReconcile.mockImplementation(reconcile);
+    mockCreate.mockResolvedValue({ id: 'resumed-booking', invoiceId: 'resumed-invoice' });
+    mockGetBooking.mockResolvedValue({ id: 'resumed-booking', invoiceId: 'resumed-invoice', status: 'pending' });
+    mockGetInvoice.mockImplementation(invoice);
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    const hook = renderHook(() => useBookingPayment(input), { wrapper });
-    await act(async () => { await hook.result.current.pay('card'); });
-    mockStorage.set('sawaa.native-payment:user-1:stale-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'stale-invoice', paymentId: 'payment' }));
-    await act(async () => { await hook.result.current.pay('bank_transfer'); });
-    return { alert, hook };
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay('card'); });
+    await act(async () => { await result.current.pay('bank_transfer'); });
+    return alert;
   }
-  it('allows bank transfer when the server reports the stored attempt FAILED without a local marker', async () => {
-    const { alert } = await setup(async () => ({ paymentId: 'payment', invoiceId: 'stale-invoice', status: 'FAILED', requiresReview: false }));
-    expect(mockReconcile).toHaveBeenCalledWith('payment');
-    expect(alert).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/bank-transfer', params: { invoiceId: 'stale-invoice', amount: '45000', bookingId: 'stale-booking' } });
-    expect(JSON.parse(mockStorage.get('sawaa.native-payment:user-1:stale-invoice')!).failed).toBe(true);
+  const bankRoute = { pathname: '/(client)/booking/bank-transfer', params: { invoiceId: 'resumed-invoice', amount: '45000', bookingId: 'resumed-booking' } };
+  it('blocks when committed payments cover the invoice, even with no local attempt (another device)', async () => {
+    const alert = await resume(async () => ({ id: 'resumed-invoice', total: 45000, payments: [{ status: 'PENDING', amount: 45000 }] }));
+    expect(mockGetInvoice).toHaveBeenCalledWith('resumed-invoice');
+    expect(alert).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalledWith(bankRoute);
     alert.mockRestore();
   });
-  it('keeps blocking when the server still counts the attempt or cannot be reached', async () => {
-    const pending = await setup(async () => ({ paymentId: 'payment', invoiceId: 'stale-invoice', status: 'PENDING', requiresReview: false }));
-    expect(pending.alert).toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
-    pending.alert.mockRestore();
-    const offline = await setup(async () => { throw new Error('network down'); });
-    expect(offline.alert).toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
-    offline.alert.mockRestore();
+  it('allows bank transfer when a failed attempt no longer commits any amount', async () => {
+    const alert = await resume(async () => ({ id: 'resumed-invoice', total: 45000, payments: [{ status: 'FAILED', amount: 45000 }] }));
+    expect(alert).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith(bankRoute);
+    alert.mockRestore();
   });
-});
-
-it('does not trust a cached failed marker when the server now reports a newer pending attempt', async () => {
-  mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
-  mockCreate.mockResolvedValue({ id: 'cached-booking', invoiceId: 'cached-invoice' });
-  mockGetBooking.mockResolvedValue({ id: 'cached-booking', invoiceId: 'cached-invoice', status: 'pending' });
-  mockReconcile.mockResolvedValue({ paymentId: 'payment', invoiceId: 'cached-invoice', status: 'PENDING', requiresReview: false });
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
-  await act(async () => { await result.current.pay('card'); });
-  mockStorage.set('sawaa.native-payment:user-1:cached-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'cached-invoice', paymentId: 'payment', failed: true }));
-  await act(async () => { await result.current.pay('bank_transfer'); });
-  expect(mockReconcile).toHaveBeenCalledWith('payment');
-  expect(alert).toHaveBeenCalled();
-  expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
-  alert.mockRestore();
+  it('blocks when the invoice cannot be read or has no usable total', async () => {
+    const offline = await resume(async () => { throw new Error('network down'); });
+    expect(offline).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalledWith(bankRoute);
+    offline.mockRestore();
+    const unknown = await resume(async () => ({ id: 'resumed-invoice', payments: [] }));
+    expect(unknown).toHaveBeenCalled();
+    unknown.mockRestore();
+  });
 });

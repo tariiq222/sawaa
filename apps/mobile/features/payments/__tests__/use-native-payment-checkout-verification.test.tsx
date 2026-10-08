@@ -110,7 +110,9 @@ it('verifyPayable waits for a reconciliation that is already running', async () 
   unmount();
 });
 
+const realNow = Date.now();
 describe('verifyPayable provider configuration gate', () => {
+  afterEach(() => { jest.spyOn(Date, 'now').mockRestore(); });
   const appleInput = { ...input, method: 'APPLE_PAY' as const };
   const pendingOk = { paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true } as const;
   async function ready() {
@@ -118,6 +120,8 @@ describe('verifyPayable provider configuration gate', () => {
     const hook = renderHook(() => useNativePaymentCheckout(appleInput), { wrapper });
     await waitFor(() => expect(hook.result.current.phase).toBe('ready'));
     jest.mocked(clientPaymentsService.initNativePayment).mockClear();
+    // Past the freshness window the post-Wallet check re-runs the throttled initialization.
+    jest.spyOn(Date, 'now').mockReturnValue(realNow + 60_000);
     return hook;
   }
   it('re-runs initialization and accepts the unchanged configuration for the same attempt', async () => {
@@ -225,6 +229,27 @@ describe('verifyPayable provider configuration gate', () => {
     expect(jest.mocked(clientPaymentsService.reconcileNativePayment).mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(result.current.canRetryInit).toBe(false);
     expect(result.current.canResume).toBe(false);
+    unmount();
+  });
+  it('skips the throttled re-initialization when the attempt was initialized moments ago', async () => {
+    const { result, unmount } = await ready();
+    jest.spyOn(Date, 'now').mockReturnValue(realNow + 1_000);
+    jest.mocked(clientPaymentsService.initNativePayment).mockClear();
+    let ok = false;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(true);
+    expect(clientPaymentsService.initNativePayment).not.toHaveBeenCalled();
+    unmount();
+  });
+  it('reports a throttled initialization (HTTP 429) as a temporary error without blocking later retries', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { status: 429, data: {} } });
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    expect(result.current.phase).toBe('error');
+    expect(result.current.error).toBe('nativePayment.tryAgainShortly');
+    expect(result.current.canRetryInit).toBe(true);
     unmount();
   });
   it('fails closed on a configuration-changed conflict or a different payment identity', async () => {

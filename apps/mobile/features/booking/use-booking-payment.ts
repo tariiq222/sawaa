@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateClientBookingResources } from '@/hooks/queries/invalidateClientBookingResources';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -12,6 +11,7 @@ import { useAppSelector } from '@/hooks/use-redux';
 import { useBankTransferSettings, usePublicPaymentMethods } from '@/hooks/queries';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
+import { getOutstandingHalalas } from '@/lib/invoice-outstanding';
 import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
 import {
@@ -23,27 +23,13 @@ import {
 import type { DeliveryType } from '@/types/booking-enums';
 
 /**
- * A saved native attempt reserves the invoice unless the server reports it failed. The server is
- * always asked (a local failed marker is never proof, because a newer attempt may exist); any
- * doubt or error keeps the invoice reserved. There is no invoice-level reservation endpoint, so a
- * reservation created from another device is only caught by the receipt upload itself.
+ * Bank transfer can only be uploaded for what the invoice still owes. The server's committed
+ * payments (any device, any flow) decide; an unreadable invoice or total keeps it blocked.
  */
-async function hasReservingNativeAttempt(userId: string, invoiceId: string): Promise<boolean> {
-  const key = `sawaa.native-payment:${userId}:${invoiceId}`;
-  const raw = await AsyncStorage.getItem(key);
-  if (!raw) return false;
-  let stored: { paymentId?: unknown; invoiceId?: unknown; failed?: boolean };
+async function invoiceHasNothingOutstanding(invoiceId: string): Promise<boolean> {
   try {
-    stored = JSON.parse(raw);
-  } catch {
-    return true;
-  }
-  if (typeof stored.paymentId !== 'string' || !stored.paymentId) return true;
-  try {
-    const result = await clientPaymentsService.reconcileNativePayment(stored.paymentId);
-    if (result.paymentId !== stored.paymentId || result.invoiceId !== invoiceId || result.status !== 'FAILED') return true;
-    await AsyncStorage.setItem(key, JSON.stringify({ ...stored, failed: true }));
-    return false;
+    const outstanding = getOutstandingHalalas(await clientPaymentsService.getInvoice(invoiceId));
+    return outstanding === null || outstanding <= 0;
   } catch {
     return true;
   }
@@ -174,10 +160,10 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
           Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'));
           return null;
         }
-        // A started card/Apple Pay attempt reserves the invoice amount, so a
-        // bank-transfer receipt would be rejected as already reserved.
+        // Committed payments (such as a pending card/Apple Pay attempt) reserve the invoice amount,
+        // so a bank-transfer receipt would be rejected as already reserved.
         if (selected === 'bank_transfer' && booking.invoiceId
-          && await hasReservingNativeAttempt(userId, booking.invoiceId)) {
+          && await invoiceHasNothingOutstanding(booking.invoiceId)) {
           Alert.alert(t('booking.paymentMethod'), t('booking.existingNativeAttempt'));
           return null;
         }

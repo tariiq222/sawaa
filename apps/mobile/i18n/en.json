@@ -997,6 +997,7 @@
     "processing": "Waiting for payment confirmation. Your result will appear automatically; you do not need to pay again.",
     "awaitingVerification": "Your payment is being verified. Check again, or contact the center if it remains pending.",
     "cardRejected": "The card details were not accepted. Check them and try again.",
+    "tryAgainShortly": "Verification could not finish right now. Wait a minute, then try again.",
     "title": "Payment",
     "cards": "Cards",
     "cardNetworks": "Mada · Visa · Mastercard",
