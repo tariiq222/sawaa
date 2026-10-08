@@ -123,7 +123,11 @@ test('completed booking removes confirmation from the back stack', async ({ app,
   await fetch(`${api}/__complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoiceId: initialized.body.invoiceId }) });
   await screen.getByRole('button', 'التحقق مجددًا').tap();
   await expect(screen.getByText('تم تأكيد موعدك')).toBeVisible();
-  await device.back();
+  // After success the confirmation must be gone from the stack: either there is no in-app back
+  // control at all (the engine reports it unavailable) or going back must not reach it.
+  await device.back().catch((error: unknown) => {
+    if (!/in-app back control is not available/.test(String(error))) throw error;
+  });
   await expect(screen.getByText('تأكيد الموعد')).not.toBeVisible();
   await expect(screen.getByText('طريقة الدفع')).not.toBeVisible();
   await app.screenshot('completed-booking-back-stack');
