@@ -3,6 +3,5 @@
 // credential store, API-key provider, or fallback is configured here.
 import { chatgpt } from 'e2e/oauth/chatgpt';
 
-// The local SDK accepts vendor model IDs. Account availability requires a
-// separately authorized provider check; do not silently substitute a model.
-export const astra = chatgpt('gpt-6-astra');
+// sol61-all-v1: account availability is checked separately; no fallback.
+export const sol61 = chatgpt('gpt-6.1-sol');

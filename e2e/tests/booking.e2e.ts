@@ -1,0 +1,68 @@
+import { test } from '@e2e-dev/web';
+import { credentials, expect } from 'e2e';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fixture, verifyBooking } from '../local/verify.mjs';
+import { isTarget, websiteUrl, dashboardUrl } from '../urls.ts';
+
+test('SW-B03 website books a SERVICES clinic with pay at center', { tags: ['booking', 'website'], requires: ['browser'] }, async ({ app, screen, browser }) => {
+  test.skip(!isTarget(app.baseUrl, websiteUrl), 'website only');
+  const f = fixture();
+  const client = credentials.user('client');
+  await app.open('/login');
+  await screen.getByLabel('رقم الجوال').fill(client.username);
+  await screen.getByLabel('كلمة المرور').fill(client.password);
+  await screen.getByRole('button', 'تسجيل الدخول').tap();
+  await expect(browser).toHaveURL('/account');
+  await app.open('/clinics');
+  await screen.getByRole('link', /عيادة اختبار الحجز/).tap();
+  await expect(browser).toHaveURL(new RegExp(`categoryId=${f.clinicId}`));
+  await screen.getByRole('radio', /جلسة اختبار أسرية/).tap();
+  // The sole eligible practitioner is selected automatically by the real wizard.
+  await expect(screen.getByRole('complementary', 'ملخص الموعد').getByText('ممارس الاختبار', { exact: true })).toBeVisible();
+  await screen.getByRole('button', /^حضوري 60 دقيقة/).tap();
+  const date = new Date(f.appointments.web);
+  const dateLabel = new Intl.DateTimeFormat('ar-SA', { timeZone: 'Asia/Riyadh', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+  await screen.getByRole('radio', dateLabel, { exact: true }).tap();
+  const slotLabel = date.toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  await screen.getByRole('radio', slotLabel, { exact: true }).tap();
+  await screen.getByRole('radio', /الدفع في المركز/).tap();
+  await screen.getByRole('button', 'تأكيد الموعد', { exact: true }).tap();
+  await expect(screen.getByRole('heading', 'تم تأكيد موعدك!')).toBeVisible({ timeout: 30_000 });
+  const receipt = await verifyBooking('web');
+  await app.open(`/account/bookings/${receipt.bookingId}`);
+  await expect(screen.getByText('جلسة اختبار أسرية', { exact: true })).toBeVisible();
+  await browser.reload();
+  await expect(screen.getByText('جلسة اختبار أسرية', { exact: true })).toBeVisible();
+});
+
+test('SW-D02 staff sees the exact website booking', { tags: ['booking', 'dashboard'], requires: ['browser'] }, async ({ app, screen, browser }) => {
+  test.skip(!isTarget(app.baseUrl, dashboardUrl), 'dashboard only');
+  fixture();
+  const receipt = JSON.parse(readFileSync(resolve(process.env.E2E_LOCAL_RUN_DIR!, 'web-receipt.json'), 'utf8'));
+  const staff = credentials.user('dashboard');
+  await app.open('/login');
+  await screen.getByLabel(/البريد الإلكتروني أو رقم الجوال|Email or mobile number/).fill(staff.username);
+  await screen.getByRole('button', /^(متابعة|Continue)$/).tap();
+  await screen.getByRole('button', /^(باستخدام كلمة المرور|Use password)$/).tap();
+  await screen.getByLabel(/^(كلمة المرور|Password)$/).fill(staff.password);
+  await screen.getByRole('button', /^(تسجيل الدخول|Sign in)$/).tap();
+  await expect(browser).toHaveURL('/');
+  await app.open('/bookings');
+  await screen.getByRole('tab', /^(الكل|All)$/).first().tap();
+  await screen.getByPlaceholder(/بحث بالاسم|Search by name/i).first().fill(receipt.bookingId);
+  const row = browser.locator('tbody tr').filter({ hasText: 'مستفيد اختبار web' });
+  await expect(row).toHaveCount(1);
+  await expect(row.getByText(`#${String(receipt.bookingNumber).padStart(4, '0')}`, { exact: true })).toBeVisible();
+  await expect(row.getByText('د. ممارس الاختبار', { exact: true })).toBeVisible();
+  await expect(row.getByText(/٣٠٠٫٠٠|300\.00/)).toBeVisible();
+  await row.getByRole('button', /مستفيد اختبار web/).tap();
+  await expect(screen.getByRole('dialog')).toBeVisible();
+  await expect(screen.getByRole('dialog').getByText('جلسة اختبار أسرية', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('dialog').getByText('ممارس الاختبار', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('dialog').getByText('08:00 — 09:00', { exact: true })).toBeVisible();
+  const day = receipt.scheduledAt.slice(0, 10).split('-').reverse().join('/');
+  await expect(screen.getByRole('dialog').getByText(day, { exact: true })).toBeVisible();
+  await expect(screen.getByRole('dialog').getByText('مؤكد', { exact: true })).toBeVisible();
+  await verifyBooking('web');
+});
