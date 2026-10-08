@@ -371,3 +371,45 @@ it('allows a new attempt and marks the stored identity failed after an authorita
   expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(2);
   unmount();
 });
+
+it('verifyPayable is true only when the server says the same attempt can still be paid', async () => {
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true });
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  let ok = false;
+  await act(async () => { ok = await result.current.verifyPayable(); });
+  expect(ok).toBe(true);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
+  await act(async () => { ok = await result.current.verifyPayable(); });
+  expect(ok).toBe(false);
+  expect(result.current.phase).toBe('unavailable');
+  unmount();
+});
+
+it('verifyPayable fails closed on a verification error or a provider-created payment', async () => {
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  let ok = true;
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockRejectedValueOnce(new Error('network down'));
+  await act(async () => { ok = await result.current.verifyPayable(); });
+  expect(ok).toBe(false);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+  await act(async () => { ok = await result.current.verifyPayable(); });
+  expect(ok).toBe(false);
+  unmount();
+});
+
+it('verifyPayable waits for a reconciliation that is already running', async () => {
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  let finish!: (value: Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>) => void;
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
+  let ok = true; let verifying!: Promise<void>;
+  act(() => { void result.current.reconcile(); });
+  await act(async () => { verifying = result.current.verifyPayable().then((value) => { ok = value; }); });
+  await act(async () => { finish({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true }); await verifying; });
+  expect(ok).toBe(false);
+  expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(2);
+  unmount();
+});

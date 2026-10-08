@@ -15,6 +15,8 @@ export interface PreparedApplePay {
   onResult: () => void;
   onCancel?: () => void;
   isCurrent: () => boolean;
+  /** Fresh server verdict after Wallet returns; the token is never submitted unless it resolves true. */
+  verify: () => Promise<boolean>;
 }
 
 export function DeferredApplePayButton({ disabled, prepare, onError }: {
@@ -70,6 +72,12 @@ export function DeferredApplePayButton({ disabled, prepare, onError }: {
 
       if (!mounted.current || !prepared.isCurrent()) {
         try { await response.complete('failure'); } catch { /* Owner revoked; never submit its token. */ }
+        onCancel?.(); return;
+      }
+      let payable = false;
+      try { payable = await prepared.verify(); } catch { /* Unknown eligibility is treated as not payable. */ }
+      if (!payable || !mounted.current || !prepared.isCurrent()) {
+        try { await response.complete('failure'); } catch { /* No token was submitted. */ }
         onCancel?.(); return;
       }
       const token = response.details.paymentData;

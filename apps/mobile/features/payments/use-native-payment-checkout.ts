@@ -34,7 +34,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const [state, setState] = useState<CheckoutState & { scope: string }>({ ...empty, scope });
-  const controls = useRef({ reconcile: async () => {}, retry: async () => {}, paymentResult: async (_attempt: number) => {} });
+  const controls = useRef({ reconcile: async () => {}, verifyPayable: async () => false, retry: async () => {}, paymentResult: async (_attempt: number) => {} });
 
   useEffect(() => {
     let active = true;
@@ -49,6 +49,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let terminalFailure = false;
     let terminalUnavailable = false;
     let canInitialize = true;
+    let payable = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
     const valid = () => active && currentScope.current === scope;
@@ -125,6 +126,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: result.unavailableReason });
         } else {
           canInitialize = result.canCreatePayment === true && !resultReceived;
+          payable = canInitialize;
           schedule();
           update({ phase: settling ? 'processing' : 'pending', canResume: canInitialize });
         }
@@ -201,7 +203,17 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         update({ phase: 'error', error: errorKey(error) });
       } finally { busy = false; }
     };
-    controls.current = { reconcile, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
+    // Authoritative pre-submission check: a fresh server verdict that this same
+    // reserved attempt can still be paid. Any doubt or error fails closed.
+    const verifyPayable = async (): Promise<boolean> => {
+      const deadline = Date.now() + 10000;
+      while (busy && Date.now() < deadline) await new Promise((done) => setTimeout(done, 25));
+      if (busy || !valid() || !paymentId || terminalResult || terminalUnavailable) return false;
+      payable = false;
+      await reconcile();
+      return valid() && payable;
+    };
+    controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
       if (!valid() || !paymentId || renderedAttempt !== attempt || terminalResult || terminalUnavailable || resultReceived) return;
       resultReceived = true; settling = true; polls = 0; canInitialize = false;
       // The SDK callback ends this bank interaction, but cannot decide payment success.
@@ -220,6 +232,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
   const reconcile = useCallback(async () => {
     if (currentScope.current === scope) await controls.current.reconcile();
   }, [scope]);
+  const verifyPayable = useCallback(async () => (currentScope.current === scope ? controls.current.verifyPayable() : false), [scope]);
   const retryInitialization = useCallback(async () => {
     if (currentScope.current === scope) await controls.current.retry();
   }, [scope]);
@@ -227,5 +240,5 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
   const onPaymentResult = useCallback(async () => {
     if (currentScope.current === scope) await controls.current.paymentResult(renderedAttempt);
   }, [scope, renderedAttempt]);
-  return { ...(state.scope === scope ? state : empty), reconcile, retryInitialization, onPaymentResult };
+  return { ...(state.scope === scope ? state : empty), reconcile, verifyPayable, retryInitialization, onPaymentResult };
 }

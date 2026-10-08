@@ -64,6 +64,7 @@ export function useInlineApplePay({ clientId, scope, enabled, prepareBooking }: 
       const isCurrent = () => owned() && allowed.current && latest.current.config === preparedConfig;
       setWalletOpen(true);
       finish({ config: checkout.config, isCurrent,
+        verify: async () => owned() && allowed.current && await latest.current.verifyPayable() && isCurrent(),
         onResult: () => { if (!owned()) return; setWalletOpen(false); void onResult(); },
         onCancel: () => { if (owned()) setWalletOpen(false); },
       });
