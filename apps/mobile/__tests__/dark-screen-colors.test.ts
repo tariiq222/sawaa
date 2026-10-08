@@ -36,6 +36,7 @@ const backgroundExceptions = new Set([
 function paintsSharedBackground(source: string): boolean {
   return source.includes('<AquaBackground') ||
     source.includes('<SettingsScaffold') ||
+    source.includes('<AuthFormScaffold') ||
     source.includes('<VideoCallScreen');
 }
 
@@ -61,8 +62,10 @@ describe('route color migration safeguards', () => {
 
   it('settings save pairs an action fill with its on-action foreground', () => {
     const source = fs.readFileSync(path.join(appRoot, '../components/features/settings/SettingsProfileSection.tsx'), 'utf8');
-    expect(source).toContain('theme.colors.primaryFill');
-    expect(source).toContain('theme.colors.primaryForeground');
+    expect(source).toContain('<AppButton');
+    const button = fs.readFileSync(path.join(appRoot, '../components/ui/AppButton.tsx'), 'utf8');
+    expect(button).toContain('roles.action.foreground');
+    expect(button).toContain('roles.action.gradient');
     expect(source).not.toMatch(/#1D4ED8/i);
   });
 

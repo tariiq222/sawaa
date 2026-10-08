@@ -1,11 +1,11 @@
 import React from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import type { ComponentProps } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-import { Glass } from '@/theme/components/Glass';
+import { AppButton } from './AppButton';
 import {
   sawaaRadius,
   sawaaSpacing,
@@ -95,33 +95,7 @@ export function EmptyState({
         </Text>
       ) : null}
       {actionLabel && onAction ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onAction}
-          style={{ marginTop: sawaaSpacing.sm }}
-        >
-          <Glass variant="strong" radius={sawaaRadius.pill}>
-            <View
-              style={{
-                paddingHorizontal: sawaaSpacing.lg,
-                paddingVertical: sawaaSpacing.sm,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: sawaaType.body.fontSize,
-                  lineHeight: sawaaType.body.lineHeight,
-                  fontFamily: getFontName(locale, '600'),
-                  fontWeight: '600',
-                  color: sawaaColors.teal[700],
-                  writingDirection,
-                }}
-              >
-                {actionLabel}
-              </Text>
-            </View>
-          </Glass>
-        </Pressable>
+        <AppButton label={actionLabel} onPress={onAction} variant="secondary" style={{ marginTop: sawaaSpacing.sm }} />
       ) : null}
     </View>
   );

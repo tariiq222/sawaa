@@ -1,9 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { getSawaaRoles } from './tokens';
-import { useTheme } from '../useTheme';
-import { getFontName } from '../fonts';
+import { Text, ViewStyle } from 'react-native';
+import { AppButton } from '@/components/ui/AppButton';
 
 interface Props {
   label: string;
@@ -12,70 +9,11 @@ interface Props {
   style?: ViewStyle;
   height?: number;
   disabled?: boolean;
+  loading?: boolean;
   icon?: React.ReactNode;
 }
-
-/**
- * Primary pill button — teal gradient with glass sheen + top-edge highlight.
- * Matches the "ابدأ الآن / تسجيل جديد" CTA style from the welcome screen.
- * Use everywhere a primary action is surfaced so the app stays visually uniform.
- */
-export function PrimaryButton({ label, onPress, fontFamily = getFontName('ar', '600'), style, height = 56, disabled, icon }: Props) {
-  const { scheme } = useTheme();
-  const action = getSawaaRoles(scheme).action;
-  const styles = createStyles(action);
-  const isDisabled = Boolean(disabled || !onPress);
-  return (
-    <Pressable
-      onPress={isDisabled ? undefined : onPress}
-      disabled={isDisabled}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
-      style={[{ opacity: isDisabled ? 0.55 : 1 }, style]}
-    >
-      <LinearGradient
-        colors={action.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.gradient, { height, borderRadius: 999 }]}
-      >
-        {/* Specular sheen on top half */}
-        <LinearGradient
-          colors={[action.sheen, 'transparent']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.sheen}
-          pointerEvents="none"
-        />
-        <View style={styles.topEdge} pointerEvents="none" />
-        <Text style={[styles.label, fontFamily ? { fontFamily } : null]}>{label}</Text>
-        {icon}
-      </LinearGradient>
-    </Pressable>
-  );
+/** Legacy primary API delegates rendering to the shared action. */
+export function PrimaryButton({ label, fontFamily, height = 56, ...props }: Props) {
+  return <AppButton {...props} minHeight={height} accessibilityLabel={label}
+    label={fontFamily ? <Text style={{ fontFamily }}>{label}</Text> : label} />;
 }
-
-const createStyles = (action: ReturnType<typeof getSawaaRoles>['action']) => StyleSheet.create({
-  gradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    overflow: 'hidden',
-    shadowColor: action.fill,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  sheen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: '55%' },
-  topEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 12,
-    right: 12,
-    height: 1,
-    backgroundColor: action.sheen,
-  },
-  label: { color: action.foreground, fontSize: 17, letterSpacing: 0.2 },
-});

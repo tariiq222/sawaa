@@ -41,3 +41,16 @@ it('renders Arabic body copy with the loaded IBM font and right alignment', () =
     textAlign: 'right', writingDirection: 'rtl',
   });
 });
+
+it.each(['bodySm', 'label'] as const)('honors explicit %s color', variant => {
+  const view = render(<ThemedText variant={variant} color="rebeccapurple">Explicit</ThemedText>);
+  expect(view.getByText('Explicit')).toHaveStyle({ color: 'rebeccapurple' });
+});
+it('forwards native announcement semantics', () => {
+  const view = render(<ThemedText accessibilityRole="alert" accessibilityLiveRegion="polite">Offline</ThemedText>);
+  expect(view.getByRole('alert').props.accessibilityLiveRegion).toBe('polite');
+});
+it('gives caller style color precedence over explicit color', () => {
+  const view = render(<ThemedText color="red" style={{ color: 'blue' }}>Styled</ThemedText>);
+  expect(view.getByText('Styled')).toHaveStyle({ color: 'blue' });
+});

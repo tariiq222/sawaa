@@ -13,24 +13,26 @@ const darkBgSource = require('../../assets/bg-aqua-dark.png');
 
 /** Shared wave backdrop; the dark image supplies its own palette without a wash. */
 export function AquaBackground({ variant = 'aqua', style, children, ...rest }: Props) {
-  const { scheme } = useTheme();
+  const { scheme, isHydrated } = useTheme();
   const appearance = variant === 'dark' ? 'dark' : scheme;
   const roles = getSawaaRoles(appearance);
   return (
     <View style={[styles.root, { backgroundColor: roles.backdrop.base }, style]} {...rest}>
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <ImageBackground
-          source={appearance === 'dark' ? darkBgSource : lightBgSource}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-      {appearance === 'light' ? (
-        <View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: getSawaaColors('light').glass.bgSoft }]}
-        />
-      ) : null}
+      {isHydrated !== false ? <>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <ImageBackground
+            source={appearance === 'dark' ? darkBgSource : lightBgSource}
+            resizeMode="cover"
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+        {appearance === 'light' ? (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: getSawaaColors('light').glass.bgSoft }]}
+          />
+        ) : null}
+      </> : null}
       <View
         style={[
           styles.content,

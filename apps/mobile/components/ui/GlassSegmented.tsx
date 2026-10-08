@@ -58,18 +58,17 @@ export function GlassSegmented<T extends string>({
                 if (isActive) return;
                 onChange(option.value);
               }}
-              style={[styles.tab, isActive && { backgroundColor: theme.colors.primarySelection }]}
+              style={[styles.tab, { flexDirection: dir.row }, isActive && { backgroundColor: theme.colors.primarySelection }]}
               accessibilityRole="tab"
               accessibilityLabel={option.label}
               accessibilityState={{ selected: isActive }}
             >
               <Text
-                numberOfLines={1}
                 style={[
                   styles.label,
                   {
                     fontFamily: f600,
-                    fontWeight: '600',
+                    writingDirection: dir.writingDirection,
                     color: isActive
                       ? theme.colors.primarySelectionForeground
                       : colors.ink[700],
@@ -94,7 +93,7 @@ export function GlassSegmented<T extends string>({
                       styles.badgeText,
                       {
                         fontFamily: f600,
-                        fontWeight: '600',
+                        writingDirection: dir.writingDirection,
                         color: isActive ? theme.colors.primarySelection : colors.ink[500],
                       },
                     ]}
@@ -121,6 +120,8 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, size: 'sm' | 'm
     },
     tab: {
       flex: 1,
+      minWidth: 0,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -131,10 +132,14 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>, size: 'sm' | 'm
       overflow: 'hidden',
     },
     label: {
+      flexShrink: 1,
+      minWidth: 0,
+      textAlign: 'center',
       fontSize: size === 'md' ? sawaaType.body.fontSize : sawaaType.caption.fontSize,
       lineHeight: size === 'md' ? sawaaType.body.lineHeight : sawaaType.caption.lineHeight,
     },
     badge: {
+      flexShrink: 0,
       minWidth: 18,
       paddingHorizontal: 6,
       paddingVertical: 1,

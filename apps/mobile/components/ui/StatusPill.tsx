@@ -1,4 +1,6 @@
 import React from 'react';
+import { useDir } from '@/hooks/useDir';
+import { getFontName } from '@/theme/fonts';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme/useTheme';
 import { sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa/tokens';
@@ -21,6 +23,7 @@ interface StatusPillProps {
 }
 
 export function StatusPill({ status, label }: StatusPillProps) {
+  const { locale } = useDir();
   const { theme } = useTheme();
   const palette = statusColors(theme.colors);
   const bgColor = palette[status] ?? palette.pending;
@@ -37,7 +40,7 @@ export function StatusPill({ status, label }: StatusPillProps) {
         borderColor: withAlpha(bgColor, 0.3),
       }]}
     >
-      <Text style={[styles.label, { color: textColor }]}>{label}</Text>
+      <Text style={[styles.label, { color: textColor, fontFamily: getFontName(locale, '600') }]}>{label}</Text>
     </View>
   );
 }

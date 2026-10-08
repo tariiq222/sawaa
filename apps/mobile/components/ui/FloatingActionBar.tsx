@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FloatingCta } from './FloatingCta';
 import { useDir } from '@/hooks/useDir';
 import { Glass } from '@/theme/components/Glass';
 import type { GlassVariant } from '@/theme/components/Glass';
@@ -20,20 +20,11 @@ interface FloatingActionBarProps {
  * child's flex.
  */
 export function FloatingActionBar({ children, variant = 'strong', allowOverflow = false, opaqueBackdrop = false }: FloatingActionBarProps) {
-  const insets = useSafeAreaInsets();
   const { row } = useDir();
   const colors = useSawaaColors();
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: 'absolute',
-        start: sawaaSpacing.lg,
-        end: sawaaSpacing.lg,
-        bottom: insets.bottom + sawaaSpacing.lg,
-      }}
-    >
+    <FloatingCta>
       <Glass variant={variant} radius={sawaaRadius.xl} padding={sawaaSpacing.md}
         style={{
           ...(allowOverflow ? { overflow: 'visible' as const } : {}),
@@ -49,6 +40,6 @@ export function FloatingActionBar({ children, variant = 'strong', allowOverflow 
           {children}
         </View>
       </Glass>
-    </View>
+    </FloatingCta>
   );
 }

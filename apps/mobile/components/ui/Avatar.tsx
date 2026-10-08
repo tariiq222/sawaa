@@ -1,4 +1,6 @@
 import React from 'react';
+import { useDir } from '@/hooks/useDir';
+import { getFontName } from '@/theme/fonts';
 import { View, Text, Image } from 'react-native';
 import { withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
@@ -16,6 +18,7 @@ export function Avatar({
   imageUrl,
   color: colorOverride,
 }: AvatarProps) {
+  const { locale } = useDir();
   const colors = useSawaaColors();
   const color = colorOverride ?? colors.teal[700];
   if (imageUrl) {
@@ -54,7 +57,7 @@ export function Avatar({
         style={{
           color,
           fontSize: size * 0.35,
-          fontWeight: '700',
+          fontFamily: getFontName(locale, '700'),
         }}
       >
         {initials}
