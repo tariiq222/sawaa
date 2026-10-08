@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-08",
+  "scope": "Representative display-only iOS component/route fixtures; not all-page or business/provider acceptance",
+  "isolation": {
+    "storage": "in-memory guest",
+    "requests": "all Axios rejected locally",
+    "external_navigation": "disabled",
+    "root_layout": "scratch ExpoRouter shell; actual imported components/pages"
+  },
+  "hosts": {
+    "old": "preexisting sa.sawa.app debug host, images diagnostic only",
+    "fresh": "generated integration Expo55/RN0.83 Debug host; iOS26.5,375x667"
+  },
+  "verified_cases": [
+    {
+      "case": "FloatingCta two long actions at nativefontScale2.14",
+      "result": "last row visible above footer and second action fully reachable via inner scrolling; measured footer324pt, body reserve340pt",
+      "image": "summary-ar-dark-375x667-font214-after-cap.jpg",
+      "host": "fresh",
+      "limits": "display fixture; exact320pt unavailable; no keyboard/physical/provider acceptance"
+    },
+    {
+      "case": "Persisted dark Aqua coldstart after readiness remedy",
+      "result": "coldrestart route context dark and initial native wave visiblydark; content retained by focusedtests",
+      "image": "aqua-restored-dark-cold-start.jpg",
+      "host": "fresh",
+      "limits": "isolatedmemorypreference, actualThemeProvider; not all skin switches/device acceptance"
+    },
+    {
+      "case": "Actual confirmation route in Arabic dark native375x667font100 withfictional long service/clinic/practitioner",
+      "result": "solid rows wrap naturally; header/progress/summary andguestactionvisible; existinglogin gate remains",
+      "image": "confirm-ar-dark-375x667-font100-guest.jpg",
+      "host": "fresh",
+      "limits": "guestmemorydata; no paymentselection/providertransaction; scratchQA button overlapslogicalback area so not navigationacceptance"
+    }
+  ],
+  "open_cases": [
+    "Rapid repeated theme switching during active image requests not established; coldstart storedmode issue resolved and visuallyverified",
+    "Full AR/EN light/dark normal/large matrix, native screenreader, autofill, ReduceMotion, Android, physicaldevice and owner acceptance incomplete",
+    "Unsigned simulator ExpoNotifications keychain registration warning; no push-provider acceptance"
+  ],
+  "images": [
+    {
+      "file": "actions-ar-dark-402x874-font100.jpg",
+      "sha256": "df782b5574d534c7808bfae42e7d72ffac10023d92c98455a16adc4d5256483c",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "actions-ar-light-402x874-font100.jpg",
+      "sha256": "27e6b6e5c7e5c4e4cea3783efabdb113b8ed93805311161d69f86a11bc4b7d36",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "actions-en-dark-402x874-font100.jpg",
+      "sha256": "9d13487e345b68dcf366c07037fec350f669a70d1d0770aed2d161376ff74786",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "actions-en-dark-busy.jpg",
+      "sha256": "71b281bf3e1bbe2d7022c6061a457c88b7cf64278353ebfed458a6c93713f3ca",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "actions-en-light-402x874-font100.jpg",
+      "sha256": "31466c8498a5e32dc0965626351b7c461422d9323f9fc15f525de8bc87509248",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "aqua-restored-dark-cold-start.jpg",
+      "sha256": "90f0e54754ed26d2d2f950baed1117828ba01aeec0c0fe8ed8be23b36eda3902",
+      "host": "fresh",
+      "status": "accepted isolated display case"
+    },
+    {
+      "file": "confirm-ar-dark-375x667-font100-guest.jpg",
+      "sha256": "85f805324a06b8e657af9d5c2ab02c3f4e4cd36172c22fb4a9b0074c09fcf2ff",
+      "host": "fresh",
+      "status": "accepted isolated display case"
+    },
+    {
+      "file": "metadata-ar-dark-375x667-font214.jpg",
+      "sha256": "b807f803099a9f39286ab31632e6a1cb41793451987ce0dc59e0c4fad2c980b1",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "metadata-ar-dark-402x874-font100.jpg",
+      "sha256": "fb3f831bdd6c4fdd5a76bf484c73aaf6cc5e75acd054196b32f3145a7773528f",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "metadata-ar-dark-font264.jpg",
+      "sha256": "2afb5a93be163027f1e007c385fb0af1112fe60f2c085e799798e7474d67e80e",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "summary-ar-dark-375x667-font214-after-cap.jpg",
+      "sha256": "fef4839df1ef981a46ffb5cb2e659ec38ea6761fb80c304a0ed7a1eee5a1f753",
+      "host": "fresh",
+      "status": "accepted isolated display case"
+    },
+    {
+      "file": "summary-ar-dark-375x667-font214-before-cap.jpg",
+      "sha256": "4d97ec5a9b7b31c10e3a510e9ffd2f9dde30dface037120ee284a9677d5dfa44",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "summary-ar-dark-font214-last-row.jpg",
+      "sha256": "135f210e1e1f3a1192dc01bef059561571d589d206b8bc056f41ce9f97fe0ccb",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    },
+    {
+      "file": "summary-ar-dark-font214-two-actions-midscroll.jpg",
+      "sha256": "7de742828bd3aeaadb4bd256a7be57a6ac54af120bdb5d6a8e0556474d69ed62",
+      "host": "old",
+      "status": "historical diagnostic/representative observation only"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "policy": "sol61-all-v1",
+  "acceptedScope": "Local iOS card Pay button geometry remedy and explicitly listed native display cases; source review and integrated mobile checks passed. Full release/payment/all-route runtime acceptance is NOT granted.",
+  "evidence": "/Users/tariq/.codex/worktrees/mobile-ui-unification/sawaa/docs/mobile-app/audits/2026-10-08-ios-ui/evidence.json",
+  "sourceChange": [
+    "apps/mobile/features/payments/NativePaymentForm.tsx",
+    "apps/mobile/features/payments/__tests__/NativePaymentForm.test.tsx"
+  ],
+  "verification": {
+    "mobileJest": "207suites1461tests exit0",
+    "typecheck": "exit0",
+    "lint": "exit0;0errors5existingwarnings",
+    "diffWhitespace": "exit0",
+    "nativeRedGreen": "Arabic dark214% Pay clipping reproduced then complete label/amount; EN light214% complete; fresh ARdark100% complete",
+    "independentReview": "PASS"
+  },
+  "pending": [
+    "SDK nested keyboard scrolling and large CardNumber placeholder/network-mark overlap",
+    "Signed physical iPhone and ApplePay/MoyasarSandbox and dashboard smoke",
+    "All70-route native runtime/size/theme/locale/accessibility matrix"
+  ],
+  "usageAttribution": "unknown;late/incomplete capture",
+  "delivery": "Uncommitted local integration worktree only; no push/merge/deployment/TestFlight/production or real transactions"
+}

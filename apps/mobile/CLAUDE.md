@@ -39,7 +39,7 @@ app/
   - Transient UI state (modals, form drafts, typing indicators) → component-level `useState`/`useReducer`.
 - **API**: Axios services in `services/` — one file per domain; `services/client/` and `services/employee/` hold role-specific endpoints.
 - **i18n**: `i18next` + `react-i18next` — translation files in `i18n/`; keys mirror dashboard/backend tokens.
-- **Theme**: `ThemeProvider` combines backend `PublicBranding`, the system/user color scheme, and Sawaa design tokens. The selected theme mode is stored in AsyncStorage; theme state is not in Redux. Never hardcode brand colors.
+- **Theme**: `ThemeProvider` accepts backend `PublicBranding` for compatibility and combines the system/user color scheme with the fixed Sawaa design tokens. `buildTheme` retains the Sawaa palette; branding does not override theme colors. The selected theme mode is stored in AsyncStorage; theme state is not in Redux. Never hardcode brand colors.
 - **Components**: Reusable in `components/`, feature-specific stay in `app/`.
 
 ## Service Files (`services/`)
@@ -80,7 +80,7 @@ Backend, dashboard, and admin do not change.
 
 - `useBranding` query fetches `PublicBranding` for the Sawa deployment.
 - `ThemeProvider` consumes the result and exposes theme colors and mode to RN components.
-- All colors, logo, and typography flow from this — no hardcoded brand values anywhere.
+- UI colors and typography come from the fixed Sawaa tokens and locale font aliases. PublicBranding does not replace the palette in `buildTheme`; preserve that behavior. Logos retain their existing asset/branding consumers. No hardcoded brand values in components.
 
 ## Terminology
 
