@@ -6,6 +6,7 @@ import {
   createEmployee,
   onboardEmployee,
   updateEmployee,
+  uploadEmployeePublicImage,
   setAvailability,
   setBreaks,
   createVacation,
@@ -62,7 +63,12 @@ export function useEmployeeMutations() {
     },
   })
 
-  return { createMutation, onboardMutation, updateMutation }
+  const uploadPublicImageMutation = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => uploadEmployeePublicImage(id, file),
+    onSuccess: invalidate,
+  })
+
+  return { createMutation, onboardMutation, updateMutation, uploadPublicImageMutation }
 }
 
 /* ─── Availability Mutation ─── */

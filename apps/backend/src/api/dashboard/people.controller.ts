@@ -1025,6 +1025,35 @@ export class DashboardPeopleController {
     }, file.buffer);
   }
 
+  @Post('employees/:employeeId/public-image')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload a public profile image for an employee' })
+  @ApiParam({ name: 'employeeId', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Public profile image (JPEG/PNG/WebP)' },
+      },
+    },
+  })
+  @ApiCreatedResponse({ type: UploadAvatarResponseDto, description: 'Public image uploaded — returns fileId and signed URL' })
+  @ApiNotFoundResponse({ description: 'Employee not found' })
+  uploadPublicImageEndpoint(
+    @Param('employeeId', ParseUUIDPipe) employeeId: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.uploadAvatar.execute({
+      employeeId, target: 'public',
+      filename: file.originalname, mimetype: file.mimetype, size: file.size,
+    }, file.buffer);
+  }
+
   // ── Employee Account (System Login) ────────────────────────────────────────
   @Get('employees/:id/account')
   @CheckPermissions({ action: 'read', subject: 'User' })

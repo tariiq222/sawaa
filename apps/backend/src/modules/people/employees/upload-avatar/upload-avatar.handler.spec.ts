@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UploadAvatarHandler } from './upload-avatar.handler';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { PrismaService } from '../../../../infrastructure/database';
 
 const EMPLOYEE_ID = '00000000-0000-0000-0000-000000000002';
@@ -39,7 +40,7 @@ function makeHandler(overrides: {
     : jest.fn().mockResolvedValue(overrides.uploadResult ?? MOCK_FILE_ROW);
   const uploadFile = { execute: uploadFileExecute } as unknown as UploadFileHandler;
 
-  const handler = new UploadAvatarHandler(prisma, uploadFile);
+  const handler = new UploadAvatarHandler(prisma, uploadFile, { getSignedUrl: jest.fn().mockResolvedValue(EXPECTED_URL) } as unknown as MinioService);
   return { handler, employeeFindUnique, employeeUpdate, uploadFileExecute };
 }
 
@@ -87,8 +88,13 @@ describe('UploadAvatarHandler', () => {
     );
     expect(employeeUpdate).toHaveBeenCalledWith({
       where: { id: EMPLOYEE_ID },
-      data: { avatarUrl: EXPECTED_URL },
+      data: { avatarUrl: 'org/new.png' },
     });
     expect(res).toEqual({ fileId: MOCK_FILE_ROW.id, url: EXPECTED_URL });
+  });
+  it('uploads the explicitly selected public image without replacing the internal avatar', async () => {
+    const { handler, employeeUpdate } = makeHandler();
+    await handler.execute({ ...validCmd, target: 'public' } as never, Buffer.alloc(1024));
+    expect(employeeUpdate).toHaveBeenCalledWith({ where: { id: EMPLOYEE_ID }, data: { publicImageUrl: 'org/new.png' } });
   });
 });

@@ -6186,6 +6186,10 @@
             "example": true,
             "type": "boolean"
           },
+          "isPublic": {
+            "description": "Whether the employee appears in the public directory",
+            "type": "boolean"
+          },
           "name": {
             "description": "Full display name",
             "example": "Dr. Khalid Al-Otaibi",
@@ -6214,6 +6218,21 @@
             "nullable": true,
             "type": "object"
           },
+          "publicBioAr": {
+            "description": "Arabic public bio",
+            "nullable": true,
+            "type": "object"
+          },
+          "publicBioEn": {
+            "description": "English public bio",
+            "nullable": true,
+            "type": "object"
+          },
+          "publicImageUrl": {
+            "description": "Public profile image read URL",
+            "nullable": true,
+            "type": "object"
+          },
           "ratingCount": {
             "description": "Total rating count",
             "example": 32,
@@ -6225,6 +6244,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "slug": {
+            "description": "Public profile slug",
+            "nullable": true,
+            "type": "object"
           },
           "specialty": {
             "description": "Specialty label",
@@ -6257,6 +6281,7 @@
           "employmentType",
           "onboardingStatus",
           "isActive",
+          "isPublic",
           "averageRating",
           "ratingCount",
           "bookingCount",
@@ -31427,6 +31452,107 @@
           }
         ],
         "summary": "Upload an avatar image for an employee",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
+    "/api/v1/dashboard/people/employees/{employeeId}/public-image": {
+      "post": {
+        "operationId": "DashboardPeopleController_uploadPublicImageEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Employee UUID",
+            "in": "path",
+            "name": "employeeId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "Public profile image (JPEG/PNG/WebP)",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAvatarResponseDto"
+                }
+              }
+            },
+            "description": "Public image uploaded — returns fileId and signed URL"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Employee not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a public profile image for an employee",
         "tags": [
           "Dashboard / People"
         ]

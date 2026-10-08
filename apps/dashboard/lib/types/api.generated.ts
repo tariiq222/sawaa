@@ -2600,6 +2600,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/people/employees/{employeeId}/public-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a public profile image for an employee */
+        post: operations["DashboardPeopleController_uploadPublicImageEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/people/employees/{employeeId}/services/{serviceId}/custom-pricing": {
         parameters: {
             query?: never;
@@ -9299,6 +9316,8 @@ export interface components {
              * @example true
              */
             isActive: boolean;
+            /** @description Whether the employee appears in the public directory */
+            isPublic: boolean;
             /**
              * @description Full display name
              * @example Dr. Khalid Al-Otaibi
@@ -9324,6 +9343,12 @@ export interface components {
              * @example +966501234567
              */
             phone?: Record<string, never> | null;
+            /** @description Arabic public bio */
+            publicBioAr?: Record<string, never> | null;
+            /** @description English public bio */
+            publicBioEn?: Record<string, never> | null;
+            /** @description Public profile image read URL */
+            publicImageUrl?: Record<string, never> | null;
             /**
              * @description Total rating count
              * @example 32
@@ -9331,6 +9356,8 @@ export interface components {
             ratingCount: number;
             /** @description Assigned service UUIDs */
             serviceIds: string[];
+            /** @description Public profile slug */
+            slug?: Record<string, never> | null;
             /**
              * @description Specialty label
              * @example Family Therapy
@@ -27067,6 +27094,82 @@ export interface operations {
         };
         responses: {
             /** @description Avatar uploaded — returns fileId and URL */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadAvatarResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_uploadPublicImageEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                employeeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Public profile image (JPEG/PNG/WebP)
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Public image uploaded — returns fileId and signed URL */
             201: {
                 headers: {
                     [name: string]: unknown;

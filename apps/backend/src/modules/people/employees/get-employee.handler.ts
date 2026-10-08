@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { parseEntityRef } from '../../../common/parse-entity-ref';
+import { OwnedImageResolver } from '../../media/owned-image.resolver';
 import { mapEmployeeRow } from './employee-row.mapper';
 
 export interface GetEmployeeQuery {
@@ -11,6 +12,7 @@ export interface GetEmployeeQuery {
 export class GetEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly images: OwnedImageResolver,
   ) {}
 
   async execute(query: GetEmployeeQuery) {
@@ -44,6 +46,8 @@ export class GetEmployeeHandler {
         { avg: ratingAgg._avg.score, count: ratingAgg._count._all },
         bookingCount,
       ),
+      avatarUrl: await this.images.resolve('employee', employee.id, employee.avatarUrl),
+      publicImageUrl: await this.images.resolve('employee', employee.id, employee.publicImageUrl),
       exceptions: employee.exceptions,
     };
   }

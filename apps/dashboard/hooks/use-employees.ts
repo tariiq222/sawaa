@@ -131,7 +131,7 @@ export function useEmployees() {
     queryKey: queryKeys.employees.list(query),
     queryFn: () => fetchEmployees(query),
     placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000, // Refresh before five-minute image signatures expire.
   })
 
   const resetFilters = useCallback(() => {
@@ -177,7 +177,7 @@ export function useAllEmployees() {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.employees.list(query),
     queryFn: () => fetchEmployees(query),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000, // Refresh before five-minute image signatures expire.
   })
 
   return {
@@ -194,7 +194,7 @@ export function useEmployee(id: string | null) {
     queryKey: queryKeys.employees.detail(id!),
     queryFn: () => fetchEmployee(id!),
     enabled: !!id,
-    staleTime: 10 * 60 * 1000, // 10 min
+    staleTime: 60 * 1000, // Refresh before five-minute image signatures expire.
   })
 }
 

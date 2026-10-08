@@ -1,3 +1,4 @@
+import { OwnedImageResolver } from './owned-image.resolver';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
@@ -12,6 +13,7 @@ import { MAX_FILE_SIZE_BYTES } from './files/upload-file.handler';
 import { DashboardMediaController } from '../../api/dashboard/media.controller';
 
 const handlers = [
+  OwnedImageResolver,
   UploadFileHandler,
   GetFileHandler,
   DeleteFileHandler,

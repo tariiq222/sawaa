@@ -14,34 +14,34 @@
  * dedicated integration smoke tests run outside the Jest VM.
  */
 
-import * as React from 'react';
+import * as React from "react";
 
 /** Builds a minimal but structurally valid PDF buffer (>1KB). */
 function buildStubPdf(): Buffer {
   // A tiny one-page PDF skeleton. We pad the body so the total length
   // exceeds 1024 bytes — that matches the threshold the renderer service
   // spec uses to confirm the buffer is "real PDF output".
-  const header = '%PDF-1.4\n%âãÏÓ\n';
+  const header = "%PDF-1.4\n%âãÏÓ\n";
   const body = [
-    '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
-    '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-    '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >> endobj',
+    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
+    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >> endobj",
     // Padding comment to push the buffer past 1024 bytes deterministically.
-    `% padding ${'.'.repeat(1100)}`,
-  ].join('\n');
+    `% padding ${".".repeat(1100)}`,
+  ].join("\n");
   const trailer = [
-    'xref',
-    '0 4',
-    '0000000000 65535 f ',
-    '0000000018 00000 n ',
-    '0000000066 00000 n ',
-    '0000000118 00000 n ',
-    'trailer << /Size 4 /Root 1 0 R >>',
-    'startxref',
-    '200',
-    '%%EOF',
-  ].join('\n');
-  return Buffer.from(`${header}${body}\n${trailer}\n`, 'binary');
+    "xref",
+    "0 4",
+    "0000000000 65535 f ",
+    "0000000018 00000 n ",
+    "0000000066 00000 n ",
+    "0000000118 00000 n ",
+    "trailer << /Size 4 /Root 1 0 R >>",
+    "startxref",
+    "200",
+    "%%EOF",
+  ].join("\n");
+  return Buffer.from(`${header}${body}\n${trailer}\n`, "binary");
 }
 
 interface PdfInstance {
@@ -58,7 +58,7 @@ export function pdf(_element: React.ReactElement): PdfInstance {
       // into a fresh Uint8Array view so the BlobPart type matches across
       // ArrayBuffer / SharedArrayBuffer typings.
       const view = new Uint8Array(buffer);
-      return new Blob([view], { type: 'application/pdf' });
+      return new Blob([view], { type: "application/pdf" });
     },
     async toBuffer() {
       return buffer;
@@ -75,11 +75,11 @@ const passthrough = (name: string): React.FC<React.PropsWithChildren> =>
     return React.createElement(React.Fragment, null, children);
   };
 
-export const Document = passthrough('Document');
-export const Page = passthrough('Page');
-export const View = passthrough('View');
-export const Text = passthrough('Text');
-export const Image = passthrough('Image');
+export const Document = passthrough("Document");
+export const Page = passthrough("Page");
+export const View = passthrough("View");
+export const Text = passthrough("Text");
+export const Image = passthrough("Image");
 
 export const StyleSheet = {
   create<T extends Record<string, unknown>>(styles: T): T {
@@ -88,6 +88,12 @@ export const StyleSheet = {
 };
 
 export const Font = {
+  clear(): void {
+    // no-op in tests: the shim has no font or glyph cache
+  },
+  async load(_descriptor: unknown): Promise<void> {
+    // no-op in tests
+  },
   register(_config: unknown): void {
     // no-op in tests
   },

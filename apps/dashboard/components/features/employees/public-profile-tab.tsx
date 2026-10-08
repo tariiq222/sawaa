@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, startTransition } from "react"
+import { useState, useEffect, useRef, startTransition } from "react"
 import { useEmployeeMutations } from "@/hooks/use-employee-mutations"
-import { Card, CardContent } from "@sawaa/ui"
+import { AvatarUpload, Card, CardContent } from "@sawaa/ui"
+import { toast } from "sonner"
 import { Label } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
@@ -26,13 +27,16 @@ function slugify(raw: string): string {
 
 export function PublicProfileTab({ employee }: Props) {
   const { t } = useLocale()
-  const { updateMutation } = useEmployeeMutations()
+  const { updateMutation, uploadPublicImageMutation } = useEmployeeMutations()
+  const [isSaving, setIsSaving] = useState(false)
+  const [image, setImage] = useState({ value: employee.publicImageUrl ?? "", file: undefined as File | undefined, clear: false })
+  const previewRef = useRef<string | undefined>(undefined)
+  useEffect(() => () => { if (previewRef.current) URL.revokeObjectURL(previewRef.current) }, [])
 
   const [form, setForm] = useState({
     slug: employee.slug ?? "",
     publicBioAr: employee.publicBioAr ?? "",
     publicBioEn: employee.publicBioEn ?? "",
-    publicImageUrl: employee.publicImageUrl ?? "",
   })
 
   useEffect(() => {
@@ -40,14 +44,32 @@ export function PublicProfileTab({ employee }: Props) {
     if (!form.slug && seed) startTransition(() => setForm((f) => ({ ...f, slug: slugify(seed) })))
   }, [employee.user.firstName, employee.user.lastName, form.slug])
 
+  const replacePreview = (value: string, file?: File, clear = false) => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    previewRef.current = value.startsWith("blob:") ? value : undefined
+    setImage({ value, file, clear })
+  }
+
   const save = async () => {
-    const payload: UpdateEmployeePayload = {
-      slug: form.slug || null,
-      publicBioAr: form.publicBioAr || null,
-      publicBioEn: form.publicBioEn || null,
-      publicImageUrl: form.publicImageUrl || null,
+    if (isSaving) return
+    setIsSaving(true)
+    try {
+      if (image.file) {
+        const uploaded = await uploadPublicImageMutation.mutateAsync({ id: employee.id, file: image.file })
+        replacePreview(uploaded.url)
+      }
+      const payload: UpdateEmployeePayload = {
+        slug: form.slug || null,
+        publicBioAr: form.publicBioAr || null,
+        publicBioEn: form.publicBioEn || null,
+        ...(image.clear ? { publicImageUrl: null } : {}),
+      }
+      await updateMutation.mutateAsync({ id: employee.id, ...payload })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("employees.public.saveError"))
+    } finally {
+      setIsSaving(false)
     }
-    await updateMutation.mutateAsync({ id: employee.id, ...payload })
   }
 
   return (
@@ -64,10 +86,14 @@ export function PublicProfileTab({ employee }: Props) {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>{t("employees.public.imageUrl")}</Label>
-            <Input
-              value={form.publicImageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, publicImageUrl: e.target.value }))}
-              placeholder="https://..."
+            <AvatarUpload
+              key={image.value}
+              value={image.value || undefined}
+              onChange={(file, preview) => replacePreview(preview, file)}
+              onClear={() => replacePreview("", undefined, true)}
+              uploadAriaLabel={t("employees.public.imageUrl")}
+              addAriaLabel={t("employees.public.imageUrl")}
+              clearAriaLabel={t("employees.public.removeImage")}
             />
           </div>
         </div>
@@ -91,8 +117,8 @@ export function PublicProfileTab({ employee }: Props) {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={updateMutation.isPending}>
-            {updateMutation.isPending ? t("employees.public.saving") : t("employees.public.save")}
+          <Button onClick={save} disabled={isSaving || updateMutation.isPending || uploadPublicImageMutation.isPending}>
+            {isSaving ? t("employees.public.saving") : t("employees.public.save")}
           </Button>
         </div>
       </CardContent>
