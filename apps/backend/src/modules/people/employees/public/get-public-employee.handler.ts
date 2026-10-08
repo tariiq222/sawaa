@@ -29,6 +29,7 @@ export class GetPublicEmployeeHandler {
         gender: true,
         employmentType: true,
         experience: true,
+        languages: true,
       },
     });
     if (!row) throw new NotFoundException('Employee not found');

@@ -134,12 +134,11 @@ export default function LoginScreen() {
 
     {mode === 'password' && <View style={styles.passwordField}>
       <LabeledInput label={t('auth.password')} value={password} dir={dir}
-        onChangeText={value => { setPassword(value); setError(undefined); }} secureTextEntry={!visible}
+        onChangeText={value => { setPassword(value); setError(undefined); }} secureTextEntry
+        showVisibilityToggle isVisible={visible} onToggleVisibility={() => setVisible(current => !current)}
         editable={!passwordLogin.pending} autoCapitalize="none" autoCorrect={false}
         autoComplete="password" textContentType="password" onSubmitEditing={handleLogin}
         inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }} />
-      <AppButton variant="ghost" size="sm" label={t(visible ? 'auth.hidePassword' : 'auth.showPassword')}
-        onPress={() => setVisible(!visible)} />
     </View>}
 
     <AppButton
@@ -203,7 +202,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   modes: { gap: 8, marginBottom: 20 },
   mode: { flex: 1, minHeight: 48, justifyContent: 'center', borderWidth: 1, borderColor: colors.teal[200], borderRadius: sawaaTokens.radius.lg },
   selectedMode: { borderColor: colors.teal[700], backgroundColor: colors.teal[100] },
-  passwordField: { gap: 8, marginTop: 16 },
+  passwordField: { marginTop: 16 },
   primary: { marginTop: 16 },
   registerRow: { flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   registerText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700], textAlign: 'center' },

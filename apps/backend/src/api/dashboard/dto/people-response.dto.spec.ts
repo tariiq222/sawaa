@@ -290,6 +290,7 @@ describe('UploadAvatarResponseDto (output shape)', () => {
 describe('PublicEmployeeResponseDto (output shape)', () => {
   it('constructs a public employee with the right shape', () => {
     const p: PublicEmployeeResponseDto = {
+      languages: [], experience: 0,
       id: '00000000-0000-0000-0000-000000000000',
       slug: 'dr-ahmed',
       nameAr: 'أحمد الغامدي',
@@ -319,6 +320,7 @@ describe('PublicEmployeeResponseDto (output shape)', () => {
 
   it('accepts null for nullable public fields', () => {
     const p: PublicEmployeeResponseDto = {
+      languages: [], experience: 0,
       id: '00000000-0000-0000-0000-000000000000',
       slug: null,
       nameAr: null,

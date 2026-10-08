@@ -5,6 +5,18 @@ const identity = `qa-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const api = 'http://127.0.0.1:59002';
 const draft = `clinicId=qa-clinic&serviceId=qa-service&employeeId=qa-employee&branchId=qa-branch&deliveryType=in_person&scheduledAt=${encodeURIComponent(new Date(Date.now() + 864000000).toISOString())}&chargedPrice=12500&currency=SAR`;
 
+// Locators below are exact Arabic names and the app restores its saved language from storage.
+// Fail with a clear cause instead of a misleading locator timeout when the simulator was switched.
+test('simulator app language is Arabic', async ({ app, device, screen }) => {
+  await app.open();
+  await device.openLink(`sawa://booking/confirm?${draft}`);
+  await expect.poll(async () => await screen.getByText('طريقة الدفع').isVisible() || await screen.getByText('Payment method').isVisible()).toBeTruthy();
+  if (await screen.getByText('Payment method').isVisible()) {
+    throw new Error('The app language is English. Switch it to Arabic in Settings on the "Sawaa Booking QA" simulator, then rerun.');
+  }
+  await expect(screen.getByText('طريقة الدفع')).toBeVisible();
+});
+
 test('new booking opens selected card form without another method chooser', async ({ app, device, screen }) => {
   await fetch(`${api}/__reset`, { method: 'POST' });
   await app.open();
@@ -27,7 +39,7 @@ test('new booking opens selected card form without another method chooser', asyn
   await expect(screen.getByText('تأكيد الموعد')).toBeVisible();
   await expect(screen.getByText('طريقة الدفع')).toBeVisible();
   await screen.getByRole('button', 'تأكيد الموعد والدفع في المركز').tap();
-  await expect(screen.getByText(/لهذا الحجز فاتورة/)).toBeVisible();
+  await expect(screen.getByText(/لهذا الموعد فاتورة/)).toBeVisible();
   await app.screenshot('existing-invoice-explanation');
   await screen.getByRole('button', 'OK').tap();
   await expect(screen.getByRole('button', 'الدفع بالبطاقات')).toBeVisible();
@@ -111,7 +123,11 @@ test('completed booking removes confirmation from the back stack', async ({ app,
   await fetch(`${api}/__complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoiceId: initialized.body.invoiceId }) });
   await screen.getByRole('button', 'التحقق مجددًا').tap();
   await expect(screen.getByText('تم تأكيد موعدك')).toBeVisible();
-  await device.back();
+  // After success the confirmation must be gone from the stack: either there is no in-app back
+  // control at all (the engine reports it unavailable) or going back must not reach it.
+  await device.back().catch((error: unknown) => {
+    if (!/in-app back control is not available/.test(String(error))) throw error;
+  });
   await expect(screen.getByText('تأكيد الموعد')).not.toBeVisible();
   await expect(screen.getByText('طريقة الدفع')).not.toBeVisible();
   await app.screenshot('completed-booking-back-stack');

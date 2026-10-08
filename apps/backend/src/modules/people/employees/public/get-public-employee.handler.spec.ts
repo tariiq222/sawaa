@@ -55,7 +55,7 @@ describe('GetPublicEmployeeHandler', () => {
       publicImageUrl: null,
       gender: null,
       employmentType: 'FULL_TIME',
-      experience: 7,
+      experience: 7, languages: ['العربية', 'English'],
     });
     prisma.rating.aggregate.mockResolvedValue({ _avg: { score: 4.5 }, _count: { _all: 3 } });
     prisma.employeeService.findMany.mockResolvedValue([
@@ -73,6 +73,8 @@ describe('GetPublicEmployeeHandler', () => {
     prisma.branch.findMany.mockResolvedValue([{ id: 'active-branch' }]);
 
     const result = await handler.execute('john');
+    expect(result.languages).toEqual(['العربية', 'English']);
+    expect(prisma.employee.findFirst).toHaveBeenCalledWith(expect.objectContaining({ select: expect.objectContaining({ languages: true }) }));
 
     expect(prisma.service.findMany).toHaveBeenCalledWith({
       where: {

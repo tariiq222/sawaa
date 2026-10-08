@@ -235,3 +235,23 @@ model MobileEmailFlow {
   @@index([emailExpiresAt])
   @@index([continuationExpiresAt, consumedAt])
 }
+
+// A contact change is bound to the authenticated staff account and old contact.
+// Login OTPs and registration continuations cannot be used here.
+model EmployeeContactChallenge {
+  id             String     @id @default(uuid())
+  userId         String
+  employeeId     String
+  channel        OtpChannel
+  identifier     String
+  previousValue  String?
+  codeHash       String
+  expiresAt      DateTime
+  attempts       Int        @default(0)
+  ready          Boolean    @default(false)
+  consumedAt     DateTime?
+  createdAt      DateTime   @default(now())
+
+  @@index([userId, channel, consumedAt])
+  @@index([expiresAt])
+}

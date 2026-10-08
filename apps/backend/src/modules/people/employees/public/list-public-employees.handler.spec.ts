@@ -39,7 +39,7 @@ describe('ListPublicEmployeesHandler', () => {
 
   it('should return employees with ratings and prices', async () => {
     prisma.employee.findMany.mockResolvedValue([
-      { id: 'e1', nameAr: 'جون', nameEn: 'John', gender: 'MALE', employmentType: 'FULL_TIME', slug: 'john' },
+      { id: 'e1', languages: ['العربية'], nameAr: 'جون', nameEn: 'John', gender: 'MALE', employmentType: 'FULL_TIME', slug: 'john' },
       { id: 'e2', nameAr: 'جين', nameEn: 'Jane', gender: null, employmentType: 'PART_TIME', slug: null },
     ]);
     prisma.rating.groupBy.mockResolvedValue([
@@ -59,6 +59,8 @@ describe('ListPublicEmployeesHandler', () => {
 
     const result = await handler.execute();
     expect(result).toHaveLength(2);
+    expect(result[0].languages).toEqual(['العربية']);
+    expect(prisma.employee.findMany).toHaveBeenCalledWith(expect.objectContaining({ select: expect.objectContaining({ languages: true }) }));
     expect(result[0].ratingAverage).toBe(4.5);
     expect(result[0].ratingCount).toBe(10);
     expect(result[0].minServicePrice).toBe(100);

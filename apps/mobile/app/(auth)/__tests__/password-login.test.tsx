@@ -91,8 +91,13 @@ function fill(ui: ReturnType<typeof render>) {
 it('defaults to masked password with a visibility control and retains identifier across modes', () => {
   const ui = render(<LoginScreen />); fill(ui);
   expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(true);
-  fireEvent.press(ui.getByLabelText('auth.showPassword'));
+  expect(ui.queryByText('auth.showPassword')).toBeNull();
+  expect(ui.queryByText('auth.hidePassword')).toBeNull();
+  fireEvent.press(ui.getByRole('button', { name: 'common.showPassword' }));
   expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(false);
+  expect(ui.getByLabelText('auth.password').props.value).toBe('Secret1');
+  fireEvent.press(ui.getByRole('button', { name: 'common.hidePassword' }));
+  expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(true);
   fireEvent.press(ui.getByText('auth.loginWithOtp'));
   expect(ui.queryByLabelText('auth.password')).toBeNull();
   expect(ui.getByLabelText('auth.login.identifier').props.value).toBe('sara@example.test');
