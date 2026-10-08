@@ -180,13 +180,24 @@ describe('post-Wallet verification and initialization conflicts', () => {
     expect(result.current.canRetryInit).toBe(true);
     unmount();
   });
-  it('keeps initialization blocked when only the stale attempt reports FAILED', async () => {
+  it('keeps initialization blocked when an identity was given and only the stale attempt reports FAILED', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress('HOSTED_PAYMENT_IN_PROGRESS', 'replacement'));
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+    await act(() => result.current.retryInitialization());
+    await act(() => result.current.reconcile());
+    expect(result.current.canRetryInit).toBe(false);
+    unmount();
+  });
+  it('lets a conflict without identity become retryable once the stale attempt is confirmed failed', async () => {
     const { result, unmount } = await ready();
     jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress('HOSTED_PAYMENT_IN_PROGRESS'));
     await act(() => result.current.retryInitialization());
+    expect(result.current.canRetryInit).toBe(false);
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
     await act(() => result.current.reconcile());
-    expect(result.current.canRetryInit).toBe(false);
+    expect(result.current.canRetryInit).toBe(true);
     unmount();
   });
 });

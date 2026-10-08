@@ -46,6 +46,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let payable = false;
     let readyConfig: NativePaymentConfiguration | null = null;
     let initBlocked = false;
+    let configConflict = false; // sticky: every re-init hits the stored fingerprint
     let adoptedId: string | null = null; // replacement identity adopted from an in-progress conflict
     let verifying = false;
     let recheckRequested = false;
@@ -114,7 +115,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         } else if (result.status === 'FAILED') {
           terminalResult = true; settling = false;
           terminalFailure = true;
-          if (paymentId === adoptedId) initBlocked = false; // the adopted attempt itself failed
+          // The in-progress block lifts when the attempt we were told about (or, when the conflict
+          // carried no identity, the stale attempt) is confirmed failed; a config conflict never lifts.
+          if (!configConflict && (adoptedId === null || paymentId === adoptedId)) initBlocked = false;
           canInitialize = !initBlocked;
           // Only an authoritative failure reopens initialization after a submitted result.
           resultReceived = false;
@@ -191,8 +194,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         return true;
       }
       if (code === 'PAYMENT_CONFIGURATION_CHANGED') {
-        // Every further initialization hits the same stored-fingerprint conflict.
-        initBlocked = true; canInitialize = false; readyConfig = null;
+        configConflict = true; initBlocked = true; canInitialize = false; readyConfig = null;
         update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict' });
         return true;
       }
