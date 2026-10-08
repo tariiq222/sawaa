@@ -71,6 +71,7 @@ export class InitClientPaymentHandler {
 
     const organizationSettings = await this.prisma.organizationSettings.findFirst({
       select: { paymentMoyasarEnabled: true },
+      orderBy: { createdAt: 'desc' },
     });
     if (organizationSettings?.paymentMoyasarEnabled === false) {
       throw new BadRequestException('Online payment is not enabled');

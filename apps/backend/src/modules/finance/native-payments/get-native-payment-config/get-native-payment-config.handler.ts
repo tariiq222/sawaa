@@ -22,6 +22,7 @@ export class GetNativePaymentConfigHandler {
       }),
       this.prisma.organizationSettings.findFirst({
         select: { paymentMoyasarEnabled: true },
+        orderBy: { createdAt: 'desc' },
       }),
     ]);
     const publishableKey = row?.publishableKey?.trim() ?? '';

@@ -80,3 +80,22 @@ describe('native capabilities', () => {
     );
   });
 });
+
+describe('native capabilities settings row', () => {
+  it('reads the newest organization settings row', async () => {
+    const findFirst = jest.fn().mockResolvedValue({ paymentMoyasarEnabled: true });
+    const handler = new GetNativePaymentConfigHandler(
+      {
+        organizationPaymentConfig: {
+          findUnique: jest.fn().mockResolvedValue({ publishableKey: 'pk_test_valid', isLive: false }),
+        },
+        organizationSettings: { findFirst },
+      } as any,
+      { get: () => undefined } as any,
+    );
+    await handler.execute();
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
+    );
+  });
+});
