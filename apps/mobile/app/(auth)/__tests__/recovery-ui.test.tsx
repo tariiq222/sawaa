@@ -27,25 +27,25 @@ for (const locale of ['ar', 'en'] as const) {
  it(`${locale}: localizes recovery and rejects invalid email without requesting a code`, async () => {
   const view = localized(<ForgotPasswordScreen />);
   expect(view.getByText(resources.auth.forgotPassword.title)).toBeTruthy();
-  fireEvent.changeText(view.getByLabelText(resources.auth.forgotPassword.emailLabel), 'bad');
+  fireEvent.changeText(view.getByLabelText(resources.auth['login.identifier']), 'bad');
   await act(async () => fireEvent.press(view.getByText(resources.auth.forgotPassword.submit)));
-  expect(view.getByText(resources.auth['register.emailError'])).toBeTruthy();
+  expect(view.getByText(resources.auth['login.identifierError'])).toBeTruthy();
   expect(mockRequest).not.toHaveBeenCalled();
  });
  it(`${locale}: preserves four-character verification and rejects short or mismatching passwords`, async () => {
   const view = localized(<ResetPasswordScreen />);
   fireEvent.changeText(view.getByLabelText(resources.auth.resetPassword.codeLabel), '1234');
-  await act(async () => fireEvent.press(view.getByText(resources.auth.resetPassword.verifyCode)));
+  await act(async () => fireEvent.press(view.getByRole('button', { name: resources.auth.resetPassword.verifyCode })));
   expect(mockVerify).toHaveBeenCalledWith('a@example.com', '1234');
   fireEvent.changeText(view.getByLabelText(resources.auth.resetPassword.newPasswordLabel), '1234567');
-  fireEvent.changeText(view.getByLabelText(resources.auth.resetPassword.confirmPasswordLabel), '1234567');
+  fireEvent.changeText(view.getByLabelText(resources.auth.confirmPassword), '1234567');
   await act(async () => fireEvent.press(view.getByText(resources.auth.resetPassword.submit)));
   expect(view.getByText(resources.auth.resetPassword.weakPassword)).toBeTruthy();
   expect(mockReset).not.toHaveBeenCalled();
   fireEvent.changeText(view.getByLabelText(resources.auth.resetPassword.newPasswordLabel), '12345678');
-  fireEvent.changeText(view.getByLabelText(resources.auth.resetPassword.confirmPasswordLabel), '87654321');
+  fireEvent.changeText(view.getByLabelText(resources.auth.confirmPassword), '87654321');
   await act(async () => fireEvent.press(view.getByText(resources.auth.resetPassword.submit)));
-  expect(view.getByText(resources.auth.resetPassword.mismatch)).toBeTruthy();
+  expect(view.getByText(resources.auth.passwordMismatch)).toBeTruthy();
   expect(mockReset).not.toHaveBeenCalled();
  });
 }

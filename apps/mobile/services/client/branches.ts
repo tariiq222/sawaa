@@ -5,6 +5,7 @@ export interface PublicBranchSummary {
   nameAr: string;
   nameEn: string;
   city: string | null;
+  isMain: boolean;
   addressAr: string | null;
 }
 

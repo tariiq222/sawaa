@@ -1,6 +1,6 @@
 import React from 'react';
 import { Linking } from 'react-native';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import type { Program } from '@/services/client/group-sessions';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
@@ -23,12 +23,14 @@ it('keeps full public programs reachable without enrolling or dialing', () => {
   fireEvent.press(screen.getByRole('button', { name: 'guest.viewDetails' }));
   expect(open).toHaveBeenCalledTimes(1); expect(dial).not.toHaveBeenCalled(); dial.mockRestore();
 });
-it('keeps client full contact behavior and detail fallback', () => {
+it('keeps client full contact behavior and detail fallback', async () => {
   const dial = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined); const open = jest.fn();
   const screen = render(<GroupCard group={group} onOpen={open} contactPhone="123" />);
   fireEvent.press(screen.getByRole('button', { name: 'groups.contactUs' }));
   expect(dial).toHaveBeenCalledWith('tel:123'); expect(open).not.toHaveBeenCalled();
   screen.rerender(<GroupCard group={group} onOpen={open} />);
+  // The next user action occurs after the shared button's same-turn lock clears.
+  await act(async () => { await Promise.resolve(); });
   fireEvent.press(screen.getByRole('button', { name: 'groups.contactUs' }));
   expect(open).toHaveBeenCalledTimes(1); dial.mockRestore();
 });

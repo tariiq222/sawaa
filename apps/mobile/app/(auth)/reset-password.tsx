@@ -19,7 +19,8 @@ export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const dir = useDir();
-  const { email, booking, redirect } = useLocalSearchParams<{ email: string; booking?: string; redirect?: string }>();
+  const { identifier: target, email, booking, redirect } = useLocalSearchParams<{ identifier?: string; email?: string; booking?: string; redirect?: string }>();
+  const identifier = target ?? email ?? '';
 
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -35,18 +36,18 @@ export default function ResetPasswordScreen() {
 
   const validateVerify = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!code || code.length < 4) newErrors.code = t('auth.resetPassword.invalidCode');
+    if (!/^\d{4}$/.test(code)) newErrors.code = t('auth.resetPassword.invalidCode');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [code, t]);
 
   const validateReset = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!newPassword || newPassword.length < 8) {
+    if (newPassword.length < 8 || newPassword.length > 200 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
       newErrors.newPassword = t('auth.resetPassword.weakPassword');
     }
     if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = t('auth.resetPassword.mismatch');
+      newErrors.confirmPassword = t('auth.passwordMismatch');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -60,7 +61,7 @@ export default function ResetPasswordScreen() {
 
     setLoading(true);
     try {
-      const result = await authService.verifyPasswordResetOtp(email, code);
+      const result = await authService.verifyPasswordResetOtp(identifier, code);
       setSessionToken(result.sessionToken);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep('reset');
@@ -70,7 +71,7 @@ export default function ResetPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, code, validateVerify, t]);
+  }, [identifier, code, validateVerify, t]);
 
   const handleResetPassword = useCallback(async () => {
     if (!validateReset()) {
@@ -82,8 +83,9 @@ export default function ResetPasswordScreen() {
     try {
       await authService.resetClientPassword(sessionToken, newPassword);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(t('common.success'), t('auth.resetPassword.success'), [
-        { text: t('auth.forgotPassword.back'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
+      setSessionToken(''); setNewPassword(''); setConfirmPassword('');
+      Alert.alert(t('common.saved'), t('auth.resetPassword.success'), [
+        { text: t('auth.loginNow'), onPress: () => router.replace(authLoginHref(booking, redirect)) },
       ]);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -93,8 +95,8 @@ export default function ResetPasswordScreen() {
     }
   }, [sessionToken, newPassword, validateReset, router, t, booking, redirect]);
 
-  return <AuthFormScaffold title={t(step === 'verify' ? 'auth.resetPassword.verifyTitle' : 'auth.resetPassword.newTitle')} onBack={() => router.back()}>
-    <ThemedText variant="body">{t(step === 'verify' ? 'auth.resetPassword.otpStepSubtitle' : 'auth.resetPassword.passwordStepSubtitle', { email })}</ThemedText>
+  return <AuthFormScaffold title={t(step === 'verify' ? 'auth.resetPassword.verifyCode' : 'auth.resetPassword.newPasswordLabel')} onBack={() => router.back()}>
+    <ThemedText variant="body">{t(step === 'verify' ? 'auth.resetPassword.otpStepSubtitle' : 'auth.resetPassword.passwordStepSubtitle', { identifier })}</ThemedText>
     <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
       <View style={styles.formInner}>
         {step === 'verify' ? (
@@ -106,7 +108,7 @@ export default function ResetPasswordScreen() {
                 setCode(v);
                 clearError('code');
               }}
-              placeholder="123456"
+              placeholder="1234" maxLength={4}
               error={errors.code}
               keyboardType="number-pad" textContentType="oneTimeCode" inputStyle={{ textAlign: 'center', writingDirection: 'ltr' }}
               dir={dir}
@@ -133,7 +135,7 @@ export default function ResetPasswordScreen() {
               dir={dir}
             />
             <LabeledInput
-              label={t('auth.resetPassword.confirmPasswordLabel')}
+              label={t('auth.confirmPassword')}
               value={confirmPassword}
               onChangeText={(v) => {
                 setConfirmPassword(v);
@@ -154,14 +156,14 @@ export default function ResetPasswordScreen() {
         )}
 
         <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-          <ThemedText variant="body">{t('auth.forgotPassword.remembered')}</ThemedText>
-          <Pressable accessibilityRole="link" style={styles.loginLink}
+          <ThemedText variant="body">{t('auth.rememberPassword')}</ThemedText>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('auth.loginNow')} style={styles.loginLink}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.replace(authLoginHref(booking, redirect));
             }}
           >
-            <ThemedText variant="body">{t('auth.forgotPassword.back')}</ThemedText>
+            <ThemedText variant="body">{t('auth.loginNow')}</ThemedText>
           </Pressable>
         </View>
       </View>

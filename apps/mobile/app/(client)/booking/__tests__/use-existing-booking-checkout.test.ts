@@ -16,6 +16,7 @@ jest.mock('@/hooks/queries/useClientBookings', () => ({
 
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
+import { queryClient } from '@/services/query-client';
 import { useExistingBookingCheckout } from '@/features/booking/use-existing-booking-checkout';
 
 const mockedBookings = clientBookingsService as unknown as { getById: jest.Mock };
@@ -38,6 +39,7 @@ const invoice = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  queryClient.clear();
 });
 
 describe('useExistingBookingCheckout', () => {
@@ -122,4 +124,24 @@ describe('deposit balance refresh', () => {
     expect(mockedBookings.getById).toHaveBeenCalledTimes(1);
     unmount();
   });
+});
+
+afterEach(() => queryClient.clear());
+it('refreshes portal, invoice and package caches after server confirmation', async () => {
+  const keys = [['portal', 'home'], ['portal', 'summary'], ['client-payments', 'invoice', 'invoice-1'], ['packages', 'purchases']];
+  keys.forEach((key) => queryClient.setQueryData(key, { cached: true }));
+  mockedBookings.getById.mockResolvedValue({ ...booking, status: 'confirmed' });
+  mockedPayments.getInvoice.mockResolvedValue(invoice);
+  const { result } = renderHook(() => useExistingBookingCheckout({ bookingId: 'booking-1', invoiceId: 'invoice-1' }));
+  await waitFor(() => expect(result.current.phase).toBe('success'));
+  keys.forEach((key) => expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true));
+});
+it('preserves portal and invoice caches when the authoritative read fails', async () => {
+  queryClient.setQueryData(['portal', 'home'], { cached: true });
+  queryClient.setQueryData(['client-payments', 'invoice', 'invoice-1'], { cached: true });
+  mockedBookings.getById.mockRejectedValue(new Error('offline'));
+  const { result } = renderHook(() => useExistingBookingCheckout({ bookingId: 'booking-1' }));
+  await waitFor(() => expect(result.current.phase).toBe('error'));
+  expect(queryClient.getQueryState(['portal', 'home'])?.isInvalidated).toBe(false);
+  expect(queryClient.getQueryState(['client-payments', 'invoice', 'invoice-1'])?.isInvalidated).toBe(false);
 });

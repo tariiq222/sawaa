@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, ScrollView, Pressable, Linking, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -20,11 +20,12 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Thumb } from '@/components/ui/Thumb';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { clientsService, type ClientRecord, type EmployeeClientVisit } from '@/services/clients';
+import { useEmployeeClient, useEmployeeClientHistory } from '@/hooks/queries/useEmployeeClient';
 import { goBackOrHome } from '@/lib/navigation';
 import { getStatusLabel } from '@/lib/status-helpers';
 
@@ -41,25 +42,14 @@ export default function DoctorClientRecordScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
 
+  const record = useEmployeeClient(id);
+  const history = useEmployeeClientHistory(id);
+  const loadFailed = record.isError || history.isError;
+  const client = record.data;
+  const visits = history.data ?? [];
+  const retry = () => { void record.refetch(); void history.refetch(); };
 
-  const [client, setClient] = useState<ClientRecord | null>(null);
-  const [visits, setVisits] = useState<EmployeeClientVisit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    Promise.all([clientsService.getById(id), clientsService.getEmployeeBookings(id)])
-      .then(([record, history]) => {
-        setClient(record);
-        setVisits(history);
-      })
-      .catch(() => setError(t('common.error')))
-      .finally(() => setLoading(false));
-  }, [id, t]);
-
-  if (loading) {
+  if (id && !loadFailed && (record.isPending || history.isPending)) {
     return (
       <AquaBackground>
         <View style={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md }]}>
@@ -74,18 +64,14 @@ export default function DoctorClientRecordScreen() {
     );
   }
 
-  if (error || !client) {
+  if (loadFailed || !client) {
     return (
       <AquaBackground>
         <View style={[styles.scroll, { flex: 1, paddingTop: insets.top + sawaaSpacing.md }]}>
           <ScreenHeader title={t('doctor.clientRecord')} onBack={handleBack} />
-          <EmptyState
-            icon="alert-circle-outline"
-            tone="danger"
-            title={error ?? t('doctor.clientNotFound')}
-            actionLabel={t('common.back')}
-            onAction={handleBack}
-          />
+          {loadFailed ? <ErrorState onRetry={retry} /> : <EmptyState
+            icon="alert-circle-outline" tone="danger" title={t('doctor.clientNotFound')}
+            actionLabel={t('common.back')} onAction={handleBack} />}
         </View>
       </AquaBackground>
     );

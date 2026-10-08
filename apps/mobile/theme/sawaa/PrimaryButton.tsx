@@ -1,19 +1,7 @@
 import React from 'react';
-import { Text, ViewStyle } from 'react-native';
-import { AppButton } from '@/components/ui/AppButton';
+import { ActionButton, type ActionButtonProps } from './ActionButton';
 
-interface Props {
-  label: string;
-  onPress?: () => void;
-  fontFamily?: string;
-  style?: ViewStyle;
-  height?: number;
-  disabled?: boolean;
-  loading?: boolean;
-  icon?: React.ReactNode;
-}
-/** Legacy primary API delegates rendering to the shared action. */
-export function PrimaryButton({ label, fontFamily, height = 56, ...props }: Props) {
-  return <AppButton {...props} minHeight={height} accessibilityLabel={label}
-    label={fontFamily ? <Text style={{ fontFamily }}>{label}</Text> : label} />;
+/** Primary pill action; accepts the shared loading and accessibility contract. */
+export function PrimaryButton(props: ActionButtonProps) {
+  return <ActionButton {...props} variant="primary" />;
 }

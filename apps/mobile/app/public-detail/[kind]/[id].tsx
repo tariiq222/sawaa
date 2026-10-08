@@ -62,12 +62,12 @@ export default function PublicDetailScreen() {
         <TherapistProfileView
           employee={therapist.data}
           loading={therapist.isLoading}
-          employeeError={therapist.isError}
-          onRetryEmployee={() => { void therapist.refetch(); }}
-          catalogError={catalog.isError}
-          onRetryCatalog={() => { void catalog.refetch(); }}
           catalog={catalog.data}
           catalogLoading={catalog.isLoading}
+          employeeError={therapist.isError}
+          catalogError={catalog.isError}
+          onRetryEmployee={() => void therapist.refetch()}
+          onRetryCatalog={() => void catalog.refetch()}
           clinicId={clinicId}
           serviceId={serviceId}
           onBack={back}

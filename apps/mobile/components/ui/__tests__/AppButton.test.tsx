@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { getSawaaColors, getSawaaRoles } from '@/theme/sawaa/tokens';
 import { AppButton } from '../AppButton';
@@ -97,4 +97,21 @@ it.each(['secondary', 'ghost'] as const)('keeps %s readable on the light Aqua ba
   const backdrop = blend(rgb(wash), Number(wash.match(/[\d.]+/g)![3]), [49, 151, 175]);
   const a = luminance(foreground), b = luminance(backdrop);
   expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5);
+});
+
+it('locks synchronous presses for the current event turn', async () => {
+  const onPress = jest.fn();
+  const view = render(<AppButton label="Save once" onPress={onPress} />);
+  const button = view.getByRole('button', { name: 'Save once' });
+  act(() => { fireEvent.press(button); fireEvent.press(button); });
+  expect(onPress).toHaveBeenCalledTimes(1);
+  await act(async () => { await Promise.resolve(); });
+  fireEvent.press(button);
+  expect(onPress).toHaveBeenCalledTimes(2);
+});
+it('retains legacy target, font, test ID and label style aliases', () => {
+  const view = render(<PrimaryButton label="Legacy" onPress={jest.fn()} testID="legacy-action" height={20}
+    fontFamily="CallerFont" labelStyle={{ fontSize: 19 }} textStyle={{ lineHeight: 28 }} />);
+  expect(view.getByTestId('legacy-action')).toHaveStyle({ minHeight: 44 });
+  expect(view.getByText('Legacy')).toHaveStyle({ fontFamily: 'CallerFont', fontSize: 19, lineHeight: 28 });
 });

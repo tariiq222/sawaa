@@ -23,26 +23,20 @@ import { AquaBackground, sawaaRadius, sawaaType, withAlpha } from '@/theme/sawaa
 import { Glass } from '@/theme/components/Glass';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { useAppSelector } from '@/hooks/use-redux';
 import { authService } from '@/services/auth';
 import { getFontName } from '@/theme/fonts';
 import { useBranding, useSummary } from '@/hooks/queries';
 import { AppButton } from '@/components/ui/AppButton';
 import { ThemedText } from '@/theme/components/ThemedText';
-import { useReduceMotion } from '@/hooks/useA11y';
 import { goBackOrHome } from '@/lib/navigation';
 import { useTheme } from '@/theme/useTheme';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 
-const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 function formatLastVisit(iso: string | null, isRTL: boolean): string {
   if (!iso) return '—';
-  const d = new Date(iso);
-  const month = isRTL ? MONTHS_AR[d.getMonth()] : MONTHS_EN[d.getMonth()];
-  const day = isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate();
-  return `${day} ${month}`;
+  return new Intl.DateTimeFormat(isRTL ? 'ar-SA' : 'en-US', { calendar: 'gregory', day: 'numeric', month: 'short' }).format(new Date(iso));
 }
 
 type Row = { key: string; icon: LucideIcon; label: string; hint?: string; onPress: () => void };
@@ -87,18 +81,18 @@ export default function ProfileScreen({ asTab = false }: { asTab?: boolean }) {
       value: summary
         ? (dir.isRTL ? summary.totalBookings.toLocaleString('ar-SA') : String(summary.totalBookings))
         : '—',
-      label: t('profile.summarySessions'),
+      label: t('profile.sessions'),
     },
     {
       key: 'lastVisit',
       value: summary ? formatLastVisit(summary.lastVisit, dir.isRTL) : '—',
-      label: t('profile.summaryLastVisit'),
+      label: t('profile.lastVisit'),
     },
     {
       key: 'outstanding',
       // outstandingBalance is integer halalas.
       value: summary ? formatCurrencyAmount(summary.outstandingBalance, 'SAR', dir.isRTL) : '—',
-      label: t('profile.summaryOutstanding'),
+      label: t('profile.outstanding'),
     },
   ];
 
@@ -251,7 +245,7 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   profileMid: { flex: 1, minWidth: 0 },
   profileName: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight, color: colors.ink[900] },
   profileMeta: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700] },
-  editBtn: { alignSelf: 'center', maxWidth: '40%' },
+  editBtn: { alignSelf: 'center', minWidth: 68, maxWidth: '40%' },
   summaryStatus: { marginTop: 16, gap: 8, alignItems: 'center' },
   statsRow: { marginTop: 16, gap: 8 },
   statBox: {

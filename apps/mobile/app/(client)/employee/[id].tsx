@@ -9,10 +9,8 @@ import { AquaBackground } from '@/theme/sawaa';
 export default function EmployeeProfileScreen() {
   const { id, clinicId, serviceId, steps } = useLocalSearchParams<{ id: string; clinicId?: string; serviceId?: string; steps?: string }>();
   const router = useRouter();
-  const employeeQuery = useTherapist(id);
-  const { data: employee, isLoading: employeeLoading } = employeeQuery;
-  const catalogQuery = usePublicCatalog();
-  const { data: catalog, isLoading: catalogLoading } = catalogQuery;
+  const { data: employee, isLoading: employeeLoading, isError: employeeError, refetch: refetchEmployee } = useTherapist(id);
+  const { data: catalog, isLoading: catalogLoading, isError: catalogError, refetch: refetchCatalog } = usePublicCatalog();
 
   const book = (selectedServiceId: string, employeeId: string) => {
     const selectedService = catalog?.services.find((service) => service.id === selectedServiceId);
@@ -32,12 +30,12 @@ export default function EmployeeProfileScreen() {
       <TherapistProfileView
         employee={employee}
         loading={employeeLoading}
-        employeeError={employeeQuery.isError}
-        onRetryEmployee={() => { void employeeQuery.refetch(); }}
-        catalogError={catalogQuery.isError}
-        onRetryCatalog={() => { void catalogQuery.refetch(); }}
         catalog={catalog}
         catalogLoading={catalogLoading}
+        employeeError={employeeError}
+        catalogError={catalogError}
+        onRetryEmployee={() => void refetchEmployee()}
+        onRetryCatalog={() => void refetchCatalog()}
         clinicId={clinicId}
         serviceId={serviceId}
         onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')}

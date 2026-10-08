@@ -13,6 +13,7 @@ interface ThemedButtonProps {
   icon?: React.ReactNode;
   style?: ViewStyle;
 }
+/** @deprecated Retained as an AppButton adapter for existing imports and ReactNode labels. */
 export function ThemedButton({ children, variant = 'primary', full, style, ...props }: ThemedButtonProps) {
   return <AppButton {...props} label={children} variant={variant === 'outline' ? 'secondary' : variant}
     style={[full ? { width: '100%' } : undefined, style]} />;

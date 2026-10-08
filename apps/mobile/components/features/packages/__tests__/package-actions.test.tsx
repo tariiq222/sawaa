@@ -19,7 +19,7 @@ it('keeps the action label and blocks repeat booking while pending', () => {
 });
 it('announces chosen branches and retries without changing selection', () => {
   const select = jest.fn(); const retry = jest.fn();
-  const props = { branches: [{id:'a',nameAr:'أ',nameEn:'A',city:null,addressAr:null},{id:'b',nameAr:'ب',nameEn:'B',city:null,addressAr:null}], branchId:'a',loading:false,error:false,onSelect:select,onRetry:retry,dir,f400:'System',f600:'System',f700:'System'};
+  const props = { branches: [{id:'a',nameAr:'أ',nameEn:'A',city:null,addressAr:null,isMain:true},{id:'b',nameAr:'ب',nameEn:'B',city:null,addressAr:null,isMain:false}], branchId:'a',loading:false,error:false,onSelect:select,onRetry:retry,dir,f400:'System',f600:'System',f700:'System'};
   const screen = render(<PackageBranchPicker {...props} />);
   fireEvent.press(screen.getByRole('radio', {name:'B'})); expect(select).toHaveBeenCalledWith('b');
   screen.rerender(<PackageBranchPicker {...props} branchId="b" error />);

@@ -12,13 +12,11 @@ import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sa
 import { goBackOrHome } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
-import { useInitPackagePurchase, usePackageFamily } from '@/hooks/queries';
+import { useInitPackagePurchase, usePackageFamily, usePublicBranches } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
-import { publicBranchesService } from '@/services/client';
 import { getPendingPackagePurchase } from '@/services/client/packages';
 import { runPackageCheckout } from '@/lib/package-checkout';
 import { packagePurchaseErrorKey } from '@/lib/package-utils';
-import type { PublicBranchSummary } from '@/services/client';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import { packageGrossHalalas, packageVatHalalas, packageVatRate } from '@/lib/package-vat';
 import { PackageBranchPicker } from '@/components/features/packages/PackageBranchPicker';
@@ -40,10 +38,11 @@ export default function PackageFamilyDetailScreen() {
   userRef.current = user?.id;
   const initPurchase = useInitPackagePurchase();
   const [selectedId, setSelectedId] = useState<string>();
-  const [branches, setBranches] = useState<PublicBranchSummary[]>([]);
+  const branchQuery = usePublicBranches();
+  const branches = branchQuery.data ?? [];
   const [branchId, setBranchId] = useState<string>();
-  const [branchLoading, setBranchLoading] = useState(true);
-  const [branchError, setBranchError] = useState(false);
+  const branchLoading = branchQuery.isFetching;
+  const branchError = branchQuery.isError;
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
@@ -53,21 +52,12 @@ export default function PackageFamilyDetailScreen() {
     setSelectedId(query.data.options[0]?.id);
   }, [query.data, selectedId]);
 
-  const loadBranches = useCallback(async () => {
-    setBranchLoading(true);
-    setBranchError(false);
-    try {
-      const loaded = await publicBranchesService.list();
-      setBranches(loaded);
-      setBranchId((current) => current && loaded.some((branch) => branch.id === current) ? current : loaded[0]?.id);
-    } catch {
-      setBranchError(true);
-    } finally {
-      setBranchLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadBranches(); }, [loadBranches]);
+  useEffect(() => {
+    const loaded = branchQuery.data;
+    if (!loaded) return;
+    setBranchId((current) => current && loaded.some((branch) => branch.id === current)
+      ? current : loaded[0]?.id);
+  }, [branchQuery.data]);
 
   const option = useMemo(
     () => query.data?.options.find((candidate) => candidate.id === selectedId) ?? query.data?.options[0],
@@ -221,7 +211,7 @@ export default function PackageFamilyDetailScreen() {
               loading={branchLoading}
               error={branchError}
               onSelect={setBranchId}
-              onRetry={() => { void loadBranches(); }}
+              onRetry={() => { void branchQuery.refetch(); }}
               dir={dir}
               f400={f400}
               f600={f600}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   Alert,
   StyleSheet,
@@ -21,9 +21,9 @@ import { setUser } from '@/stores/slices/auth-slice';
 import { AppButton } from '@/components/ui/AppButton';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { useDir } from '@/hooks/useDir';
-import { clientProfileService } from '@/services/client';
+import { useUpdateClientProfile } from '@/hooks/queries/useClientProfile';
 
-const SAUDI_PHONE_RE = /^\+966\d{9}$/;
+import { hasPhoneFormat } from '@/lib/phone-format';
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, 'required'),
@@ -31,7 +31,7 @@ const profileSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || SAUDI_PHONE_RE.test(v), 'invalidPhone'),
+    .refine((v) => !v || hasPhoneFormat(v), 'invalidPhone'),
   email: z
     .string()
     .trim()
@@ -50,7 +50,8 @@ export function SettingsProfileSection() {
   const dir = useDir();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
-  const [saving, setSaving] = useState(false);
+  const updateProfile = useUpdateClientProfile();
+  const saving = updateProfile.isPending;
 
   const emailReadOnly = Boolean(user?.email);
   const initialName = user?.name ?? (user
@@ -82,9 +83,8 @@ export function SettingsProfileSection() {
 
   const onSave = handleSubmit(async (values) => {
     if (!user) return;
-    setSaving(true);
     try {
-      const profile = await clientProfileService.updateProfile({
+      const profile = await updateProfile.mutateAsync({
         name: values.name,
         phone: values.phone ? values.phone : null,
         ...(!emailReadOnly ? { email: values.email || null } : {}),
@@ -108,8 +108,6 @@ export function SettingsProfileSection() {
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('settings.profileSaveError'));
-    } finally {
-      setSaving(false);
     }
   });
 

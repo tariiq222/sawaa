@@ -1,14 +1,10 @@
 import React from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
-import { AppButton } from './AppButton';
-interface SecondaryButtonProps {
-  label: string;
-  onPress?: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-  height?: number;
-  style?: StyleProp<ViewStyle>;
-}
-export function SecondaryButton({ height = 56, ...props }: SecondaryButtonProps) {
-  return <AppButton {...props} variant="secondary" minHeight={height} />;
+import { useDir } from '@/hooks/useDir';
+import { getFontName } from '@/theme/fonts';
+import { ActionButton, type ActionButtonProps } from '@/theme/sawaa/ActionButton';
+
+/** Outlined capsule for the less prominent of two actions. */
+export function SecondaryButton(props: ActionButtonProps) {
+  const dir = useDir();
+  return <ActionButton fontFamily={getFontName(dir.locale, '700')} {...props} variant="outline" />;
 }

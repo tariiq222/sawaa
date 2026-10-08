@@ -1,3 +1,4 @@
+jest.mock('@/features/auth/use-password-login', () => ({ usePasswordLogin: () => ({ pending: false, cancel: jest.fn(), capture: () => () => true, submit: jest.fn() }) }));
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: mockLocale === 'ar', language: mockLocale }) }));
 import { StyleSheet, Text as MockText } from 'react-native';

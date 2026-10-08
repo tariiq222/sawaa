@@ -1,5 +1,7 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 // Keep the real pure toggle helper without initializing auth persistence via the transport.
 jest.mock('@/services/api', () => ({ __esModule: true, default: {} }));
 const mockGetAvailabilitySchedule = jest.fn();
@@ -69,28 +71,36 @@ jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 import i18n from '@/i18n';
 import AvailabilityScreen from '../availability';
 import type { EmployeeAvailability, AvailabilityException } from '@/services/employees';
+const queryClients: QueryClient[] = [];
+function renderScreen() {
+ const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
+ queryClients.push(queryClient);
+ return render(<QueryClientProvider client={queryClient}><AvailabilityScreen /></QueryClientProvider>);
+}
+afterEach(() => { queryClients.splice(0).forEach(client => client.clear()); });
 const windows: EmployeeAvailability[] = [{ id: 'w1', dayOfWeek: 0, startTime: '08:00', endTime: '10:00', isActive: true }, { id: 'w2', dayOfWeek: 0, startTime: '13:00', endTime: '15:00', isActive: true }];
 const exceptions: AvailabilityException[] = [{ id: 'e1', startDate: '2026-10-08', endDate: '2026-10-09', reason: 'Leave' }];
 beforeEach(async () => { jest.clearAllMocks(); mockGetAvailabilitySchedule.mockReset(); mockUpdateAvailabilitySchedule.mockReset(); mockCanGoBack = false; await act(async () => { await i18n.changeLanguage('en'); }); });
 it('keeps failed read blocked, retries and saves all returned windows and exceptions', async () => {
  mockGetAvailabilitySchedule.mockRejectedValueOnce(new Error('offline'));
- const view = render(<AvailabilityScreen />);
+ const view = renderScreen();
  await waitFor(() => expect(view.getByText(i18n.t('availability.loadError'))).toBeTruthy());
  expect(view.queryAllByRole('switch')).toHaveLength(0);
  expect(view.queryByText(i18n.t('availability.save'))).toBeNull();
  expect(mockUpdateAvailabilitySchedule).not.toHaveBeenCalled();
- mockGetAvailabilitySchedule.mockResolvedValueOnce({ windows, exceptions });
+ mockGetAvailabilitySchedule.mockResolvedValue({ windows, exceptions });
  fireEvent.press(view.getByText(i18n.t('common.retry')));
  await waitFor(() => expect(view.getByText('13:00')).toBeTruthy());
- mockUpdateAvailabilitySchedule.mockResolvedValueOnce({ windows, exceptions });
+ mockUpdateAvailabilitySchedule.mockResolvedValue({ windows, exceptions });
  fireEvent.press(view.getByText(i18n.t('availability.save')));
- await waitFor(() => expect(mockUpdateAvailabilitySchedule).toHaveBeenCalledWith({ windows, exceptions }));
+ await waitFor(() => expect(mockUpdateAvailabilitySchedule).toHaveBeenCalledTimes(1));
+ expect(mockUpdateAvailabilitySchedule.mock.calls[0][0]).toEqual({ windows, exceptions });
  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/profile'));
  expect(mockBack).not.toHaveBeenCalled();
 });
 it('repeated rejection remains blocked and pending retry never writes', async () => {
  mockGetAvailabilitySchedule.mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline again'));
- const view = render(<AvailabilityScreen />);
+ const view = renderScreen();
  await waitFor(() => expect(view.getByText(i18n.t('availability.loadError'))).toBeTruthy());
  fireEvent.press(view.getByText(i18n.t('common.retry')));
  await waitFor(() => expect(mockGetAvailabilitySchedule).toHaveBeenCalledTimes(2));
@@ -105,19 +115,21 @@ it('repeated rejection remains blocked and pending retry never writes', async ()
  await waitFor(() => expect(view.getAllByRole('switch')).toHaveLength(7));
  expect(view.getAllByRole('switch').every(item => item.props.value === false)).toBe(true);
  fireEvent.press(view.getByText(i18n.t('availability.save')));
- await waitFor(() => expect(mockUpdateAvailabilitySchedule).toHaveBeenCalledWith({ windows: [], exceptions: [] }));
+ await waitFor(() => expect(mockUpdateAvailabilitySchedule).toHaveBeenCalledTimes(1));
+ expect(mockUpdateAvailabilitySchedule.mock.calls[0][0]).toEqual({ windows: [], exceptions: [] });
 });
 it('saving blocks repeated presses and recovers after rejection', async () => {
- mockGetAvailabilitySchedule.mockResolvedValueOnce({ windows, exceptions });
+ mockGetAvailabilitySchedule.mockResolvedValue({ windows, exceptions });
  let rejectSave!: (value: Error) => void;
  mockUpdateAvailabilitySchedule.mockImplementationOnce(() => new Promise((_, reject) => { rejectSave = reject; }));
- const view = render(<AvailabilityScreen />);
+ const view = renderScreen();
  await waitFor(() => expect(view.getByText('13:00')).toBeTruthy());
  fireEvent.press(view.getByText(i18n.t('availability.save')));
  const button = view.getByRole('button', { name: i18n.t('availability.save') });
  expect(button.props.accessibilityState).toEqual(expect.objectContaining({ busy: true, disabled: true }));
  fireEvent.press(button);
- expect(mockUpdateAvailabilitySchedule).toHaveBeenCalledTimes(1);
+ await waitFor(() => expect(mockUpdateAvailabilitySchedule).toHaveBeenCalledTimes(1));
+ expect(mockUpdateAvailabilitySchedule.mock.calls[0][0]).toEqual({ windows, exceptions });
  await act(async () => { rejectSave(new Error('offline')); });
  await waitFor(() => expect(view.getByRole('button', { name: i18n.t('availability.save') }).props.accessibilityState.disabled).toBe(false));
 });
@@ -127,8 +139,8 @@ it.each(['loading', 'error', 'success'] as const)('availability back is reachabl
  jest.clearAllMocks(); mockCanGoBack = warm;
  if (state === 'loading') mockGetAvailabilitySchedule.mockImplementationOnce(() => new Promise(() => {}));
  else if (state === 'error') mockGetAvailabilitySchedule.mockRejectedValueOnce(new Error('offline'));
- else mockGetAvailabilitySchedule.mockResolvedValueOnce({ windows, exceptions });
- const view = render(<AvailabilityScreen />);
+ else mockGetAvailabilitySchedule.mockResolvedValue({ windows, exceptions });
+ const view = renderScreen();
  if (state === 'error') await waitFor(() => expect(view.getByText(i18n.t('availability.loadError'))).toBeTruthy());
  if (state === 'success') await waitFor(() => expect(view.getByText('13:00')).toBeTruthy());
  fireEvent.press(view.getByLabelText(i18n.t('a11y.buttonBack')));

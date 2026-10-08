@@ -7741,6 +7741,29 @@
         ],
         "type": "object"
       },
+      "MobilePasswordLoginDto": {
+        "properties": {
+          "email": {
+            "description": "Client email address (provide either email or phone, not both)",
+            "example": "client@example.com",
+            "type": "string"
+          },
+          "password": {
+            "description": "Account password",
+            "example": "SecurePass123",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Saudi mobile number (any common format; normalized to E.164). Provide either email or phone, not both.",
+            "example": "+966501234567",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
       "MobileRateBookingDto": {
         "properties": {
           "comment": {
@@ -36723,6 +36746,105 @@
           }
         },
         "summary": "Revoke native mobile sessions",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/password-login": {
+      "post": {
+        "operationId": "MobileClientAuthController_loginWithPassword_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobilePasswordLoginDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "sessionKind": {
+                      "enum": [
+                        "client"
+                      ],
+                      "type": "string"
+                    },
+                    "tokens": {
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "accessToken",
+                        "refreshToken"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "sessionKind",
+                    "tokens"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Customer authenticated, native client tokens issued"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Log in a customer with email or phone and password",
         "tags": [
           "Mobile Client / Identity"
         ]

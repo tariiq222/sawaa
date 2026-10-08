@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatTimeOfDay } from '@/lib/session-format';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { Check } from 'lucide-react-native';
@@ -18,15 +19,7 @@ export interface Slot {
 }
 
 export function formatTime(iso: string, isRTL: boolean): string {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const suffix = h < 12 ? (isRTL ? 'ص' : 'AM') : isRTL ? 'م' : 'PM';
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const locale = isRTL ? 'ar-SA-u-nu-arab' : 'en-US';
-  const hour = new Intl.NumberFormat(locale, { useGrouping: false }).format(h12);
-  const minute = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(m);
-  return `${hour}:${minute} ${suffix}`;
+  return formatTimeOfDay(iso, isRTL) ?? '—';
 }
 
 export function slotGridLayout(width: number, fontScale: number): { columns: number; cellWidth: number } {
@@ -99,8 +92,8 @@ export function TimeSlotsGrid({
     return (
       <EmptyState
         icon="calendar-outline"
-        title={t('booking.slotsEmpty')}
-        description={t('booking.slotsEmptyHint')}
+        title={t('booking.noSlotsForDay')}
+        description={t('booking.chooseAnotherDay')}
       />
     );
   }
@@ -125,7 +118,7 @@ export function TimeSlotsGrid({
               borderColor: isSelected ? roles.selection.fill : roles.surfaceHigh,
             }]}
             accessibilityRole="radio"
-            accessibilityLabel={t('a11y.timeSlot', { time: formatTime(s.startTime, dir.isRTL) })}
+            accessibilityLabel={t('booking.slotTime', { time: formatTime(s.startTime, dir.isRTL) })}
             accessibilityState={{ selected: isSelected }}
           >
             <Text

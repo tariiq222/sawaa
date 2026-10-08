@@ -14,7 +14,7 @@ import { SettingsScaffold } from '@/components/features/settings/SettingsScaffol
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { clientProfileService } from '@/services/client/profile';
+import { useUpdateClientProfile } from '@/hooks/queries/useClientProfile';
 import { LANGUAGE_KEY } from '@/hooks/language-preference';
 import { useDir } from '@/hooks/useDir';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
@@ -29,6 +29,7 @@ export default function SettingsScreen() {
   const dir = useDir();
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
   const { query: pushPreference, mutation: pushMutation } = usePushPreference();
+  const { mutateAsync: updateProfile } = useUpdateClientProfile();
   const pushEnabled = pushPreference.data?.enabled === true && pushPreference.data?.permitted === true;
 
   const handleLanguageSelect = useCallback(
@@ -36,8 +37,7 @@ export default function SettingsScreen() {
       if (lang === language) return;
       await i18n.changeLanguage(lang);
       await AsyncStorage.setItem(LANGUAGE_KEY, lang);
-      clientProfileService
-        .updateProfile({ preferredLocale: lang })
+      updateProfile({ preferredLocale: lang })
         .catch((err) => console.warn('[Settings] Failed to sync locale to server:', err));
       Alert.alert(t('settings.languageChangeRestart'), '', [
         { text: t('settings.restartLater'), style: 'cancel' },
@@ -49,7 +49,7 @@ export default function SettingsScreen() {
         },
       ]);
     },
-    [language, i18n, t],
+    [language, i18n, t, updateProfile],
   );
 
   const handleTogglePush = useCallback(

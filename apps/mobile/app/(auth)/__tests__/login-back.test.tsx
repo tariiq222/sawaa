@@ -1,3 +1,4 @@
+jest.mock('@/features/auth/use-password-login', () => ({ usePasswordLogin: () => ({ pending: false, cancel: jest.fn(), capture: () => () => true, submit: jest.fn() }) }));
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import type { NavigatorScreenParams } from '@react-navigation/native';

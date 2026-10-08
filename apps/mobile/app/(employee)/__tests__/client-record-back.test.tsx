@@ -1,4 +1,5 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 const mockGetById = jest.fn();
 const mockGetHistory = jest.fn();
@@ -64,6 +65,13 @@ jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 
 import i18n from '@/i18n';
 import ClientRecordScreen from '../client/[id]';
+const queryClients: QueryClient[] = [];
+function renderScreen() {
+ const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
+ queryClients.push(queryClient);
+ return render(<QueryClientProvider client={queryClient}><ClientRecordScreen /></QueryClientProvider>);
+}
+afterEach(() => { queryClients.splice(0).forEach(client => client.clear()); });
 const record = { id: 'client-1', name: 'Nora', firstName: null, lastName: null, email: 'nora@example.com', phone: '+966501234567', avatarUrl: null };
 beforeEach(async () => { jest.clearAllMocks(); mockGetById.mockReset(); mockGetHistory.mockReset(); mockCanGoBack = false; await act(async () => { await i18n.changeLanguage('en'); }); });
 it.each(['loading', 'error', 'success'] as const)('cold and warm back remain reachable during %s', async state => {
@@ -72,7 +80,7 @@ it.each(['loading', 'error', 'success'] as const)('cold and warm back remain rea
   if (state === 'loading') { mockGetById.mockImplementationOnce(() => new Promise(() => {})); mockGetHistory.mockImplementationOnce(() => new Promise(() => {})); }
   else if (state === 'error') { mockGetById.mockRejectedValueOnce(new Error('offline')); mockGetHistory.mockResolvedValueOnce([]); }
   else { mockGetById.mockResolvedValueOnce(record); mockGetHistory.mockResolvedValueOnce([]); }
-  const view = render(<ClientRecordScreen />);
+  const view = renderScreen();
   if (state === 'success') await waitFor(() => expect(view.getByText('Nora')).toBeTruthy());
   if (state === 'error') await waitFor(() => expect(view.getByText(i18n.t('common.error'))).toBeTruthy());
   fireEvent.press(view.getByLabelText(i18n.t('a11y.buttonBack')));

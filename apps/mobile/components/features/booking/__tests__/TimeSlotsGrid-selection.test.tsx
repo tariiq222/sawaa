@@ -14,10 +14,10 @@ const slots = [1,2].map((hour) => ({startTime:new Date(2026,9,7,hour).toISOStrin
 const props = {loading:false,error:null,slots,selectedIdx:null,dir:buildDirState('en'),f500:'System',f600:'System',reduceMotion:true};
 it('selects the original slot index once and announces the selected slot', () => {
   const select = jest.fn(); const screen = render(<TimeSlotsGrid {...props} onSelect={select} />);
-  fireEvent.press(screen.getByRole('radio',{name:`a11y.timeSlot ${formatTime(slots[1].startTime,false)}`}));
+  fireEvent.press(screen.getByRole('radio',{name:`booking.slotTime ${formatTime(slots[1].startTime,false)}`}));
   expect(select).toHaveBeenCalledTimes(1);expect(select).toHaveBeenCalledWith(1);
   screen.rerender(<TimeSlotsGrid {...props} selectedIdx={1} onSelect={select} />);
-  expect(screen.getByRole('radio',{name:`a11y.timeSlot ${formatTime(slots[1].startTime,false)}`}).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByRole('radio',{name:`booking.slotTime ${formatTime(slots[1].startTime,false)}`}).props.accessibilityState.selected).toBe(true);
 });
 it('retries a failed read without selecting a slot', () => {
   const retry=jest.fn();const select=jest.fn();const screen=render(<TimeSlotsGrid {...props} error="failed" onRetry={retry} onSelect={select} />);

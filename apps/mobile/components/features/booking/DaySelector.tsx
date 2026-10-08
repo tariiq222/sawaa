@@ -9,17 +9,6 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 import type { DirState } from '@/hooks/useDir';
 
-const DAYS_AR_SHORT = ['أحد', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
-const DAYS_EN_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS_AR = [
-  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
-];
-const MONTHS_EN = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
 interface DaySelectorProps {
   days: Date[];
   dayIdx: number | null;
@@ -37,9 +26,8 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
   const { scheme } = useTheme();
   const roles = getSawaaRoles(scheme);
   const selectedDay = days[dayIdx ?? 0];
-  const monthLabel = dir.isRTL
-    ? `${MONTHS_AR[selectedDay.getMonth()]} ${selectedDay.getFullYear().toLocaleString('ar-SA', { useGrouping: false })}`
-    : `${MONTHS_EN[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`;
+  const locale = dir.isRTL ? 'ar-SA' : 'en-US';
+  const monthLabel = selectedDay ? new Intl.DateTimeFormat(locale, { calendar: 'gregory', month: 'short', year: 'numeric' }).format(selectedDay) : '';
 
   return (
     <View style={styles.wrap}>
@@ -55,7 +43,8 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
           const isActive = i === dayIdx;
           const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           const canSelect = availabilityByDate === undefined || availabilityByDate?.[dateKey] === true;
-          const dow = d.getDay();
+          const dayLabel = new Intl.DateTimeFormat(locale, { calendar: 'gregory', weekday: 'short' }).format(d);
+          const fullDateLabel = new Intl.DateTimeFormat(locale, { calendar: 'gregory', dateStyle: 'full' }).format(d);
           return (
             <Pressable
               key={d.toISOString()}
@@ -66,6 +55,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
               }}
               disabled={!canSelect}
               accessibilityRole="radio"
+              accessibilityLabel={fullDateLabel}
               accessibilityState={{ selected: isActive, disabled: !canSelect }}
               style={[
                 styles.dayCell,
@@ -77,7 +67,7 @@ export function DaySelector({ days, dayIdx, availabilityByDate, onSelect, dir, f
               ]}
             >
               <Text style={[styles.dayName, { fontFamily: f500, color: isActive ? roles.selection.foreground : colors.ink[700] }]}>
-                {dir.isRTL ? DAYS_AR_SHORT[dow] : DAYS_EN_SHORT[dow]}
+                {dayLabel}
               </Text>
               <Text style={[styles.dayNum, { fontFamily: f700, color: isActive ? roles.selection.foreground : colors.ink[900] }]}>
                 {dir.isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate()}

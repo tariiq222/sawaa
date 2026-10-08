@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { usePasswordLogin } from '@/features/auth/use-password-login';
 import EmailEntryScreen from './email-entry';
 import {
   View,
@@ -18,7 +19,6 @@ import { LabeledInput } from '@/components/ui/LabeledInput';
 import { AppButton } from '@/components/ui/AppButton';
 import { sawaaTokens, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { useRequestLoginOtp } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
@@ -36,14 +36,20 @@ export default function LoginScreen() {
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
 
+  const [mode, setMode] = useState<'password' | 'otp'>('password');
+  const [password, setPassword] = useState('');
+  const [visible, setVisible] = useState(false);
+  const otpBusy = useRef(false);
+  const passwordLogin = usePasswordLogin({ booking, redirect });
+  const leave = () => { passwordLogin.cancel(); otpBusy.current = false; setPassword(''); };
   const [identifier, setIdentifier] = useState('');
   const [emailEntry, setEmailEntry] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const requestOtp = useRequestLoginOtp();
   const continuation = authContinuationParams(booking, redirect);
-  const forgotPasswordHref = booking || redirect
-    ? { pathname: '/(auth)/forgot-password' as const, params: continuation }
+  const forgotPasswordHref = booking || redirect || identifier.trim()
+    ? { pathname: '/(auth)/forgot-password' as const, params: { ...continuation, ...(identifier.trim() ? { identifier: identifier.trim() } : {}) } }
     : '/(auth)/forgot-password';
   const registerHref = booking || redirect
     ? { pathname: '/(auth)/register' as const, params: continuation }
@@ -56,10 +62,21 @@ export default function LoginScreen() {
       return;
     }
 
+    if (mode === 'password') {
+      if (!password) { setError(t('auth.passwordRequired')); return; }
+      const result = await passwordLogin.submit(identifier, password);
+      if (result === 'failed') setError(t('auth.loginError'));
+      if (result !== 'cancelled') setPassword('');
+      return;
+    }
+    if (otpBusy.current) return;
     if (identifier.includes('@')) { setEmailEntry(true); return; }
 
+    otpBusy.current = true;
+    const current = passwordLogin.capture();
     try {
       const result = await requestOtp.mutateAsync({ identifier: identifier.trim() });
+      if (!current()) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/otp-verify',
@@ -71,17 +88,18 @@ export default function LoginScreen() {
         },
       });
     } catch {
+      if (!current()) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.error.generic'));
-    }
-  }, [identifier, requestOtp, router, t, booking, redirect]);
+    } finally { if (current()) otpBusy.current = false; }
+  }, [identifier, requestOtp, router, t, booking, redirect, mode, password, passwordLogin]);
 
   const centered = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
 
-  if (emailEntry) return <EmailEntryScreen initialEmail={identifier.trim()} onExit={() => { setEmailEntry(false); setIdentifier(''); }} />;
+  if (emailEntry) return <EmailEntryScreen initialEmail={identifier.trim()} autoStart onExit={() => setEmailEntry(false)} />;
 
   return (
-    <AuthFormScaffold onBack={() => goBackOrHome(router)}>
+    <AuthFormScaffold onBack={() => { leave(); goBackOrHome(router); }}>
     <View style={styles.logoWrap}>
       <Glass variant="strong" radius={sawaaTokens.radius.xl} style={styles.logoCard}>
         <Image
@@ -100,17 +118,34 @@ export default function LoginScreen() {
       {t('auth.login.subtitle')}
     </Text>
 
+    <View style={[styles.modes, { flexDirection: dir.row }]}>
+      {(['password', 'otp'] as const).map(value => <Pressable key={value} accessibilityRole="tab"
+        accessibilityState={{ selected: mode === value }} style={[styles.mode, mode === value && styles.selectedMode]}
+        onPress={() => { leave(); setMode(value); setError(undefined); setVisible(false); }}>
+        <Text style={[styles.smallLink, { fontFamily: f700 }]}>{t(value === 'password' ? 'auth.loginWithPassword' : 'auth.loginWithOtp')}</Text>
+      </Pressable>)}
+    </View>
+
     <LabeledInput label={t('auth.login.identifier')} value={identifier} dir={dir}
       onChangeText={text => { setIdentifier(text.trim()); if (error) setError(undefined); }}
       placeholder={t('auth.login.identifierPlaceholder')} error={error} autoCorrect={false}
-      keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress"
+      keyboardType="email-address" autoCapitalize="none" autoComplete="username" textContentType="username" editable={!passwordLogin.pending}
       inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }} />
 
-    <PrimaryButton
-      label={t('auth.login.sendCode')}
+    {mode === 'password' && <View style={styles.passwordField}>
+      <LabeledInput label={t('auth.password')} value={password} dir={dir}
+        onChangeText={value => { setPassword(value); setError(undefined); }} secureTextEntry={!visible}
+        editable={!passwordLogin.pending} autoCapitalize="none" autoCorrect={false}
+        autoComplete="password" textContentType="password" onSubmitEditing={handleLogin}
+        inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }} />
+      <AppButton variant="ghost" size="sm" label={t(visible ? 'auth.hidePassword' : 'auth.showPassword')}
+        onPress={() => setVisible(!visible)} />
+    </View>}
+
+    <AppButton
+      label={t(mode === 'password' ? 'auth.loginNow' : 'auth.login.sendCode')}
       onPress={handleLogin}
-      fontFamily={f700}
-      disabled={requestOtp.isPending} loading={requestOtp.isPending}
+      disabled={requestOtp.isPending || passwordLogin.pending} loading={requestOtp.isPending || passwordLogin.pending}
       style={styles.primary}
     />
 
@@ -119,7 +154,7 @@ export default function LoginScreen() {
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push(registerHref);
+          leave(); router.push(registerHref);
         }}
         accessibilityRole="link"
         style={styles.linkTarget}
@@ -129,13 +164,13 @@ export default function LoginScreen() {
     </View>
 
     {booking ? null : <AppButton label={t('auth.login.continueAsGuest')} variant="secondary"
-      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.replace('/(guest)/home'); }} />}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); leave(); router.replace('/(guest)/home'); }} />}
 
 
     <Pressable
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push(forgotPasswordHref);
+        leave(); router.push(forgotPasswordHref);
       }}
       accessibilityRole="link"
       style={styles.linkTarget}
@@ -147,7 +182,7 @@ export default function LoginScreen() {
 
     <Pressable
       onPress={() => {
-        router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
+        leave(); router.push({ pathname: '/(auth)/review-login', params: authContinuationParams(booking, redirect) });
       }}
       accessibilityRole="button"
       style={styles.linkTarget}
@@ -165,6 +200,10 @@ const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.c
   logo: { width: 60, height: 60, tintColor: colors.teal[700] },
   title: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, color: colors.ink[900] },
   subtitle: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700], marginTop: 8, marginBottom: 28 },
+  modes: { gap: 8, marginBottom: 20 },
+  mode: { flex: 1, minHeight: 48, justifyContent: 'center', borderWidth: 1, borderColor: colors.teal[200], borderRadius: sawaaTokens.radius.lg },
+  selectedMode: { borderColor: colors.teal[700], backgroundColor: colors.teal[100] },
+  passwordField: { gap: 8, marginTop: 16 },
   primary: { marginTop: 16 },
   registerRow: { flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   registerText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.ink[700], textAlign: 'center' },

@@ -3,7 +3,7 @@ jest.mock('@/theme/useTheme', () => ({
   useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', setThemeMode: jest.fn(), isRTL: true, language: 'ar' }),
 }));
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert, Linking, StyleSheet } from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 jest.mock('react-native-reanimated', () => {
   const animation = { duration: () => animation, delay: () => animation, easing: () => animation };
@@ -109,15 +109,12 @@ describe('profile rows lead to purpose-specific pages', () => {
     openURL.mockRestore();
   });
 
-  it('keeps the edit control a fixed compact pill instead of stretching with the profile row', () => {
+  it('keeps profile editing accessible with a compact minimum 44pt target', () => {
     const screen = render(<ProfileScreen />);
     const control = screen.getByRole('button', { name: 'profile.edit' });
-    expect(StyleSheet.flatten(control.props.style)).toMatchObject({
-      minHeight: 44,
-      alignSelf: 'center',
-      alignItems: 'center',
-      justifyContent: 'center',
-    });
+    expect(control).toHaveStyle({ minHeight: 44, minWidth: 68, alignSelf: 'center' });
+    fireEvent.press(control);
+    expect(mockPush).toHaveBeenCalledWith('/(client)/settings-profile');
   });
 
   it('never routes two different rows to the same destination', () => {

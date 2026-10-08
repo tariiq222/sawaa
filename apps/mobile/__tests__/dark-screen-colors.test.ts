@@ -62,7 +62,9 @@ describe('route color migration safeguards', () => {
 
   it('settings save pairs an action fill with its on-action foreground', () => {
     const source = fs.readFileSync(path.join(appRoot, '../components/features/settings/SettingsProfileSection.tsx'), 'utf8');
-    expect(source).toContain('<AppButton');
+    expect(source).toMatch(/<(AppButton|PrimaryButton)/);
+    expect(source).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(source).not.toMatch(/rgba?\(/i);
     const button = fs.readFileSync(path.join(appRoot, '../components/ui/AppButton.tsx'), 'utf8');
     expect(button).toContain('roles.action.foreground');
     expect(button).toContain('roles.action.gradient');

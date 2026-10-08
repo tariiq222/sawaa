@@ -14,11 +14,11 @@ import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Pill } from '@/components/ui/Pill';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { useNotifications } from '@/hooks/use-notifications';
 import { resolveNotificationHref } from '@/utils/notification-deeplink';
 import { AppButton } from '@/components/ui/AppButton';
-import { useReduceMotion } from '@/hooks/useA11y';
 import { goBackOrHome } from '@/lib/navigation';
 import { useTheme } from '@/theme/useTheme';
 import type { Notification } from '@/types/models';
@@ -76,7 +76,7 @@ function relativeWhen(iso: string, locale: 'ar' | 'en', t: TFunction): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return t('notifications.daysAgo', { count: days });
   return new Date(iso).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-    day: 'numeric', month: 'short',
+    calendar: 'gregory', day: 'numeric', month: 'short',
   });
 }
 

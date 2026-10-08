@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { View, ScrollView, StyleSheet, Alert, Text } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -15,15 +15,15 @@ import {
   sawaaType,
 } from '@/theme/sawaa';
 import { FloatingCta } from '@/components/ui/FloatingCta';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { goBackOrHome } from '@/lib/navigation';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
-import { employeesService } from '@/services/employees';
+import { useEmployeeAvailability, useUpdateEmployeeAvailability } from '@/hooks/queries/useEmployeeAvailability';
 import { toggleAvailabilityDay } from '@/services/employees';
 import type { AvailabilityDayGroup, AvailabilityException, EmployeeAvailability } from '@/services/employees';
 
@@ -48,40 +48,34 @@ export default function AvailabilityScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const [schedule, setSchedule] = useState<DayScheduleGroup[]>([]);
+  const availability = useEmployeeAvailability();
+  const updateAvailability = useUpdateEmployeeAvailability();
+  const [schedule, setSchedule] = useState<DayScheduleGroup[] | null>(null);
   const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const saveInFlight = useRef(false);
+  const loading = availability.isPending;
+  const saving = updateAvailability.isPending;
   const [footerHeight, setFooterHeight] = useState(160);
   const handleBack = () => goBackOrHome(router, '/(employee)/(tabs)/profile');
 
 
   const toggleDay = useCallback((dayIndex: number) => {
-    setSchedule((prev) => toggleAvailabilityDay(prev, dayIndex));
+    setDirty(true);
+    setSchedule((prev) => prev ? toggleAvailabilityDay(prev, dayIndex) : prev);
   }, []);
 
-  const loadSchedule = useCallback(async () => {
-    setLoading(true);
-    setLoadFailed(false);
-    try {
-      const result = await employeesService.getAvailabilitySchedule();
-      setSchedule(groupSchedule(result.windows));
-      setExceptions(result.exceptions);
-    } catch {
-      setLoadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadSchedule(); }, [loadSchedule]);
+  useEffect(() => {
+    if (!availability.data || dirty) return;
+    setSchedule(groupSchedule(availability.data.windows));
+    setExceptions(availability.data.exceptions);
+  }, [availability.data, dirty]);
 
   const handleSave = async () => {
-    if (loading || loadFailed || saving) return;
-    setSaving(true);
+    if (!schedule || saveInFlight.current || availability.isError) return;
+    saveInFlight.current = true;
     try {
-      await employeesService.updateAvailabilitySchedule({
+      await updateAvailability.mutateAsync({
         windows: schedule.flatMap((day) => day.windows),
         exceptions,
       });
@@ -90,7 +84,7 @@ export default function AvailabilityScreen() {
     } catch {
       Alert.alert(t('common.error'), t('availability.saveError'));
     } finally {
-      setSaving(false);
+      saveInFlight.current = false;
     }
   };
 
@@ -100,7 +94,7 @@ export default function AvailabilityScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: !loading && !loadFailed ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.xl },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: !loading && !availability.isError && schedule ? footerHeight + sawaaSpacing.lg : insets.bottom + sawaaSpacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -118,13 +112,12 @@ export default function AvailabilityScreen() {
               <Skeleton key={i} height={60} radius={sawaaRadius.lg} />
             ))}
           </View>
-        ) : loadFailed ? (
-          <EmptyState icon="cloud-offline-outline" tone="danger" title={t('availability.loadError')}
-            description={t('availability.loadErrorHint')} actionLabel={t('common.retry')}
-            onAction={() => { void loadSchedule(); }} />
+        ) : availability.isError ? (
+          <ErrorState title={t('availability.loadError')} description={t('availability.loadErrorHint')}
+            retryLabel={t('common.retry')} onRetry={() => { void availability.refetch(); }} />
         ) : (
           <View style={styles.dayList}>
-            {schedule.map((day, index) => (
+            {(schedule ?? []).map((day, index) => (
               <Animated.View
                 key={day.dayOfWeek}
                 entering={reduceMotion ? undefined : FadeInDown.delay(120 + index * 60).duration(600).easing(Easing.out(Easing.cubic))}
@@ -140,6 +133,7 @@ export default function AvailabilityScreen() {
                       value={day.windows.some((window) => window.isActive !== false)}
                       onValueChange={() => toggleDay(day.dayOfWeek)}
                       accessibilityLabel={t(`days.${day.dayOfWeek}`)}
+                      disabled={saving}
                     />
                   </View>
                   {day.windows.some((window) => window.isActive !== false) ? (
@@ -168,7 +162,7 @@ export default function AvailabilityScreen() {
         )}
       </ScrollView>
 
-      {!loading && !loadFailed && (
+      {!loading && !availability.isError && schedule && (
         <FloatingCta onHeightChange={setFooterHeight}>
           <PrimaryButton
             label={t('availability.save')}

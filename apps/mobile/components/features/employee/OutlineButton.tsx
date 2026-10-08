@@ -1,13 +1,7 @@
 import React from 'react';
-import { AppButton } from '@/components/ui/AppButton';
-interface OutlineButtonProps {
-  label: string;
-  onPress: () => void;
-  icon?: React.ReactNode;
-  tone?: 'brand' | 'neutral';
-  disabled?: boolean;
-  loading?: boolean;
-}
-export function OutlineButton(props: OutlineButtonProps) {
-  return <AppButton {...props} variant="secondary" />;
+import { ActionButton, type ActionButtonProps } from '@/theme/sawaa/ActionButton';
+
+/** Employee secondary action; defaults to brand tone and accepts optional neutral tone. */
+export function OutlineButton(props: ActionButtonProps) {
+  return <ActionButton {...props} variant="outline" />;
 }

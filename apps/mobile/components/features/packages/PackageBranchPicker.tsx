@@ -59,6 +59,7 @@ const createStyles = (sawaaColors: ReturnType<typeof useSawaaColors>) => StyleSh
   title: { color: sawaaColors.ink[900], fontSize: sawaaType.subheading.fontSize },
   message: { color: sawaaColors.ink[500], fontSize: sawaaType.caption.fontSize },
   errorRow: { alignItems: 'center', gap: sawaaSpacing.sm },
+  retryAction: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
   retry: { color: sawaaColors.teal[700], fontSize: sawaaType.caption.fontSize },
   list: { gap: sawaaSpacing.sm },
   branch: { minHeight: 44, padding: sawaaSpacing.md },

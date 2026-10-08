@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { getFontName, getHeadingFont, fontAssets } from '../fonts';
 import { ThemedText } from '../components/ThemedText';
+import { sawaaType } from '../sawaa/tokens';
 
 let mockLanguage = 'ar';
 
@@ -40,6 +41,17 @@ it('renders Arabic body copy with the loaded IBM font and right alignment', () =
     fontFamily: 'IBMPlexSansArabic_400Regular',
     textAlign: 'right', writingDirection: 'rtl',
   });
+});
+
+it.each(['bodySm', 'label'] as const)('lets explicit color override the %s secondary color', (variant) => {
+  render(<ThemedText variant={variant} color="red">Explicit color</ThemedText>);
+  expect(screen.getByText('Explicit color')).toHaveStyle({ color: 'red' });
+});
+
+it('gives explicit style final precedence and uses the canonical heading scale', () => {
+  render(<><ThemedText variant="heading">Heading</ThemedText><ThemedText variant="label" color="red" style={[{ color: 'blue' }, { fontWeight: '700' }]}>Override</ThemedText></>);
+  expect(screen.getByText('Override')).toHaveStyle({ color: 'blue', fontFamily: getFontName('ar', '700') });
+  expect(screen.getByText('Heading')).toHaveStyle({ fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight });
 });
 
 it.each(['bodySm', 'label'] as const)('honors explicit %s color', variant => {

@@ -75,11 +75,12 @@ export const sawaaBlur = {
  */
 export const sawaaType = {
   display: { fontSize: 32, lineHeight: 42, weight: '700' },
+  displaySm: { fontSize: 28, lineHeight: 35, weight: '700' },
   heading: { fontSize: 24, lineHeight: 30, weight: '700' },
   subheading: { fontSize: 18, lineHeight: 24, weight: '600' },
   action: { fontSize: 17, lineHeight: 24, weight: '600' },
-  bodySm: { fontSize: 13, lineHeight: 20, weight: '400' },
   body: { fontSize: 14, lineHeight: 20, weight: '400' },
+  bodySm: { fontSize: 13, lineHeight: 20, weight: '400' },
   caption: { fontSize: 12, lineHeight: 16, weight: '500' },
   micro: { fontSize: 11, lineHeight: 14, weight: '600' },
 } as const;
@@ -128,6 +129,7 @@ const lightRoles = {
   accent: '#E7DBC4', focus: '#098a7d',
   danger: { fill: '#991B1B', foreground: '#FFFFFF' },
   action: { fill: '#087a6f', gradient: ['#087a6f', '#066962'] as const, foreground: '#FFFFFF', sheen: 'rgba(255,255,255,0.06)' },
+  destructive: { fill: '#B42318', foreground: '#FFFFFF' },
   /**
    * Selected pill on a segmented track. Kept apart from `action`: a CTA keeps its
    * dark fill in both appearances, but a selection has to separate from the track
@@ -147,6 +149,7 @@ const darkRoles = {
   background: '#0a1f1e', surface: '#0c2424', surfaceLow: '#0e2927', surfaceHigh: '#173632',
   accent: '#dfc89f', focus: darkSawaaColors.teal[600],
   action: lightRoles.action,
+  destructive: { fill: darkSawaaColors.accent.coral, foreground: sawaaColors.ink[900] },
   danger: { fill: darkSawaaColors.accent.coral, foreground: darkSawaaColors.teal[50] },
   selection: { fill: darkSawaaColors.teal[600], foreground: darkSawaaColors.teal[50] },
   switch: {

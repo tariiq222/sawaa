@@ -1,3 +1,5 @@
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -37,6 +39,11 @@ jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true
 } }));
 
 import { useBookingPayment } from '../use-booking-payment';
+const mockQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+function wrapper({ children }: React.PropsWithChildren) { return <QueryClientProvider client={mockQueryClient}>{children}</QueryClientProvider>; }
+beforeEach(() => mockQueryClient.clear());
+afterEach(() => mockQueryClient.clear());
+
 const input = { branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'service-1', scheduledAt: '2026-10-01T10:00:00.000Z', amount: '45000', currency: 'SAR' };
 
 describe('new booking payment retries', () => {
@@ -55,8 +62,25 @@ describe('new booking payment retries', () => {
     mockBrowser.mockResolvedValue({ type: 'success' });
   });
 
+  it('makes portal and invoice resources stale after creating a booking', async () => {
+    mockQueryClient.setQueryData(['portal', 'home'], { count: 0 });
+    mockQueryClient.setQueryData(['client-payments', 'invoice', 'invoice-1'], { status: 'UNPAID' });
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay(); });
+    expect(mockQueryClient.getQueryState(['portal', 'home'])?.isInvalidated).toBe(true);
+    expect(mockQueryClient.getQueryState(['client-payments', 'invoice', 'invoice-1'])?.isInvalidated).toBe(true);
+  });
+
+  it('preserves the portal cache when booking creation fails', async () => {
+    mockCreate.mockRejectedValueOnce(new Error('slot unavailable'));
+    mockQueryClient.setQueryData(['portal', 'home'], { count: 0 });
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay(); });
+    expect(mockQueryClient.getQueryState(['portal', 'home'])?.isInvalidated).toBe(false);
+  });
+
   it('routes to native checkout without launching hosted payment or claiming success', async () => {
-    const { result } = renderHook(() => useBookingPayment(input));
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockInit).not.toHaveBeenCalled();
@@ -67,7 +91,7 @@ describe('new booking payment retries', () => {
   });
 
   it('offers Apple Pay only while the wallet is available and resets removed selection', () => {
-    const { result, rerender } = renderHook(() => useBookingPayment(input));
+    const { result, rerender } = renderHook(() => useBookingPayment(input), { wrapper });
     expect(result.current.availableMethods).not.toContain('apple_pay');
     mockAppleAvailable = true;
     rerender({});
@@ -80,7 +104,7 @@ describe('new booking payment retries', () => {
 
   it('preserves the selected Apple method in native route params', async () => {
     mockAppleAvailable = true;
-    const { result } = renderHook(() => useBookingPayment(input));
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     act(() => result.current.setMethod('apple_pay'));
     await act(async () => { await result.current.pay(); });
     expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/payments/native-checkout', params: {
@@ -89,29 +113,29 @@ describe('new booking payment retries', () => {
   });
 
   it('resumes the saved invoice after remounting instead of creating again', async () => {
-    const first = renderHook(() => useBookingPayment(input));
+    const first = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await first.result.current.pay(); });
     first.unmount();
-    const second = renderHook(() => useBookingPayment(input));
+    const second = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await second.result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockGetBooking).toHaveBeenCalledWith('booking-1');
   });
 
   it('ignores duplicate presses in the same frame', async () => {
-    const { result } = renderHook(() => useBookingPayment(input));
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await Promise.all([result.current.pay(), result.current.pay()]); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
   it('omits blank duration options from booking creation', async () => {
-    const { result } = renderHook(() => useBookingPayment({ ...input, durationOptionId: '  ' }));
+    const { result } = renderHook(() => useBookingPayment({ ...input, durationOptionId: '  ' }), { wrapper });
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('durationOptionId');
   });
   it('refuses an expired saved booking without creating a replacement', async () => {
-    const { result } = renderHook(() => useBookingPayment(input));
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     mockGetBooking.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status: 'expired', ...input });
     await act(async () => { await result.current.pay(); });
@@ -121,7 +145,7 @@ describe('new booking payment retries', () => {
   });
 
   it('routes a completed saved booking to its result without charging again', async () => {
-    const { result } = renderHook(() => useBookingPayment(input));
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     mockGetBooking.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status: 'confirmed', ...input });
     await act(async () => { await result.current.pay(); });
@@ -131,7 +155,7 @@ describe('new booking payment retries', () => {
   });
 
   it('keeps an existing invoice in the resume flow when pay-at-center is selected on retry', async () => {
-    const { result } = renderHook(() => useBookingPayment(input));
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     act(() => { result.current.setMethod('at_center'); });
     await act(async () => { await result.current.pay(); });
@@ -141,7 +165,7 @@ describe('new booking payment retries', () => {
 
   it('keeps the authenticated bank-settings query disabled for a guest', () => {
     mockUserId = null;
-    renderHook(() => useBookingPayment(input, false));
+    renderHook(() => useBookingPayment(input, false), { wrapper });
     expect(mockBankQuery).toHaveBeenCalledWith(false);
   });
 
@@ -150,7 +174,7 @@ describe('new booking payment retries', () => {
 it('keeps pay-at-center creation and result navigation intact', async () => {
   mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks();
   mockCreate.mockResolvedValue({ id: 'at-center', invoiceId: null });
-  const { result } = renderHook(() => useBookingPayment(input));
+  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
   act(() => result.current.setMethod('at_center'));
   await act(async () => { await result.current.pay(); });
   expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ payAtClinic: true }));
@@ -160,7 +184,7 @@ it('keeps pay-at-center creation and result navigation intact', async () => {
 
 it('preserves bank transfer routing and guest draft without creating a booking', async () => {
   mockUserId = null; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true;
-  const { result, rerender } = renderHook(() => useBookingPayment(input));
+  const { result, rerender } = renderHook(() => useBookingPayment(input), { wrapper });
   await act(async () => { await result.current.pay(); });
   expect(mockCreate).not.toHaveBeenCalled();
   mockUserId = 'user-1'; rerender({});
@@ -173,7 +197,7 @@ it('preserves bank transfer routing and guest draft without creating a booking',
 
 it('does not silently select pay-at-center while native capability is loading', () => {
   mockNativeLoading = true; mockNativeEnabled = false; mockUserId = 'user-1'; mockBankEnabled = false;
-  const { result, rerender } = renderHook(() => useBookingPayment(input));
+  const { result, rerender } = renderHook(() => useBookingPayment(input), { wrapper });
   expect(result.current.method).toBe('card');
   expect(result.current.canPay).toBe(false);
   mockNativeLoading = false; mockNativeEnabled = true;
@@ -183,7 +207,7 @@ it('does not silently select pay-at-center while native capability is loading', 
 
 it('shows capability fetch failure, keeps Apple selected and retries in place despite offline alternatives', () => {
   mockNativeLoading = false; mockNativeEnabled = true; mockNativeError = false; mockAppleAvailable = true; mockBankEnabled = true;
-  const { result, rerender } = renderHook(() => useBookingPayment(input));
+  const { result, rerender } = renderHook(() => useBookingPayment(input), { wrapper });
   act(() => result.current.setMethod('apple_pay'));
   mockNativeError = true; mockNativeEnabled = false; mockAppleAvailable = false;
   rerender({});

@@ -18,21 +18,22 @@ import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
+  const { booking, redirect, identifier: initialIdentifier } = useLocalSearchParams<{ booking?: string; redirect?: string; identifier?: string }>();
   const dir = useDir();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(initialIdentifier ?? '');
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
 
   const validate = useCallback((): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      setError(t('auth.register.emailError'));
+    const value = identifier.trim();
+    if (!value || (value.includes('@') ? !emailRegex.test(value) : !/^(?:\+|00)?[\d ()-]{7,20}$/.test(value))) {
+      setError(t('auth.login.identifierError'));
       return false;
     }
     return true;
-  }, [email, t]);
+  }, [identifier, t]);
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) {
@@ -42,11 +43,11 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      await authService.requestPasswordResetOtp(email.trim());
+      await authService.requestPasswordResetOtp(identifier.trim());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/reset-password',
-        params: { email: email.trim(), ...authContinuationParams(booking, redirect) },
+        params: { identifier: identifier.trim(), ...authContinuationParams(booking, redirect) },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -54,20 +55,20 @@ export default function ForgotPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, validate, router, t, booking, redirect]);
+  }, [identifier, validate, router, t, booking, redirect]);
 
   return <AuthFormScaffold title={t('auth.forgotPassword.title')} onBack={() => router.back()}>
     <ThemedText variant="body">{t('auth.forgotPassword.subtitle')}</ThemedText>
     <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
       <View style={styles.formInner}>
         <LabeledInput
-          label={t('auth.forgotPassword.emailLabel')}
-          value={email}
+          label={t('auth.login.identifier')}
+          value={identifier}
           onChangeText={(v) => {
-            setEmail(v);
+            setIdentifier(v);
             if (error) setError(undefined);
           }}
-          placeholder="example@email.com"
+          placeholder={t('auth.login.identifierPlaceholder')}
           error={error}
           keyboardType="email-address" inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }}
           autoCapitalize="none"
@@ -82,14 +83,14 @@ export default function ForgotPasswordScreen() {
         />
 
         <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-          <ThemedText variant="body">{t('auth.forgotPassword.remembered')}</ThemedText>
-          <Pressable accessibilityRole="link" style={styles.loginLink}
+          <ThemedText variant="body">{t('auth.rememberPassword')}</ThemedText>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('auth.loginNow')} style={styles.loginLink}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}
           >
-            <ThemedText variant="body">{t('auth.forgotPassword.back')}</ThemedText>
+            <ThemedText variant="body">{t('auth.loginNow')}</ThemedText>
           </Pressable>
         </View>
       </View>

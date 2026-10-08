@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 import { useTheme } from '../useTheme';
 import { getFontName } from '../fonts';
 import { sawaaType } from '../sawaa/tokens';
@@ -12,18 +12,19 @@ interface ThemedTextProps extends TextProps {
   align?: 'left' | 'center' | 'right' | 'auto';
 }
 
-/** Canonical metrics with legacy variant aliases and native text semantics. */
+/** Native text semantics and canonical scale; caller style has final precedence. */
 export function ThemedText({ children, variant = 'body', color, align, style, ...textProps }: ThemedTextProps) {
   const { theme, isRTL, language } = useTheme();
-  const role = variant === 'displaySm' ? 'heading' : variant === 'label' ? 'micro' : variant;
-  const metric = sawaaType[role];
-  const weight = StyleSheet.flatten(style)?.fontWeight ?? metric.weight;
+  const token = sawaaType[variant === 'label' ? 'micro' : variant];
+  const weight = StyleSheet.flatten(style)?.fontWeight ?? token.weight;
+  const secondary = variant === 'bodySm' || variant === 'label';
   return (
     <Text {...textProps} style={[
-      { fontSize: metric.fontSize, lineHeight: metric.lineHeight,
-        fontFamily: getFontName(language, String(weight)),
+      { fontFamily: getFontName(language, String(weight)), fontWeight: token.weight,
+        fontSize: token.fontSize, lineHeight: token.lineHeight,
         textAlign: align ?? (isRTL ? 'right' : 'left'), writingDirection: isRTL ? 'rtl' : 'ltr',
-        color: variant === 'bodySm' || variant === 'label' ? theme.colors.textSecondary : theme.colors.textPrimary },
+        color: secondary ? theme.colors.textSecondary : theme.colors.textPrimary },
+      variant === 'label' ? { textTransform: 'uppercase', letterSpacing: 0.6 } : undefined,
       color ? { color } : undefined,
       style,
     ]}>{children}</Text>

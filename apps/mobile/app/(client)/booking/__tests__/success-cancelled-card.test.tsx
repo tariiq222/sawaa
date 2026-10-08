@@ -30,7 +30,7 @@ jest.mock('lucide-react-native', () => {
   return { Calendar: NativeView, Check: NativeView, CircleAlert: NativeView, Clock: NativeView, Hash: NativeView, User: NativeView };
 });
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
-jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string) => key === 'booking.backToHome' ? 'Back to home' : key }) }));
+jest.mock('react-i18next', () => ({ __esModule: true, initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => ({ t: (key: string, options?: import('i18next').TOptions) => require('@/test-utils/translation').translatedTestMessage(key, 'en', options) }) }));
 jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
@@ -107,8 +107,8 @@ describe('booking success after the client closed the card gateway', () => {
     await advance(6000);
 
     expect(screen.getByText('Payment not completed')).toBeTruthy();
-    expect(screen.queryByText('booking.checkAgain')).toBeNull();
-    fireEvent.press(screen.getByText('booking.tryAgain'));
+    expect(screen.queryByText('Check again')).toBeNull();
+    fireEvent.press(screen.getByText('Try again'));
 
     expect(mockBack).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith({
@@ -126,8 +126,8 @@ describe('booking success after the client closed the card gateway', () => {
     await advance(0);
 
     expect(screen.getByText('Payment processing')).toBeTruthy();
-    expect(screen.getByText('booking.checkAgain')).toBeTruthy();
-    expect(screen.queryByText('booking.tryAgain')).toBeNull();
+    expect(screen.getByText('Check again')).toBeTruthy();
+    expect(screen.queryByText('Try again')).toBeNull();
   });
 
   it('falls back to going back when the booking identity is missing', async () => {
@@ -136,7 +136,7 @@ describe('booking success after the client closed the card gateway', () => {
     const screen = render(<BookingSuccessScreen />);
     await advance(6000);
 
-    fireEvent.press(screen.getByText('booking.tryAgain'));
+    fireEvent.press(screen.getByText('Try again'));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
   });

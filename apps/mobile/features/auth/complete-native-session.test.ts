@@ -39,3 +39,10 @@ it('hands off its new epoch before asynchronous persistence so cancellation can 
   resolve(true);
   await pending;
 });
+
+it('rejects a staff profile for an explicit client response', async () => {
+  jest.mocked(authService.getProfile).mockResolvedValueOnce({ success: true, data: { role: 'ADMIN' } } as Awaited<ReturnType<typeof authService.getProfile>>);
+  const dispatch = jest.fn(); const replace = jest.fn();
+  await expect(completeNativeSession({ ...session, sessionEpoch: 3 }, { dispatch, replace })).rejects.toThrow();
+  expect(dispatch).not.toHaveBeenCalled(); expect(replace).not.toHaveBeenCalled();
+});

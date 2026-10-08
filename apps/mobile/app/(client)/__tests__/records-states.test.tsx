@@ -23,6 +23,7 @@ jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right' }) }));
+jest.mock('@/components/ui/Skeleton', () => ({ Skeleton: require('react-native').View }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/sawaa', () => {
   const { View } = require('react-native');
@@ -32,7 +33,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.re
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
 
 const mockRefetch = jest.fn();
-let mockQuery: { data?: { items: unknown[] }; isPending: boolean; isError: boolean };
+let mockQuery: { data?: { items: unknown[]; meta?: { total: number; page: number; totalPages: number } }; isPending: boolean; isError: boolean };
 const mockUseClientBookings = jest.fn();
 jest.mock('@/hooks/queries', () => ({
   useClientBookings: (params: unknown) => {
@@ -52,7 +53,7 @@ beforeEach(() => {
 describe('records screen states', () => {
   it('requests completed appointments through the shared bookings query', () => {
     render(<RecordsScreen />);
-    expect(mockUseClientBookings).toHaveBeenCalledWith({ status: 'completed', limit: 50 });
+    expect(mockUseClientBookings).toHaveBeenCalledWith({ status: 'completed', limit: 50, page: 1 });
   });
 
   it('shows neither the empty state nor the error while loading', () => {
@@ -94,6 +95,22 @@ describe('records screen states', () => {
     expect(mockPush).toHaveBeenCalledWith('/(client)/appointment/b-1');
   });
 
+  it('reaches records after the first 50 while retaining the completed filter and retrying page 2', () => {
+    mockQuery = { data: { items: Array.from({ length: 50 }, (_, i) => ({ id: `b-${i}`, scheduledAt: '2026-09-01T10:00:00.000Z', employee: { nameEn: `Person ${i}` } })), meta: { total: 51, page: 1, totalPages: 2 } }, isPending: false, isError: false };
+    const screen = render(<RecordsScreen />);
+    fireEvent.press(screen.getByText('common.next'));
+    expect(mockUseClientBookings).toHaveBeenLastCalledWith({ status: 'completed', limit: 50, page: 2 });
+    mockQuery = { isPending: false, isError: true };
+    screen.rerender(<RecordsScreen />);
+    fireEvent.press(screen.getByText('common.retry'));
+    expect(mockRefetch).toHaveBeenCalled();
+    expect(mockUseClientBookings).toHaveBeenLastCalledWith({ status: 'completed', limit: 50, page: 2 });
+    mockQuery = { data: { items: [{ id: 'b-50', scheduledAt: '2026-09-01T10:00:00.000Z', employee: { nameAr: 'آخر سجل' } }], meta: { total: 51, page: 2, totalPages: 2 } }, isPending: false, isError: false };
+    screen.rerender(<RecordsScreen />);
+    fireEvent.press(screen.getByText('آخر سجل'));
+    expect(mockPush).toHaveBeenCalledWith('/(client)/appointment/b-50');
+  });
+
   it('falls back to the account tab when opened with no history', () => {
     mockCanGoBack = false;
     const screen = render(<RecordsScreen />);
@@ -116,7 +133,7 @@ it.each([true, false])('keeps 50 response-ordered records reachable with Reduce 
  const view = render(<RecordsScreen />);
  const rows = view.getAllByRole('button', { name: /مختص/ });
  expect(rows).toHaveLength(50);
- rows.forEach((row, i) => expect(row.props.accessibilityLabel).toContain(`مختص ${i}.`));
+ rows.forEach((row, i) => expect(row.props.accessibilityLabel).toContain(`مختص ${i} ·`));
  if (reduced) expect(mockEntering.every(value => value === undefined)).toBe(true);
  else expect(Math.max(...mockDelay.mock.calls.map(([delay]) => delay))).toBeLessThanOrEqual(240);
 });

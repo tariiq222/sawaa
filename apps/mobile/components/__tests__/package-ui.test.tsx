@@ -23,6 +23,7 @@ jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) =>
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, row: mockRTL ? 'row-reverse' : 'row', textAlign: mockRTL ? 'right' : 'left' }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockUser }));
 jest.mock('@/hooks/queries', () => ({
+  usePublicBranches: () => ({ data: mockBranches, isFetching: false, isError: false, refetch: mockRefetch }),
   usePackageFamily: () => mockQuery, usePackageFamilies: () => mockQuery, usePackagePurchases: () => mockQuery,
   useInitPackagePurchase: () => ({ isPending: false, mutateAsync: mockMutateAsync }), useBookPackageCredit: () => ({ isPending: false }), useSlots: () => ({ data: [] }),
 }));
