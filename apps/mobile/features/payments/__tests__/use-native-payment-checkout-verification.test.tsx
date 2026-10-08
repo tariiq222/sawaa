@@ -55,14 +55,13 @@ it('keeps a submitted attempt verification-only while the provider outcome is st
   unmount(); jest.useRealTimers();
 });
 
-it('allows a new attempt and marks the stored identity failed after an authoritative failure', async () => {
+it('allows a new attempt after an authoritative failure', async () => {
   const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
   await waitFor(() => expect(result.current.phase).toBe('ready'));
   await act(async () => { await result.current.onPaymentResult(); });
   jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
   await act(() => result.current.reconcile());
   expect(result.current.phase).toBe('failed');
-  expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).failed).toBe(true);
   await act(() => result.current.retryInitialization());
   expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(2);
   unmount();
@@ -298,13 +297,41 @@ describe('verifyPayable provider configuration gate', () => {
     expect(result.current.error).toBe('nativePayment.conflict');
     expect(result.current.config).toBeNull();
     expect(result.current.canRetryInit).toBe(false);
-    // A later reconcile that still allows creation must not re-offer the retry that hits the same conflict.
+    // A later reconcile that still allows creation must not re-offer the retry that hits the same
+    // conflict, and must keep the explicit conflict message instead of "awaiting verification".
     await act(() => result.current.reconcile());
     expect(result.current.canRetryInit).toBe(false);
     expect(result.current.canResume).toBe(false);
-    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'other-payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    expect(result.current.error).toBe('nativePayment.conflict');
+    unmount();
+  });
+  it('fails closed on a mismatched invoice from the fresh initialization', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'other-invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    let ok = true;
     await act(async () => { ok = await result.current.verifyPayable(); });
     expect(ok).toBe(false);
+    expect(result.current.phase).toBe('error');
+    unmount();
+  });
+  it('does not schedule a poll that would overwrite a revoked error', async () => {
+    jest.useFakeTimers();
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { status: 429, data: {} } });
+    await act(async () => { await result.current.verifyPayable(); });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
+    await act(async () => { jest.advanceTimersByTime(10_000); });
+    expect(clientPaymentsService.reconcileNativePayment).not.toHaveBeenCalled();
+    expect(result.current.error).toBe('nativePayment.tryAgainShortly');
+    unmount(); jest.useRealTimers();
+  });
+  it('persists an adopted in-progress identity so a restart restores the live payment', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'NATIVE_PAYMENT_IN_PROGRESS', paymentId: 'replacement', invoiceId: 'invoice' } } });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+    await act(async () => { await result.current.verifyPayable(); });
+    expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).paymentId).toBe('replacement');
     unmount();
   });
 });

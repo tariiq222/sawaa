@@ -48,6 +48,7 @@ export default function NativeCheckout() {
     clientId: capabilities.isLoading || capabilities.isError || !capabilities.enabled || appleUnavailable ? undefined : clientId,
     invoiceId, bookingId, purchaseId, method,
   });
+  useEffect(() => { setCardRejected(false); }, [choiceScope, checkout.attempt]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();

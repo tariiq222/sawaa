@@ -23,8 +23,12 @@ function classifySdkResult(result: unknown, method: NativePaymentMethod): SdkOut
   if (method !== 'ONLINE_CARD') return 'submitted';
   const value = result as { name?: unknown; error?: { type?: unknown; errors?: unknown } } | null | undefined;
   const fields = value?.error?.errors;
-  const hasFieldErrors = typeof fields === 'object' && fields !== null && Object.keys(fields).length > 0;
-  return value?.name === 'MoyasarNetworkEndpointError' && value.error?.type === 'invalid_request_error' && hasFieldErrors
+  const keys = typeof fields === 'object' && fields !== null ? Object.keys(fields) : [];
+  // Only errors the user can fix by editing the card count; request-level keys (given_id,
+  // amount, currency, ...) may mean a provider payment exists and must be verified.
+  const cardField = /(^|\.)(number|name|cvc|month|year|expiry)$/;
+  const editable = keys.length > 0 && keys.every((key) => cardField.test(key));
+  return value?.name === 'MoyasarNetworkEndpointError' && value.error?.type === 'invalid_request_error' && editable
     ? 'rejected' : 'submitted';
 }
 

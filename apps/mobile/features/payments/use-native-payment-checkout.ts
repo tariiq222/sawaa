@@ -18,7 +18,7 @@ interface CheckoutInput {
 }
 type Phase = 'choosing' | 'unavailable' | 'loading' | 'ready' | 'checking' | 'processing' | 'pending' | 'completed' | 'failed' | 'review' | 'error';
 interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentConfiguration | null; paymentId: string | null; error: string | null; canResume: boolean; canRetryInit: boolean; unavailableReason?: NativePaymentReconcileResponse['unavailableReason'] }
-interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string; failed?: boolean }
+interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string }
 const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false, canRetryInit: true };
 
 // Mirrors the backend attempt fingerprint (publishable key, mode, Apple Pay) plus the attempt terms.
@@ -29,11 +29,6 @@ function sameAttemptConfig(a: NativePaymentConfiguration, b: NativePaymentConfig
   return pick(a) === pick(b);
 }
 
-function errorKey(error: unknown): string {
-  const code = (error as { response?: { data?: { code?: string; message?: string } } })?.response?.data?.code;
-  if (['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS', 'PAYMENT_CONFIGURATION_CHANGED'].includes(code ?? '')) return 'nativePayment.conflict';
-  return 'nativePayment.verificationError';
-}
 
 export function useNativePaymentCheckout(input: CheckoutInput) {
   const { clientId, invoiceId, bookingId, purchaseId, method } = input;
@@ -67,6 +62,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
     const valid = () => active && currentScope.current === scope;
+    const closed = () => terminalResult || terminalUnavailable;
     const update = (next: Partial<CheckoutState>) => {
       // retryInitialization is a no-op once a result was submitted or a payment exists.
       const canRetryInit = canInitialize && !settling && !resultReceived;
@@ -101,8 +97,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (busy) { if (verifying) recheckRequested = true; return; }
       busy = true;
       clearTimeout(timer);
-      // Keep the live SDK/WebView mounted while checking a bank challenge.
-      update({ phase: settling ? 'processing' : 'checking', error: null });
+      // Keep the live SDK/WebView mounted while checking a bank challenge. An explicit blocked
+      // state (conflict, in-progress payment) keeps its message across checks.
+      update({ phase: settling ? 'processing' : 'checking', ...(initBlocked ? {} : { error: null }) });
       try {
         const result = await clientPaymentsService.reconcileNativePayment(paymentId);
         if (!valid()) return;
@@ -131,10 +128,6 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           canInitialize = !initBlocked;
           // Only an authoritative failure reopens initialization after a submitted result.
           resultReceived = false;
-          try {
-            const stored = await AsyncStorage.getItem(storageKey);
-            if (stored) await AsyncStorage.setItem(storageKey, JSON.stringify({ ...JSON.parse(stored), failed: true }));
-          } catch { /* the identity stays; bank transfer remains blocked conservatively */ }
           update({ phase: 'failed', config: null, canResume: false });
         } else if (result.unavailableReason) {
           terminalUnavailable = true; settling = false;
@@ -154,9 +147,25 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         // A Wallet result can arrive while the foreground request is still running.
         if (queuedResult) {
           queuedResult = false;
-          if (valid() && !terminalResult && !terminalUnavailable) await reconcile();
+          if (valid() && !closed()) await reconcile();
         }
       }
+    };
+    const persistIdentity = async () => {
+      const pending: PendingIdentity = { clientId: clientId!, invoiceId, paymentId: paymentId!, bookingId, purchaseId };
+      await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
+    };
+    // A freshly initialized attempt becomes the live one: persisted, counted, and ready.
+    const adoptAttempt = async (result: { paymentId: string; config: NativePaymentConfiguration }) => {
+      createNativePaymentConfig(result.config);
+      paymentId = result.paymentId;
+      await persistIdentity();
+      if (!valid()) return false;
+      attempt += 1;
+      terminalFailure = false; terminalResult = false; resultReceived = false;
+      readyConfig = result.config; lastInitAt = Date.now();
+      update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
+      return true;
     };
     // Authoritative results an initialization request can return; true means it was handled.
     const handleInitError = async (error: unknown): Promise<boolean> => {
@@ -185,6 +194,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         initBlocked = true; canInitialize = false; readyConfig = null;
         if (conflict?.invoiceId === invoiceId && typeof conflict.paymentId === 'string' && conflict.paymentId) {
           paymentId = adoptedId = conflict.paymentId;
+          try { await persistIdentity(); } catch { /* restoration falls back to the server identity */ }
         }
         update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict', ...(paymentId ? { paymentId } : {}) });
         if (paymentId) { busy = false; await reconcile(); }
@@ -227,19 +237,11 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         if (!valid()) return;
         if (result.invoiceId !== invoiceId || !result.paymentId
           || (paymentId && !terminalFailure && result.paymentId !== paymentId)) throw new Error('Invalid identity');
-        createNativePaymentConfig(result.config);
-        paymentId = result.paymentId;
-        const pending: PendingIdentity = { clientId, invoiceId, paymentId, bookingId, purchaseId };
-        await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
-        if (!valid()) return;
-        attempt += 1;
-        terminalFailure = false; terminalResult = false; resultReceived = false;
-        readyConfig = result.config; lastInitAt = Date.now();
-        update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
+        await adoptAttempt(result);
       } catch (error) {
         if (!valid()) return;
         if (await handleInitError(error)) return;
-        update({ phase: 'error', error: errorKey(error) });
+        update({ phase: 'error', error: 'nativePayment.verificationError' });
       } finally { busy = false; }
     };
     // Authoritative pre-submission check: a fresh server verdict that this same
@@ -255,8 +257,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       // a rotated Moyasar/Apple Pay configuration rejects here and must not reach the token.
       // Any failure revokes the prepared configuration and surfaces an explicit state, so the
       // UI never keeps offering a Wallet action that would only be dismissed again.
+      let revoked = false;
       const revoke = (error: string, conflict = false) => {
-        readyConfig = null;
+        readyConfig = null; revoked = true;
         // Every re-init hits the stored-fingerprint conflict while the rotation is active: not retryable.
         if (conflict) { initBlocked = true; canInitialize = false; }
         update({ phase: 'error', config: null, canResume: false, error });
@@ -268,27 +271,19 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       clearTimeout(timer);
       const run = async (): Promise<boolean> => {
       // native/init is throttled (3/min): a just-initialized attempt already carries the current config.
-      if (Date.now() - lastInitAt < 20_000) return valid() && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
+      if (Date.now() - lastInitAt < 20_000) return valid() && !closed() && readyConfig === startConfig;
       try {
           const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
           if (!valid()) return false;
           if (fresh.invoiceId === invoiceId && fresh.paymentId && fresh.paymentId !== paymentId) {
             // The backend legitimately replaces an attempt it saw FAILED. The Wallet authorization
             // belongs to the old attempt, so revoke it but adopt and persist the replacement.
-            createNativePaymentConfig(fresh.config);
-            paymentId = fresh.paymentId;
-            const pending: PendingIdentity = { clientId: clientId!, invoiceId, paymentId, bookingId, purchaseId };
-            await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
-            if (!valid()) return false;
-            attempt += 1;
-            terminalFailure = false; terminalResult = false; resultReceived = false;
-            readyConfig = fresh.config; lastInitAt = Date.now();
-            update({ attempt, phase: 'ready', config: fresh.config, paymentId, canResume: true });
+            await adoptAttempt(fresh);
             return false;
           }
           if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
             || !sameAttemptConfig(fresh.config, startConfig)) return revoke('nativePayment.conflict', true);
-          return valid() && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
+          return valid() && !closed() && readyConfig === startConfig;
         } catch (error) {
           if (!valid()) return false;
           // Closure, completion and configuration results are authoritative, exactly as in initialize().
@@ -303,10 +298,10 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         ok = await run();
       } finally {
         busy = false; verifying = false;
-        if (valid() && !terminalResult && !terminalUnavailable) schedule();
+        if (valid() && !closed() && !revoked) schedule();
         if (queuedResult) {
           queuedResult = false;
-          if (valid() && !terminalResult && !terminalUnavailable) await reconcile();
+          if (valid() && !closed()) await reconcile();
         }
       }
       // A check requested while initialization was in flight must give its verdict before
@@ -315,7 +310,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         recheckRequested = false;
         payable = false;
         await reconcile();
-        ok = valid() && payable && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
+        ok = valid() && payable && !closed() && readyConfig === startConfig;
       }
       return ok;
     };

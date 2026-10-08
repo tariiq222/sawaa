@@ -100,6 +100,8 @@ describe('SDK result classification', () => {
     expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: {} } })).toHaveBeenCalledWith('submitted');
   });
   it.each([
+    { name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: { given_id: ['has already been taken'] } } },
+    { name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: { number: ['is invalid'], amount: ['is invalid'] } } },
     { name: 'MoyasarNetworkEndpointError', error: { type: 'api_error' } },
     { name: 'MoyasarNetworkEndpointError', error: {} },
     { name: 'MoyasarGeneralError' },

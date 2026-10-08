@@ -26,7 +26,7 @@ import type { DeliveryType } from '@/types/booking-enums';
  * Bank transfer can only be uploaded for what the invoice still owes. The server's committed
  * payments (any device, any flow) decide; an unreadable invoice or total keeps it blocked.
  */
-async function invoiceHasNothingOutstanding(invoiceId: string): Promise<boolean> {
+async function bankTransferBlocked(invoiceId: string): Promise<boolean> {
   try {
     const outstanding = getOutstandingHalalas(await clientPaymentsService.getInvoice(invoiceId));
     return outstanding === null || outstanding <= 0;
@@ -163,7 +163,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         // Committed payments (such as a pending card/Apple Pay attempt) reserve the invoice amount,
         // so a bank-transfer receipt would be rejected as already reserved.
         if (selected === 'bank_transfer' && booking.invoiceId
-          && await invoiceHasNothingOutstanding(booking.invoiceId)) {
+          && await bankTransferBlocked(booking.invoiceId)) {
           Alert.alert(t('booking.paymentMethod'), t('booking.existingNativeAttempt'));
           return null;
         }
