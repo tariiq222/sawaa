@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { NativePaymentConfiguration } from '@sawaa/shared';
 import { GeneralError } from 'react-native-moyasar-sdk';
 import { DeferredApplePayButton } from '../DeferredApplePayButton';
@@ -10,6 +10,13 @@ const mockCreatePayment = jest.fn();
 const mockCanUseApplePay = jest.fn();
 let mockScheme = 'light';
 const mockNativeButtonProps = jest.fn();
+const mockNativeComplete = jest.fn();
+
+jest.mock('react-native', () => {
+  const actual = jest.requireActual('react-native');
+  actual.NativeModules.ReactNativePayments = { complete: (...args: unknown[]) => mockNativeComplete(...args) };
+  return actual;
+});
 
 jest.mock('expo-constants', () => ({ expoConfig: { extra: { applePayMerchantId: 'merchant.sa.sawa' } } }));
 jest.mock('@/modules/sawaa-payments', () => ({ canUseApplePay: (...args: unknown[]) => mockCanUseApplePay(...args) }));
@@ -67,10 +74,40 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockScheme = 'light';
   mockCanUseApplePay.mockReturnValue(true);
-  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => true });
+  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => true, verify: async () => true });
   mockShow.mockResolvedValue({ details: { paymentData: token }, complete });
   complete.mockResolvedValue(undefined);
   mockCreatePayment.mockResolvedValue({ status: 'paid', source: { number: 'sensitive-fixture' } });
+  mockNativeComplete.mockImplementation((_status, callback) => callback(null));
+});
+
+// Use the actual SDK response and bridge: a mocked complete() hid the hung Promise.
+it.each([
+  ['src', 'failed'], ['src', 'paid'], ['lib/module', 'failed'], ['lib/module', 'paid'],
+])('unlocks another tap after the real SDK %s completes a %s payment', async (graph, status) => {
+  const PaymentResponse = graph === 'src'
+    ? require('react-native-moyasar-sdk/src/react_native_apple_pay/PaymentRequest/PaymentResponse').default
+    : require('react-native-moyasar-sdk/lib/module/react_native_apple_pay/PaymentRequest/PaymentResponse').default;
+  mockShow.mockImplementation(async () => new PaymentResponse({ details: { paymentData: token } }));
+  mockCreatePayment.mockResolvedValue({ status });
+  const screen = subject();
+  await press(screen);
+  await waitFor(() => expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: false, busy: false }));
+  expect(onResult).toHaveBeenCalledTimes(1);
+  expect(mockNativeComplete).toHaveBeenCalledWith(status === 'paid' ? 'success' : 'failure', expect.any(Function));
+  await press(screen);
+  await waitFor(() => expect(onResult).toHaveBeenCalledTimes(2));
+  expect(prepare).toHaveBeenCalledTimes(2);
+});
+
+it('reconciles and unlocks when the real native completion reports an error', async () => {
+  const PaymentResponse = require('react-native-moyasar-sdk/src/react_native_apple_pay/PaymentRequest/PaymentResponse').default;
+  mockShow.mockResolvedValue(new PaymentResponse({ details: { paymentData: token } }));
+  mockNativeComplete.mockImplementation((_status, callback) => callback(new Error('Native completion failed')));
+  const screen = subject();
+  await press(screen);
+  await waitFor(() => expect(onResult).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: false, busy: false });
 });
 
 // A missing prepare await or preview amount substitution breaks this boundary contract.
@@ -116,7 +153,7 @@ it('blocks repeated taps across preparation, Wallet and provider processing', as
   await press(screen); await press(screen);
   expect(prepare).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: true, busy: true });
-  await act(async () => { preparation.resolve({ config, onResult, isCurrent: () => true }); });
+  await act(async () => { preparation.resolve({ config, onResult, isCurrent: () => true, verify: async () => true }); });
   await press(screen);
   expect(mockShow).toHaveBeenCalledTimes(1);
   await act(async () => { wallet.resolve({ details: { paymentData: token }, complete }); });
@@ -254,5 +291,27 @@ it('never submits a token if ownership changes while Wallet is authorizing', asy
   await act(async () => { response.resolve({ details: { paymentData: token }, complete }); });
   expect(mockCreatePayment).not.toHaveBeenCalled();
   expect(complete).toHaveBeenCalledWith('failure'); expect(onResult).not.toHaveBeenCalled();
+  expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+it('revalidates the checkout with the server after Wallet and never submits when it is no longer payable', async () => {
+  const verify = jest.fn().mockResolvedValue(false);
+  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => true, verify });
+  await press(subject());
+  expect(mockShow).toHaveBeenCalledTimes(1);
+  expect(verify).toHaveBeenCalledTimes(1);
+  expect(mockCreatePayment).not.toHaveBeenCalled();
+  expect(complete).toHaveBeenCalledWith('failure');
+  expect(onCancel).toHaveBeenCalledTimes(1);
+  expect(onResult).not.toHaveBeenCalled();
+});
+
+it('does not submit when ownership changes while the server revalidation is running', async () => {
+  let current = true;
+  const verify = jest.fn(async () => { current = false; return true; });
+  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => current, verify });
+  await press(subject());
+  expect(mockCreatePayment).not.toHaveBeenCalled();
+  expect(complete).toHaveBeenCalledWith('failure');
   expect(onCancel).toHaveBeenCalledTimes(1);
 });

@@ -60,6 +60,13 @@ class Handler(BaseHTTPRequestHandler):
         global run_id
         path=urlsplit(self.path).path.removeprefix('/api/v1')
         body=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))) or b'{}')
+        if path in ('/mobile/auth/password-login', '/mobile/auth/refresh'):
+            # Synthetic CLIENT session for the disposable simulator: an unsigned JWT whose payload
+            # carries namespace=client (the app only decodes it); never valid against a real API.
+            import base64
+            claims = base64.urlsafe_b64encode(b'{"sub":"payment-e2e-client","namespace":"client","exp":4102444800}').rstrip(b'=').decode()
+            header = base64.urlsafe_b64encode(b'{"alg":"none","typ":"JWT"}').rstrip(b'=').decode()
+            return self.reply(dict(tokens=dict(accessToken=f'{header}.{claims}.', refreshToken='qa-refresh'), sessionKind='client'))
         if path == '/__reset':
             run_id=uuid.uuid4().hex[:10]
             events.clear(); bookings.clear(); completed_invoices.clear(); self.reply({}); return

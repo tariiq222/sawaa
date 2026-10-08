@@ -32,7 +32,8 @@ jest.mock('@/constants/config', () => ({ APP_SCHEME: 'sawa' }));
 jest.mock('@/services/client/bookings', () => ({ clientBookingsService: {
   create: (...args: unknown[]) => mockCreate(...args), getById: (...args: unknown[]) => mockGetBooking(...args),
 } }));
-jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initPayment: (...args: unknown[]) => mockInit(...args) } }));
+const mockGetInvoice = jest.fn();
+jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initPayment: (...args: unknown[]) => mockInit(...args), getInvoice: (...args: unknown[]) => mockGetInvoice(...args) } }));
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: (...args: unknown[]) => mockBrowser(...args) }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), NotificationFeedbackType: { Success: 'success' } }));
 jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true, default: {
@@ -254,4 +255,41 @@ it('shows capability fetch failure, keeps Apple selected and retries in place de
   rerender({});
   expect(result.current.method).toBe('apple_pay');
   expect(result.current.canPay).toBe(true);
+});
+
+describe('bank transfer on a resumed booking checks the invoice reservations on the server', () => {
+  async function resume(invoice: () => Promise<unknown>) {
+    mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
+    mockCreate.mockResolvedValue({ id: 'resumed-booking', invoiceId: 'resumed-invoice' });
+    mockGetBooking.mockResolvedValue({ id: 'resumed-booking', invoiceId: 'resumed-invoice', status: 'pending' });
+    mockGetInvoice.mockImplementation(invoice);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay('card'); });
+    await act(async () => { await result.current.pay('bank_transfer'); });
+    return alert;
+  }
+  const bankRoute = { pathname: '/(client)/booking/bank-transfer', params: { invoiceId: 'resumed-invoice', amount: '45000', bookingId: 'resumed-booking' } };
+  it('blocks when committed payments cover the invoice, even with no local attempt (another device)', async () => {
+    const alert = await resume(async () => ({ id: 'resumed-invoice', total: 45000, payments: [{ status: 'PENDING', amount: 45000 }] }));
+    expect(mockGetInvoice).toHaveBeenCalledWith('resumed-invoice');
+    expect(alert).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalledWith(bankRoute);
+    alert.mockRestore();
+  });
+  it('allows bank transfer when a failed attempt no longer commits any amount', async () => {
+    const alert = await resume(async () => ({ id: 'resumed-invoice', total: 45000, payments: [{ status: 'FAILED', amount: 45000 }] }));
+    expect(alert).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith(bankRoute);
+    alert.mockRestore();
+  });
+  it('blocks when the invoice cannot be read or has no usable total', async () => {
+    const offline = await resume(async () => { throw new Error('network down'); });
+    expect(offline).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalledWith(bankRoute);
+    offline.mockRestore();
+    const unknown = await resume(async () => ({ id: 'resumed-invoice', payments: [] }));
+    expect(unknown).toHaveBeenCalled();
+    unknown.mockRestore();
+  });
 });

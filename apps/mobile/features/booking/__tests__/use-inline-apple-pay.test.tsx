@@ -66,6 +66,21 @@ it('returns to ready after Wallet cancellation when the server confirms no provi
   expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
   expect(mockReplace).not.toHaveBeenCalled();
 });
+it('retries a declined payment with a fresh payment identity on the same booking and invoice', async () => {
+  const { result } = mount();
+  const first = await press(result);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  await act(async () => { first?.onResult(); });
+  await waitFor(() => expect(result.current.phase).toBe('failed'));
+  expect(result.current.locked).toBe(false);
+  const nextConfig = { ...config, givenId: 'a0000000-0000-4000-8000-000000000002' };
+  jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment-retry', invoiceId: 'invoice', config: nextConfig } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+  const second = await press(result);
+  expect(second?.config.givenId).toBe('a0000000-0000-4000-8000-000000000002');
+  expect(clientPaymentsService.initNativePayment).toHaveBeenLastCalledWith('invoice', 'APPLE_PAY');
+  expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!)).toMatchObject({ bookingId: 'booking', invoiceId: 'invoice', paymentId: 'payment-retry' });
+  expect(mockReplace).not.toHaveBeenCalled();
+});
 it('only navigates after backend payment and booking confirmation, retaining neutral processing', async () => {
   const { result } = mount();
   const prepared = await press(result);
@@ -116,4 +131,13 @@ it('clears revoked Wallet state when admin disables then re-enables online payme
   rerender({ enabled: true, scope: 'draft' });
   expect(result.current.locked).toBe(false);
   expect(mockReplace).not.toHaveBeenCalled();
+});
+
+it('revokes the prepared Wallet when the server closes the payment target while Wallet is open', async () => {
+  const { result } = mount(); const prepared = await press(result);
+  expect(prepared?.isCurrent()).toBe(true);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
+  await act(async () => { await result.current.reconcile(); });
+  expect(result.current.phase).toBe('unavailable');
+  expect(prepared?.isCurrent()).toBe(false);
 });
