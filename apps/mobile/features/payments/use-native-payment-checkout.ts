@@ -246,31 +246,48 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         update({ phase: 'error', config: null, canResume: false, error });
         return false;
       };
+      const startConfig = readyConfig;
+      // Hold the exclusive slot while initializing: no poll or foreground reconcile may overlap
+      // it, so no newer verdict can land after this one authorizes the token.
+      busy = true;
+      clearTimeout(timer);
+      const run = async (): Promise<boolean> => {
       try {
-        const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
-        if (!valid()) return false;
-        if (fresh.invoiceId === invoiceId && fresh.paymentId && fresh.paymentId !== paymentId) {
-          // The backend legitimately replaces an attempt it saw FAILED. The Wallet authorization
-          // belongs to the old attempt, so revoke it but adopt and persist the replacement.
-          createNativePaymentConfig(fresh.config);
-          paymentId = fresh.paymentId;
-          const pending: PendingIdentity = { clientId: clientId!, invoiceId, paymentId, bookingId, purchaseId };
-          await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
+          const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
           if (!valid()) return false;
-          attempt += 1;
-          terminalFailure = false; terminalResult = false; resultReceived = false;
-          readyConfig = fresh.config;
-          update({ attempt, phase: 'ready', config: fresh.config, paymentId, canResume: true });
-          return false;
+          if (fresh.invoiceId === invoiceId && fresh.paymentId && fresh.paymentId !== paymentId) {
+            // The backend legitimately replaces an attempt it saw FAILED. The Wallet authorization
+            // belongs to the old attempt, so revoke it but adopt and persist the replacement.
+            createNativePaymentConfig(fresh.config);
+            paymentId = fresh.paymentId;
+            const pending: PendingIdentity = { clientId: clientId!, invoiceId, paymentId, bookingId, purchaseId };
+            await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
+            if (!valid()) return false;
+            attempt += 1;
+            terminalFailure = false; terminalResult = false; resultReceived = false;
+            readyConfig = fresh.config;
+            update({ attempt, phase: 'ready', config: fresh.config, paymentId, canResume: true });
+            return false;
+          }
+          if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
+            || !sameAttemptConfig(fresh.config, startConfig)) return revoke('nativePayment.conflict', true);
+          return valid() && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
+        } catch (error) {
+          if (!valid()) return false;
+          // Closure, completion and configuration results are authoritative, exactly as in initialize().
+          if (await handleInitError(error)) return false;
+          return revoke('nativePayment.verificationError');
         }
-        if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
-          || !sameAttemptConfig(fresh.config, readyConfig)) return revoke('nativePayment.conflict', true);
-        return true;
-      } catch (error) {
-        if (!valid()) return false;
-        // Closure, completion and configuration results are authoritative, exactly as in initialize().
-        if (await handleInitError(error)) return false;
-        return revoke('nativePayment.verificationError');
+      };
+      try {
+        return await run();
+      } finally {
+        busy = false;
+        if (valid() && !terminalResult && !terminalUnavailable) schedule();
+        if (queuedResult) {
+          queuedResult = false;
+          if (valid() && !terminalResult && !terminalUnavailable) await reconcile();
+        }
       }
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
