@@ -81,3 +81,33 @@ describe('TherapistProfileView booking button', () => {
     expect(onBook).toHaveBeenCalledWith('a', 'employee-1');
   });
 });
+
+it('shows failed scoped services and retries without booking a fallback service', () => {
+  const retry = jest.fn(); const book = jest.fn();
+  const screen = render(<TherapistProfileView employee={employee(['a'])} loading={false} catalog={undefined} catalogLoading={false} catalogError onRetryCatalog={retry} clinicId="gone" onBack={jest.fn()} onBook={book} />);
+  fireEvent.press(screen.getByText('employeeProfile.services'));
+  expect(screen.queryByText('employeeProfile.noServices')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'common.retry' }));
+  expect(retry).toHaveBeenCalledTimes(1); expect(book).not.toHaveBeenCalled();
+});
+it('retries an unavailable employee read without booking', () => {
+  const retry = jest.fn(); const book = jest.fn();
+  const screen = render(<TherapistProfileView employee={undefined} loading={false} employeeError onRetryEmployee={retry} catalog={undefined} catalogLoading={false} onBack={jest.fn()} onBook={book} />);
+  fireEvent.press(screen.getByRole('button', { name: 'common.retry' }));
+  expect(retry).toHaveBeenCalledTimes(1); expect(book).not.toHaveBeenCalled();
+});
+it('keeps cached scoped services visible when their refresh fails', () => {
+  const screen = render(<TherapistProfileView employee={employee(['a'])} loading={false} catalog={catalog(['a'])} catalogLoading={false} catalogError onRetryCatalog={jest.fn()} onBack={jest.fn()} onBook={jest.fn()} />);
+  fireEvent.press(screen.getByText('employeeProfile.services'));
+  expect(screen.getByTestId('employee-service-a')).toBeTruthy();
+  expect(screen.getByText('guest.loadError')).toBeTruthy();
+});
+it.each([undefined, 'invalid-clinic'])('keeps a genuinely empty or invalid clinic scope unbookable (%s)', (clinicId) => {
+  const book = jest.fn();
+  const screen = render(<TherapistProfileView employee={employee(['a'])} loading={false} catalog={catalog(clinicId ? ['a'] : [])} catalogLoading={false} clinicId={clinicId} onBack={jest.fn()} onBook={book} />);
+  fireEvent.press(screen.getByText('employeeProfile.services'));
+  expect(screen.getByText('employeeProfile.noServices')).toBeTruthy();
+  expect(screen.queryByTestId('employee-service-a')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
+  expect(book).not.toHaveBeenCalled();
+});

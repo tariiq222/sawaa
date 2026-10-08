@@ -5,6 +5,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { authService } from '@/services/auth';
 import { DeleteAccountButton } from './DeleteAccountButton';
 
+jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => false }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/services/auth', () => ({ authService: { requestAccountDeletion: jest.fn() } }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: true, language: 'ar' }) }));
@@ -55,9 +56,16 @@ describe('DeleteAccountButton', () => {
       fireEvent.press(confirm);
     });
     expect(requestClosure).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState).toMatchObject({ disabled: true, busy: true });
 
     await act(async () => { resolveClosure?.(); });
     expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState.disabled).toBe(false);
   });
+});
+
+it('closes on backdrop without requesting deletion', () => {
+ const view = openSheet();
+ fireEvent.press(view.getByTestId('delete-account-backdrop', { includeHiddenElements: true }));
+ expect(view.queryByText('profile.deleteAccountSheetTitle')).toBeNull();
+ expect(requestClosure).not.toHaveBeenCalled();
 });

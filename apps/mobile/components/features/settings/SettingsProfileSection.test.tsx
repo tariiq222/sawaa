@@ -19,6 +19,7 @@ jest.mock('@/hooks/use-redux', () => ({
 }));
 jest.mock('@/services/client', () => ({ clientProfileService: { updateProfile: (body: unknown) => mockUpdate(body) } }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: true, language: 'ar' }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => jest.requireActual('@/hooks/useDir').buildDirState('ar') }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), NotificationFeedbackType: { Success: 'success', Error: 'error' } }));
 
 beforeEach(() => {
@@ -68,4 +69,14 @@ it('uses the canonical multi-part name and cleared phone without retaining stale
   expect(mockDispatch.mock.calls[0][0].payload).toMatchObject({ name: '  Sara  New Family  ', firstName: 'Sara', lastName: 'New Family', phone: null });
   expect(screen.getByLabelText('settings.fullName').props.value).toBe('  Sara  New Family  ');
   expect(screen.getByLabelText('settings.phone').props.value).toBe('');
+});
+
+it('keeps save unavailable during the existing save request', async () => {
+  let finish!: (value: typeof baseUser) => void;
+  mockUpdate.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  const view = render(<SettingsProfileSection />);
+  fireEvent.changeText(view.getByLabelText('settings.fullName'), 'Sara New');
+  await act(async () => { fireEvent.press(view.getByText('settings.saveProfile')); });
+  expect(view.getByRole('button', { name: 'settings.saveProfile' }).props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+  await act(async () => finish(baseUser));
 });

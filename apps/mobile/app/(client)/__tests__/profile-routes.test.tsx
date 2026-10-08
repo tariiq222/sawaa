@@ -111,13 +111,9 @@ describe('profile rows lead to purpose-specific pages', () => {
 
   it('keeps the edit control a fixed compact pill instead of stretching with the profile row', () => {
     const screen = render(<ProfileScreen />);
-    // The control is the nearest ancestor that pins a height (Glass renders the wrapper).
-    let control = screen.getByText('profile.edit').parent;
-    while (control && StyleSheet.flatten(control.props?.style)?.height == null) {
-      control = control.parent;
-    }
-    expect(StyleSheet.flatten(control?.props?.style)).toMatchObject({
-      height: 32,
+    const control = screen.getByRole('button', { name: 'profile.edit' });
+    expect(StyleSheet.flatten(control.props.style)).toMatchObject({
+      minHeight: 44,
       alignSelf: 'center',
       alignItems: 'center',
       justifyContent: 'center',

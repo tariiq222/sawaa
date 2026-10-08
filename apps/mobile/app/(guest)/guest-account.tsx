@@ -1,10 +1,12 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, CircleUserRound } from 'lucide-react-native';
+import { CircleUserRound } from 'lucide-react-native';
 
+import { GuestSignInPrompt } from '@/components/features/guest/GuestSignInPrompt';
+import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { Glass } from '@/theme/components/Glass';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useDir } from '@/hooks/useDir';
@@ -38,36 +40,18 @@ export default function GuestAccountScreen() {
             {t('guest.accountIntro')}
           </Text>
         </Glass>
-        <Glass variant="strong" style={styles.card}>
-          <View style={[styles.heading, { flexDirection: dir.row }]}>
-            <AppIcon sf="calendar" fallback={CalendarDays} size={25} color={colors.teal[700]} />
-            <Text style={[styles.cardTitle, { color: colors.ink[900], fontFamily: bold, textAlign: dir.textAlign }]}>
-              {t('tabs.myAppointments')}
-            </Text>
-          </View>
-          <Text style={[styles.body, { color: colors.ink[700], fontFamily: regular, textAlign: dir.textAlign }]}>
-            {t('guest.accountAppointmentsHint')}
-          </Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('guest.signInForAppointments')}
-            onPress={() => router.push('/(auth)/login')}
-            style={[styles.action, { borderColor: colors.teal[700] }]}>
-            <Text style={[styles.actionText, { color: colors.teal[700], fontFamily: bold }]}>
-              {t('guest.signInForAppointments')}
-            </Text>
-          </Pressable>
-        </Glass>
+        <GuestSignInPrompt title={t('tabs.myAppointments')} description={t('guest.accountAppointmentsHint')}
+          actionLabel={t('guest.signInForAppointments')} variant="secondary" onPress={() => router.push('/(auth)/login')} />
       </ScrollView>
     </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 18, gap: 18 },
-  title: { fontSize: 28, lineHeight: 38, marginBottom: 8 },
-  card: { borderRadius: 24, padding: 20, gap: 12 },
+  content: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  title: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight, marginBottom: 8 },
+  card: { borderRadius: sawaaRadius.lg, padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
   heading: { alignItems: 'center', gap: 10 },
-  cardTitle: { flex: 1, fontSize: 20, lineHeight: 28 },
-  body: { fontSize: 15, lineHeight: 24 },
-  action: { minHeight: 50, borderWidth: 1, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  actionText: { fontSize: 15 },
+  cardTitle: { flex: 1, minWidth: 0, flexShrink: 1, fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
+  body: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
 });

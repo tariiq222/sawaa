@@ -1,36 +1,24 @@
-import { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Alert,
-  StyleSheet,
-} from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Pressable, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-import { Glass } from '@/theme';
-import { BackButton } from '@/components/ui/BackButton';
+import { Glass } from '@/theme/components/Glass';
+import { AuthFormScaffold } from '@/components/features/auth/AuthFormScaffold';
+import { ThemedText } from '@/theme/components/ThemedText';
+import { AppButton } from '@/components/ui/AppButton';
+import { sawaaSpacing } from '@/theme/sawaa/tokens';
 import { sawaaTokens } from '@/theme/sawaa/tokens';
-import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
 import { useDir } from '@/hooks/useDir';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { authService } from '@/services/auth';
 import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 export default function ForgotPasswordScreen() {
-  const colors = useSawaaColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const { booking, redirect } = useLocalSearchParams<{ booking?: string; redirect?: string }>();
-  const insets = useSafeAreaInsets();
   const dir = useDir();
 
   const [email, setEmail] = useState('');
@@ -40,7 +28,7 @@ export default function ForgotPasswordScreen() {
   const validate = useCallback((): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
-      setError(t('auth.register.emailError') || 'البريد الإلكتروني غير صالح');
+      setError(t('auth.register.emailError'));
       return false;
     }
     return true;
@@ -68,99 +56,49 @@ export default function ForgotPasswordScreen() {
     }
   }, [email, validate, router, t, booking, redirect]);
 
-  return (
-    <AquaBackground>
+  return <AuthFormScaffold title={t('auth.forgotPassword.title')} onBack={() => router.back()}>
+    <ThemedText variant="body">{t('auth.forgotPassword.subtitle')}</ThemedText>
+    <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
+      <View style={styles.formInner}>
+        <LabeledInput
+          label={t('auth.forgotPassword.emailLabel')}
+          value={email}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (error) setError(undefined);
+          }}
+          placeholder="example@email.com"
+          error={error}
+          keyboardType="email-address" inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }}
+          autoCapitalize="none"
+          dir={dir}
+        />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <BackButton onPress={() => router.back()} style={[styles.backBtn, { alignSelf: dir.alignStart }]} />
+        <AppButton
+          label={t('auth.forgotPassword.submit')} loading={loading}
+          onPress={handleSubmit}
+          disabled={loading}
+          style={{ marginTop: 8 }}
+        />
 
-          <Text
-            style={[
-              styles.title,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
+        <View style={[styles.loginRow, { flexDirection: dir.row }]}>
+          <ThemedText variant="body">{t('auth.forgotPassword.remembered')}</ThemedText>
+          <Pressable accessibilityRole="link" style={styles.loginLink}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
           >
-            استعادة كلمة المرور
-          </Text>
-          <Text
-            style={[
-              styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection },
-            ]}
-          >
-            أدخل بريدك الإلكتروني لاستلام رمز التحقق
-          </Text>
-
-          <Glass variant="regular" radius={sawaaTokens.radius.lg} style={[styles.form, { marginTop: 24 }]}>
-            <View style={styles.formInner}>
-              <LabeledInput
-                label="البريد الإلكتروني"
-                value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  if (error) setError(undefined);
-                }}
-                placeholder="example@email.com"
-                error={error}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                dir={dir}
-              />
-
-              <PrimaryButton
-                label={loading ? 'جارِ الإرسال...' : 'إرسال رمز التحقق'}
-                onPress={handleSubmit}
-                disabled={loading}
-                style={{ marginTop: 8 }}
-              />
-
-              <View style={[styles.loginRow, { flexDirection: dir.row }]}>
-                <Text style={styles.loginText}>تذكرت كلمة المرور؟ </Text>
-                <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.back();
-                  }}
-                >
-                  <Text style={styles.loginLink}>تسجيل الدخول</Text>
-                </Pressable>
-              </View>
-            </View>
-          </Glass>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </AquaBackground>
-  );
+            <ThemedText variant="body">{t('auth.forgotPassword.back')}</ThemedText>
+          </Pressable>
+        </View>
+      </View>
+    </Glass>
+  </AuthFormScaffold>;
 }
 
-const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  container: { flex: 1 },
-  flex: { flex: 1 },
-  scroll: { paddingHorizontal: 24 },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    alignSelf: 'flex-start',
-  },
-  title: { fontSize: 32, fontWeight: '800', color: colors.teal[700], lineHeight: 42, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: colors.ink[500], lineHeight: 20 },
-  form: { padding: 24 },
-  formInner: { gap: 16 },
-  loginRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
-  loginText: { fontSize: 14, color: colors.ink[500] },
-  loginLink: { fontSize: 14, fontWeight: '700', color: colors.teal[700] },
+const styles = StyleSheet.create({
+  form: { padding: sawaaSpacing.lg }, formInner: { gap: sawaaSpacing.lg },
+  loginRow: { alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: sawaaSpacing.xs, marginTop: sawaaSpacing.sm },
+  loginLink: { minHeight: 44, justifyContent: 'center' },
 });

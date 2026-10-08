@@ -2,8 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   Alert,
   StyleSheet,
@@ -13,10 +11,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { AquaBackground, PrimaryButton } from '@/theme/sawaa';
+import { AuthFormScaffold } from '@/components/features/auth/AuthFormScaffold';
+import { sawaaType, sawaaRadius } from '@/theme/sawaa/tokens';
+import { AppButton } from '@/components/ui/AppButton';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -50,7 +48,6 @@ export default function OtpVerifyScreen() {
     lastName = '',
     email = '',
   } = params;
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const colors = useSawaaColors();
   const dir = useDir();
@@ -143,110 +140,85 @@ export default function OtpVerifyScreen() {
   const isComplete = otp.length === OTP_LENGTH;
 
   return (
-    <AquaBackground>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
+    <AuthFormScaffold title={t('auth.otp.title')} onBack={() => router.back()}>
+    <View style={styles.header}>
+      <View style={[styles.lockCircle, { backgroundColor: colors.glass.opaqueBg }]}>
+        <Lock size={32} color={colors.teal[700]} strokeWidth={1.75} />
+      </View>
+      <Text
+        style={[
+          styles.sub,
+          { color: colors.ink[700], fontFamily: f400, writingDirection: dir.writingDirection },
+        ]}
       >
+        {t('auth.otp.sentTo')} {maskedIdentifier}
+      </Text>
+    </View>
+
+    <View style={styles.otpRow}>
+      {Array.from({ length: OTP_LENGTH }, (_, index) => (
         <View
+          key={`otp-${index}`}
+          pointerEvents="none"
           style={[
-            styles.content,
-            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 },
+            styles.otpBox,
+            {
+              backgroundColor: colors.glass.opaqueBg,
+              borderColor: otp[index] ? colors.teal[600] : colors.teal[200],
+            },
           ]}
         >
-          <ScreenHeader title={t('auth.otp.title')} onBack={() => router.back()} />
-
-          <View style={styles.header}>
-            <View style={[styles.lockCircle, { backgroundColor: colors.glass.opaqueBg }]}>
-              <Lock size={32} color={colors.teal[700]} strokeWidth={1.75} />
-            </View>
-            <Text
-              style={[
-                styles.sub,
-                { color: colors.ink[700], fontFamily: f400, writingDirection: dir.writingDirection },
-              ]}
-            >
-              {t('auth.otp.sentTo')} {maskedIdentifier}
-            </Text>
-          </View>
-
-          <View style={styles.otpRow}>
-            {Array.from({ length: OTP_LENGTH }, (_, index) => (
-              <View
-                key={`otp-${index}`}
-                pointerEvents="none"
-                style={[
-                  styles.otpBox,
-                  {
-                    backgroundColor: colors.glass.opaqueBg,
-                    borderColor: otp[index] ? colors.teal[600] : colors.teal[200],
-                  },
-                ]}
-              >
-                <Text style={[styles.digit, { color: colors.ink[900], fontFamily: f700 }]}>
-                  {otp[index] ?? ''}
-                </Text>
-              </View>
-            ))}
-            <TextInput
-              ref={inputRef}
-              value={otp}
-              onChangeText={handleChange}
-              keyboardType="number-pad"
-              maxLength={OTP_LENGTH}
-              textContentType="oneTimeCode"
-              autoComplete="sms-otp"
-              accessibilityLabel={t('auth.otp.code')}
-              caretHidden
-              selectionColor={colors.glass.opaqueBg}
-              style={styles.codeInput}
-            />
-          </View>
-
-          <View style={styles.actions}>
-            <PrimaryButton
-              label={loading ? t('auth.otp.submitting') : t('auth.otp.submit')}
-              onPress={handleVerify}
-              fontFamily={f700}
-              disabled={!isComplete || loading}
-            />
-
-            <View style={styles.resendRow}>
-              {countdown > 0 ? (
-                <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
-                  {t('auth.otp.resendIn', { seconds: countdown })}
-                </Text>
-              ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={handleResend}
-                  disabled={resendLoading}
-                  style={styles.linkTarget}
-                >
-                  <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
-                    {resendLoading ? t('common.loading') : t('auth.otp.resend')}
-                  </Text>
-                </Pressable>
-              )}
-              <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.linkTarget}>
-                <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
-                  {t('auth.otp.changeNumber')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          <Text style={[styles.digit, { color: colors.ink[900], fontFamily: f700 }]}>
+            {otp[index] ?? ''}
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </AquaBackground>
+      ))}
+      <TextInput
+        ref={inputRef}
+        value={otp}
+        onChangeText={handleChange}
+        keyboardType="number-pad"
+        maxLength={OTP_LENGTH}
+        textContentType="oneTimeCode"
+        autoComplete="sms-otp"
+        accessibilityLabel={t('auth.otp.code')}
+        caretHidden
+        selectionColor={colors.glass.opaqueBg}
+        style={styles.codeInput}
+      />
+    </View>
+
+    <View style={styles.actions}>
+      <AppButton
+        label={t('auth.otp.submit')}
+        onPress={handleVerify}
+        disabled={!isComplete || loading} loading={loading}
+      />
+
+      <View style={styles.resendRow}>
+        {countdown > 0 ? (
+          <Text style={[styles.meta, { color: colors.ink[700], fontFamily: f400 }]}>
+            {t('auth.otp.resendIn', { seconds: countdown })}
+          </Text>
+        ) : (
+          <AppButton label={t('auth.otp.resend')} variant="ghost" size="sm" onPress={handleResend} disabled={resendLoading} loading={resendLoading} />
+        )}
+        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.linkTarget}>
+          <Text style={[styles.link, { color: colors.teal[700], fontFamily: f700 }]}>
+            {t('auth.otp.changeNumber')}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+
+  </AuthFormScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 16 },
   header: { alignItems: 'center', marginTop: 24, marginBottom: 28, gap: 14 },
   lockCircle: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  sub: { fontSize: 15, lineHeight: 24, textAlign: 'center' },
+  sub: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'center' },
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -257,13 +229,14 @@ const styles = StyleSheet.create({
   otpBox: {
     flex: 1,
     maxWidth: 64,
-    height: 60,
-    borderRadius: 16,
+    minHeight: 60,
+    paddingVertical: 12,
+    borderRadius: sawaaRadius.lg,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  digit: { fontSize: 24, lineHeight: 32 },
+  digit: { fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   codeInput: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
@@ -273,7 +246,7 @@ const styles = StyleSheet.create({
   },
   actions: { gap: 12 },
   resendRow: { alignItems: 'center' },
-  meta: { fontSize: 14, lineHeight: 20, textAlign: 'center', minHeight: 44, textAlignVertical: 'center' },
+  meta: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'center', minHeight: 44, textAlignVertical: 'center' },
   linkTarget: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
-  link: { fontSize: 15, textAlign: 'center' },
+  link: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'center' },
 });
