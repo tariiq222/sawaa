@@ -56,9 +56,12 @@ export function useInlineApplePay({ clientId, scope, enabled, prepareBooking }: 
     if (checkout.phase === 'ready' && checkout.config) {
       const onResult = checkout.onPaymentResult;
       const preparedGeneration = generation.current;
+      const preparedConfig = checkout.config;
       const owned = () => mounted.current && currentOwner.current === owner
         && generation.current === preparedGeneration;
-      const isCurrent = () => owned() && allowed.current;
+      // Every terminal checkout result clears the config, so a token must not be
+      // submitted once the attempt this Wallet was prepared for is no longer live.
+      const isCurrent = () => owned() && allowed.current && latest.current.config === preparedConfig;
       setWalletOpen(true);
       finish({ config: checkout.config, isCurrent,
         onResult: () => { if (!owned()) return; setWalletOpen(false); void onResult(); },

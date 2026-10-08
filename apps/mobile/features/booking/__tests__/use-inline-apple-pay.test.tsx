@@ -117,3 +117,12 @@ it('clears revoked Wallet state when admin disables then re-enables online payme
   expect(result.current.locked).toBe(false);
   expect(mockReplace).not.toHaveBeenCalled();
 });
+
+it('revokes the prepared Wallet when the server closes the payment target while Wallet is open', async () => {
+  const { result } = mount(); const prepared = await press(result);
+  expect(prepared?.isCurrent()).toBe(true);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
+  await act(async () => { await result.current.reconcile(); });
+  expect(result.current.phase).toBe('unavailable');
+  expect(prepared?.isCurrent()).toBe(false);
+});
