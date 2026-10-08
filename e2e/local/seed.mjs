@@ -26,7 +26,7 @@ export async function seed(env, output) {
       isSuperAdmin: true, role: 'SUPER_ADMIN', emailVerifiedAt: new Date(),
     } });
     const clients = {};
-    for (const [kind, phone] of [['web', '+966550000101'], ['mobile', '+966550000102'], ['payment', '+966550000103']]) {
+    for (const [kind, phone] of [['web', '+966550000101'], ['mobile', '+966550000102'], ['payment', '+966550000103'], ['apple', '+966550000104']]) {
       const user = await prisma.user.create({ data: {
         name: `مستفيد اختبار ${kind}`, email: `${kind}@example.test`, phone,
         role: 'CLIENT', phoneVerifiedAt: new Date(), emailVerifiedAt: new Date(),
@@ -64,7 +64,7 @@ export async function seed(env, output) {
       await prisma.employeeAvailability.create({ data: { employeeId: employee.id, dayOfWeek, startTime: '08:00', endTime: '22:00' } });
     }
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    const appointments = Object.fromEntries([['web', 2, '08'], ['mobile', 3, '08'], ['payment', 4, '09']].map(([kind, offset, hour]) => {
+    const appointments = Object.fromEntries([['web', 2, '08'], ['mobile', 3, '08'], ['payment', 4, '09'], ['apple', 5, '10']].map(([kind, offset, hour]) => {
       const day = new Date(`${today}T00:00:00Z`); day.setUTCDate(day.getUTCDate() + offset);
       return [kind, `${day.toISOString().slice(0, 10)}T${hour}:00:00+03:00`];
     }));

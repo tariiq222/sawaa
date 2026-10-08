@@ -30,9 +30,9 @@ export async function verifyBooking(kind, status = 'CONFIRMED') {
     assert.equal(Number(b.price), f.priceHalalas);
     assert.equal(b.currency, 'SAR');
     assert.equal(b.status, status);
-    assert.equal(b.payAtClinic, kind !== 'payment');
+    assert.equal(b.payAtClinic, !['payment', 'apple'].includes(kind));
     const invoices = await prisma.invoice.findMany({ where: { bookingId: b.id }, include: { payments: true } });
-    if (kind !== 'payment') {
+    if (!['payment', 'apple'].includes(kind)) {
       assert.equal(b.expiresAt, null);
       assert.equal(invoices.length, 0, 'Pay-at-clinic creation must not invent a paid invoice');
     } else {

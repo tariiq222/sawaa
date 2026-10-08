@@ -7,6 +7,7 @@ import { seed } from './seed.mjs';
 import { assertIsolatedDatabase } from './safety.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
+const applePay = process.argv.includes('--apple-pay');
 const id = Date.now().toString();
 const runDir = resolve(root, '.e2e', `local-${id}`);
 mkdirSync(runDir, { recursive: true, mode: 0o700 });
@@ -28,7 +29,10 @@ Object.assign(env, {
   MOYASAR_PLATFORM_SECRET_KEY: '', MOYASAR_PUBLISHABLE_KEY: '', MOYASAR_WEBHOOK_SECRET: '',
   FCM_PROJECT_ID: '', FCM_CLIENT_EMAIL: '', FCM_PRIVATE_KEY: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '',
   SENTRY_DSN: '', NEXT_PUBLIC_SENTRY_DSN: '', SENTRY_AUTH_TOKEN: '',
-  MOYASAR_APPLE_PAY_ENABLED: 'false', NEXT_TELEMETRY_DISABLED: '1', E2E_TELEMETRY_DISABLED: '1',
+  MOYASAR_APPLE_PAY_ENABLED: applePay ? 'true' : 'false',
+  MOYASAR_APPLE_PAY_MERCHANT_ID: applePay ? 'merchant.sa.sawa.app' : '',
+  MOYASAR_APPLE_PAY_MERCHANT_LABEL: applePay ? 'Sawaa E2E Sandbox' : '',
+  NEXT_TELEMETRY_DISABLED: '1', E2E_TELEMETRY_DISABLED: '1',
   E2E_WEBSITE_URL: 'http://127.0.0.1:55205', E2E_DASHBOARD_URL: 'http://127.0.0.1:55203',
   NEXT_PUBLIC_API_URL: 'http://127.0.0.1:55200/api/v1', INTERNAL_API_URL: 'http://127.0.0.1:55200',
   WEBSITE_API_PROXY_URL: 'http://127.0.0.1:55200', EXPO_NO_DOTENV: '1',
