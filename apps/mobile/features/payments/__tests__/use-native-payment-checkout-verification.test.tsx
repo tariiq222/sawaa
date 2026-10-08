@@ -145,6 +145,32 @@ describe('post-Wallet verification and initialization conflicts', () => {
     expect(result.current.config).toBeNull();
     unmount();
   });
+  it('drains every check requested during verification and refuses after repeated interruptions', async () => {
+    const { result, unmount } = await ready();
+    let calls = 0;
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockImplementation(async () => {
+      calls += 1;
+      if (calls <= 2) void result.current.reconcile(); // another request arrives mid-check, twice
+      return pendingOk;
+    });
+    let ok = false;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(true);
+    expect(calls).toBe(3);
+    unmount();
+  });
+  it('keeps initialization available when an in-progress conflict arrives with no identity at all', async () => {
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce(inProgress('NATIVE_PAYMENT_IN_PROGRESS'));
+    const { result, unmount } = renderHook(() => useNativePaymentCheckout(appleInput), { wrapper });
+    await waitFor(() => expect(result.current.phase).toBe('error'));
+    expect(result.current.paymentId).toBeNull();
+    expect(result.current.canRetryInit).toBe(true);
+    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValueOnce({ paymentId: 'winner', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    await act(() => result.current.retryInitialization());
+    expect(result.current.phase).toBe('ready');
+    expect(result.current.paymentId).toBe('winner');
+    unmount();
+  });
   it.each(['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS'])('%s on retry blocks initialization, keeps its message across checks and keeps verifying', async (code) => {
     const { result, unmount } = await ready();
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ ...pendingOk, canCreatePayment: false });

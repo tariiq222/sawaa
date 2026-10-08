@@ -184,11 +184,14 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (code === 'NATIVE_PAYMENT_IN_PROGRESS' || code === 'HOSTED_PAYMENT_IN_PROGRESS') {
         // A provider payment is already in flight: stop initializing and keep verifying it (the
         // returned identity wins over a retained, possibly failed, local one).
-        initBlocked = true; canInitialize = false; readyConfig = null;
+        readyConfig = null;
         if (conflict?.invoiceId === invoiceId && typeof conflict.paymentId === 'string' && conflict.paymentId) {
           paymentId = adoptedId = conflict.paymentId;
           try { await persistIdentity(); } catch { /* restoration falls back to the server identity */ }
         }
+        // Without any identity nothing can be verified, so initialization must stay available
+        // for a later init to discover the winning reservation.
+        if (paymentId) { initBlocked = true; canInitialize = false; }
         update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict', ...(paymentId ? { paymentId } : {}) });
         if (paymentId) { busy = false; await reconcile(); }
         return true;
@@ -251,8 +254,12 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         return valid() && payable && !closed() && readyConfig === startConfig;
       };
       let ok = await check();
-      // A check requested while ours was running must give its own verdict before authorizing.
-      if (ok && recheckRequested) ok = await check();
+      // Every check requested while ours was running must give its own verdict before authorizing;
+      // a target that keeps changing under us is not authorized.
+      for (let drained = 0; ok && recheckRequested; drained += 1) {
+        if (drained >= 3) return false;
+        ok = await check();
+      }
       return ok;
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {

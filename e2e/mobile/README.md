@@ -16,6 +16,10 @@ Apple Pay is unavailable in this fixture; these checks do not establish provider
   with a clear message when the simulator app is set to English.
 - An existing synthetic CLIENT session in that disposable simulator. These
   tests do not sign in, verify tokens, or modify authentication behavior.
+  To create that session once, with the fixture and Metro running, sign in
+  from the app with any password as `qa@example.test`: the fixture's
+  `/mobile/auth/password-login` answers with an unsigned client token that is
+  only meaningful to this fixture.
 - Mobile dependencies installed and shared built from the checkout under test.
 - Node satisfying the installed runner's engine requirement (`^22.22.3` or
   `>=24.8.0`), Python 3.9+, and `npm ci` in this directory.
