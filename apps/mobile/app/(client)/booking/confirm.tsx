@@ -60,8 +60,8 @@ export default function BookingConfirmScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
-  const clientId = useAppSelector((state) => state.auth.user?.id);
   const [footerHeight, setFooterHeight] = useState(180);
+  const clientId = useAppSelector((state) => state.auth.user?.id);
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const f400 = getFontName(dir.locale, '400');
     const f600 = getFontName(dir.locale, '600');

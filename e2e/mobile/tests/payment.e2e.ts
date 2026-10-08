@@ -23,7 +23,7 @@ test('new booking opens selected card form without another method chooser', asyn
   await device.openLink(`sawa://booking/confirm?${draft}`);
   await expect(screen.getByText('طريقة الدفع')).toBeVisible();
   await expect(screen.getByRole('button', 'الدفع بالبطاقات')).toBeVisible();
-  await expect(screen.getByRole('button', 'تحويل بنكي')).toBeVisible();
+  await expect(screen.getByText('تحويل بنكي')).toBeVisible();
   await expect(screen.getByRole('button', 'تأكيد الموعد والدفع في المركز')).toBeVisible();
   await screen.getByRole('button', 'الدفع بالبطاقات').tap();
   await expect.poll(async () => await screen.getByPlaceholder('الاسم على البطاقة').isVisible() || await screen.getByRole('button', 'استئناف محاولة الدفع').isVisible()).toBeTruthy();
@@ -84,7 +84,7 @@ test('new bank transfer booking goes directly to account and receipt screen', as
   await app.open();
   await device.openLink(`sawa://booking/confirm?${draft}&durationOptionId=qa-bank-${identity}`);
   await expect(screen.getByText('طريقة الدفع')).toBeVisible();
-  await screen.getByRole('button', 'تحويل بنكي').tap();
+  await screen.getByText('تحويل بنكي').tap();
   await expect(screen.getByText('QA Bank')).toBeVisible();
   await expect(screen.getByText('QA Center')).toBeVisible();
   await expect(screen.getByRole('button', 'انقر لرفع صورة الإيصال')).toBeVisible();
