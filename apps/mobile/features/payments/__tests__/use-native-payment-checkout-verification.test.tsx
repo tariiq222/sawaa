@@ -263,6 +263,21 @@ describe('verifyPayable provider configuration gate', () => {
     expect(result.current.paymentId).toBe('replacement');
     unmount();
   });
+  it('re-enables initialization when the adopted replacement attempt itself fails', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'NATIVE_PAYMENT_IN_PROGRESS', paymentId: 'replacement', invoiceId: 'invoice' } } });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+    await act(async () => { await result.current.verifyPayable(); });
+    expect(result.current.canRetryInit).toBe(false);
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+    await act(() => result.current.reconcile());
+    expect(result.current.canRetryInit).toBe(true);
+    jest.mocked(clientPaymentsService.initNativePayment).mockClear();
+    await act(() => result.current.retryInitialization());
+    expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+    unmount();
+  });
   it('keeps initialization blocked even if the stale attempt later reports FAILED', async () => {
     const { result, unmount } = await ready();
     jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'HOSTED_PAYMENT_IN_PROGRESS' } } });

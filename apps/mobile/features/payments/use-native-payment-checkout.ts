@@ -60,6 +60,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let payable = false;
     let readyConfig: NativePaymentConfiguration | null = null;
     let initBlocked = false;
+    let adoptedId: string | null = null; // replacement identity adopted from an in-progress conflict
     let verifying = false;
     let lastInitAt = 0;
     let recheckRequested = false;
@@ -126,6 +127,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         } else if (result.status === 'FAILED') {
           terminalResult = true; settling = false;
           terminalFailure = true;
+          if (paymentId === adoptedId) initBlocked = false; // the adopted attempt itself failed
           canInitialize = !initBlocked;
           // Only an authoritative failure reopens initialization after a submitted result.
           resultReceived = false;
@@ -178,11 +180,11 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         }
       }
       if (code === 'NATIVE_PAYMENT_IN_PROGRESS' || code === 'HOSTED_PAYMENT_IN_PROGRESS') {
-        // A provider payment is already in flight: stop initializing and keep verifying it.
+        // A provider payment is already in flight: stop initializing and keep verifying it (the
+        // returned identity wins over a retained, possibly failed, local one).
         initBlocked = true; canInitialize = false; readyConfig = null;
-        // The returned identity is authoritative and replaces a retained (possibly failed) one.
         if (conflict?.invoiceId === invoiceId && typeof conflict.paymentId === 'string' && conflict.paymentId) {
-          paymentId = conflict.paymentId;
+          paymentId = adoptedId = conflict.paymentId;
         }
         update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict', ...(paymentId ? { paymentId } : {}) });
         if (paymentId) { busy = false; await reconcile(); }
@@ -255,15 +257,13 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       // UI never keeps offering a Wallet action that would only be dismissed again.
       const revoke = (error: string, conflict = false) => {
         readyConfig = null;
-        // Initialization keeps failing on the stored fingerprint while the rotated configuration
-        // is active, so a conflict is not retryable (a later reconcile cannot re-enable it either).
+        // Every re-init hits the stored-fingerprint conflict while the rotation is active: not retryable.
         if (conflict) { initBlocked = true; canInitialize = false; }
         update({ phase: 'error', config: null, canResume: false, error });
         return false;
       };
       const startConfig = readyConfig;
-      // Hold the exclusive slot while initializing: no poll or foreground reconcile may overlap
-      // it, so no newer verdict can land after this one authorizes the token.
+      // Exclusive slot: no poll or reconcile may overlap, so no newer verdict lands after this one.
       busy = true; verifying = true; recheckRequested = false;
       clearTimeout(timer);
       const run = async (): Promise<boolean> => {
