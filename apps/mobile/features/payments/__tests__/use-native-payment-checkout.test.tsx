@@ -331,3 +331,17 @@ it('ignores an old SDK result while the new attempt identity is being persisted'
   expect(result.current.phase).toBe('processing'); expect(result.current.config).toBeNull();
   unmount();
 });
+
+it('does not offer initialization retry after a submitted result when verification keeps failing', async () => {
+  jest.useFakeTimers();
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  expect(result.current.canRetryInit).toBe(true);
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockRejectedValue(new Error('network down'));
+  await act(async () => { await result.current.onPaymentResult(); });
+  for (let i = 0; i < 10; i += 1) await act(async () => { jest.advanceTimersByTime(3000); });
+  await act(() => result.current.reconcile());
+  expect(result.current.phase).toBe('error');
+  expect(result.current.canRetryInit).toBe(false);
+  unmount(); jest.useRealTimers();
+});

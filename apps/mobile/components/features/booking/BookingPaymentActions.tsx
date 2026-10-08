@@ -37,7 +37,7 @@ export function BookingPaymentActions({ payment, apple }: {
         actionLabel={t('common.retry')} onAction={payment.retryMethods} />
       : <>
         {status ? <Text style={hintStyle}>{t(status)}</Text> : null}
-        {apple.preparing || apple.phase === 'loading' || apple.phase === 'processing' || apple.phase === 'checking'
+        {payment.submitting || apple.preparing || apple.phase === 'loading' || apple.phase === 'processing' || apple.phase === 'checking'
           ? <ActivityIndicator color={colors.teal[600]} /> : null}
         {payment.availableMethods.includes('apple_pay') ? <DeferredApplePayButton disabled={disabled}
           prepare={apple.prepare} onError={() => { apple.cancel(); Alert.alert(t('common.error'), t('nativePayment.appleUnavailable')); }} /> : null}
@@ -49,7 +49,7 @@ export function BookingPaymentActions({ payment, apple }: {
           onPress={() => { apple.handoff(); void payment.pay('at_center'); }} disabled={disabled} fontFamily={fontFamily} /> : null}
         {apple.phase === 'pending' || apple.phase === 'error' ? <PrimaryButton label={t('nativePayment.checkAgain')}
           onPress={() => { void apple.reconcile(); }} fontFamily={fontFamily} /> : null}
-        {apple.phase === 'error' ? <SecondaryButton label={t('nativePayment.retry')}
+        {apple.phase === 'error' && apple.canRetryInit ? <SecondaryButton label={t('nativePayment.retry')}
           onPress={() => { void apple.retryInitialization(); }} fontFamily={fontFamily} /> : null}
       </>}
   </View>;

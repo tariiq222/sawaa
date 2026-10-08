@@ -17,9 +17,9 @@ interface CheckoutInput {
   method?: NativePaymentMethod;
 }
 type Phase = 'choosing' | 'unavailable' | 'loading' | 'ready' | 'checking' | 'processing' | 'pending' | 'completed' | 'failed' | 'review' | 'error';
-interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentConfiguration | null; paymentId: string | null; error: string | null; canResume: boolean; unavailableReason?: NativePaymentReconcileResponse['unavailableReason'] }
+interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentConfiguration | null; paymentId: string | null; error: string | null; canResume: boolean; canRetryInit: boolean; unavailableReason?: NativePaymentReconcileResponse['unavailableReason'] }
 interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string }
-const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false };
+const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false, canRetryInit: true };
 
 function errorKey(error: unknown): string {
   const code = (error as { response?: { data?: { code?: string; message?: string } } })?.response?.data?.code;
@@ -53,7 +53,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
     const valid = () => active && currentScope.current === scope;
     const update = (next: Partial<CheckoutState>) => {
-      if (valid()) setState((previous) => ({ ...(previous.scope === scope ? previous : empty), ...next, scope }));
+      // retryInitialization is a no-op once a result was submitted or a payment exists.
+      const canRetryInit = canInitialize && !settling;
+      if (valid()) setState((previous) => ({ ...(previous.scope === scope ? previous : empty), ...next, canRetryInit, scope }));
     };
     update(empty);
     const target = async () => {

@@ -11,6 +11,9 @@ Apple Pay is unavailable in this fixture; these checks do not establish provider
 - Xcode and an iOS Simulator named `Sawaa Booking QA`.
 - A development build of `sa.sawa.app` with the current native payment modules
   installed on that simulator. Expo Go is insufficient.
+- The app language set to Arabic (the default). The suite restores the saved
+  language from app storage and uses exact Arabic names; its first test fails
+  with a clear message when the simulator app is set to English.
 - An existing synthetic CLIENT session in that disposable simulator. These
   tests do not sign in, verify tokens, or modify authentication behavior.
 - Mobile dependencies installed and shared built from the checkout under test.

@@ -5,6 +5,18 @@ const identity = `qa-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const api = 'http://127.0.0.1:59002';
 const draft = `clinicId=qa-clinic&serviceId=qa-service&employeeId=qa-employee&branchId=qa-branch&deliveryType=in_person&scheduledAt=${encodeURIComponent(new Date(Date.now() + 864000000).toISOString())}&chargedPrice=12500&currency=SAR`;
 
+// Locators below are exact Arabic names and the app restores its saved language from storage.
+// Fail with a clear cause instead of a misleading locator timeout when the simulator was switched.
+test('simulator app language is Arabic', async ({ app, device, screen }) => {
+  await app.open();
+  await device.openLink(`sawa://booking/confirm?${draft}`);
+  await expect.poll(async () => await screen.getByText('طريقة الدفع').isVisible() || await screen.getByText('Payment method').isVisible()).toBeTruthy();
+  if (await screen.getByText('Payment method').isVisible()) {
+    throw new Error('The app language is English. Switch it to Arabic in Settings on the "Sawaa Booking QA" simulator, then rerun.');
+  }
+  await expect(screen.getByText('طريقة الدفع')).toBeVisible();
+});
+
 test('new booking opens selected card form without another method chooser', async ({ app, device, screen }) => {
   await fetch(`${api}/__reset`, { method: 'POST' });
   await app.open();
