@@ -1,0 +1,43 @@
+import React from 'react';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { EmployeeAvatarEditor } from './EmployeeAvatarEditor';
+jest.mock('expo-image-picker', () => ({ requestMediaLibraryPermissionsAsync: jest.fn(), launchImageLibraryAsync: jest.fn(), UIImagePickerPreferredAssetRepresentationMode: { Compatible: 'compatible' } }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', language: 'ar', isRTL: true }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => jest.requireActual('@/hooks/useDir').buildDirState('ar') }));
+beforeEach(() => jest.clearAllMocks());
+it('uploads the actual selected file metadata and supports removing the current picture', async () => {
+  jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///new.png', mimeType: 'image/png', fileName: 'new.png', fileSize: 100 }] } as never);
+  const upload = jest.fn().mockResolvedValue(undefined);
+  const remove = jest.fn().mockResolvedValue(undefined);
+  const view = render(<EmployeeAvatarEditor uri="old-photo" upload={upload} remove={remove} busy={false} />);
+  fireEvent.press(view.getByText('employeeSelfProfile.changePhoto'));
+  await waitFor(() => expect(upload).toHaveBeenCalledWith({ uri: 'file:///new.png', type: 'image/png', name: 'new.png' }));
+  fireEvent.press(view.getByText('employeeSelfProfile.removePhoto'));
+  await waitFor(() => expect(remove).toHaveBeenCalled());
+});
+it('reports denied permission without uploading or removing the current image', async () => {
+  jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({ granted: false } as never);
+  const upload = jest.fn();
+  const remove = jest.fn();
+  const view = render(<EmployeeAvatarEditor uri="old-photo" upload={upload} remove={remove} busy={false} />);
+  fireEvent.press(view.getByText('employeeSelfProfile.changePhoto'));
+  await waitFor(() => expect(view.getByText('employeeSelfProfile.photoPermission')).toBeTruthy());
+  expect(upload).not.toHaveBeenCalled();
+  expect(remove).not.toHaveBeenCalled();
+});
+it('rejects oversize images before upload and shows upload failures without changing the picture', async () => {
+  jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce({ canceled: false, assets: [{ uri: 'file:///large.jpg', mimeType: 'image/jpeg', fileSize: 1048577 }] } as never);
+  const upload = jest.fn().mockRejectedValue(new Error());
+  const view = render(<EmployeeAvatarEditor uri="old-photo" upload={upload} remove={jest.fn()} busy={false} />);
+  fireEvent.press(view.getByText('employeeSelfProfile.changePhoto'));
+  await waitFor(() => expect(view.getByText('employeeSelfProfile.invalidPhoto')).toBeTruthy());
+  expect(upload).not.toHaveBeenCalled();
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce({ canceled: false, assets: [{ uri: 'file:///new.jpg', mimeType: 'image/jpeg', fileSize: 100 }] } as never);
+  fireEvent.press(view.getByText('employeeSelfProfile.changePhoto'));
+  await waitFor(() => expect(view.getByText('employeeSelfProfile.photoError')).toBeTruthy());
+  expect(view.getByLabelText('employeeSelfProfile.photo').props.source).toEqual({ uri: 'old-photo' });
+});
