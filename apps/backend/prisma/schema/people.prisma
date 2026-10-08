@@ -123,6 +123,7 @@ model Employee {
   bioAr            String?
   education        String?
   educationAr      String?
+  languages        String[]         @default([])
   experience       Int?
   employmentType   EmploymentType   @default(FULL_TIME)
   onboardingStatus OnboardingStatus @default(PENDING)

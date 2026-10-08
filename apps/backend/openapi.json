@@ -5982,6 +5982,29 @@
         ],
         "type": "object"
       },
+      "EmployeeContactChallengeResponseDto": {
+        "properties": {
+          "challengeId": {
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresIn": {
+            "example": 300,
+            "type": "number"
+          },
+          "retryAfterSeconds": {
+            "example": 60,
+            "type": "number"
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresIn",
+          "retryAfterSeconds"
+        ],
+        "type": "object"
+      },
       "EmployeeDurationItemDto": {
         "properties": {
           "durationMins": {
@@ -9632,6 +9655,11 @@
             "example": "FULL_TIME",
             "type": "string"
           },
+          "experience": {
+            "description": "Years of experience",
+            "example": 8,
+            "type": "number"
+          },
           "gender": {
             "description": "Gender",
             "nullable": true,
@@ -9651,6 +9679,17 @@
             "description": "True only if employee has ≥1 service, ≥1 branch, and ≥1 active availability rule",
             "example": true,
             "type": "boolean"
+          },
+          "languages": {
+            "description": "Spoken languages",
+            "example": [
+              "العربية",
+              "English"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "minServicePrice": {
             "description": "Minimum service price in SAR",
@@ -9731,6 +9770,8 @@
           }
         },
         "required": [
+          "languages",
+          "experience",
           "id",
           "employmentType",
           "ratingCount",
@@ -10178,6 +10219,29 @@
         ],
         "type": "object"
       },
+      "RequestEmployeeContactDto": {
+        "properties": {
+          "channel": {
+            "description": "New contact channel",
+            "enum": [
+              "EMAIL",
+              "SMS"
+            ],
+            "example": "EMAIL",
+            "type": "string"
+          },
+          "identifier": {
+            "description": "New email address or phone number",
+            "example": "new@example.com",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "identifier"
+        ],
+        "type": "object"
+      },
       "RequestMobileLoginOtpDto": {
         "properties": {
           "identifier": {
@@ -10379,6 +10443,68 @@
         },
         "required": [
           "startDate"
+        ],
+        "type": "object"
+      },
+      "SelfProfileResponseDto": {
+        "properties": {
+          "avatarUrl": {
+            "example": "https://cdn.example.com/photo.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "bioAr": {
+            "example": "نبذة",
+            "nullable": true,
+            "type": "string"
+          },
+          "bioEn": {
+            "example": "Biography",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "example": "nora@example.com",
+            "type": "string"
+          },
+          "experience": {
+            "example": 8,
+            "nullable": true,
+            "type": "number"
+          },
+          "id": {
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "languages": {
+            "example": [
+              "العربية"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "example": "Nora",
+            "type": "string"
+          },
+          "phone": {
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "avatarUrl",
+          "bioAr",
+          "bioEn",
+          "experience",
+          "languages",
+          "email",
+          "phone"
         ],
         "type": "object"
       },
@@ -11914,6 +12040,40 @@
         ],
         "type": "object"
       },
+      "UpdateSelfProfileDto": {
+        "properties": {
+          "bioAr": {
+            "description": "Public biography in Arabic",
+            "example": "أعمل في الإرشاد الأسري.",
+            "maxLength": 5000,
+            "type": "string"
+          },
+          "bioEn": {
+            "description": "Public biography in English",
+            "example": "Family counselor.",
+            "maxLength": 5000,
+            "type": "string"
+          },
+          "experience": {
+            "description": "Years of experience; null clears the value",
+            "example": 8,
+            "nullable": true,
+            "type": "number"
+          },
+          "languages": {
+            "description": "Spoken languages",
+            "example": [
+              "العربية",
+              "English"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "UpdateServiceDto": {
         "properties": {
           "bufferMinutes": {
@@ -12834,6 +12994,26 @@
         "required": [
           "continuationToken",
           "phoneChallengeId",
+          "code"
+        ],
+        "type": "object"
+      },
+      "VerifyEmployeeContactDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Challenge returned by the request endpoint",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "description": "Six-digit confirmation code",
+            "example": "123456",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
           "code"
         ],
         "type": "object"
@@ -41356,6 +41536,453 @@
         ]
       }
     },
+    "/api/v1/mobile/employee/profile": {
+      "get": {
+        "operationId": "MobileEmployeeProfileController_get_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfProfileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated employee profile",
+        "tags": [
+          "Mobile Employee / Profile"
+        ]
+      },
+      "patch": {
+        "operationId": "MobileEmployeeProfileController_patch_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSelfProfileDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfProfileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update the authenticated employee biography, experience and languages",
+        "tags": [
+          "Mobile Employee / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/employee/profile/avatar": {
+      "delete": {
+        "operationId": "MobileEmployeeProfileController_remove_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfProfileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove the authenticated employee profile image",
+        "tags": [
+          "Mobile Employee / Profile"
+        ]
+      },
+      "post": {
+        "operationId": "MobileEmployeeProfileController_upload_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfProfileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload the authenticated employee profile image",
+        "tags": [
+          "Mobile Employee / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/employee/profile/contact/request": {
+      "post": {
+        "operationId": "MobileEmployeeProfileController_request_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEmployeeContactDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeContactChallengeResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a confirmation code to a new employee contact",
+        "tags": [
+          "Mobile Employee / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/employee/profile/contact/verify": {
+      "post": {
+        "operationId": "MobileEmployeeProfileController_verify_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmployeeContactDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfProfileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify and adopt a new employee contact",
+        "tags": [
+          "Mobile Employee / Profile"
+        ]
+      }
+    },
     "/api/v1/mobile/employee/schedule/availability": {
       "get": {
         "operationId": "MobileEmployeeScheduleController_getAvailabilityEndpoint_v1",
@@ -43214,6 +43841,72 @@
           }
         },
         "summary": "Get single public employee by slug or id",
+        "tags": [
+          "Public / Employees"
+        ]
+      }
+    },
+    "/api/v1/public/employees/images/{fileId}": {
+      "get": {
+        "operationId": "PublicEmployeeAvatarController_get_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000001",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Read the current explicitly public employee profile photo",
         "tags": [
           "Public / Employees"
         ]
