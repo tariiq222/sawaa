@@ -1,6 +1,6 @@
 # تعديل الملف الشخصي للمعالج — 2026-10-08
 
-الحالة: تنفيذ محلي على `codex/employee-self-profile`، من `develop` عند `96e882e2bab02087ead9dc4b1e1fef2b2d38fb88`. التغييرات غير ملتزمة؛ لا push أو دمج أو نشر أو بناء/رفع TestFlight في هذه المهمة. تُركت تعديلات نسخة العمل الأصلية كما هي.
+الحالة عند توثيق التنفيذ الأول: كود محلي على `codex/employee-self-profile` مبني من `96e882e2bab02087ead9dc4b1e1fef2b2d38fb88`. بعد تفويض المالك الرفع والدمج والنشر وTestFlight، فُصل التغيير عن commit محلي غير متعلق بالميزة، وأُعيد تأسيس فرع النشر على `origin/develop` عند `5855a2bdc081ac27f9763f795899275167628756`. تُركت تعديلات نسخة العمل الأصلية كما هي. لم يكن نشر الاستيج أو بناء TestFlight مكتملًا عند إعداد مرشح الدمج؛ نتائج التسليم تُسجل بعد الرصد الفعلي.
 
 ## النطاق المنفذ
 
@@ -14,6 +14,8 @@
 ## عقد API والمخطط
 
 المسار `/api/v1/mobile/employee/profile` يدعم GET/PATCH، وPOST/DELETE على `/avatar`، وPOST على `/contact/request` و`/contact/verify`. يقبل PATCH فقط `bioAr` و`bioEn` و`experience` و`languages`. جُدد `apps/backend/openapi.json` وأنواع لوحة الإدارة بواسطة `pnpm openapi:sync` من تطبيق Nest الفعلي في اختبار القبول، وحُدّث نوع الدليل العام اليدوي في `packages/api-client`.
+
+أُضيف اختبار HTTP الجديد إلى قائمة `test:e2e:critical` والفحص الإلزامي لنتائجه، ويستخدم Redis المخصص للاختبار أو `REDIS_PORT` الخاص بالـCI.
 
 Migration إضافية `20261008120000_add_employee_self_profile` تضيف `Employee.languages` وجدول `EmployeeContactChallenge`. طُبقت مع migrations السابقة على PostgreSQL اختبار جديد قابل للتخلص منه فقط. يجب تطبيقها على بيئة النشر قبل إتاحة الكود؛ لم تُطبّق على staging أو الإنتاج.
 
