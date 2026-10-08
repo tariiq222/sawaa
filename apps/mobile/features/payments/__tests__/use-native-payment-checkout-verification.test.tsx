@@ -146,6 +146,43 @@ describe('verifyPayable provider configuration gate', () => {
     expect(ok).toBe(false);
     unmount();
   });
+  it('applies terminal init results after Wallet: an expired booking becomes unavailable', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'BOOKING_EXPIRED' } } });
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    expect(result.current.phase).toBe('unavailable');
+    expect(result.current.unavailableReason).toBe('BOOKING_EXPIRED');
+    unmount();
+  });
+  it('adopts the completed payment identity when another flow completed it during verification', async () => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_ALREADY_COMPLETED', paymentId: 'completed-payment', invoiceId: 'invoice' } } });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValueOnce(pendingOk);
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'completed-payment', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: false });
+    jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'confirmed' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    expect(clientPaymentsService.reconcileNativePayment).toHaveBeenLastCalledWith('completed-payment');
+    expect(result.current.phase).toBe('completed');
+    unmount();
+  });
+  it('adopts a legitimate replacement attempt instead of treating it as a configuration conflict', async () => {
+    const { result, unmount } = await ready();
+    const replacement = { ...config, givenId: 'b0000000-0000-4000-8000-000000000002' };
+    jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'replacement', invoiceId: 'invoice', config: replacement } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    expect(result.current.phase).toBe('ready');
+    expect(result.current.paymentId).toBe('replacement');
+    expect(result.current.config).toEqual(replacement);
+    expect(result.current.canRetryInit).toBe(true);
+    expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).paymentId).toBe('replacement');
+    unmount();
+  });
   it('fails closed on a configuration-changed conflict or a different payment identity', async () => {
     const { result, unmount } = await ready();
     jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_CONFIGURATION_CHANGED' } } });

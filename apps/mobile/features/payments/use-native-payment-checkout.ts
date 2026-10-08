@@ -152,6 +152,35 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         }
       }
     };
+    // Authoritative results an initialization request can return; true means it was handled.
+    const handleInitError = async (error: unknown): Promise<boolean> => {
+      const conflict = (error as { response?: { data?: { code?: string; paymentId?: string; invoiceId?: string } } })?.response?.data;
+      const code = conflict?.code;
+      if (code === 'BOOKING_EXPIRED' || code === 'BOOKING_CLOSED' || code === 'INVOICE_CLOSED') {
+        terminalUnavailable = true; settling = false;
+        canInitialize = false;
+        update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: code });
+        return true;
+      }
+      if (conflict?.code === 'PAYMENT_ALREADY_COMPLETED') {
+        const completedId = conflict.invoiceId === invoiceId && typeof conflict.paymentId === 'string'
+          && conflict.paymentId ? conflict.paymentId : paymentId;
+        if (completedId) {
+          paymentId = completedId;
+          update({ paymentId });
+          busy = false;
+          await reconcile();
+          return true;
+        }
+      }
+      if (code === 'PAYMENT_CONFIGURATION_CHANGED') {
+        // Every further initialization hits the same stored-fingerprint conflict.
+        configConflict = true; canInitialize = false; readyConfig = null;
+        update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict' });
+        return true;
+      }
+      return false;
+    };
     const initialize = async (restore = false) => {
       if (!valid() || terminalUnavailable || busy || !clientId || !canInitialize || settling || resultReceived) return;
       busy = true;
@@ -192,31 +221,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         update({ attempt, phase: 'ready', config: result.config, paymentId, canResume: true });
       } catch (error) {
         if (!valid()) return;
-        const conflict = (error as { response?: { data?: { code?: string; paymentId?: string; invoiceId?: string } } })?.response?.data;
-        const code = conflict?.code;
-        if (code === 'BOOKING_EXPIRED' || code === 'BOOKING_CLOSED' || code === 'INVOICE_CLOSED') {
-          terminalUnavailable = true; settling = false;
-          canInitialize = false;
-          update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: code });
-          return;
-        }
-        if (conflict?.code === 'PAYMENT_ALREADY_COMPLETED') {
-          const completedId = conflict.invoiceId === invoiceId && typeof conflict.paymentId === 'string'
-            && conflict.paymentId ? conflict.paymentId : paymentId;
-          if (completedId) {
-            paymentId = completedId;
-            update({ paymentId });
-            busy = false;
-            await reconcile();
-            return;
-          }
-        }
-        if (code === 'PAYMENT_CONFIGURATION_CHANGED') {
-          // Every further initialization hits the same stored-fingerprint conflict.
-          configConflict = true; canInitialize = false; readyConfig = null;
-          update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict' });
-          return;
-        }
+        if (await handleInitError(error)) return;
         update({ phase: 'error', error: errorKey(error) });
       } finally { busy = false; }
     };
@@ -244,14 +249,28 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       try {
         const fresh = await clientPaymentsService.initNativePayment(invoiceId, method);
         if (!valid()) return false;
+        if (fresh.invoiceId === invoiceId && fresh.paymentId && fresh.paymentId !== paymentId) {
+          // The backend legitimately replaces an attempt it saw FAILED. The Wallet authorization
+          // belongs to the old attempt, so revoke it but adopt and persist the replacement.
+          createNativePaymentConfig(fresh.config);
+          paymentId = fresh.paymentId;
+          const pending: PendingIdentity = { clientId: clientId!, invoiceId, paymentId, bookingId, purchaseId };
+          await AsyncStorage.setItem(storageKey, JSON.stringify(pending));
+          if (!valid()) return false;
+          attempt += 1;
+          terminalFailure = false; terminalResult = false; resultReceived = false;
+          readyConfig = fresh.config;
+          update({ attempt, phase: 'ready', config: fresh.config, paymentId, canResume: true });
+          return false;
+        }
         if (fresh.invoiceId !== invoiceId || fresh.paymentId !== paymentId
           || !sameAttemptConfig(fresh.config, readyConfig)) return revoke('nativePayment.conflict', true);
         return true;
       } catch (error) {
         if (!valid()) return false;
-        const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
-        return code === 'PAYMENT_CONFIGURATION_CHANGED'
-          ? revoke('nativePayment.conflict', true) : revoke('nativePayment.verificationError');
+        // Closure, completion and configuration results are authoritative, exactly as in initialize().
+        if (await handleInitError(error)) return false;
+        return revoke('nativePayment.verificationError');
       }
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
