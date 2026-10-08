@@ -18,7 +18,7 @@ interface CheckoutInput {
 }
 type Phase = 'choosing' | 'unavailable' | 'loading' | 'ready' | 'checking' | 'processing' | 'pending' | 'completed' | 'failed' | 'review' | 'error';
 interface CheckoutState { attempt: number; phase: Phase; config: NativePaymentConfiguration | null; paymentId: string | null; error: string | null; canResume: boolean; canRetryInit: boolean; unavailableReason?: NativePaymentReconcileResponse['unavailableReason'] }
-interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string }
+interface PendingIdentity { clientId: string; invoiceId: string; paymentId: string; bookingId?: string; purchaseId?: string; failed?: boolean }
 const empty: CheckoutState = { attempt: 0, phase: 'loading', config: null, paymentId: null, error: null, canResume: false, canRetryInit: true };
 
 function errorKey(error: unknown): string {
@@ -54,7 +54,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     const valid = () => active && currentScope.current === scope;
     const update = (next: Partial<CheckoutState>) => {
       // retryInitialization is a no-op once a result was submitted or a payment exists.
-      const canRetryInit = canInitialize && !settling;
+      const canRetryInit = canInitialize && !settling && !resultReceived;
       if (valid()) setState((previous) => ({ ...(previous.scope === scope ? previous : empty), ...next, canRetryInit, scope }));
     };
     update(empty);
@@ -112,13 +112,19 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           terminalResult = true; settling = false;
           terminalFailure = true;
           canInitialize = true;
+          // Only an authoritative failure reopens initialization after a submitted result.
+          resultReceived = false;
+          try {
+            const stored = await AsyncStorage.getItem(storageKey);
+            if (stored) await AsyncStorage.setItem(storageKey, JSON.stringify({ ...JSON.parse(stored), failed: true }));
+          } catch { /* the identity stays; bank transfer remains blocked conservatively */ }
           update({ phase: 'failed', config: null, canResume: false });
         } else if (result.unavailableReason) {
           terminalUnavailable = true; settling = false;
           canInitialize = false;
           update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: result.unavailableReason });
         } else {
-          canInitialize = result.canCreatePayment === true;
+          canInitialize = result.canCreatePayment === true && !resultReceived;
           schedule();
           update({ phase: settling ? 'processing' : 'pending', canResume: canInitialize });
         }
@@ -135,7 +141,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       }
     };
     const initialize = async (restore = false) => {
-      if (!valid() || terminalUnavailable || busy || !clientId || !canInitialize || settling) return;
+      if (!valid() || terminalUnavailable || busy || !clientId || !canInitialize || settling || resultReceived) return;
       busy = true;
       clearTimeout(timer);
       update({ phase: 'loading', config: null, error: null });

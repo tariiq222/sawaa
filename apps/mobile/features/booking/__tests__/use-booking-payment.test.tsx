@@ -272,3 +272,17 @@ it('does not route to bank transfer once a native payment attempt reserved the i
   expect(alert).toHaveBeenCalled();
   alert.mockRestore();
 });
+
+it('allows bank transfer when the saved native attempt authoritatively failed', async () => {
+  mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
+  mockCreate.mockResolvedValue({ id: 'failed-booking', invoiceId: 'failed-invoice' });
+  mockGetBooking.mockResolvedValue({ id: 'failed-booking', invoiceId: 'failed-invoice', status: 'pending' });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+  await act(async () => { await result.current.pay('card'); });
+  mockStorage.set('sawaa.native-payment:user-1:failed-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'failed-invoice', paymentId: 'payment', failed: true }));
+  await act(async () => { await result.current.pay('bank_transfer'); });
+  expect(alert).not.toHaveBeenCalled();
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/bank-transfer', params: { invoiceId: 'failed-invoice', amount: '45000', bookingId: 'failed-booking' } });
+  alert.mockRestore();
+});

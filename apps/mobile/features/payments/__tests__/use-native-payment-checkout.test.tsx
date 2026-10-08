@@ -345,3 +345,29 @@ it('does not offer initialization retry after a submitted result when verificati
   expect(result.current.canRetryInit).toBe(false);
   unmount(); jest.useRealTimers();
 });
+
+it('keeps a submitted attempt verification-only while the provider outcome is still ambiguous', async () => {
+  jest.useFakeTimers();
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true });
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  await act(async () => { await result.current.onPaymentResult(); });
+  for (let i = 0; i < 10; i += 1) await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(result.current.canResume).toBe(false);
+  await act(() => result.current.retryInitialization());
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  unmount(); jest.useRealTimers();
+});
+
+it('allows a new attempt and marks the stored identity failed after an authoritative failure', async () => {
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('ready'));
+  await act(async () => { await result.current.onPaymentResult(); });
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  await act(() => result.current.reconcile());
+  expect(result.current.phase).toBe('failed');
+  expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).failed).toBe(true);
+  await act(() => result.current.retryInitialization());
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(2);
+  unmount();
+});

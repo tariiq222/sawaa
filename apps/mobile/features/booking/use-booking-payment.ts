@@ -21,6 +21,17 @@ import {
 } from '@/features/booking/payment-resume-state';
 import type { DeliveryType } from '@/types/booking-enums';
 
+/** A saved native attempt reserves the invoice unless the server reported it failed. */
+async function hasReservingNativeAttempt(userId: string, invoiceId: string): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(`sawaa.native-payment:${userId}:${invoiceId}`);
+  if (!raw) return false;
+  try {
+    return (JSON.parse(raw) as { failed?: boolean }).failed !== true;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Payment methods offered for a brand-new booking (the wizard path).
  * `at_center` creates a confirmed booking with no online invoice; reception
@@ -149,7 +160,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         // A started card/Apple Pay attempt reserves the invoice amount, so a
         // bank-transfer receipt would be rejected as already reserved.
         if (selected === 'bank_transfer' && booking.invoiceId
-          && await AsyncStorage.getItem(`sawaa.native-payment:${userId}:${booking.invoiceId}`)) {
+          && await hasReservingNativeAttempt(userId, booking.invoiceId)) {
           Alert.alert(t('booking.paymentMethod'), t('booking.existingNativeAttempt'));
           return null;
         }
