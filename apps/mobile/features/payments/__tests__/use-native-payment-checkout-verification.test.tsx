@@ -198,20 +198,33 @@ describe('verifyPayable provider configuration gate', () => {
     expect(ok).toBe(true);
     unmount();
   });
-  it('does not authorize submission when the target closed while initialization was in flight', async () => {
+  it('queues a check requested during initialization and does not authorize when it finds the target closed', async () => {
     const { result, unmount } = await ready();
     let finish!: (value: Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>) => void;
     jest.mocked(clientPaymentsService.initNativePayment).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
     let verifying!: Promise<boolean>;
     await act(async () => { verifying = result.current.verifyPayable(); });
+    // A foreground/poll check arrives while initialization is in flight; the target closes meanwhile.
+    await act(async () => { await result.current.reconcile(); });
     jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, unavailableReason: 'BOOKING_EXPIRED' } as Awaited<ReturnType<typeof clientPaymentsService.reconcileNativePayment>>);
     let ok = true;
     await act(async () => { finish({ paymentId: 'payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>); ok = await verifying; });
-    // The queued check after verification observes the closure; the config is revoked.
-    await act(async () => { await result.current.reconcile(); });
+    expect(ok).toBe(false);
     expect(result.current.phase).toBe('unavailable');
     expect(result.current.config).toBeNull();
-    expect(ok).toBe(true);
+    unmount();
+  });
+  it.each(['NATIVE_PAYMENT_IN_PROGRESS', 'HOSTED_PAYMENT_IN_PROGRESS'])('keeps %s in verification mode instead of offering Retry', async (code) => {
+    const { result, unmount } = await ready();
+    jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code, paymentId: 'payment', invoiceId: 'invoice' } } });
+    jest.mocked(clientPaymentsService.reconcileNativePayment).mockClear();
+    let ok = true;
+    await act(async () => { ok = await result.current.verifyPayable(); });
+    expect(ok).toBe(false);
+    // verification continues (own check plus the one for the in-flight payment) and Retry stays hidden
+    expect(jest.mocked(clientPaymentsService.reconcileNativePayment).mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(result.current.canRetryInit).toBe(false);
+    expect(result.current.canResume).toBe(false);
     unmount();
   });
   it('fails closed on a configuration-changed conflict or a different payment identity', async () => {

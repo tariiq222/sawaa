@@ -59,7 +59,9 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
     let canInitialize = true;
     let payable = false;
     let readyConfig: NativePaymentConfiguration | null = null;
-    let configConflict = false;
+    let initBlocked = false;
+    let verifying = false;
+    let recheckRequested = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const storageKey = `sawaa.native-payment:${clientId}:${invoiceId}`;
     const valid = () => active && currentScope.current === scope;
@@ -93,7 +95,8 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       timer = setTimeout(() => { polls += 1; void reconcile(); }, 3000);
     };
     const reconcile = async () => {
-      if (!valid() || terminalUnavailable || busy || !paymentId) return;
+      if (!valid() || terminalUnavailable || !paymentId) return;
+      if (busy) { if (verifying) recheckRequested = true; return; }
       busy = true;
       clearTimeout(timer);
       // Keep the live SDK/WebView mounted while checking a bank challenge.
@@ -135,7 +138,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           canInitialize = false;
           update({ phase: 'unavailable', config: null, canResume: false, unavailableReason: result.unavailableReason });
         } else {
-          canInitialize = result.canCreatePayment === true && !resultReceived && !configConflict;
+          canInitialize = result.canCreatePayment === true && !resultReceived && !initBlocked;
           payable = canInitialize;
           schedule();
           update({ phase: settling ? 'processing' : 'pending', canResume: canInitialize });
@@ -173,9 +176,19 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           return true;
         }
       }
+      if (code === 'NATIVE_PAYMENT_IN_PROGRESS' || code === 'HOSTED_PAYMENT_IN_PROGRESS') {
+        // A provider payment is already in flight: stop initializing and keep verifying it.
+        initBlocked = true; canInitialize = false; readyConfig = null;
+        if (!paymentId && conflict?.invoiceId === invoiceId && typeof conflict.paymentId === 'string' && conflict.paymentId) {
+          paymentId = conflict.paymentId;
+        }
+        update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict', ...(paymentId ? { paymentId } : {}) });
+        if (paymentId) { busy = false; await reconcile(); }
+        return true;
+      }
       if (code === 'PAYMENT_CONFIGURATION_CHANGED') {
         // Every further initialization hits the same stored-fingerprint conflict.
-        configConflict = true; canInitialize = false; readyConfig = null;
+        initBlocked = true; canInitialize = false; readyConfig = null;
         update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict' });
         return true;
       }
@@ -242,14 +255,14 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         readyConfig = null;
         // Initialization keeps failing on the stored fingerprint while the rotated configuration
         // is active, so a conflict is not retryable (a later reconcile cannot re-enable it either).
-        if (conflict) { configConflict = true; canInitialize = false; }
+        if (conflict) { initBlocked = true; canInitialize = false; }
         update({ phase: 'error', config: null, canResume: false, error });
         return false;
       };
       const startConfig = readyConfig;
       // Hold the exclusive slot while initializing: no poll or foreground reconcile may overlap
       // it, so no newer verdict can land after this one authorizes the token.
-      busy = true;
+      busy = true; verifying = true; recheckRequested = false;
       clearTimeout(timer);
       const run = async (): Promise<boolean> => {
       try {
@@ -279,16 +292,26 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
           return revoke('nativePayment.verificationError');
         }
       };
+      let ok = false;
       try {
-        return await run();
+        ok = await run();
       } finally {
-        busy = false;
+        busy = false; verifying = false;
         if (valid() && !terminalResult && !terminalUnavailable) schedule();
         if (queuedResult) {
           queuedResult = false;
           if (valid() && !terminalResult && !terminalUnavailable) await reconcile();
         }
       }
+      // A check requested while initialization was in flight must give its verdict before
+      // the token may be authorized.
+      if (ok && recheckRequested) {
+        recheckRequested = false;
+        payable = false;
+        await reconcile();
+        ok = valid() && payable && !terminalResult && !terminalUnavailable && readyConfig === startConfig;
+      }
+      return ok;
     };
     controls.current = { reconcile, verifyPayable, retry: () => initialize(), paymentResult: async (renderedAttempt: number) => {
       if (!valid() || !paymentId || renderedAttempt !== attempt || terminalResult || terminalUnavailable || resultReceived) return;
