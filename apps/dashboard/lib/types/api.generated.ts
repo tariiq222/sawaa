@@ -4203,6 +4203,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/employee/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authenticated employee profile */
+        get: operations["MobileEmployeeProfileController_get_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the authenticated employee biography, experience and languages */
+        patch: operations["MobileEmployeeProfileController_patch_v1"];
+        trace?: never;
+    };
+    "/api/v1/mobile/employee/profile/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload the authenticated employee profile image */
+        post: operations["MobileEmployeeProfileController_upload_v1"];
+        /** Remove the authenticated employee profile image */
+        delete: operations["MobileEmployeeProfileController_remove_v1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/employee/profile/contact/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a confirmation code to a new employee contact */
+        post: operations["MobileEmployeeProfileController_request_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/employee/profile/contact/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify and adopt a new employee contact */
+        post: operations["MobileEmployeeProfileController_verify_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/employee/schedule/availability": {
         parameters: {
             query?: never;
@@ -4639,6 +4709,23 @@ export interface paths {
         };
         /** Get single public employee by slug or id */
         get: operations["PublicEmployeesController_getOne_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/employees/images/{fileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the current explicitly public employee profile photo */
+        get: operations["PublicEmployeeAvatarController_get_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9158,6 +9245,17 @@ export interface components {
              */
             updatedAt: string;
         };
+        EmployeeContactChallengeResponseDto: {
+            /**
+             * Format: uuid
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            challengeId: string;
+            /** @example 300 */
+            expiresIn: number;
+            /** @example 60 */
+            retryAfterSeconds: number;
+        };
         EmployeeDurationItemDto: {
             /**
              * @description Duration in minutes (≥ 1)
@@ -11324,6 +11422,11 @@ export interface components {
              * @example FULL_TIME
              */
             employmentType: string;
+            /**
+             * @description Years of experience
+             * @example 8
+             */
+            experience: number;
             /** @description Gender */
             gender?: Record<string, never> | null;
             /**
@@ -11341,6 +11444,14 @@ export interface components {
              * @example true
              */
             isBookable: boolean;
+            /**
+             * @description Spoken languages
+             * @example [
+             *       "العربية",
+             *       "English"
+             *     ]
+             */
+            languages: string[];
             /**
              * @description Minimum service price in SAR
              * @example 250
@@ -11662,6 +11773,19 @@ export interface components {
              */
             privacyAccepted?: boolean;
         };
+        RequestEmployeeContactDto: {
+            /**
+             * @description New contact channel
+             * @example EMAIL
+             * @enum {string}
+             */
+            channel: "EMAIL" | "SMS";
+            /**
+             * @description New email address or phone number
+             * @example new@example.com
+             */
+            identifier: string;
+        };
         RequestMobileLoginOtpDto: {
             /**
              * @description Phone (E.164) or email
@@ -11775,6 +11899,30 @@ export interface components {
             durationMins?: number;
             /** @description ISO date for the program start (must be future) */
             startDate: string;
+        };
+        SelfProfileResponseDto: {
+            /** @example https://cdn.example.com/photo.jpg */
+            avatarUrl: string | null;
+            /** @example نبذة */
+            bioAr: string | null;
+            /** @example Biography */
+            bioEn: string | null;
+            /** @example nora@example.com */
+            email: string;
+            /** @example 8 */
+            experience: number | null;
+            /** @example 00000000-0000-4000-a000-000000000001 */
+            id: string;
+            /**
+             * @example [
+             *       "العربية"
+             *     ]
+             */
+            languages: string[];
+            /** @example Nora */
+            name: string;
+            /** @example +966501234567 */
+            phone: string | null;
         };
         SendChatMessageDto: {
             /**
@@ -12738,6 +12886,31 @@ export interface components {
              */
             isPublic: boolean;
         };
+        UpdateSelfProfileDto: {
+            /**
+             * @description Public biography in Arabic
+             * @example أعمل في الإرشاد الأسري.
+             */
+            bioAr?: string;
+            /**
+             * @description Public biography in English
+             * @example Family counselor.
+             */
+            bioEn?: string;
+            /**
+             * @description Years of experience; null clears the value
+             * @example 8
+             */
+            experience?: number | null;
+            /**
+             * @description Spoken languages
+             * @example [
+             *       "العربية",
+             *       "English"
+             *     ]
+             */
+            languages?: string[];
+        };
         UpdateServiceDto: {
             /**
              * @description Buffer time in minutes after the service
@@ -13411,6 +13584,19 @@ export interface components {
              * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
              */
             phoneChallengeId: string;
+        };
+        VerifyEmployeeContactDto: {
+            /**
+             * Format: uuid
+             * @description Challenge returned by the request endpoint
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit confirmation code
+             * @example 123456
+             */
+            code: string;
         };
         VerifyMobileOtpDto: {
             /**
@@ -34346,6 +34532,355 @@ export interface operations {
             };
         };
     };
+    MobileEmployeeProfileController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelfProfileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeProfileController_patch_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSelfProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelfProfileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeProfileController_upload_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelfProfileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeProfileController_remove_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelfProfileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeProfileController_request_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestEmployeeContactDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeContactChallengeResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileEmployeeProfileController_verify_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmployeeContactDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelfProfileResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileEmployeeScheduleController_getAvailabilityEndpoint_v1: {
         parameters: {
             query?: never;
@@ -35649,6 +36184,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicEmployeeAvatarController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
             /** @description Unhandled server error */
             500: {

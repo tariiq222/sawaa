@@ -74,7 +74,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockScheme = 'light';
   mockCanUseApplePay.mockReturnValue(true);
-  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => true });
+  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => true, verify: async () => true });
   mockShow.mockResolvedValue({ details: { paymentData: token }, complete });
   complete.mockResolvedValue(undefined);
   mockCreatePayment.mockResolvedValue({ status: 'paid', source: { number: 'sensitive-fixture' } });
@@ -153,7 +153,7 @@ it('blocks repeated taps across preparation, Wallet and provider processing', as
   await press(screen); await press(screen);
   expect(prepare).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: true, busy: true });
-  await act(async () => { preparation.resolve({ config, onResult, isCurrent: () => true }); });
+  await act(async () => { preparation.resolve({ config, onResult, isCurrent: () => true, verify: async () => true }); });
   await press(screen);
   expect(mockShow).toHaveBeenCalledTimes(1);
   await act(async () => { wallet.resolve({ details: { paymentData: token }, complete }); });
@@ -291,5 +291,27 @@ it('never submits a token if ownership changes while Wallet is authorizing', asy
   await act(async () => { response.resolve({ details: { paymentData: token }, complete }); });
   expect(mockCreatePayment).not.toHaveBeenCalled();
   expect(complete).toHaveBeenCalledWith('failure'); expect(onResult).not.toHaveBeenCalled();
+  expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+it('revalidates the checkout with the server after Wallet and never submits when it is no longer payable', async () => {
+  const verify = jest.fn().mockResolvedValue(false);
+  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => true, verify });
+  await press(subject());
+  expect(mockShow).toHaveBeenCalledTimes(1);
+  expect(verify).toHaveBeenCalledTimes(1);
+  expect(mockCreatePayment).not.toHaveBeenCalled();
+  expect(complete).toHaveBeenCalledWith('failure');
+  expect(onCancel).toHaveBeenCalledTimes(1);
+  expect(onResult).not.toHaveBeenCalled();
+});
+
+it('does not submit when ownership changes while the server revalidation is running', async () => {
+  let current = true;
+  const verify = jest.fn(async () => { current = false; return true; });
+  prepare.mockResolvedValue({ config, onResult, onCancel, isCurrent: () => current, verify });
+  await press(subject());
+  expect(mockCreatePayment).not.toHaveBeenCalled();
+  expect(complete).toHaveBeenCalledWith('failure');
   expect(onCancel).toHaveBeenCalledTimes(1);
 });

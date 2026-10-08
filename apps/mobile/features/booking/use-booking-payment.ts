@@ -10,6 +10,8 @@ import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useBankTransferSettings, usePublicPaymentMethods } from '@/hooks/queries';
 import { clientBookingsService } from '@/services/client/bookings';
+import { clientPaymentsService } from '@/services/client/payments';
+import { getOutstandingHalalas } from '@/lib/invoice-outstanding';
 import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
 import {
@@ -19,6 +21,19 @@ import {
   type PendingBookingCheckout,
 } from '@/features/booking/payment-resume-state';
 import type { DeliveryType } from '@/types/booking-enums';
+
+/**
+ * Bank transfer can only be uploaded for what the invoice still owes. The server's committed
+ * payments (any device, any flow) decide. Returns the message key that blocks it, or null.
+ */
+async function bankTransferBlocked(invoiceId: string): Promise<string | null> {
+  try {
+    const outstanding = getOutstandingHalalas(await clientPaymentsService.getInvoice(invoiceId));
+    return outstanding === null || outstanding <= 0 ? 'booking.invoicePaymentInProgress' : null;
+  } catch {
+    return 'nativePayment.verificationError';
+  }
+}
 
 /**
  * Payment methods offered for a brand-new booking (the wizard path).
@@ -143,6 +158,14 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         // An existing online invoice cannot be converted into pay-at-center.
         if (selected === 'at_center') {
           Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'));
+          return null;
+        }
+        // Committed payments (such as a pending card/Apple Pay attempt) reserve the invoice amount,
+        // so a bank-transfer receipt would be rejected as already reserved.
+        const blocked = selected === 'bank_transfer' && booking.invoiceId
+          ? await bankTransferBlocked(booking.invoiceId) : null;
+        if (blocked) {
+          Alert.alert(t('booking.paymentMethod'), t(blocked));
           return null;
         }
       } else {
