@@ -23,9 +23,10 @@ import {
 import type { DeliveryType } from '@/types/booking-enums';
 
 /**
- * A saved native attempt reserves the invoice unless the server reports it failed. The local
- * failed marker is only a cache: an attempt that failed while the app was closed is confirmed
- * (and marked) here, and any doubt or error keeps the invoice reserved.
+ * A saved native attempt reserves the invoice unless the server reports it failed. The server is
+ * always asked (a local failed marker is never proof, because a newer attempt may exist); any
+ * doubt or error keeps the invoice reserved. There is no invoice-level reservation endpoint, so a
+ * reservation created from another device is only caught by the receipt upload itself.
  */
 async function hasReservingNativeAttempt(userId: string, invoiceId: string): Promise<boolean> {
   const key = `sawaa.native-payment:${userId}:${invoiceId}`;
@@ -37,7 +38,6 @@ async function hasReservingNativeAttempt(userId: string, invoiceId: string): Pro
   } catch {
     return true;
   }
-  if (stored.failed === true) return false;
   if (typeof stored.paymentId !== 'string' || !stored.paymentId) return true;
   try {
     const result = await clientPaymentsService.reconcileNativePayment(stored.paymentId);

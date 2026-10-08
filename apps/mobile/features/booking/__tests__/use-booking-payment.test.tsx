@@ -283,6 +283,7 @@ it('allows bank transfer when the saved native attempt authoritatively failed', 
   const { result } = renderHook(() => useBookingPayment(input), { wrapper });
   await act(async () => { await result.current.pay('card'); });
   mockStorage.set('sawaa.native-payment:user-1:failed-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'failed-invoice', paymentId: 'payment', failed: true }));
+  mockReconcile.mockResolvedValue({ paymentId: 'payment', invoiceId: 'failed-invoice', status: 'FAILED', requiresReview: false });
   await act(async () => { await result.current.pay('bank_transfer'); });
   expect(alert).not.toHaveBeenCalled();
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/bank-transfer', params: { invoiceId: 'failed-invoice', amount: '45000', bookingId: 'failed-booking' } });
@@ -320,4 +321,20 @@ describe('stored native attempt is verified with the server before blocking bank
     expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
     offline.alert.mockRestore();
   });
+});
+
+it('does not trust a cached failed marker when the server now reports a newer pending attempt', async () => {
+  mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
+  mockCreate.mockResolvedValue({ id: 'cached-booking', invoiceId: 'cached-invoice' });
+  mockGetBooking.mockResolvedValue({ id: 'cached-booking', invoiceId: 'cached-invoice', status: 'pending' });
+  mockReconcile.mockResolvedValue({ paymentId: 'payment', invoiceId: 'cached-invoice', status: 'PENDING', requiresReview: false });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+  await act(async () => { await result.current.pay('card'); });
+  mockStorage.set('sawaa.native-payment:user-1:cached-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'cached-invoice', paymentId: 'payment', failed: true }));
+  await act(async () => { await result.current.pay('bank_transfer'); });
+  expect(mockReconcile).toHaveBeenCalledWith('payment');
+  expect(alert).toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
+  alert.mockRestore();
 });

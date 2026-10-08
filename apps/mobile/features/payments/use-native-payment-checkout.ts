@@ -211,6 +211,12 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
             return;
           }
         }
+        if (code === 'PAYMENT_CONFIGURATION_CHANGED') {
+          // Every further initialization hits the same stored-fingerprint conflict.
+          configConflict = true; canInitialize = false; readyConfig = null;
+          update({ phase: 'error', config: null, canResume: false, error: 'nativePayment.conflict' });
+          return;
+        }
         update({ phase: 'error', error: errorKey(error) });
       } finally { busy = false; }
     };

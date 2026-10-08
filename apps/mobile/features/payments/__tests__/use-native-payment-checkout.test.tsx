@@ -471,3 +471,19 @@ describe('verifyPayable provider configuration gate', () => {
     unmount();
   });
 });
+
+it('treats a configuration conflict during initialization retry as non-retryable', async () => {
+  await AsyncStorage.setItem('sawaa.native-payment:client:invoice', JSON.stringify({ clientId: 'client', invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment' }));
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true });
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.phase).toBe('pending'));
+  expect(result.current.canRetryInit).toBe(true);
+  jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValueOnce({ response: { data: { code: 'PAYMENT_CONFIGURATION_CHANGED' } } });
+  await act(() => result.current.retryInitialization());
+  expect(result.current.phase).toBe('error');
+  expect(result.current.error).toBe('nativePayment.conflict');
+  expect(result.current.canRetryInit).toBe(false);
+  await act(() => result.current.reconcile());
+  expect(result.current.canRetryInit).toBe(false);
+  unmount();
+});

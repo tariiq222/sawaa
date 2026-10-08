@@ -91,8 +91,13 @@ describe('SDK result classification', () => {
     mockCardProps.mock.calls.at(-1)?.[0].onPaymentResult(result);
     return callback;
   };
-  it('reports a definitive pre-creation validation rejection as rejected', () => {
-    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', message: 'bad card' } })).toHaveBeenCalledWith('rejected');
+  it('reports a card-field validation rejection as rejected', () => {
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', message: 'bad card', errors: { number: ['is invalid'] } } })).toHaveBeenCalledWith('rejected');
+  });
+  it('keeps an invalid-request response without field errors verification-only', () => {
+    // For example an already-used given_id: the provider payment may exist and must be reconciled.
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', message: 'given_id already used' } })).toHaveBeenCalledWith('submitted');
+    expect(press({ name: 'MoyasarNetworkEndpointError', error: { type: 'invalid_request_error', errors: {} } })).toHaveBeenCalledWith('submitted');
   });
   it.each([
     { name: 'MoyasarNetworkEndpointError', error: { type: 'api_error' } },

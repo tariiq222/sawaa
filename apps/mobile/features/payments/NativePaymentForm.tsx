@@ -13,13 +13,16 @@ import { createNativePaymentConfig } from './native-payment-config';
 export type SdkOutcome = 'submitted' | 'rejected';
 
 /**
- * Only a validation rejection from Moyasar (HTTP error with type invalid_request_error) happens
- * before any payment exists. Everything else, including transport errors and failed payments, is
- * ambiguous and stays verification-only; the payload itself is never retained.
+ * Only a card-field validation rejection from Moyasar (invalid_request_error that names the
+ * invalid fields) is known to happen before any payment exists. Other invalid-request responses
+ * (for example a reused given_id), transport errors and failed payments are ambiguous and stay
+ * verification-only; the payload itself is never retained.
  */
 function classifySdkResult(result: unknown): SdkOutcome {
-  const value = result as { name?: unknown; error?: { type?: unknown } } | null | undefined;
-  return value?.name === 'MoyasarNetworkEndpointError' && value.error?.type === 'invalid_request_error'
+  const value = result as { name?: unknown; error?: { type?: unknown; errors?: unknown } } | null | undefined;
+  const fields = value?.error?.errors;
+  const hasFieldErrors = typeof fields === 'object' && fields !== null && Object.keys(fields).length > 0;
+  return value?.name === 'MoyasarNetworkEndpointError' && value.error?.type === 'invalid_request_error' && hasFieldErrors
     ? 'rejected' : 'submitted';
 }
 
