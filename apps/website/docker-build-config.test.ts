@@ -51,3 +51,23 @@ describe("website web-chat build flag", () => {
     );
   });
 });
+
+describe("website runtime memory guard", () => {
+  function websiteService() {
+    const compose = readRepositoryFile("docker/openship/compose.yml");
+    const start = compose.indexOf("\n  website:\n");
+    const end = compose.indexOf("\nnetworks:", start);
+    expect(start).toBeGreaterThan(-1);
+    return compose.slice(start, end);
+  }
+
+  it("caps the OpenShip website container so a memory leak restarts it instead of starving the host", () => {
+    expect(websiteService()).toContain("mem_limit: 1536m");
+  });
+
+  it("bounds the V8 heap below the container cap and limits glibc malloc arenas", () => {
+    const service = websiteService();
+    expect(service).toContain('NODE_OPTIONS: "--max-old-space-size=1024"');
+    expect(service).toContain('MALLOC_ARENA_MAX: "2"');
+  });
+});
