@@ -72,7 +72,19 @@ const retry = () => i18n.t('common.retry');
 const empty = () => i18n.t('doctor.noClients');
 const noResults = () => i18n.t('common.noResults');
 const search = () => i18n.t('doctor.searchClients');
-beforeEach(() => mockGetAll.mockReset());
+// The screen debounces search with a 400ms timer and React Query delivers results
+// through setTimeout(0). With real timers every waitFor races a 1000ms wall-clock
+// budget, and RNTL fails on that deadline without a final check, so a CPU stall in
+// a busy parallel run fails the test. Fake timers put all of it on a virtual clock.
+beforeEach(() => {
+  mockGetAll.mockReset();
+  jest.useFakeTimers();
+});
+afterEach(() => {
+  act(() => { jest.runOnlyPendingTimers(); });
+  jest.useRealTimers();
+});
+const flushSearchDebounce = () => act(async () => { jest.advanceTimersByTime(400); });
 it('first-read failure has retry and no success-empty copy', async () => {
   mockGetAll.mockRejectedValueOnce(new Error('offline'));
   const { view } = await mount();
@@ -87,6 +99,7 @@ it('retries failed search without success-empty copy', async () => {
   const { view } = await mount();
   await waitFor(() => expect(view.getByText(empty())).toBeTruthy());
   fireEvent.changeText(view.getByPlaceholderText(search()), 'Nora');
+  await flushSearchDebounce();
   await waitFor(() => expect(view.getByText(title())).toBeTruthy());
   expect(view.queryByText(noResults())).toBeNull();
   mockGetAll.mockResolvedValueOnce({ data: [] });
@@ -100,6 +113,7 @@ it.each([true, false])('retains current-search valid data on refetch failure: no
   const { view, queryClient } = await mount();
   await waitFor(() => expect(view.getByText(empty())).toBeTruthy());
   fireEvent.changeText(view.getByPlaceholderText(search()), 'Nora');
+  await flushSearchDebounce();
   await waitFor(() => expect(view.getByText(nonempty ? 'Nora' : noResults())).toBeTruthy());
   mockGetAll.mockRejectedValueOnce(new Error('offline'));
   await act(async () => { await queryClient.invalidateQueries({ queryKey: employeeClientsKeys.list('Nora', 50) }); });
@@ -117,6 +131,7 @@ it('isolates previous search while new search is pending, failed, then retried',
   await waitFor(() => expect(view.getByText('Nora')).toBeTruthy());
   mockGetAll.mockImplementationOnce(() => new Promise((_, reject) => { rejectRead = reject; }));
   fireEvent.changeText(view.getByPlaceholderText(search()), 'Omar');
+  await flushSearchDebounce();
   await waitFor(() => expect(mockGetAll).toHaveBeenLastCalledWith({ search: 'Omar', limit: 50 }));
   expect(view.queryByText('Nora')).toBeNull();
   expect(view.queryByText(noResults())).toBeNull();
