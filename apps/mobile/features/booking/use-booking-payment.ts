@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateClientBookingResources } from '@/hooks/queries/invalidateClientBookingResources';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -143,6 +144,13 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         // An existing online invoice cannot be converted into pay-at-center.
         if (selected === 'at_center') {
           Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'));
+          return null;
+        }
+        // A started card/Apple Pay attempt reserves the invoice amount, so a
+        // bank-transfer receipt would be rejected as already reserved.
+        if (selected === 'bank_transfer' && booking.invoiceId
+          && await AsyncStorage.getItem(`sawaa.native-payment:${userId}:${booking.invoiceId}`)) {
+          Alert.alert(t('booking.paymentMethod'), t('booking.existingNativeAttempt'));
           return null;
         }
       } else {

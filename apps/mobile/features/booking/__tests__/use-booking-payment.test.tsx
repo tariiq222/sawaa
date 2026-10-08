@@ -255,3 +255,20 @@ it('shows capability fetch failure, keeps Apple selected and retries in place de
   expect(result.current.method).toBe('apple_pay');
   expect(result.current.canPay).toBe(true);
 });
+
+it('does not route to bank transfer once a native payment attempt reserved the invoice', async () => {
+  mockUserId = 'user-1'; mockStorage.clear(); jest.clearAllMocks(); mockBankEnabled = true; mockNativeEnabled = true; mockNativeLoading = false; mockNativeError = false;
+  mockCreate.mockResolvedValue({ id: 'reserved-booking', invoiceId: 'reserved-invoice' });
+  mockGetBooking.mockResolvedValue({ id: 'reserved-booking', invoiceId: 'reserved-invoice', status: 'pending' });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+  await act(async () => { await result.current.pay('card'); });
+  expect(mockPush).toHaveBeenCalledTimes(1);
+  // Checkout init stores the reserved attempt for this invoice before the user returns.
+  mockStorage.set('sawaa.native-payment:user-1:reserved-invoice', JSON.stringify({ clientId: 'user-1', invoiceId: 'reserved-invoice', paymentId: 'payment' }));
+  await act(async () => { await result.current.pay('bank_transfer'); });
+  expect(mockCreate).toHaveBeenCalledTimes(1);
+  expect(mockReplace).not.toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/bank-transfer' }));
+  expect(alert).toHaveBeenCalled();
+  alert.mockRestore();
+});
