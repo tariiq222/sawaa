@@ -362,7 +362,7 @@
       "available": "Available",
       "women": "Women",
       "remote": "Remote",
-      "under300": "< 300 ﷼"
+      "under300": "Under 300 SAR"
     }
   },
   "employeeProfile": {
@@ -871,6 +871,7 @@
     "dismiss": "Dismiss verification reminder"
   },
   "common": {
+    "ok": "OK",
     "loading": "Loading...",
     "error": "An error occurred",
     "retry": "Retry",

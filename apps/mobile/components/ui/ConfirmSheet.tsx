@@ -47,7 +47,7 @@ export function ConfirmSheet({
   const reduceMotion = useReduceMotion();
   const { height } = useWindowDimensions();
   const [typed, setTyped] = useState('');
-  const tint = tone === 'danger' ? colors.accent.coral : colors.teal[700];
+  const tint = tone === 'danger' ? roles.danger.fill : colors.teal[700];
 
   // Every opening starts from an empty confirmation field.
   useEffect(() => { if (!visible) setTyped(''); }, [visible]);

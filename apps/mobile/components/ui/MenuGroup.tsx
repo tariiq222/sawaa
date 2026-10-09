@@ -5,8 +5,9 @@ import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react-native'
 import { Glass } from '@/theme/components/Glass';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useDir } from '@/hooks/useDir';
+import { useTheme } from '@/theme/useTheme';
 import { getFontName } from '@/theme/fonts';
-import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 
 export interface MenuEntry {
@@ -53,12 +54,13 @@ function MenuRow({ icon: Icon, label, description, value, valueDirection = 'auto
   const colors = useSawaaColors();
   const dir = useDir();
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
-  const tint = danger ? colors.accent.coral : colors.teal[700];
+  const { scheme } = useTheme();
+  const tint = danger ? getSawaaRoles(scheme).danger.fill : colors.teal[700];
   const content = (
     <>
       <View style={styles.icon}><Icon size={22} color={tint} strokeWidth={1.75} /></View>
       <View style={styles.text}>
-        <Text style={[styles.label, { color: danger ? colors.accent.coral : colors.ink[900], fontFamily: getFontName(dir.locale, '600'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+        <Text style={[styles.label, { color: danger ? tint : colors.ink[900], fontFamily: getFontName(dir.locale, '600'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
           {label}
         </Text>
         {description ? (

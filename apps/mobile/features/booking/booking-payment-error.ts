@@ -16,5 +16,5 @@ export function showBookingPaymentError(error: unknown, t: TFunction, viewAppoin
     ]);
     return;
   }
-  Alert.alert(t('common.error'), t('payment.couldNotContinuePaymentTryAgain'));
+  Alert.alert(t('common.error'), t('payment.couldNotContinuePaymentTryAgain'), [{ text: t('common.ok') }]);
 }

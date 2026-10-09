@@ -168,7 +168,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         }
         // An existing online invoice cannot be converted into pay-at-center.
         if (selected === 'at_center') {
-          Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'));
+          Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'), [{ text: t('common.ok') }]);
           return null;
         }
         // Committed payments (such as a pending card/Apple Pay attempt) reserve the invoice amount,
@@ -176,7 +176,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         const blocked = selected === 'bank_transfer' && booking.invoiceId
           ? await bankTransferBlocked(booking.invoiceId) : null;
         if (blocked) {
-          Alert.alert(t('booking.paymentMethod'), t(blocked));
+          Alert.alert(t('booking.paymentMethod'), t(blocked), [{ text: t('common.ok') }]);
           return null;
         }
       } else {

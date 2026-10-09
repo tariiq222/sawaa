@@ -136,7 +136,7 @@ describe('new booking payment retries', () => {
     mockCreate.mockRejectedValueOnce({ response: { status: 500, data: { message: 'Internal server details' } } });
     const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
-    expect(Alert.alert).toHaveBeenCalledWith(expect.stringMatching(/خطأ/), expect.stringMatching(/تعذّر/));
+    expect(Alert.alert).toHaveBeenCalledWith(expect.stringMatching(/خطأ/), expect.stringMatching(/تعذّر/), [{ text: 'حسنًا' }]);
     expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[1]).not.toContain('Internal server details');
   });
 
@@ -252,7 +252,7 @@ describe('new booking payment retries', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
     expect(result.current.method).toBe('at_center');
-    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.stringMatching(/invoice|فاتورة/));
+    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.stringMatching(/invoice|فاتورة/), [{ text: 'OK' }]);
     act(() => { result.current.setMethod('card'); });
     await act(async () => { await result.current.pay(); });
     expect(mockCreate).toHaveBeenCalledTimes(1);

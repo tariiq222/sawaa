@@ -17,6 +17,7 @@ jest.mock('expo-router', () => ({
 jest.mock('@/hooks/queries', () => ({
   useTherapists: () => mockTherapists,
   useClinics: () => mockClinics,
+  usePublicCatalog: () => ({ data: undefined }),
   useServicePriceFloors: () => mockFloors,
 }));
 jest.mock('@/hooks/useA11y', () => ({
