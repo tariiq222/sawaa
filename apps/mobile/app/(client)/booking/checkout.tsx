@@ -118,6 +118,10 @@ export default function ExistingBookingCheckoutScreen() {
     }
   };
 
+  // Invoice PENDING also represents an unsubmitted reservation. The native
+  // screen must reconcile it before offering a charge.
+  const requiresPaymentCheck = checkout.phase === 'pending' ||
+    checkout.invoice?.payments?.[0]?.status.trim().toUpperCase() === 'PENDING';
   const showPaymentChoice = canPay && checkout.invoice;
   const showRetry = ['pending', 'deposit_confirmed', 'error'].includes(checkout.phase);
   const showContact = Boolean(brandingQuery.data?.contactPhone) &&
@@ -161,14 +165,14 @@ export default function ExistingBookingCheckoutScreen() {
           ) : null}
         </Glass>
 
-        {showPaymentChoice ? (
+        {showPaymentChoice && !requiresPaymentCheck ? (
           <Text style={[styles.body, { fontFamily: f400, textAlign: dir.textAlign }]}>
             {t('checkout.paymentMethods')}
           </Text>
         ) : null}
         {showPaymentChoice ? (
           <PrimaryButton
-            label={t('checkout.continue')}
+            label={t(requiresPaymentCheck ? 'checkout.checkPaymentStatus' : 'checkout.continue')}
             onPress={openPayment}
             disabled={!canPay}
             loading={submitting}
