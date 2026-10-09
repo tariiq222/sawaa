@@ -1,3 +1,5 @@
+export const APPOINTMENT_TIME_ZONE = 'Asia/Riyadh';
+
 /** Date/time formatting shared by the appointment and group-session screens. */
 
 function parse(iso: string | null | undefined): Date | null {
@@ -12,7 +14,7 @@ function localeOf(isRTL: boolean): string {
 
 /** Arabic uses the Gregorian calendar (ar-SA defaults to Umm al-Qura). */
 function options(isRTL: boolean, base: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
-  return isRTL ? { ...base, calendar: 'gregory' } : base;
+  return { ...base, timeZone: APPOINTMENT_TIME_ZONE, ...(isRTL ? { calendar: 'gregory' } : {}) };
 }
 
 /** Day number and short month for the date box, or null when the date is missing/invalid. */
@@ -22,6 +24,15 @@ export function formatDayMonth(iso: string | null | undefined, isRTL: boolean): 
   return {
     day: new Intl.DateTimeFormat(localeOf(isRTL), options(isRTL, { day: 'numeric' })).format(date),
     month: new Intl.DateTimeFormat(localeOf(isRTL), options(isRTL, { month: 'short' })).format(date),
+  };
+}
+
+export function formatDayWeekday(iso: string | null | undefined, isRTL: boolean): { day: string; weekday: string } | null {
+  const date = parse(iso);
+  if (!date) return null;
+  return {
+    day: new Intl.DateTimeFormat(localeOf(isRTL), options(isRTL, { day: 'numeric' })).format(date),
+    weekday: new Intl.DateTimeFormat(localeOf(isRTL), options(isRTL, { weekday: 'short' })).format(date),
   };
 }
 
