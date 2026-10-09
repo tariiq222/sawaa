@@ -5,13 +5,14 @@ import api from '../api';
  *  mobile portal screens actually read are typed here. */
 export interface PortalBookingRow {
   id: string;
-  date: string;        // YYYY-MM-DD (UTC)
-  startTime: string;   // HH:MM (UTC)
-  endTime: string;     // HH:MM (UTC)
+  date: string;        // YYYY-MM-DD (Riyadh wall-clock)
+  startTime: string;   // HH:MM (Riyadh wall-clock)
+  endTime: string;     // HH:MM (Riyadh wall-clock)
   status: string;
   type: string;        // 'in_person' | 'online' | ...
   zoomJoinUrl: string | null;
-  scheduledAt?: string;
+  scheduledAt?: string | null;
+  endsAt?: string | null;
   employee: {
     id: string;
     user: { firstName: string; lastName: string };

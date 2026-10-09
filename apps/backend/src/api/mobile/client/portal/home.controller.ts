@@ -3,7 +3,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse } from '@nestjs/swa
 import { ClientSessionGuard } from '../../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
-import { ListBookingsHandler } from '../../../../modules/bookings/list-bookings/list-bookings.handler';
+import { ListClientUpcomingBookingsHandler } from '../../../../modules/bookings/client/list-client-upcoming-bookings.handler';
 import { ListNotificationsHandler } from '../../../../modules/comms/notifications/list-notifications.handler';
 import { ListPaymentsHandler } from '../../../../modules/finance/list-payments/list-payments.handler';
 import { GetClientHandler } from '../../../../modules/people/clients/get-client.handler';
@@ -24,7 +24,7 @@ function rowsOf(result: unknown): unknown[] {
 @Controller('mobile/client/portal')
 export class MobileClientHomeController {
   constructor(
-    private readonly listBookings: ListBookingsHandler,
+    private readonly upcomingHandler: ListClientUpcomingBookingsHandler,
     private readonly listNotifications: ListNotificationsHandler,
     private readonly listPayments: ListPaymentsHandler,
     private readonly getClient: GetClientHandler,
@@ -47,7 +47,7 @@ export class MobileClientHomeController {
   async home(@ClientSession() user: ClientSession) {
     const now = new Date();
     const [upcomingResult, notificationsResult, paymentsResult, profile] = await Promise.all([
-      this.listBookings.execute({ clientId: user.id, fromDate: now, page: 1, limit: 5 }),
+      this.upcomingHandler.execute({ clientId: user.id, now, page: 1, limit: 5 }),
       this.listNotifications.execute({ recipientId: user.id, unreadOnly: true, page: 1, limit: 5 }),
       this.listPayments.execute({ clientId: user.id, page: 1, limit: 3 }),
       this.getClient.execute({ clientId: user.id }),

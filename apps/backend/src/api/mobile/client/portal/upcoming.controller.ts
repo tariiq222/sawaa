@@ -27,7 +27,7 @@ export class MobileClientUpcomingController {
   @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 10)', example: 10 })
   @ApiOkResponse({
-    description: 'Paginated list of upcoming bookings with status PENDING or CONFIRMED.',
+    description: 'Paginated list of upcoming bookings with status pending, confirmed or deposit_paid, sorted by nearest future appointment.',
     schema: {
       type: 'object',
       properties: {
