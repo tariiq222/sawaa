@@ -518,7 +518,18 @@
     "summarySessions": "جلسة",
     "summaryLastVisit": "آخر زيارة",
     "summaryOutstanding": "مبلغ مستحق",
-    "summaryLoadError": "تعذر تحميل ملخص الحساب"
+    "summaryLoadError": "تعذر تحميل ملخص الحساب",
+    "deleteAccountPointSignIn": "سيُغلق تسجيل الدخول نهائيًا ولن يمكن استعادة الحساب.",
+    "deleteAccountPointContact": "سيُحذف رقم جوالك وبريدك وصورتك، وستتوقف الإشعارات.",
+    "deleteAccountPointRecords": "تبقى السجلات العلاجية والمالية محفوظة لدى المركز.",
+    "deleteAccountPhrase": "حذف",
+    "deleteAccountPhraseLabel": "للتأكيد اكتب كلمة «{{phrase}}»",
+    "personalDetails": "بياناتي الشخصية",
+    "myPackages": "باقاتي ورصيدي",
+    "myPackagesHint": "الجلسات المتبقية والحجز منها",
+    "support": "الدعم",
+    "preferences": "التفضيلات",
+    "aboutAndPrivacy": "عن التطبيق"
   },
   "chat": {
     "headerTitle": "سَواء",
@@ -901,7 +912,8 @@
       "depleted": "لا توجد جلسات متبقية",
       "unavailable": "هذه الجلسة غير متاحة مؤقتاً",
       "support": "تواصلي مع المركز لحجز هذا الرصيد المرن"
-    }
+    },
+    "browse": "تصفح الباقات المتاحة"
   },
   "availability": {
     "title": "إدارة التوفر",

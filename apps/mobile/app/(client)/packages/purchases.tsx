@@ -16,6 +16,8 @@ import { purchaseChargedHalalas } from '@/lib/package-vat';
 import { PackageCreditCard } from '@/components/features/packages/PackageCreditCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { goBackOrHome } from '@/lib/navigation';
+import { MenuGroup } from '@/components/ui/MenuGroup';
+import { Store } from 'lucide-react-native';
 
 export default function PackagePurchasesScreen() {
   const colors = useSawaaColors();
@@ -32,7 +34,8 @@ export default function PackagePurchasesScreen() {
   return (
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
-        <ScreenHeader title={t('packages.balance')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
+        <ScreenHeader title={t('profile.myPackages')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')} />
+        <MenuGroup entries={[{ key: 'browse', icon: Store, label: t('packages.browse'), onPress: () => router.push('/(client)/packages') }]} />
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
         {!query.isLoading && query.isError ? (
           <>
@@ -84,8 +87,6 @@ export default function PackagePurchasesScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   content: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 120, gap: sawaaSpacing.md },
-  header: { alignItems: 'center', gap: sawaaSpacing.md },
-  title: { flex: 1, color: colors.ink[900], fontSize: sawaaType.heading.fontSize, lineHeight: sawaaType.heading.lineHeight },
   message: { color: colors.ink[500], textAlign: 'center', marginTop: sawaaSpacing['3xl'] },
   purchase: { padding: sawaaSpacing.lg, gap: sawaaSpacing.sm },
   purchaseName: { color: colors.ink[900], fontSize: sawaaType.subheading.fontSize },

@@ -63,6 +63,9 @@ jest.mock('@/theme/components/Glass', () => {
   return { Glass: ({ children, ...props }: { children?: React.ReactNode }) => <View {...props}>{children}</View> };
 });
 
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+jest.mock('@/hooks/queries/usePushPreference', () => ({ usePushPreference: () => ({ query: { data: undefined, isPending: false, isError: false, refetch: jest.fn() }, mutation: { mutateAsync: jest.fn(), isPending: false } }) }));
+jest.mock('@/hooks/queries/useClientProfile', () => ({ useUpdateClientProfile: () => ({ mutateAsync: jest.fn() }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 
 

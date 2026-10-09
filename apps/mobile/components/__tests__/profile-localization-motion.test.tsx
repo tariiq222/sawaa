@@ -21,8 +21,11 @@ jest.mock('@/services/auth', () => ({ authService: { getProfile: jest.fn(), logo
 jest.mock('@/hooks/queries', () => ({ useBranding: () => ({ data: {} }), useSummary: () => ({ data: { totalBookings: 2, lastVisit: '2026-10-07T09:00:00Z', outstandingBalance: 5000 }, refetch: jest.fn() }) }));
 jest.mock('@/components/features/auth/UnverifiedEmailBanner', () => ({ UnverifiedEmailBanner: () => null }));
 jest.mock('@/hooks/use-notifications', () => ({ useNotifications: () => ({ notifications: [{ id: 'n1', titleAr: 'تذكير', titleEn: 'Reminder', bodyAr: 'تفاصيل', bodyEn: 'Details', createdAt: '2026-10-07T09:00:00Z', type: 'booking_reminder', isRead: false }], unreadCount: 1, loading: false, refreshing: false, refresh: jest.fn(), loadMore: jest.fn(), hasMore: false, loadingMore: false, loadError: false, markAsRead: jest.fn(), markAllAsRead: jest.fn() }) }));
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+jest.mock('@/hooks/queries/usePushPreference', () => ({ usePushPreference: () => ({ query: { data: { enabled: true, permitted: true }, isPending: false, isError: false, refetch: jest.fn() }, mutation: { mutateAsync: jest.fn(), isPending: false } }) }));
+jest.mock('@/hooks/queries/useClientProfile', () => ({ useUpdateClientProfile: () => ({ mutateAsync: jest.fn() }) }));
 import i18n from '@/i18n';
-import ClientProfile from '../../app/(client)/profile';
+import ClientProfile from '../../app/(client)/(tabs)/account';
 import EmployeeProfile from '../../app/(employee)/(tabs)/profile';
 import Notifications from '../../app/(client)/notifications';
 

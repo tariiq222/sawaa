@@ -518,7 +518,18 @@
     "summarySessions": "Sessions",
     "summaryLastVisit": "Last visit",
     "summaryOutstanding": "Outstanding",
-    "summaryLoadError": "Could not load account summary"
+    "summaryLoadError": "Could not load account summary",
+    "deleteAccountPointSignIn": "Sign-in closes permanently and the account cannot be restored.",
+    "deleteAccountPointContact": "Your phone, email and photo are removed, and notifications stop.",
+    "deleteAccountPointRecords": "Clinical and financial records stay with the center.",
+    "deleteAccountPhrase": "DELETE",
+    "deleteAccountPhraseLabel": "To confirm, type \"{{phrase}}\"",
+    "personalDetails": "Personal details",
+    "myPackages": "My packages & balance",
+    "myPackagesHint": "Remaining sessions and booking",
+    "support": "Support",
+    "preferences": "Preferences",
+    "aboutAndPrivacy": "About the app"
   },
   "chat": {
     "headerTitle": "Sawaa",
@@ -901,7 +912,8 @@
       "depleted": "No sessions remaining",
       "unavailable": "This session is temporarily unavailable",
       "support": "Please contact the center to book this flexible credit"
-    }
+    },
+    "browse": "Browse available packages"
   },
   "availability": {
     "title": "Manage Availability",
