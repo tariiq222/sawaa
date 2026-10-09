@@ -54,15 +54,21 @@ export class UpdateClientHandler {
     const lastName = cmd.lastName ?? client.lastName ?? '';
     const composedName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
 
+    // A dashboard edit that changes the stored address (case-insensitive after
+    // normalization) voids the previous verification: the new value is unproven.
+    const emailChanged = cmd.email !== undefined
+      && (cmd.email ?? '').trim().toLowerCase() !== (client.email ?? '').trim().toLowerCase();
+
     const updated = await this.prisma.client.update({
       where: { id: cmd.clientId },
       data: {
         name: composedName || client.name,
+        email: cmd.email,
+        emailVerified: emailChanged ? null : undefined,
         firstName: cmd.firstName,
         middleName: cmd.middleName,
         lastName: cmd.lastName,
         phone: cmd.phone,
-        email: cmd.email,
         gender: cmd.gender,
         dateOfBirth:
           cmd.dateOfBirth !== undefined ? (cmd.dateOfBirth ? new Date(cmd.dateOfBirth) : null) : undefined,

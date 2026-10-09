@@ -5,7 +5,9 @@ import { normalizeIdentifier } from '../shared/identifier-detector';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 type AuthUser = Prisma.UserGetPayload<{ include: { customRole: { include: { permissions: true } } } }>;
-export type EmailIdentity = { kind: 'register' } | { kind: 'unavailable' } | { kind: 'staff'; user: AuthUser } | { kind: 'client' | 'link'; user: AuthUser; client: Client };
+export type EmailIdentity = { kind: 'register' } | { kind: 'unavailable' } | { kind: 'staff'; user: AuthUser }
+  | { kind: 'client' | 'link'; user: AuthUser; client: Client }
+  | { kind: 'clientOnly'; client: Client };
 const canonical = (value: string) => normalizeIdentifier(value, 'EMAIL');
 
 @Injectable()
@@ -22,6 +24,18 @@ export class MobileEmailIdentity {
     for (const id of clients.map(c => c.id).sort()) await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Client" WHERE "id" = ${id} FOR UPDATE`);
     clients = await loadClients();
     if (users.length === 0 && clients.length === 0) return { kind: 'register' };
+    if (users.length === 0) {
+      // A Client-only account (phone-first registration or a legacy record) may
+      // sign in with its email ONLY after that exact address was proven on the
+      // account itself. Unverified, inactive, deleted or ambiguous rows never
+      // authenticate and are never adopted.
+      const live = clients.filter(c => c.deletedAt === null);
+      const client = live.length === 1 ? live[0] : undefined;
+      if (!client || client.userId || !client.isActive || !client.emailVerified || !client.email || canonical(client.email) !== email) {
+        return { kind: 'unavailable' };
+      }
+      return { kind: 'clientOnly', client };
+    }
     if (users.length !== 1 || !users[0].isActive) return { kind: 'unavailable' };
     const user = users[0];
     if (canonical(user.email) !== email) return { kind: 'unavailable' };

@@ -18,7 +18,7 @@ export interface VerifyMobileOtpResult { tokens: TokenPair; sessionKind?: Mobile
 
 type ClientIdentity = {
   id: string; userId: string | null; email: string | null; phone: string | null;
-  isActive: boolean; deletedAt: Date | null; phoneVerified?: Date | null; tokenVersion: number;
+  isActive: boolean; deletedAt: Date | null; phoneVerified?: Date | null; emailVerified?: Date | null; tokenVersion: number;
   name?: string; firstName?: string | null; lastName?: string | null;
 };
 
@@ -150,7 +150,7 @@ export class VerifyMobileOtpHandler {
           client = await tx.client.update({ where: { id: client.id }, data: { phoneVerified: new Date() } }) as ClientIdentity;
         }
         return {
-          tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, tokenVersion: client.tokenVersion }, tx)),
+          tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified ?? null, tokenVersion: client.tokenVersion }, tx)),
           sessionKind: 'client' as const,
         };
       });

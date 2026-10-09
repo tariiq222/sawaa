@@ -68,6 +68,19 @@ describe('MobileClientProfileController (e2e)', () => {
       expect(res.body.name).toBe('Sara');
       expect(mockGetClient.execute).toHaveBeenCalledWith({ clientId: 'client-1' });
     });
+
+    it('never echoes an unverified stored email back to the client', async () => {
+      mockGetClient.execute.mockResolvedValue({ id: 'client-1', name: 'Sara', email: 'legacy@example.test', emailVerified: null });
+      const res = await request(app.getHttpServer()).get('/mobile/client/profile').expect(200);
+      expect(res.body.email).toBeNull();
+    });
+
+    it('returns a verified email unchanged', async () => {
+      const verifiedAt = '2026-10-09T10:00:00.000Z';
+      mockGetClient.execute.mockResolvedValue({ id: 'client-1', name: 'Sara', email: 'sara@example.test', emailVerified: verifiedAt });
+      const res = await request(app.getHttpServer()).get('/mobile/client/profile').expect(200);
+      expect(res.body.email).toBe('sara@example.test');
+    });
   });
 
   describe('PATCH /mobile/client/profile', () => {

@@ -12,6 +12,7 @@ function createClient(overrides?: Partial<any>) {
     lastName: 'Doe',
     phone: '+966501234567',
     email: 'john@test.com',
+    emailVerified: new Date('2026-01-01T00:00:00Z'),
     deletedAt: null,
     ...overrides,
   };
@@ -122,5 +123,52 @@ describe('UpdateClientHandler', () => {
     await handler.execute({ clientId: 'c1', name: 'New' } as any);
     const data = prisma.client.update.mock.calls[0][0].data;
     expect(data.dateOfBirth).toBeUndefined();
+  });
+
+  describe('email verification reset', () => {
+    // First findFirst: the client row; second (only when the email changes): the duplicate lookup.
+    const prime = () => prisma.client.findFirst.mockResolvedValueOnce(createClient()).mockResolvedValueOnce(null);
+
+    it('resets emailVerified when the dashboard changes the email', async () => {
+      prime();
+      prisma.client.update.mockResolvedValue(createClient());
+      await handler.execute({ clientId: 'c1', email: 'new@test.com' } as any);
+      expect(prisma.client.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ emailVerified: null }),
+      }));
+    });
+
+    it('resets emailVerified when the dashboard clears the email', async () => {
+      prime();
+      prisma.client.update.mockResolvedValue(createClient());
+      await handler.execute({ clientId: 'c1', email: null } as any);
+      expect(prisma.client.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ emailVerified: null }),
+      }));
+    });
+
+    it('keeps emailVerified when the email is unchanged', async () => {
+      prisma.client.findFirst.mockResolvedValue(createClient());
+      prisma.client.update.mockResolvedValue(createClient());
+      await handler.execute({ clientId: 'c1', email: 'john@test.com' } as any);
+      const data = prisma.client.update.mock.calls[0][0].data;
+      expect(data.emailVerified).toBeUndefined();
+    });
+
+    it('keeps emailVerified on a case-only email change after normalization', async () => {
+      prisma.client.findFirst.mockResolvedValue(createClient()).mockResolvedValueOnce(createClient()).mockResolvedValueOnce(null);
+      prisma.client.update.mockResolvedValue(createClient());
+      await handler.execute({ clientId: 'c1', email: ' JOHN@TEST.COM ' } as any);
+      const data = prisma.client.update.mock.calls[0][0].data;
+      expect(data.emailVerified).toBeUndefined();
+    });
+
+    it('keeps emailVerified when no email is provided', async () => {
+      prisma.client.findFirst.mockResolvedValue(createClient());
+      prisma.client.update.mockResolvedValue(createClient());
+      await handler.execute({ clientId: 'c1', name: 'New' } as any);
+      const data = prisma.client.update.mock.calls[0][0].data;
+      expect(data.emailVerified).toBeUndefined();
+    });
   });
 });
