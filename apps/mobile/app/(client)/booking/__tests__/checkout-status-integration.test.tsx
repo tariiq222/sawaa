@@ -21,7 +21,7 @@ jest.mock('react-i18next', () => ({ ...jest.requireActual('react-i18next'), useT
   return key.split('.').reduce((value, part) => value?.[part], dictionary) ?? key;
 } }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockLocale, isRTL: mockLocale === 'ar', textAlign: mockLocale === 'ar' ? 'right' : 'left', writingDirection: mockLocale === 'ar' ? 'rtl' : 'ltr' }) }));
-jest.mock('@/hooks/queries', () => ({ useBranding: () => ({ data: {} }), useGroupSession: () => ({ data: undefined }) }));
+jest.mock('@/hooks/queries', () => ({ useBranding: () => ({ data: { contactPhone: '0000000000' } }), useGroupSession: () => ({ data: undefined }) }));
 jest.mock('@/services/client/bookings', () => ({ clientBookingsService: { getById: jest.fn() } }));
 jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { getInvoice: jest.fn(), initNativePayment: jest.fn() } }));
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light', theme: require('@/theme/tokens').buildTheme(null, 'light') }) }));
@@ -72,5 +72,20 @@ it.each(['PENDING', 'PENDING_VERIFICATION'])('keeps bank transfer %s blocked fro
   expect(view.queryByText(en.checkout.continue)).toBeNull();
   expect(view.queryByText('Check payment status')).toBeNull();
   expect(mockReplace).not.toHaveBeenCalled();
+  view.unmount();
+});
+
+
+it.each(['en', 'ar'] as const)('distinguishes received payment from delayed appointment confirmation without pay or retry (%s)', async (locale) => {
+  mockLocale = locale;
+  jest.mocked(clientPaymentsService.getInvoice).mockResolvedValue({ ...invoice, status: 'PAID', payments: [{ id: 'paid', status: 'COMPLETED', amount: 10000 }] });
+  const view = render(<ExistingBookingCheckoutScreen />);
+  const dictionary = locale === 'ar' ? ar : en;
+  await waitFor(() => expect(view.getByText(locale === 'ar' ? 'تم الدفع، وجارٍ تأكيد الموعد' : 'Payment received; confirming your appointment')).toBeTruthy());
+  expect(view.queryByText(dictionary.checkout.pending)).toBeNull();
+  expect(view.queryByText(dictionary.checkout.continue)).toBeNull();
+  expect(view.queryByText(dictionary.checkout.retry)).toBeNull();
+  expect(view.getByText(`${dictionary.checkout.contactCenter} · 0000000000`)).toBeTruthy();
+  expect(clientPaymentsService.initNativePayment).not.toHaveBeenCalled();
   view.unmount();
 });
