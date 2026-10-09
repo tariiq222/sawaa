@@ -145,7 +145,7 @@ describe('login screen escape routes', () => {
 
     expect(screen.getByText('auth.login.continueAsGuest')).toBeTruthy();
     expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
-    expect(screen.getByText('auth.phoneEntry.staffLoginLink')).toBeTruthy();
+    expect(screen.queryByText('auth.phoneEntry.staffLoginLink')).toBeNull();
   });
 
   it('hides continue as guest but keeps the alternative entry links when opened from a booking', () => {
@@ -154,6 +154,6 @@ describe('login screen escape routes', () => {
 
     expect(screen.queryByText('auth.login.continueAsGuest')).toBeNull();
     expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
-    expect(screen.getByText('auth.phoneEntry.staffLoginLink')).toBeTruthy();
+    expect(screen.queryByText('auth.phoneEntry.staffLoginLink')).toBeNull();
   });
 });

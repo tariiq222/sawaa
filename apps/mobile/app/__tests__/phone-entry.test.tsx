@@ -94,8 +94,7 @@ it('preserves booking and redirect params on the email-entry and staff links', (
   const { ui } = mount();
   fireEvent.press(ui.getByText('auth.phoneEntry.emailLoginLink'));
   expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/email-entry', params: { redirect: '/(client)/(tabs)/appointments' } });
-  fireEvent.press(ui.getByText('auth.phoneEntry.staffLoginLink'));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/staff-login', params: { redirect: '/(client)/(tabs)/appointments' } });
+  expect(ui.queryByText('auth.phoneEntry.staffLoginLink')).toBeNull();
 });
 it('keeps the code challenge secret out of route parameters', async () => {
   api.verify.mockResolvedValue(authenticated);

@@ -9484,9 +9484,10 @@
             "type": "string"
           },
           "sessionKind": {
-            "description": "Client session namespace; phone entry does not issue staff sessions",
+            "description": "Server-selected native session namespace after phone verification",
             "enum": [
-              "client"
+              "client",
+              "staff"
             ],
             "example": "client",
             "type": "string"
@@ -9497,7 +9498,7 @@
                 "$ref": "#/components/schemas/EmailEntryTokensDto"
               }
             ],
-            "description": "Native client access and refresh token pair"
+            "description": "Native access and refresh token pair for the server-selected session"
           }
         },
         "required": [

@@ -60,6 +60,8 @@ describeReal('Mobile phone entry — real proof and identity boundaries', () => 
       owned.forEach(client => clients.add(client.id));
       await prisma.clientRefreshToken.deleteMany({ where: { clientId: { in: [...clients] } } });
       await prisma.client.deleteMany({ where: { id: { in: [...clients] } } });
+      await prisma.refreshToken.deleteMany({ where: { userId: { in: [...users] } } });
+      await prisma.employee.deleteMany({ where: { userId: { in: [...users] } } });
       await prisma.user.deleteMany({ where: { id: { in: [...users] } } });
       await prisma.mobilePhoneEntryFlow.deleteMany({ where: { phone: { in: [...phones] } } });
     }
@@ -104,6 +106,19 @@ describeReal('Mobile phone entry — real proof and identity boundaries', () => 
     expect(await prisma.user.count({ where: { phone: p.phone } })).toBe(0);
     await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${result.body.tokens.accessToken}`).expect(200);
     await post('complete', details(p.continuationToken)).expect(400);
+  });
+
+  it('uses the same phone challenge for staff and keeps token namespaces isolated', async () => {
+    const phone = number();
+    const user = await prisma.user.create({ data: { email: `${prefix}-staff@example.test`, name: 'Synthetic Staff', phone, role: 'EMPLOYEE', isActive: true } });
+    users.add(user.id);
+    await prisma.employee.create({ data: { userId: user.id, name: 'Synthetic Staff', isActive: true } });
+    const c = await challenge(phone);
+    const result = await post('verify', { challengeId: c.challengeId, code: c.code }).expect(200);
+    expect(result.body).toMatchObject({ next: 'authenticated', sessionKind: 'staff', emailPrompt: false });
+    await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${result.body.tokens.accessToken}`).expect(401);
+    expect(await prisma.refreshToken.count({ where: { userId: user.id, source: 'MOBILE' } })).toBe(1);
+    await post('verify', { challengeId: c.challengeId, code: c.code }).expect(400);
   });
 
   it('consumes one continuation exactly once under concurrent completions', async () => {

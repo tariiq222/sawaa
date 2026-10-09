@@ -14,10 +14,9 @@ type Props = {
   submit: () => void;
   pending: boolean;
   onEmailEntry: () => void;
-  onStaffLogin: () => void;
 };
 
-export function PhoneStepForm({ phone, onPhoneChange, submit, pending, onEmailEntry, onStaffLogin }: Props) {
+export function PhoneStepForm({ phone, onPhoneChange, submit, pending, onEmailEntry }: Props) {
   const { t } = useTranslation();
   const dir = useDir();
   const colors = useSawaaColors();
@@ -29,9 +28,6 @@ export function PhoneStepForm({ phone, onPhoneChange, submit, pending, onEmailEn
     <AppButton label={t('auth.phoneEntry.continue')} onPress={submit} loading={pending} disabled={pending} />
     <Pressable accessibilityRole="link" onPress={onEmailEntry} style={styles.linkTarget}>
       <Text style={[link, { fontFamily: getFontName(dir.locale, '600') }]}>{t('auth.phoneEntry.emailLoginLink')}</Text>
-    </Pressable>
-    <Pressable accessibilityRole="link" onPress={onStaffLogin} style={styles.linkTarget}>
-      <Text style={link}>{t('auth.phoneEntry.staffLoginLink')}</Text>
     </Pressable>
   </View>;
 }

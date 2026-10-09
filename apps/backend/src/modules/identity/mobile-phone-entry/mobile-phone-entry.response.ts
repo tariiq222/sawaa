@@ -9,8 +9,8 @@ export class PhoneEntryChallengeDto {
 }
 export class PhoneEntrySessionDto {
   @ApiProperty({ description: 'Authenticated outcome discriminator', enum: ['authenticated'], example: 'authenticated' }) next!: 'authenticated';
-  @ApiProperty({ description: 'Native client access and refresh token pair', type: EmailEntryTokensDto }) tokens!: EmailEntryTokensDto;
-  @ApiProperty({ description: 'Client session namespace; phone entry does not issue staff sessions', enum: ['client'], example: 'client' }) sessionKind!: 'client';
+  @ApiProperty({ description: 'Native access and refresh token pair for the server-selected session', type: EmailEntryTokensDto }) tokens!: EmailEntryTokensDto;
+  @ApiProperty({ description: 'Server-selected native session namespace after phone verification', enum: ['client', 'staff'], example: 'client' }) sessionKind!: 'client' | 'staff';
   @ApiProperty({ description: 'Whether to show the unresolved legacy email prompt after authentication', example: false }) emailPrompt!: boolean;
 }
 export class PhoneEntryContinueDto {
