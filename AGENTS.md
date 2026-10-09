@@ -24,6 +24,12 @@ packages/
 └── ui/           shadcn primitives for dashboard only today; website and mobile excluded
 ```
 
+## Automatic changelog
+
+Git-cliff generates the project changelog automatically on pushes to `develop` and `main` through `.github/workflows/changelog.yml`. Each run saves `CHANGELOG.md` with its source SHA as an artifact; the release workflow publishes the current tagged release's notes. Configuration and usage: [docs/operations/changelog.md](docs/operations/changelog.md).
+
+On authorized commit, merge or publication requests, write clear commit subjects (for example `fix(mobile): correct appointment times`). For a local preview after the operation, run `pnpm changelog`; this generates an ignored file and does not stage, commit, push, tag or deploy anything. Do not commit generated changelogs back to protected branches. Code changelogs do not establish deployment success; keep observed deployment evidence separate under the approved deployment policy.
+
 ## Commands and focused tests
 
 Common checks: backend `pnpm --filter=backend test -- path/to/file.spec.ts`; dashboard or website `pnpm --filter=<app> test -- path/to/file.test.ts`; dashboard smoke `pnpm --filter=dashboard run e2e:smoke`; mobile types `pnpm --dir apps/mobile typecheck`. For other commands and test coverage, read [the command and test reference](docs/operations/agent-command-reference.md). Root commands do not cover mobile.

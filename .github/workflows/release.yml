@@ -30,16 +30,23 @@ jobs:
       - name: Publish release tag only
         id: tag
         run: node scripts/tag-release.mjs "$GITHUB_SHA"
+      - name: Generate release changelog
+        if: steps.tag.outputs.skipped == 'false'
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4
+        with:
+          version: v2.14.2
+          config: cliff.toml
+          args: --current
+        env:
+          OUTPUT: RELEASE-NOTES.md
       - name: Create GitHub release
         if: steps.tag.outputs.skipped == 'false'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
-          generate_release_notes: true
-          body: |
-            Code release only. This entry does not establish successful deployment.
-            See docs/operations/current-state.md for dated runtime verification and outstanding gates.
+          body_path: RELEASE-NOTES.md
+          files: RELEASE-NOTES.md
       - name: Summarize release
         if: steps.tag.outputs.skipped == 'false'
         env:

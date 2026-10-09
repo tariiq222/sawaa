@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "prepare": "lefthook install || true",
+    "changelog": "node -e \"require('node:fs').mkdirSync('build/changelog', { recursive: true })\" && pnpm dlx git-cliff@2.14.2 --config cliff.toml --output build/changelog/CHANGELOG.md",
     "dev:backend": "turbo run dev --filter=backend",
     "dev:dashboard": "turbo run dev --filter=dashboard -- --port 5203",
     "dev:website": "turbo run dev --filter=@sawaa/website -- --port 5205",
