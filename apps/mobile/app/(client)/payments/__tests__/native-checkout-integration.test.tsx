@@ -28,6 +28,9 @@ let mockAppleAvailable = true;
 let mockClientId = 'client';
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+const mockFormMount = jest.fn();
+const mockFormUnmount = jest.fn();
+let mockSdkResult: (() => void) | undefined;
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ replace: mockReplace, back: mockBack, canGoBack: () => true }), Stack: { Screen: () => null } }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => mockClientId }));
@@ -36,6 +39,8 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => ({ ink:
 jest.mock('@/features/payments/native-payment-capabilities', () => ({ useNativePaymentCapabilities: () => ({ enabled: true, isLoading: false, isError: false, applePayAvailable: mockAppleAvailable, refetch: jest.fn() }) }));
 // Native bank/card boundary only; the route and checkout lifecycle hook remain real.
 jest.mock('@/features/payments/NativePaymentForm', () => ({ NativePaymentForm: ({ method, onResult }: { method: string; onResult: () => void }) => {
+  mockSdkResult = onResult;
+  require('react').useEffect(() => { mockFormMount(); return () => mockFormUnmount(); }, []);
   const { Text, Pressable } = require('react-native'); return <Pressable onPress={onResult}><Text>{method}</Text></Pressable>;
 } }));
 const config = { enabled: true, isLive: false, supportedNetworks: ['mada', 'visa', 'mastercard'], applePay: null,
@@ -233,11 +238,57 @@ it('does not lose the SDK result when a foreground verification is already in fl
   const view = render(<NativeCheckout />, { wrapper });
   await waitFor(() => expect(view.getByText('APPLE_PAY')).toBeTruthy());
   act(() => foreground('active'));
-  // The bank view remains usable until its own result arrives.
-  fireEvent.press(view.getByText('APPLE_PAY'));
+  // An asynchronous Wallet callback can arrive while the UI check is in flight.
+  act(() => mockSdkResult?.());
   await act(async () => { finish({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false }); });
   await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/success' })));
   expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(2);
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  view.unmount();
+});
+
+
+it('describes a provider-absent reservation as unsubmitted and resumes the same identity', async () => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'ONLINE_CARD' };
+  await AsyncStorage.setItem('sawaa.native-payment:client:invoice', JSON.stringify({ clientId: 'client', invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment' }));
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true });
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('nativePayment.prepared')).toBeTruthy());
+  expect(view.queryByText('nativePayment.pending')).toBeNull();
+  expect(view.queryByText('nativePayment.awaitingVerification')).toBeNull();
+  expect(view.queryByText('nativePayment.processing')).toBeNull();
+  expect(clientPaymentsService.initNativePayment).not.toHaveBeenCalled();
+  fireEvent.press(view.getByText('nativePayment.resume'));
+  await waitFor(() => expect(view.getByText('ONLINE_CARD')).toBeTruthy());
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  expect(JSON.parse((await AsyncStorage.getItem('sawaa.native-payment:client:invoice'))!).paymentId).toBe('payment');
+  view.unmount();
+});
+
+
+it('blocks payer interaction after unknown verification and restores the same mounted bank form after a server verdict', async () => {
+  let foreground!: (state: AppStateStatus) => void;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, callback) => {
+    foreground = callback; return { remove: jest.fn() };
+  });
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'ONLINE_CARD' };
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('ONLINE_CARD')).toBeTruthy());
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockRejectedValueOnce(new Error('network unavailable'));
+  await act(async () => { foreground('active'); });
+  await waitFor(() => expect(view.getByText('nativePayment.verificationError')).toBeTruthy());
+  expect(view.queryByText('ONLINE_CARD')).toBeNull();
+  expect(view.queryByText('nativePayment.resume')).toBeNull();
+  fireEvent.press(view.getByText('ONLINE_CARD', { includeHiddenElements: true }));
+  expect(clientPaymentsService.reconcileNativePayment).toHaveBeenCalledTimes(1);
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  expect(mockFormMount).toHaveBeenCalledTimes(1);
+  expect(mockFormUnmount).not.toHaveBeenCalled();
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+  fireEvent.press(view.getByText('nativePayment.checkAgain'));
+  await waitFor(() => expect(view.getByText('ONLINE_CARD')).toBeTruthy());
+  expect(mockFormMount).toHaveBeenCalledTimes(1);
+  expect(mockFormUnmount).not.toHaveBeenCalled();
   expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
   view.unmount();
 });

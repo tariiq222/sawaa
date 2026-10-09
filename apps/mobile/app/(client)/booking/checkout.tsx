@@ -85,7 +85,11 @@ export default function ExistingBookingCheckoutScreen() {
   useFocusEffect(useCallback(() => { checkAgain(); }, [checkAgain]));
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
-  const copy = phaseCopy(checkout.phase, t);
+  const awaitingBookingConfirmation = checkout.phase === 'pending' &&
+    checkout.invoice?.status.trim().toUpperCase() === 'PAID';
+  const copy = awaitingBookingConfirmation
+    ? { title: t('checkout.paidAwaitingConfirmation'), body: t('checkout.paidAwaitingConfirmationDescription') }
+    : phaseCopy(checkout.phase, t);
   const amount = remainingHalalas(checkout.invoice);
   const currency = checkout.invoice?.currency ?? 'SAR';
   const amountText = amount !== null
@@ -118,10 +122,14 @@ export default function ExistingBookingCheckoutScreen() {
     }
   };
 
+  // Invoice PENDING also represents an unsubmitted reservation. The native
+  // screen must reconcile it before offering a charge.
+  const requiresPaymentCheck = checkout.phase === 'pending' ||
+    checkout.invoice?.payments?.[0]?.status.trim().toUpperCase() === 'PENDING';
   const showPaymentChoice = canPay && checkout.invoice;
-  const showRetry = ['pending', 'deposit_confirmed', 'error'].includes(checkout.phase);
+  const showRetry = !awaitingBookingConfirmation && ['pending', 'deposit_confirmed', 'error'].includes(checkout.phase);
   const showContact = Boolean(brandingQuery.data?.contactPhone) &&
-    ['error', 'missing_invoice', 'invoice_mismatch', 'cancelled', 'expired'].includes(checkout.phase);
+    (awaitingBookingConfirmation || ['error', 'missing_invoice', 'invoice_mismatch', 'cancelled', 'expired'].includes(checkout.phase));
 
   return (
     <AquaBackground>
@@ -161,14 +169,14 @@ export default function ExistingBookingCheckoutScreen() {
           ) : null}
         </Glass>
 
-        {showPaymentChoice ? (
+        {showPaymentChoice && !requiresPaymentCheck ? (
           <Text style={[styles.body, { fontFamily: f400, textAlign: dir.textAlign }]}>
             {t('checkout.paymentMethods')}
           </Text>
         ) : null}
         {showPaymentChoice ? (
           <PrimaryButton
-            label={t('checkout.continue')}
+            label={t(requiresPaymentCheck ? 'checkout.checkPaymentStatus' : 'checkout.continue')}
             onPress={openPayment}
             disabled={!canPay}
             loading={submitting}

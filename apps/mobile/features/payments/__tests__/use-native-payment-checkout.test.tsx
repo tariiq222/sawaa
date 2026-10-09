@@ -331,3 +331,19 @@ it('ignores an old SDK result while the new attempt identity is being persisted'
   expect(result.current.phase).toBe('processing'); expect(result.current.config).toBeNull();
   unmount();
 });
+
+
+it('revokes a provider-absent resume verdict when the next verification is unknown', async () => {
+  await AsyncStorage.setItem('sawaa.native-payment:client:invoice', JSON.stringify({ clientId: 'client', invoiceId: 'invoice', bookingId: 'booking', paymentId: 'payment' }));
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: true });
+  const { result, unmount } = renderHook(() => useNativePaymentCheckout(input), { wrapper });
+  await waitFor(() => expect(result.current.canResume).toBe(true));
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockRejectedValue(new Error('provider unavailable'));
+  await act(() => result.current.reconcile());
+  expect(result.current.phase).toBe('error');
+  expect(result.current.canResume).toBe(false);
+  expect(result.current.canRetryInit).toBe(false);
+  await act(() => result.current.retryInitialization());
+  expect(clientPaymentsService.initNativePayment).not.toHaveBeenCalled();
+  unmount();
+});
