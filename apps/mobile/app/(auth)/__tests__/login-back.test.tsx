@@ -1,6 +1,6 @@
-jest.mock('@/features/auth/use-password-login', () => ({ usePasswordLogin: () => ({ pending: false, cancel: jest.fn(), capture: () => () => true, submit: jest.fn() }) }));
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
 let mockCanGoBack = true;
@@ -16,6 +16,7 @@ jest.mock('expo-router', () => ({
     canGoBack: () => mockCanGoBack,
   }),
   useLocalSearchParams: () => mockParams,
+  useFocusEffect: jest.fn(),
 }));
 
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -70,8 +71,16 @@ jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/hooks/queries', () => ({
   useRequestLoginOtp: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
-
 jest.mock('../email-entry', () => ({ __esModule: true, default: () => null }));
+
+const mockDispatch = jest.fn(); let mockEpoch = 1;
+jest.mock('@/hooks/use-redux', () => ({ useAppDispatch: () => mockDispatch }));
+jest.mock('@/services/auth', () => ({ authService: { getProfile: jest.fn().mockResolvedValue({ success: true, data: { id: 'u', role: 'CLIENT' } }) }, SessionSupersededError: class extends Error {} }));
+jest.mock('@/services/native-session-state', () => ({ getSessionEpoch: () => mockEpoch, isSessionCurrent: (e: number) => e === mockEpoch, beginSession: () => ++mockEpoch, fenceSession: () => ++mockEpoch, clearSessionAtEpoch: jest.fn().mockResolvedValue(true), persistSessionTokensAtEpoch: jest.fn().mockResolvedValue(true) }));
+jest.mock('@/services/phone-entry', () => ({
+  phoneEntryError: jest.requireActual('@/services/phone-entry').phoneEntryError,
+  phoneEntryService: { request: jest.fn(), resend: jest.fn(), verify: jest.fn(), complete: jest.fn() },
+}));
 
 import LoginScreen from '../login';
 import { getStateFromPath } from 'expo-router/build/fork/getStateFromPath';
@@ -81,15 +90,22 @@ type HomeRouteParams = {
   '(guest)': NavigatorScreenParams<{ home: undefined }>;
 };
 
+function mount() {
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: 0 } } });
+  const screen = render(<QueryClientProvider client={client}><LoginScreen /></QueryClientProvider>);
+  return { screen, client };
+}
+
 describe('login screen escape routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCanGoBack = true;
     mockParams = {};
+    mockEpoch = 1;
   });
 
   it('exposes a back control that returns to the previous screen', () => {
-    const screen = render(<LoginScreen />);
+    const { screen } = mount();
 
     fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
 
@@ -99,7 +115,7 @@ describe('login screen escape routes', () => {
 
   it('falls back to the public home when login was opened with no history', () => {
     mockCanGoBack = false;
-    const screen = render(<LoginScreen />);
+    const { screen } = mount();
 
     fireEvent.press(screen.getByLabelText('a11y.buttonBack'));
 
@@ -108,7 +124,7 @@ describe('login screen escape routes', () => {
   });
 
   it('lets a guest continue browsing without signing in', () => {
-    const screen = render(<LoginScreen />);
+    const { screen } = mount();
 
     fireEvent.press(screen.getByText('auth.login.continueAsGuest'));
 
@@ -124,20 +140,20 @@ describe('login screen escape routes', () => {
     expect(state?.routes[0].state?.routes[0].name).toBe('home');
   });
 
-  it('shows guest, forgot-password and review links when opened without a booking', () => {
-    const screen = render(<LoginScreen />);
+  it('shows the guest, email-entry and staff links when opened without a booking', () => {
+    const { screen } = mount();
 
     expect(screen.getByText('auth.login.continueAsGuest')).toBeTruthy();
-    expect(screen.getByText('auth.forgotPassword.linkLabel')).toBeTruthy();
-    expect(screen.getByText('auth.review.link')).toBeTruthy();
+    expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
+    expect(screen.getByText('auth.phoneEntry.staffLoginLink')).toBeTruthy();
   });
 
-  it('hides continue as guest but keeps the other links when opened from a booking', () => {
+  it('hides continue as guest but keeps the alternative entry links when opened from a booking', () => {
     mockParams = { booking: 'booking-token' };
-    const screen = render(<LoginScreen />);
+    const { screen } = mount();
 
     expect(screen.queryByText('auth.login.continueAsGuest')).toBeNull();
-    expect(screen.getByText('auth.forgotPassword.linkLabel')).toBeTruthy();
-    expect(screen.getByText('auth.review.link')).toBeTruthy();
+    expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
+    expect(screen.getByText('auth.phoneEntry.staffLoginLink')).toBeTruthy();
   });
 });
