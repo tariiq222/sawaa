@@ -37,7 +37,7 @@ export function AccountHeaderCard({ name, secondary, avatarUrl, onEdit, stats, s
 
   const identity = (
     <>
-      <Thumb uri={avatarUrl} width={64} height={64} radius={sawaaRadius.pill} />
+      <Thumb uri={avatarUrl} width={64} height={64} radius={sawaaRadius.pill} accessibilityLabel={avatarUrl ? name : undefined} />
       <View style={styles.mid}>
         <Text style={[styles.name, { color: colors.ink[900], fontFamily: getFontName(dir.locale, '700'), textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>{name}</Text>
         {secondary ? (

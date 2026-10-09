@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { LucideIcon } from 'lucide-react-native';
 
@@ -56,7 +56,7 @@ export function ConfirmSheet({
 
   return (
     <Modal visible={visible} transparent animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={onCancel}>
-      <View style={[styles.backdrop, { backgroundColor: roles.scrim }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: roles.scrim }]}>
         <Pressable testID="confirm-sheet-backdrop" accessible={false} style={StyleSheet.absoluteFill} onPress={busy ? undefined : onCancel} />
         <View accessibilityViewIsModal style={[styles.sheet, { maxHeight: height - insets.top }]}>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
@@ -96,7 +96,7 @@ export function ConfirmSheet({
             <AppButton variant="secondary" tone="neutral" label={cancelLabel} onPress={onCancel} disabled={busy} style={styles.stretch} />
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

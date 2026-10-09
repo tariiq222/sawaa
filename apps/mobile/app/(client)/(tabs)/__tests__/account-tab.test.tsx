@@ -49,11 +49,15 @@ describe('client account tab', () => {
     expect(mockPush.mock.calls).toEqual([['/(client)/settings-profile'], ['/(client)/packages/purchases']]);
   });
 
-  it('drops entries that duplicate other tabs', () => {
+  it('drops entries that duplicate other tabs and has no separate settings page', () => {
     const view = render(<AccountTabScreen />);
-    for (const removed of ['tabs.records', 'groups.title', 'profile.notifications', 'settings.title']) {
+    for (const removed of ['groups.title', 'profile.notifications', 'settings.title']) {
       expect(view.queryByText(removed)).toBeNull();
     }
+    // The appointments tab already lists completed sessions.
+    expect(view.queryByRole('button', { name: /appointment/ })).toBeNull();
+    const destinations = mockPush.mock.calls.map(([href]) => href);
+    expect(destinations).toEqual([]);
   });
 
   it('changes preferences in place without navigating', async () => {

@@ -4,12 +4,9 @@ import { AquaBackground } from '@/theme/sawaa';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/theme/components/ThemedText';
-import { useTheme } from '@/theme/useTheme';
-import { sawaaRadius, sawaaSpacing, withAlpha } from '@/theme/sawaa';
+import { sawaaSpacing } from '@/theme/sawaa';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { goBackOrHome } from '@/lib/navigation';
-import { useDir } from '@/hooks/useDir';
 
 /**
  * Shared chrome for every client settings page: surface background, safe-area
@@ -45,38 +42,8 @@ export function SettingsScaffold({
   return <AquaBackground>{keyboardSafe ? <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>{scroll}</KeyboardAvoidingView> : scroll}</AquaBackground>;
 }
 
-export function SettingsSectionHeader({
-  icon: Icon,
-  label,
-}: {
-  icon: React.ElementType;
-  label: string;
-}) {
-  const { theme } = useTheme();
-  const dir = useDir();
-  return (
-    <View style={[styles.sectionHeader, { flexDirection: dir.row }]}>
-      <View style={[styles.sectionIcon, { backgroundColor: withAlpha(theme.colors.primary, 0.08) }]}>
-        <Icon size={20} strokeWidth={1.5} color={theme.colors.primary} />
-      </View>
-      <ThemedText variant="subheading">{label}</ThemedText>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: sawaaSpacing.lg },
   header: { marginBottom: sawaaSpacing.xl },
-  sectionHeader: {
-    alignItems: 'center',
-    gap: sawaaSpacing.sm,
-    marginBottom: sawaaSpacing.lg,
-  },
-  sectionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: sawaaRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

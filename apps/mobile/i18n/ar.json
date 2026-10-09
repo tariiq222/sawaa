@@ -157,8 +157,7 @@
     "today": "اليوم",
     "calendar": "التقويم",
     "clients": "العملاء",
-    "notifications": "الإشعارات",
-    "records": "سجلاتي"
+    "notifications": "الإشعارات"
   },
   "nav": {
     "notifications": "الإشعارات",
@@ -486,7 +485,6 @@
     "arabic": "العربية",
     "about": "عن المركز",
     "faq": "الأسئلة الشائعة",
-    "privacy": "سياسة الخصوصية",
     "terms": "شروط الاستخدام",
     "logoutConfirm": "هل أنت متأكد من تسجيل الخروج؟",
     "edit": "تعديل",
@@ -499,7 +497,6 @@
     "deleteAccountError": "تعذّر إغلاق الحساب. حاول مرة أخرى.",
     "deleteAccountSheetTitle": "حذف الحساب؟",
     "deleteAccountAction": "حذف حسابي",
-    "settingsHint": "اللغة والمظهر",
     "crisisSupport": {
       "title": "دعم الأزمات · ٢٤/٧",
       "subtitle": "اتصال فوري بمختص"
@@ -989,16 +986,6 @@
     "title": "الصفحة غير متاحة",
     "message": "الرابط الذي فتحته لم يعد موجودًا أو أنه غير صحيح.",
     "back": "العودة"
-  },
-  "records": {
-    "title": "السجلات",
-    "subtitle": "جلساتك السابقة وملاحظاتها",
-    "loadError": "تعذّر تحميل السجلات",
-    "empty": "لا توجد جلسات سابقة بعد",
-    "emptyHint": "ستظهر هنا الجلسات المكتملة",
-    "date": "التاريخ",
-    "time": "الوقت",
-    "video": "فيديو"
   },
   "nativePayment": {
     "choosing": "اختر وسيلة الدفع.",

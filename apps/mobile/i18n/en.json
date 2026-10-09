@@ -157,8 +157,7 @@
     "today": "Today",
     "calendar": "Calendar",
     "clients": "Clients",
-    "notifications": "Notifications",
-    "records": "Records"
+    "notifications": "Notifications"
   },
   "nav": {
     "notifications": "Notifications",
@@ -486,7 +485,6 @@
     "arabic": "Arabic",
     "about": "About the Center",
     "faq": "FAQ",
-    "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "logoutConfirm": "Are you sure you want to logout?",
     "edit": "Edit",
@@ -499,7 +497,6 @@
     "deleteAccountError": "Could not close the account. Try again.",
     "deleteAccountSheetTitle": "Delete account?",
     "deleteAccountAction": "Delete my account",
-    "settingsHint": "Language and appearance",
     "crisisSupport": {
       "title": "Crisis support · 24/7",
       "subtitle": "Instant expert call"
@@ -989,16 +986,6 @@
     "title": "Page not available",
     "message": "The link you opened no longer exists or is incorrect.",
     "back": "Go back"
-  },
-  "records": {
-    "title": "Records",
-    "subtitle": "Your past sessions and notes",
-    "loadError": "Failed to load records",
-    "empty": "No past sessions yet",
-    "emptyHint": "Completed sessions will appear here",
-    "date": "Date",
-    "time": "Time",
-    "video": "Video"
   },
   "nativePayment": {
     "choosing": "Choose a payment method.",
