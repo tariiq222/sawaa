@@ -236,6 +236,65 @@ model MobileEmailFlow {
   @@index([continuationExpiresAt, consumedAt])
 }
 
+// Phone-first mobile client entry. The request never classifies the number;
+// identity is resolved only after the SMS code is proven.
+enum MobilePhoneFlowState {
+  CODE_PENDING
+  DETAILS_PENDING
+  CONSUMED
+  FAILED
+}
+
+model MobilePhoneEntryFlow {
+  id                    String @id @default(uuid())
+  phone                 String
+  state                 MobilePhoneFlowState
+  codeHash              String?
+  codeExpiresAt         DateTime
+  attempts              Int @default(0)
+  continuationHash      String? @unique
+  continuationExpiresAt DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  consumedAt            DateTime?
+
+  @@index([phone, createdAt])
+  @@index([codeExpiresAt])
+  @@index([continuationExpiresAt, consumedAt])
+}
+
+// Email ownership proof for an authenticated client. Bound to the client id;
+// login OTPs and entry continuations cannot be used here.
+model ClientEmailChallenge {
+  id         String    @id @default(uuid())
+  clientId   String
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([clientId, consumedAt])
+  @@index([expiresAt])
+}
+
+// Phone-change proof for an authenticated client: the code goes to the NEW
+// number only (owner decision 2026-10-09). Bound to the client id.
+model ClientPhoneChallenge {
+  id         String    @id @default(uuid())
+  clientId   String
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([clientId, consumedAt])
+  @@index([expiresAt])
+}
+
 // A contact change is bound to the authenticated staff account and old contact.
 // Login OTPs and registration continuations cannot be used here.
 model EmployeeContactChallenge {
