@@ -14,5 +14,9 @@ export class ClientPhoneTokensDto {
 
 export class ClientPhoneVerifiedDto {
   @ApiProperty({ description: 'The newly verified phone', example: '+966512345678' }) phone!: string;
-  @ApiProperty({ type: ClientPhoneTokensDto }) tokens!: ClientPhoneTokensDto;
+  @ApiProperty({
+    type: ClientPhoneTokensDto,
+    description: 'Fresh session for this device; every previous token of the client is revoked',
+    example: { accessToken: 'eyJhbGciOi...', refreshToken: 'rt_...' },
+  }) tokens!: ClientPhoneTokensDto;
 }

@@ -2585,7 +2585,16 @@
             "type": "string"
           },
           "tokens": {
-            "$ref": "#/components/schemas/ClientPhoneTokensDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientPhoneTokensDto"
+              }
+            ],
+            "description": "Fresh session for this device; every previous token of the client is revoked",
+            "example": {
+              "accessToken": "eyJhbGciOi...",
+              "refreshToken": "rt_..."
+            }
           }
         },
         "required": [

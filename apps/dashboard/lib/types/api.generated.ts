@@ -7115,6 +7115,13 @@ export interface components {
              * @example +966512345678
              */
             phone: string;
+            /**
+             * @description Fresh session for this device; every previous token of the client is revoked
+             * @example {
+             *       "accessToken": "eyJhbGciOi...",
+             *       "refreshToken": "rt_..."
+             *     }
+             */
             tokens: components["schemas"]["ClientPhoneTokensDto"];
         };
         ClientRequestHandoffDto: Record<string, never>;
