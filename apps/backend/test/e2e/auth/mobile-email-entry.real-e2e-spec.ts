@@ -312,12 +312,23 @@ describeReal('Mobile email entry — real proof and identity boundaries', () => 
     } finally { spy.mockRestore(); }
   });
 
-  it('refuses Client-only email identity rather than making an unrelated User', async () => {
+  it('signs a Client-only account in by its verified email without creating a User', async () => {
     const email = address();
     const c = await prisma.client.create({ data: { name: 'Synthetic client only', email, emailVerified: new Date(), phone: phone() } });
     clients.add(c.id);
-    expect((await proof(email)).next).toBe('unavailable');
+    const result = await proof(email);
+    expect(result).toMatchObject({ next: 'authenticated', sessionKind: 'client' });
+    await api().get('/api/v1/mobile/client/profile').set('Authorization', `Bearer ${result.tokens.accessToken}`).expect(200);
     expect(await prisma.user.count({ where: { email } })).toBe(0);
+    expect((await prisma.client.findUniqueOrThrow({ where: { id: c.id } })).lastLoginAt).toBeInstanceOf(Date);
+  });
+
+  it('refuses a Client-only account whose stored email was never proven', async () => {
+    const email = address();
+    const c = await prisma.client.create({ data: { name: 'Synthetic legacy client', email, emailVerified: null, phone: phone() } });
+    clients.add(c.id);
+    expect((await proof(email)).next).toBe('unavailable');
+    expect(await prisma.clientRefreshToken.count({ where: { clientId: c.id } })).toBe(0);
   });
 
   it('never reactivates or adopts a deleted Client', async () => {

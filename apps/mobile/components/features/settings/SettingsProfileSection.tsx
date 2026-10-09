@@ -13,7 +13,6 @@ import * as Haptics from 'expo-haptics';
 import { User } from 'lucide-react-native';
 
 import { withAlpha } from '@/theme/sawaa';
-import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import { useAppDispatch, useAppSelector } from '@/hooks/use-redux';
 import { splitName } from '@/types/auth';
@@ -22,24 +21,11 @@ import { AppButton } from '@/components/ui/AppButton';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { useDir } from '@/hooks/useDir';
 import { useUpdateClientProfile } from '@/hooks/queries/useClientProfile';
-
-import { hasPhoneFormat } from '@/lib/phone-format';
+import { ClientEmailRow } from '@/components/features/settings/ClientEmailRow';
+import { ClientPhoneRow } from '@/components/features/settings/ClientPhoneRow';
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, 'required'),
-  phone: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || hasPhoneFormat(v), 'invalidPhone'),
-  email: z
-    .string()
-    .trim()
-    .optional()
-    .refine(
-      (v) => !v || z.string().email().safeParse(v).success,
-      'invalidEmail',
-    ),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -53,7 +39,6 @@ export function SettingsProfileSection() {
   const updateProfile = useUpdateClientProfile();
   const saving = updateProfile.isPending;
 
-  const emailReadOnly = Boolean(user?.email);
   const initialName = user?.name ?? (user
     ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
     : '');
@@ -67,16 +52,12 @@ export function SettingsProfileSection() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: initialName,
-      phone: user?.phone ?? '',
-      email: user?.email ?? '',
     },
   });
 
   useEffect(() => {
     reset({
       name: initialName,
-      phone: user?.phone ?? '',
-      email: user?.email ?? '',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -84,14 +65,14 @@ export function SettingsProfileSection() {
   const onSave = handleSubmit(async (values) => {
     if (!user) return;
     try {
+      // Email changes go through the code-verified email flow, and phone
+      // changes through the SMS-verified phone flow — never this form.
       const profile = await updateProfile.mutateAsync({
         name: values.name,
-        phone: values.phone ? values.phone : null,
-        ...(!emailReadOnly ? { email: values.email || null } : {}),
       });
       const name = profile.name ?? '';
       const { firstName, lastName } = splitName(name);
-      const savedValues = { name, phone: profile.phone ?? '', email: profile.email ?? '' };
+      const savedValues = { name };
       dispatch(
         setUser({
           ...user,
@@ -99,7 +80,6 @@ export function SettingsProfileSection() {
           firstName,
           lastName,
           phone: profile.phone,
-          email: profile.email ?? '',
         }),
       );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -122,23 +102,9 @@ export function SettingsProfileSection() {
         <LabeledInput label={t('settings.fullName')} value={value} onChangeText={onChange} onBlur={onBlur}
           placeholder={t('settings.fullNamePlaceholder')} error={errorText(errors.name?.message)} dir={dir} />
       )} />
-      <Controller control={control} name="phone" render={({ field: { value, onChange, onBlur } }) => (
-        <LabeledInput label={t('settings.phone')} value={value ?? ''} onChangeText={onChange} onBlur={onBlur}
-          keyboardType="phone-pad" error={errorText(errors.phone?.message)} dir={dir}
-          inputStyle={{ writingDirection: 'ltr', textAlign: 'left' }} />
-      )} />
-      <Controller control={control} name="email" render={({ field: { value, onChange, onBlur } }) => (
-        <LabeledInput label={t('settings.email')} value={value ?? ''} editable={!emailReadOnly}
-          onChangeText={emailReadOnly ? () => undefined : onChange} onBlur={onBlur} keyboardType="email-address"
-          autoCapitalize="none" error={errorText(errors.email?.message)} dir={dir}
-          inputStyle={{ writingDirection: 'ltr', textAlign: 'left' }} />
-      )} />
 
-      {emailReadOnly ? (
-        <ThemedText variant="caption" color={theme.colors.textMuted}>
-          {t('settings.emailReadOnly')}
-        </ThemedText>
-      ) : null}
+      <ClientPhoneRow />
+      <ClientEmailRow />
 
       <AppButton label={t('settings.saveProfile')} onPress={onSave} loading={saving} disabled={!isDirty || saving} />
     </View>

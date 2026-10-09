@@ -475,7 +475,8 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
       // SECURITY (P1): token MUST be in the client namespace, not admin.
       const payload = decodeJwtPayload(cookies.client_access_token);
       expect(payload.namespace).toBe("client");
-      expect(payload.email).toBe(email);
+      // The seeded address was never proven, so the claim must not echo it.
+      expect(payload.email).toBe("");
       expect(payload.sub).toBe(seeded.id);
 
       // SECURITY: response body must NOT leak the access/refresh tokens

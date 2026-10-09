@@ -12,6 +12,7 @@ import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
 import { UpdateClientProfileHandler } from '../../../modules/identity/client-auth/update-client-profile.handler';
 import { Public } from '../../../common/guards/jwt.guard';
+import { withProvenEmailOnly } from '../../../modules/people/clients/client.serializer';
 import { RequestAccountDeletionHandler } from '../../../modules/identity/request-account-deletion/request-account-deletion.handler';
 
 export class MobileUpdateProfileBody {
@@ -56,18 +57,18 @@ export class MobileClientProfileController {
   @Get()
   @ApiOperation({ summary: "Get the authenticated client's profile" })
   @ApiOkResponse({ type: ClientResponseDto, description: 'Client profile record' })
-  getProfile(@ClientSession() user: ClientSession) {
-    return this.getClient.execute({ clientId: user.id });
+  async getProfile(@ClientSession() user: ClientSession) {
+    return withProvenEmailOnly(await this.getClient.execute({ clientId: user.id }));
   }
 
   @Patch()
   @ApiOperation({ summary: "Update the authenticated client's profile" })
   @ApiOkResponse({ type: ClientResponseDto, description: 'Updated client profile' })
-  updateProfile(
+  async updateProfile(
     @ClientSession() user: ClientSession,
     @Body() body: MobileUpdateProfileBody,
   ) {
-    return this.updateClientProfile.execute(user.id, body);
+    return withProvenEmailOnly(await this.updateClientProfile.execute(user.id, body));
   }
 
   @Delete()

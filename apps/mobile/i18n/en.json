@@ -144,7 +144,36 @@
     },
     "rememberPassword": "Remember your password?",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "phoneEntry": {
+      "title": "Sign in or create an account",
+      "intro": "Enter your mobile number and we will send you a verification code.",
+      "phoneLabel": "Mobile number",
+      "continue": "Continue",
+      "emailLoginLink": "Sign in with email",
+      "staffLoginLink": "Staff sign in",
+      "codeTitle": "Verification code",
+      "sentTo": "We sent a code to {{phone}}",
+      "codeLabel": "Six-digit verification code",
+      "confirm": "Confirm",
+      "resend": "Resend code",
+      "changePhone": "Change number",
+      "detailsTitle": "Complete your account",
+      "emailOptional": "Email (optional)",
+      "emailHint": "We will send you a code to confirm it later from your account.",
+      "createAccount": "Create account",
+      "unavailable": "This number cannot be used. Contact the center for help.",
+      "invalidPhone": "Enter a valid Saudi mobile number starting with 05. For other numbers, use email sign in.",
+      "invalidEmail": "Enter a valid email address.",
+      "invalidCode": "The code is incorrect or expired. Request a new code.",
+      "expiredCode": "The code has expired. Request a new code.",
+      "expiredFlow": "Verification has expired. Start over.",
+      "rateLimited": "Too many requests. Wait a moment and try again.",
+      "deliveryUnavailable": "We could not send the code. Wait a moment and try again.",
+      "detailsUnavailable": "These details cannot be used. Check them and try again.",
+      "invalidDetails": "Check the entered details and try again.",
+      "networkError": "We could not complete the request. Check your connection and try again."
+    }
   },
   "tabs": {
     "home": "Home",
@@ -157,8 +186,7 @@
     "today": "Today",
     "calendar": "Calendar",
     "clients": "Clients",
-    "notifications": "Notifications",
-    "records": "Records"
+    "notifications": "Notifications"
   },
   "nav": {
     "notifications": "Notifications",
@@ -486,7 +514,6 @@
     "arabic": "Arabic",
     "about": "About the Center",
     "faq": "FAQ",
-    "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "logoutConfirm": "Are you sure you want to logout?",
     "edit": "Edit",
@@ -499,7 +526,6 @@
     "deleteAccountError": "Could not close the account. Try again.",
     "deleteAccountSheetTitle": "Delete account?",
     "deleteAccountAction": "Delete my account",
-    "settingsHint": "Language and appearance",
     "crisisSupport": {
       "title": "Crisis support · 24/7",
       "subtitle": "Instant expert call"
@@ -518,7 +544,65 @@
     "summarySessions": "Sessions",
     "summaryLastVisit": "Last visit",
     "summaryOutstanding": "Outstanding",
-    "summaryLoadError": "Could not load account summary"
+    "summaryLoadError": "Could not load account summary",
+    "deleteAccountPointSignIn": "Sign-in closes permanently and the account cannot be restored.",
+    "deleteAccountPointContact": "Your phone, email and photo are removed, and notifications stop.",
+    "deleteAccountPointRecords": "Clinical and financial records stay with the center.",
+    "deleteAccountPhrase": "DELETE",
+    "deleteAccountPhraseLabel": "To confirm, type \"{{phrase}}\"",
+    "personalDetails": "Personal details",
+    "myPackages": "My packages & balance",
+    "myPackagesHint": "Remaining sessions and booking",
+    "support": "Support",
+    "preferences": "Preferences",
+    "aboutAndPrivacy": "About the app",
+    "email": {
+      "label": "Email",
+      "add": "Add your email",
+      "confirmPending": "Confirm your email",
+      "addTitle": "Add your email",
+      "confirmTitle": "Confirm your email",
+      "codeTitle": "Confirm your email",
+      "intro": "Once confirmed, you can sign in with it instead of your phone number.",
+      "sendCode": "Send confirmation code",
+      "codeSentTo": "Enter the code sent to {{email}}",
+      "codeLabel": "Six-digit verification code",
+      "confirm": "Confirm email",
+      "resend": "Resend code",
+      "decline": "I don't have an email",
+      "later": "Later",
+      "verified": "Your email is confirmed.",
+      "expiredCode": "The code has expired. Request a new code.",
+      "invalidEmail": "Enter a valid email address.",
+      "invalidCode": "The code is incorrect or expired. Request a new code.",
+      "unchangedEmail": "This email is already registered to your account.",
+      "verifiedEmail": "Your email is already verified.",
+      "sendLimited": "Too many requests. Wait a moment and try again.",
+      "deliveryUnavailable": "We could not send the code. Wait a moment and try again.",
+      "detailsUnavailable": "We could not confirm the email. Try again.",
+      "networkError": "We could not complete the request. Check your connection and try again."
+    },
+    "phone": {
+      "label": "Phone Number",
+      "newPhoneLabel": "New Phone Number",
+      "title": "Change Phone Number",
+      "intro": "We will send a verification code to the new number. After the change you will be signed out of other devices.",
+      "sendCode": "Send Verification Code",
+      "codeSentTo": "Enter the code sent to {{phone}}",
+      "codeLabel": "Six-digit verification code",
+      "confirm": "Confirm Number",
+      "resend": "Resend code",
+      "editPhone": "Change Number",
+      "changed": "Your phone number has been changed.",
+      "expiredCode": "The code has expired. Request a new code.",
+      "invalidPhone": "Enter a valid Saudi mobile number starting with 05.",
+      "invalidCode": "The code is incorrect or expired. Request a new code.",
+      "unchangedPhone": "This is your current number.",
+      "sendLimited": "Too many requests. Wait a moment and try again.",
+      "deliveryUnavailable": "We could not send the code. Wait a moment and try again.",
+      "detailsUnavailable": "This number cannot be used. Check it or contact the center.",
+      "networkError": "We could not complete the request. Check your connection and try again."
+    }
   },
   "chat": {
     "headerTitle": "Sawaa",
@@ -689,7 +773,6 @@
     "fullName": "Full Name",
     "fullNamePlaceholder": "Enter your full name",
     "phone": "Phone",
-    "emailReadOnly": "This email is linked to your account and cannot be changed here.",
     "email": "Email",
     "saveProfile": "Save Changes",
     "profileSaved": "Profile updated",
@@ -698,9 +781,7 @@
     "sendVerification": "Send activation link",
     "verificationSent": "Link sent — check your inbox",
     "errors": {
-      "required": "Required",
-      "invalidPhone": "Phone must be in +9665XXXXXXXX format",
-      "invalidEmail": "Invalid email"
+      "required": "Required"
     },
     "tenant": {
       "title": "Organizations",
@@ -901,7 +982,8 @@
       "depleted": "No sessions remaining",
       "unavailable": "This session is temporarily unavailable",
       "support": "Please contact the center to book this flexible credit"
-    }
+    },
+    "browse": "Browse available packages"
   },
   "availability": {
     "title": "Manage Availability",
@@ -977,16 +1059,6 @@
     "title": "Page not available",
     "message": "The link you opened no longer exists or is incorrect.",
     "back": "Go back"
-  },
-  "records": {
-    "title": "Records",
-    "subtitle": "Your past sessions and notes",
-    "loadError": "Failed to load records",
-    "empty": "No past sessions yet",
-    "emptyHint": "Completed sessions will appear here",
-    "date": "Date",
-    "time": "Time",
-    "video": "Video"
   },
   "nativePayment": {
     "choosing": "Choose a payment method.",

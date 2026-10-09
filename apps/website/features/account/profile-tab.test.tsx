@@ -67,12 +67,40 @@ describe('ProfileTab', () => {
   it('prefills name and phone from the current client and shows read-only email', () => {
     render(withLocale('ar', <ProfileTab />));
     expect((screen.getByLabelText('الاسم') as HTMLInputElement).value).toBe('Sara Q.');
-    expect((screen.getByLabelText('رقم الجوال') as HTMLInputElement).value).toBe('+966500000000');
     expect(screen.getByText('sara@test.com')).toBeTruthy();
     expect(screen.getByText('البريد مُوثّق')).toBeTruthy();
     // password reset link
     const pwLink = screen.getByRole('link', { name: 'تغيير كلمة المرور' });
     expect(pwLink.getAttribute('href')).toBe('/forgot-password');
+  });
+
+  it('shows the phone as a read-only value with a change hint and no phone input', () => {
+    render(withLocale('ar', <ProfileTab />));
+
+    // No editable phone input exists.
+    expect(screen.queryByLabelText('رقم الجوال')).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'رقم الجوال' })).toBeNull();
+
+    // The current phone is rendered read-only, LTR.
+    const phoneValue = screen.getByText('+966500000000');
+    expect(phoneValue.getAttribute('dir')).toBe('ltr');
+
+    // The change hint is visible.
+    expect(screen.getByText('لتغيير رقم الجوال استخدم تطبيق سواء أو تواصل مع المركز.')).toBeTruthy();
+  });
+
+  it('never includes phone in the save payload', async () => {
+    const updated = { ...fakeClient, name: 'Sara Updated' };
+    updateMock.mockResolvedValue(updated);
+    render(withLocale('ar', <ProfileTab />));
+
+    fireEvent.change(screen.getByLabelText('الاسم'), { target: { value: 'Sara Updated' } });
+    fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+    const payload = updateMock.mock.calls[0][0] as Record<string, unknown>;
+    expect('phone' in payload).toBe(false);
+    expect(payload).toEqual({ name: 'Sara Updated' });
   });
 
   it('submits only the changed fields and updates the auth store on success', async () => {
@@ -107,17 +135,6 @@ describe('ProfileTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
 
     expect(await screen.findByText('الاسم يجب ألا يقل عن حرفين.')).toBeTruthy();
-    expect(updateMock).not.toHaveBeenCalled();
-  });
-
-  it('rejects an invalid phone and warns when phone changes', async () => {
-    render(withLocale('ar', <ProfileTab />));
-    fireEvent.change(screen.getByLabelText('رقم الجوال'), { target: { value: 'abc' } });
-    // phone-changed warning appears immediately
-    expect(screen.getByText('تغيير رقم الجوال يتطلب توثيقه من جديد.')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
-    expect(await screen.findByText('رقم الجوال غير صالح.')).toBeTruthy();
     expect(updateMock).not.toHaveBeenCalled();
   });
 

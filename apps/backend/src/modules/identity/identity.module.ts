@@ -1,6 +1,19 @@
 import { EmployeeContactStore } from './employee-contact/employee-contact.store';
 import { RequestEmployeeContactHandler } from './employee-contact/request-employee-contact.handler';
 import { VerifyEmployeeContactHandler } from './employee-contact/verify-employee-contact.handler';
+import { ClientPhoneStore } from './client-phone/client-phone.store';
+import { RequestClientPhoneHandler } from './client-phone/request-client-phone.handler';
+import { VerifyClientPhoneHandler } from './client-phone/verify-client-phone.handler';
+import { ClientEmailStore } from './client-email/client-email.store';
+import { GetClientEmailStatusHandler } from './client-email/get-client-email-status.handler';
+import { RequestClientEmailHandler } from './client-email/request-client-email.handler';
+import { VerifyClientEmailHandler } from './client-email/verify-client-email.handler';
+import { DeclineClientEmailHandler } from './client-email/decline-client-email.handler';
+import { MobilePhoneFlowStore } from './mobile-phone-entry/mobile-phone-flow.store';
+import { RequestPhoneEntryHandler } from './mobile-phone-entry/request-phone-entry.handler';
+import { ResendPhoneEntryHandler } from './mobile-phone-entry/resend-phone-entry.handler';
+import { VerifyPhoneEntryHandler } from './mobile-phone-entry/verify-phone-entry.handler';
+import { CompletePhoneEntryHandler } from './mobile-phone-entry/complete-phone-entry.handler';
 import { MobileEmailFlowStore } from './mobile-email-entry/mobile-email-flow.store';
 import { MobileEmailIdentity } from './mobile-email-entry/mobile-email-identity';
 import { MobileEmailSendLimiter } from './mobile-email-entry/mobile-email-send-limiter';
@@ -86,7 +99,10 @@ import { NativeLogoutHandler } from './native-session/native-logout.handler';
 import { RequestAccountDeletionHandler } from './request-account-deletion/request-account-deletion.handler';
 
 const handlers = [
+  MobilePhoneFlowStore, RequestPhoneEntryHandler, ResendPhoneEntryHandler, VerifyPhoneEntryHandler, CompletePhoneEntryHandler,
   EmployeeContactStore, RequestEmployeeContactHandler, VerifyEmployeeContactHandler,
+  ClientEmailStore, GetClientEmailStatusHandler, RequestClientEmailHandler, VerifyClientEmailHandler, DeclineClientEmailHandler,
+  ClientPhoneStore, RequestClientPhoneHandler, VerifyClientPhoneHandler,
   MobileEmailFlowStore, MobileEmailIdentity, MobileEmailSendLimiter, MobileEmailDelivery, MobileEmailPhoneDispatch, RequestEmailEntryHandler, VerifyEmailEntryHandler, RequestEmailEntryPhoneHandler, ResendEmailEntryPhoneHandler, VerifyEmailEntryPhoneHandler,
   ReviewLoginHandler,
   LoginHandler, RefreshTokenHandler, LogoutHandler,

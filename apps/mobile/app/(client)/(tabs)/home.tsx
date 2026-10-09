@@ -23,6 +23,7 @@ import { HomeTopBar } from '@/components/features/home/HomeTopBar';
 import { TherapistsRow } from '@/components/features/home/TherapistsRow';
 import { UpNextCard } from '@/components/features/home/UpNextCard';
 import { useReduceMotion } from '@/hooks/useA11y';
+import { useClientEmailPrompt } from '@/hooks/useClientEmailPrompt';
 
 export default function HomeScreen() {
   const colors = useSawaaColors();
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const reduceMotion = useReduceMotion();
   const router = useRouter();
+  useClientEmailPrompt();
   const { token, user } = useAppSelector((s) => s.auth);
   const isClient = Boolean(token && user && getPrimaryRole(user) === 'client');
   const f600 = getFontName(dir.locale, '600');

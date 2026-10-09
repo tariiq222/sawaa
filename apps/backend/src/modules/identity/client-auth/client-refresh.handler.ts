@@ -61,6 +61,7 @@ export class ClientRefreshHandler {
     const tokens = await this.clientTokens.issueTokenPair({
       id: clientId,
       email: client.email,
+      emailVerified: client.emailVerified,
       tokenVersion: client.tokenVersion,
     });
 

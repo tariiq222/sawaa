@@ -102,7 +102,7 @@ describeRealE2e('program enrollment checkout concurrency (real PostgreSQL)', () 
         .post(`/api/v1/mobile/client/programs/${ids.programId}/enroll`)
         .expect(401);
 
-      const tokenPair = await clientTokens.issueTokenPair({ id: ids.clientId, email: null });
+      const tokenPair = await clientTokens.issueTokenPair({ id: ids.clientId, email: null, emailVerified: null });
       const httpResponse = await request(app.getHttpServer())
         .post(`/api/v1/mobile/client/programs/${ids.programId}/enroll`)
         .set('Authorization', `Bearer ${tokenPair.accessToken}`)

@@ -110,6 +110,7 @@ export class ClientLoginHandler {
     const tokens = await this.clientTokens.issueTokenPair({
       id: client.id,
       email: client.email,
+      emailVerified: client.emailVerified,
       tokenVersion: client.tokenVersion,
     });
 

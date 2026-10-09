@@ -43,6 +43,7 @@ jest.mock('@/hooks/queries', () => ({
   usePublicCatalog: () => ({ data: { services: [] }, refetch: jest.fn() }),
   useClinics: () => ({ data: [], refetch: jest.fn() }),
   useGroupSessions: () => ({ data: [], refetch: jest.fn() }),
+  useClientEmailStatus: () => ({ data: undefined }),
 }));
 jest.mock('@/components/features/home/HomeAssessmentServices', () => ({ HomeAssessmentServices: () => null }));
 jest.mock('@/components/features/home/HomeDiscoveryCards', () => ({ HomeDiscoveryCards: () => null }));

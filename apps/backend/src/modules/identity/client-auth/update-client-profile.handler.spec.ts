@@ -115,7 +115,7 @@ describe('UpdateClientProfileHandler', () => {
 
     await handler.execute('cl-1', {
       avatarUrl: 'https://cdn.example.com/avatars/sara.jpg',
-    } as any);
+    });
 
     expect(mockPrisma.client.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -124,50 +124,41 @@ describe('UpdateClientProfileHandler', () => {
     );
   });
 
-  it('updates phone and resets phoneVerified when phone changes', async () => {
-    mockPrisma.client.findFirst
-      .mockResolvedValueOnce(existingClient) // load client
-      .mockResolvedValueOnce(null); // duplicate check
-    mockPrisma.client.update.mockResolvedValue({ ...updatedProfile, phone: '+966500000002', phoneVerified: null });
-
-    const result = await handler.execute('cl-1', { phone: '+966500000002' });
-
-    expect(mockPrisma.client.findFirst).toHaveBeenNthCalledWith(2, {
-      where: { phone: '+966500000002', deletedAt: null, NOT: { id: 'cl-1' } },
-    });
-    expect(mockPrisma.client.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { phone: '+966500000002', phoneVerified: null },
-      }),
+  it.each(['+966500000002', 'invalid-phone'])('requires verification for a different phone %s without an ownership lookup', async phone => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    await expect(handler.execute('cl-1', { phone })).rejects.toThrow(
+      new BadRequestException({ code: 'phone_change_requires_verification', message: 'phone_change_requires_verification' }),
     );
-    expect(result.phoneVerified).toBeNull();
-  });
-
-  it('throws ConflictException when phone belongs to another client', async () => {
-    mockPrisma.client.findFirst
-      .mockResolvedValueOnce(existingClient)
-      .mockResolvedValueOnce({ id: 'cl-2' });
-
-    await expect(handler.execute('cl-1', { phone: '+966500000002' })).rejects.toThrow(
-      new ConflictException('رقم الجوال مستخدم في حساب آخر'),
-    );
+    expect(mockPrisma.client.findFirst).toHaveBeenCalledTimes(1);
     expect(mockPrisma.client.update).not.toHaveBeenCalled();
   });
 
-  it('maps a P2002 unique-constraint violation on update to ConflictException (TOCTOU race)', async () => {
-    mockPrisma.client.findFirst
-      .mockResolvedValueOnce(existingClient) // load client
-      .mockResolvedValueOnce(null); // duplicate pre-check passes
-    const p2002 = Object.assign(
-      Object.create(Prisma.PrismaClientKnownRequestError.prototype),
-      { code: 'P2002', message: 'Unique constraint failed on the fields: (`phone`)' },
-    );
-    mockPrisma.client.update.mockRejectedValue(p2002);
+  it.each(['0500000001', '00966500000001', '+966 50 000 0001'])('ignores normalized copies of the current phone %s', async phone => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    mockPrisma.client.update.mockResolvedValue(updatedProfile);
+    await handler.execute('cl-1', { phone });
+    expect(mockPrisma.client.findFirst).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.client.update).toHaveBeenCalledWith(expect.objectContaining({ data: {} }));
+  });
 
-    await expect(handler.execute('cl-1', { phone: '+966500000002' })).rejects.toThrow(
-      new ConflictException('رقم الجوال مستخدم في حساب آخر'),
-    );
-    expect(mockPrisma.client.update).toHaveBeenCalledTimes(1);
+  it.each([null, ''])('lets a client without a phone save other fields when older builds send %p', async phone => {
+    mockPrisma.client.findFirst.mockResolvedValue({ ...existingClient, phone: null });
+    mockPrisma.client.update.mockResolvedValue(updatedProfile);
+    await handler.execute('cl-1', { name: 'Sara', phone } as never);
+    expect(mockPrisma.client.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.not.objectContaining({ phone: expect.anything() }) }));
+  });
+
+  it('rejects clearing an existing phone through the profile form', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    await expect(handler.execute('cl-1', { phone: null } as never)).rejects.toMatchObject({ response: { code: 'phone_change_requires_verification' } });
+    expect(mockPrisma.client.update).not.toHaveBeenCalled();
+  });
+
+  it('does not enumerate a phone in a unique-constraint fallback', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    const p2002 = Object.assign(Object.create(Prisma.PrismaClientKnownRequestError.prototype), { code: 'P2002', meta: { target: ['phone'] } });
+    mockPrisma.client.update.mockRejectedValue(p2002);
+    await expect(handler.execute('cl-1', { name: 'Sara' })).rejects.toThrow(new ConflictException({ code: 'details_unavailable' }));
   });
 
   it('rethrows non-P2002 update errors untouched', async () => {
@@ -211,8 +202,7 @@ describe('UpdateClientProfileHandler', () => {
         select: expect.objectContaining({ preferredLocale: true, pushEnabled: true }),
       }),
     );
-    expect((result as any).preferredLocale).toBe('ar');
-    expect((result as any).pushEnabled).toBe(false);
+    expect(result).toMatchObject({ preferredLocale: 'ar', pushEnabled: false });
   });
 
   describe('email', () => {

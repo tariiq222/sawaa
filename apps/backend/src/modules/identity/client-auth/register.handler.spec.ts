@@ -85,6 +85,7 @@ describe('RegisterHandler', () => {
     expect(clientTokens.issueTokenPair).toHaveBeenCalledWith({
       id: 'c1',
       email: 'a@b.com',
+      emailVerified: expect.any(Date),
       tokenVersion: 0,
     });
     expect(result.accessToken).toBe('at');
@@ -135,6 +136,7 @@ describe('RegisterHandler', () => {
     expect(clientTokens.issueTokenPair).toHaveBeenCalledWith({
       id: 'c1',
       email: 'a@b.com',
+      emailVerified: expect.any(Date),
       tokenVersion: 2,
     });
     expect(prisma.client.update).toHaveBeenCalled();

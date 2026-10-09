@@ -46,6 +46,14 @@ export { invalidateClientBookingResources } from './invalidateClientBookingResou
 export { useEmployeeClient, useEmployeeClientHistory, employeeClientKeys } from './useEmployeeClient';
 export { useEmployeeAvailability, useUpdateEmployeeAvailability, employeeAvailabilityKeys } from './useEmployeeAvailability';
 export { useClientProfile, useUpdateClientProfile, clientProfileKeys } from './useClientProfile';
+export {
+  clientEmailKeys,
+  useClientEmailStatus,
+  useRequestClientEmail,
+  useVerifyClientEmail,
+  useDeclineClientEmail,
+} from './useClientEmail';
+export { clientPhoneKeys, useRequestClientPhone, useVerifyClientPhone } from './useClientPhone';
 export type { AvailableDaysParams } from './useAvailableDays';
 
 export { useEmployeeProfile, useUpdateEmployeeProfile, useUploadEmployeeAvatar, useRemoveEmployeeAvatar, useRequestEmployeeContact, useVerifyEmployeeContact, employeeProfileKeys } from './useEmployeeProfile';

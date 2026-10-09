@@ -9,15 +9,10 @@ import { setClient } from '@/features/auth/auth-store';
 import { validateEmail } from '@/features/auth/auth.schema';
 import { updateMyProfileApi } from './account.api';
 import { useT } from '@/features/locale/locale-provider';
-import { BadgeCheck, Mail, KeyRound, AlertTriangle } from 'lucide-react';
+import { BadgeCheck, Mail, KeyRound } from 'lucide-react';
 
 const INPUT =
   'w-full py-3 px-4 rounded-xl border border-[var(--sw-neutral-200)] bg-[var(--sw-neutral-50)] text-base text-[var(--sw-secondary-700)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[var(--sw-primary-500)] focus:bg-[var(--sw-neutral-0)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--sw-primary-500)_15%,transparent)]';
-
-function validatePhoneValue(phone: string): boolean {
-  // Permissive E.164-style check: optional +, 9-15 digits.
-  return /^\+?[0-9]{9,15}$/.test(phone.replace(/[\s-]/g, ''));
-}
 
 export function ProfileTab() {
   const tt = useT();
@@ -25,10 +20,9 @@ export function ProfileTab() {
   const { client } = useCurrentClient();
 
   const [name, setName] = useState(client?.name ?? '');
-  const [phone, setPhone] = useState(client?.phone ?? '');
   // Only used while the account has no email — once one exists it is read-only.
   const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -40,19 +34,15 @@ export function ProfileTab() {
     );
   }
 
-  const phoneChanged = phone.trim() !== (client.phone ?? '');
   const canAddEmail = client.email === null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
 
-    const nextErrors: { name?: string; phone?: string; email?: string } = {};
+    const nextErrors: { name?: string; email?: string } = {};
     if (name.trim().length < 2) {
       nextErrors.name = tt('account.profile.nameError');
-    }
-    if (phone.trim() && !validatePhoneValue(phone.trim())) {
-      nextErrors.phone = tt('account.profile.phoneError');
     }
     if (canAddEmail && email.trim() && validateEmail(email.trim()) !== null) {
       nextErrors.email = tt('account.profile.emailError');
@@ -62,9 +52,11 @@ export function ProfileTab() {
 
     setSaving(true);
     try {
-      const payload: { name?: string; phone?: string; email?: string } = {};
+      // Phone is intentionally not editable here: the backend rejects phone
+      // changes through profile updates ('phone_change_requires_verification');
+      // verified changes happen in the mobile app.
+      const payload: { name?: string; email?: string } = {};
       if (name.trim() !== client!.name) payload.name = name.trim();
-      if (phoneChanged) payload.phone = phone.trim();
       if (canAddEmail && email.trim()) payload.email = email.trim();
       const updated = await updateMyProfileApi(payload);
       setClient(updated);
@@ -106,24 +98,15 @@ export function ProfileTab() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="profile-phone" className="text-sm font-medium text-[var(--sw-secondary-700)]">
+        <span className="text-sm font-medium text-[var(--sw-secondary-700)]">
           {tt('account.phone')}
-        </label>
-        <input
-          id="profile-phone"
-          type="tel"
-          dir="ltr"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className={`${INPUT} text-start`}
-        />
-        {errors.phone && <p className="text-sm text-[var(--error)]">{errors.phone}</p>}
-        {phoneChanged && (
-          <p className="inline-flex items-center gap-1.5 text-sm text-[var(--warning)]">
-            <AlertTriangle size={13} aria-hidden="true" />
-            {tt('account.profile.phoneWarning')}
-          </p>
-        )}
+        </span>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--sw-neutral-50)] border border-[var(--sw-neutral-100)]">
+          <span className="text-sm text-[var(--sw-secondary-700)] truncate flex-1" dir="ltr">
+            {client.phone ?? '—'}
+          </span>
+        </div>
+        <p className="text-sm text-[var(--sw-body)]">{tt('account.profile.phoneHint')}</p>
       </div>
 
       {canAddEmail ? (

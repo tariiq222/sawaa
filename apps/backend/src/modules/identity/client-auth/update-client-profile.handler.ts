@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateClientProfileDto } from './update-client-profile.dto';
 import type { ClientProfile } from './get-me.handler';
+import { normalizePhone } from '../shared/identifier-detector';
 
 /**
  * Splits a full name into firstName/lastName the same way other identity
@@ -40,20 +41,21 @@ export class UpdateClientProfileHandler {
 
     const data: Prisma.ClientUpdateInput = {};
 
-    if (dto.phone !== undefined && dto.phone !== client.phone) {
-      const duplicate = await this.prisma.client.findFirst({
-        where: {
-          phone: dto.phone,
-          deletedAt: null,
-          NOT: { id: clientId },
-        },
-      });
-      if (duplicate) {
-        throw new ConflictException('رقم الجوال مستخدم في حساب آخر');
+    if (dto.phone !== undefined) {
+      // Older app builds send an empty/null phone for clients without one.
+      let unchanged = !dto.phone && !client.phone;
+      try {
+        unchanged ||= normalizePhone(dto.phone ?? '') === normalizePhone(client.phone ?? '');
+      } catch {
+        // Malformed input is never a way to bypass the verified-change flow.
       }
-      data.phone = dto.phone;
-      // The new number has not been verified via OTP yet.
-      data.phoneVerified = null;
+      if (!unchanged) {
+        throw new BadRequestException({
+          code: 'phone_change_requires_verification',
+          message: 'phone_change_requires_verification',
+        });
+      }
+      // A normalized copy of the current number is ignored, preserving verification.
     }
 
     if (dto.email !== undefined && dto.email !== client.email) {
@@ -113,15 +115,14 @@ export class UpdateClientProfileHandler {
 
       return updated as ClientProfile;
     } catch (error) {
-      // TOCTOU guard: another request may have claimed the phone/email between
-      // the pre-check above and this update — map the unique-constraint
-      // violation to the same conflict error as the pre-check.
+      // Preserve the email TOCTOU conflict behavior; other unique conflicts
+      // must not reveal whether a phone belongs to another account.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const target = Array.isArray(error.meta?.target) ? (error.meta.target as string[]) : [];
         if (target.includes('email')) {
           throw new ConflictException('البريد الإلكتروني مستخدم في حساب آخر');
         }
-        throw new ConflictException('رقم الجوال مستخدم في حساب آخر');
+        throw new ConflictException({ code: 'details_unavailable' });
       }
       throw error;
     }
