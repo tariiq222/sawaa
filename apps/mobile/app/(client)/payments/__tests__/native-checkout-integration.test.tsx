@@ -11,9 +11,17 @@ import NativeCheckout from '../native-checkout';
 import { clientPaymentsService } from '@/services/client/payments';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPackagesService } from '@/services/client/packages';
+import { publicCatalogService, type PublicCatalogRaw } from '@/services/client/catalog';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@/services/client/payments', () => ({ clientPaymentsService: { initNativePayment: jest.fn(), reconcileNativePayment: jest.fn() } }));
 jest.mock('@/services/client/bookings', () => ({ clientBookingsService: { getById: jest.fn() } }));
+jest.mock('@/services/client', () => ({ clientBookingsService: require('@/services/client/bookings').clientBookingsService }));
+jest.mock('@/services/api', () => ({ __esModule: true, default: {} }));
+jest.mock('@/services/client/catalog', () => ({ ...jest.requireActual('@/services/client/catalog'), publicCatalogService: { getCatalog: jest.fn() } }));
+jest.mock('@/hooks/queries', () => ({
+  useBooking: require('@/hooks/queries/useBooking').useBooking,
+  usePublicCatalog: require('@/hooks/queries/useCatalogDepartments').usePublicCatalog,
+}));
 jest.mock('@/services/client/packages', () => ({ clientPackagesService: { getPurchase: jest.fn() }, getPendingPackagePurchase: jest.fn() }));
 let mockParams: Record<string, string>;
 let mockAppleAvailable = true;
@@ -32,6 +40,10 @@ jest.mock('@/features/payments/NativePaymentForm', () => ({ NativePaymentForm: (
 } }));
 const config = { enabled: true, isLive: false, supportedNetworks: ['mada', 'visa', 'mastercard'], applePay: null,
   publishableKey: 'pk_test_fixture', givenId: 'a0000000-0000-4000-8000-000000000001', amount: 12500, currency: 'SAR', description: 'Invoice' };
+const categoryFixture = { id: 'clinic', departmentId: null, nameAr: 'عيادة', nameEn: 'Clinic', sortOrder: 0,
+  kind: 'CLINIC', bookingMode: 'SERVICES', isActive: true } satisfies PublicCatalogRaw['categories'][number];
+const serviceFixture = { id: 'service', categoryId: 'clinic', nameAr: 'جلسة', nameEn: 'Session', price: 20000,
+  currency: 'SAR', imageUrl: null, isActive: true, isHidden: false } satisfies PublicCatalogRaw['services'][number];
 function wrapper({ children }: { children: React.ReactNode }) {
   return <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })}>{children}</QueryClientProvider>;
 }
@@ -49,6 +61,99 @@ beforeEach(async () => {
   jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'deposit_paid' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
   jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', config } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
   jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'PENDING', requiresReview: false, canCreatePayment: false });
+  jest.mocked(publicCatalogService.getCatalog).mockResolvedValue({ departments: [], categories: [categoryFixture], services: [serviceFixture] });
+});
+it('changes cards after a verified Apple Pay decline and completes the same booking invoice', async () => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'APPLE_PAY' };
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('APPLE_PAY')).toBeTruthy());
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  fireEvent.press(view.getByText('APPLE_PAY'));
+  await waitFor(() => expect(view.getByText('nativePayment.failed')).toBeTruthy());
+  const nextConfig = { ...config, givenId: 'a0000000-0000-4000-8000-000000000002' };
+  jest.mocked(clientPaymentsService.initNativePayment).mockResolvedValue({ paymentId: 'payment-next', invoiceId: 'invoice', config: nextConfig } as Awaited<ReturnType<typeof clientPaymentsService.initNativePayment>>);
+  fireEvent.press(view.getByText('nativePayment.useAnotherCard'));
+  await waitFor(() => expect(view.getByText('ONLINE_CARD')).toBeTruthy());
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(2);
+  expect(clientPaymentsService.initNativePayment).toHaveBeenLastCalledWith('invoice', 'ONLINE_CARD');
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment-next', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: false });
+  jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'confirmed' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
+  fireEvent.press(view.getByText('ONLINE_CARD'));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/success', params: expect.objectContaining({ bookingId: 'booking', invoiceId: 'invoice', paymentId: 'payment-next' }) })));
+  view.unmount();
+});
+
+it('keeps method switching unavailable while a submitted payment is still pending', async () => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'APPLE_PAY' };
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('APPLE_PAY')).toBeTruthy());
+  fireEvent.press(view.getByText('APPLE_PAY'));
+  await waitFor(() => expect(view.getByText('nativePayment.processing')).toBeTruthy());
+  expect(view.queryByText('nativePayment.useAnotherCard')).toBeNull();
+  expect(view.queryByText('nativePayment.retryApplePay')).toBeNull();
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  view.unmount();
+});
+
+it('honors a newly completed payment during method change without initializing another charge', async () => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'APPLE_PAY' };
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('APPLE_PAY')).toBeTruthy());
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'FAILED', requiresReview: false });
+  fireEvent.press(view.getByText('APPLE_PAY'));
+  await waitFor(() => expect(view.getByText('nativePayment.useAnotherCard')).toBeTruthy());
+  jest.mocked(clientPaymentsService.reconcileNativePayment).mockResolvedValue({ paymentId: 'payment', invoiceId: 'invoice', status: 'COMPLETED', requiresReview: false });
+  fireEvent.press(view.getByText('nativePayment.useAnotherCard'));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/booking/success', params: expect.objectContaining({ bookingId: 'booking', invoiceId: 'invoice', paymentId: 'payment' }) })));
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  view.unmount();
+});
+
+it('returns an expired booking to availability for its own service and practitioner', async () => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'ONLINE_CARD', clinicId: 'clinic' };
+  jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'expired', serviceId: 'service', employeeId: 'employee', branchId: 'branch' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
+  jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValue({ response: { data: { code: 'BOOKING_EXPIRED' } } });
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('nativePayment.BOOKING_EXPIRED')).toBeTruthy());
+  fireEvent.press(view.getByText('nativePayment.reviewAvailability'));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/[serviceId]', params: { serviceId: 'service', employeeId: 'employee', branchId: 'branch', clinicId: 'clinic' } }));
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  view.unmount();
+});
+
+it.each([undefined, 'different-clinic'])('recovers DIRECT clinic context and rejects mismatched scope (%s)', async (clinicId) => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'ONLINE_CARD', ...(clinicId ? { clinicId } : {}) };
+  jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'expired', serviceId: 'hidden-service', employeeId: 'employee', branchId: 'branch' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
+  jest.mocked(publicCatalogService.getCatalog).mockResolvedValue({ departments: [], categories: [{ ...categoryFixture, id: 'direct-clinic', bookingMode: 'DIRECT' }],
+    services: [{ ...serviceFixture, id: 'hidden-service', categoryId: 'direct-clinic', isHidden: true }] });
+  jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValue({ response: { data: { code: 'BOOKING_EXPIRED' } } });
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('nativePayment.reviewAvailability')).toBeTruthy());
+  fireEvent.press(view.getByText('nativePayment.reviewAvailability'));
+  if (clinicId) {
+    await waitFor(() => expect(view.getByText('nativePayment.verificationError')).toBeTruthy());
+    expect(mockReplace).not.toHaveBeenCalled();
+  } else {
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/[serviceId]', params: {
+      serviceId: 'hidden-service', employeeId: 'employee', branchId: 'branch', clinicId: 'direct-clinic',
+    } }));
+  }
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  view.unmount();
+});
+
+it('recovers a service-group booking without treating its category as a clinic', async () => {
+  mockParams = { invoiceId: 'invoice', bookingId: 'booking', method: 'ONLINE_CARD' };
+  jest.mocked(clientBookingsService.getById).mockResolvedValue({ id: 'booking', invoiceId: 'invoice', status: 'expired', serviceId: 'service', employeeId: 'employee', branchId: 'branch' } as Awaited<ReturnType<typeof clientBookingsService.getById>>);
+  jest.mocked(publicCatalogService.getCatalog).mockResolvedValue({ departments: [], categories: [{ ...categoryFixture, id: 'assessments', kind: 'SERVICE_GROUP' }],
+    services: [{ ...serviceFixture, categoryId: 'assessments' }] });
+  jest.mocked(clientPaymentsService.initNativePayment).mockRejectedValue({ response: { data: { code: 'BOOKING_EXPIRED' } } });
+  const view = render(<NativeCheckout />, { wrapper });
+  await waitFor(() => expect(view.getByText('nativePayment.reviewAvailability')).toBeTruthy());
+  fireEvent.press(view.getByText('nativePayment.reviewAvailability'));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/[serviceId]', params: { serviceId: 'service', employeeId: 'employee', branchId: 'branch' } }));
+  expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(1);
+  view.unmount();
 });
 it.each(['package', 'balance'])('chooses Apple Pay before initializing a %s payment', async (entry) => {
   if (entry === 'balance') mockParams = { invoiceId: 'invoice', bookingId: 'booking' };

@@ -33,6 +33,7 @@ interface StoredPendingBookingCheckout extends PendingBookingCheckout {
 }
 
 type BookingResumeIdentity = Pick<PendingBookingCheckout, 'bookingId' | 'invoiceId'>;
+export type BookingCheckoutUnavailableReason = 'BOOKING_EXPIRED' | 'BOOKING_CLOSED';
 
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}${encodeURIComponent(userId)}`;
@@ -246,8 +247,13 @@ export async function resolvePendingBookingResume(
   userId: string,
   draft: BookingPaymentDraft | null,
   routeIdentity?: Partial<BookingResumeIdentity>,
-): Promise<{ kind: 'missing' | 'invalid' } | { kind: 'ready' | 'complete'; checkout: PendingBookingCheckout; booking: ClientBookingRow }> {
-  const stored = await getPendingBookingCheckout(userId, draft, routeIdentity);
+): Promise<{ kind: 'missing' } | { kind: 'invalid'; unavailableReason?: BookingCheckoutUnavailableReason } | { kind: 'ready' | 'complete'; checkout: PendingBookingCheckout; booking: ClientBookingRow }> {
+  if (!isNonEmptyString(userId)) return { kind: 'invalid' };
+  // An explicitly bound checkout is verified with authenticated GET. Local storage is only
+  // discovery for a draft without an identity; losing it must not create a second booking.
+  const stored: PendingBookingCheckoutRead = routeIdentity?.bookingId
+    ? { kind: 'missing' }
+    : await getPendingBookingCheckout(userId, draft);
   if (stored.kind === 'invalid') return stored;
   if (stored.kind === 'missing' && !routeIdentity?.bookingId) return stored;
   const booking = await clientBookingsService.getById(stored.kind === 'found' ? stored.checkout.bookingId : routeIdentity!.bookingId!);
@@ -265,5 +271,6 @@ export async function resolvePendingBookingResume(
   }
   return isPendingBookingResumable(booking, checkout, checkout.draft ?? undefined)
     ? { kind: 'ready', checkout, booking }
-    : { kind: 'invalid' };
+    : { kind: 'invalid', ...(booking.status === 'expired' ? { unavailableReason: 'BOOKING_EXPIRED' as const }
+      : booking.status === 'cancelled' || booking.status === 'no_show' ? { unavailableReason: 'BOOKING_CLOSED' as const } : {}) };
 }

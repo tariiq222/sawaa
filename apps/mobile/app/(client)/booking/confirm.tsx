@@ -99,6 +99,7 @@ export default function BookingConfirmScreen() {
     && subtotal != null && Number.isSafeInteger(subtotal) && subtotal >= 0
     && scheduledDate != null && !!branchId && !!employeeId && !!serviceId;
   const payment = useBookingPayment({
+    clinicId,
     branchId,
     employeeId,
     serviceId,

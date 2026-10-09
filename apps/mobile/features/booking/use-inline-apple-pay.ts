@@ -79,7 +79,8 @@ export function useInlineApplePay({ clientId, scope, enabled, prepareBooking }: 
     busy.current = true; setPreparing(true);
     const attemptOwner = owner;
     try {
-      const booking = await prepareBooking();
+      // Once bound, retry payment for this invoice instead of entering booking creation again.
+      const booking = validTarget ?? await prepareBooking();
       if (!booking?.invoiceId || !mounted.current || currentOwner.current !== attemptOwner || !allowed.current) {
         busy.current = false; if (mounted.current) setPreparing(false); return null;
       }
@@ -108,5 +109,9 @@ export function useInlineApplePay({ clientId, scope, enabled, prepareBooking }: 
   return { prepare, preparing, locked, phase, error: checkout.error,
     unavailableReason: checkout.unavailableReason, canRetryInit: checkout.canRetryInit, hasPaymentIdentity: Boolean(checkout.paymentId), reconcile: checkout.reconcile,
     retryInitialization: checkout.retryInitialization, cancel: () => setWalletOpen(false),
-    handoff: () => { generation.current += 1; finish(null); setWalletOpen(false); setTarget(null); } };
+    handoff: () => {
+      const identity = validTarget ? { bookingId: validTarget.bookingId, invoiceId: validTarget.invoiceId } : undefined;
+      generation.current += 1; finish(null); setWalletOpen(false); setTarget(null);
+      return identity;
+    } };
 }

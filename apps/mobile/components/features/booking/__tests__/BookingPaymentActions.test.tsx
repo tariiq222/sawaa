@@ -42,3 +42,8 @@ it('offers Check again only when a payment identity exists', () => {
   const pending = renderActions(false, { phase: 'pending', hasPaymentIdentity: true });
   expect(JSON.stringify(pending.toJSON())).toContain('nativePayment.checkAgain');
 });
+
+it('keeps expired-booking recovery visible when payment methods cannot load', () => {
+  const view = render(<BookingPaymentActions payment={{ ...payment(false), methodsError: true, unavailableReason: 'BOOKING_EXPIRED', reviewAvailability: jest.fn() } as never} apple={apple as never} />);
+  expect(JSON.stringify(view.toJSON())).toContain('nativePayment.reviewAvailability');
+});
