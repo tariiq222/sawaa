@@ -186,7 +186,23 @@ export function ClientDetailPage({ clientId }: Props) {
 
             <div className="flex flex-col gap-4">
               <DetailSection title={t("clients.detail.contactInfo")}>
-                <DetailRow label={t("clients.detail.email")} value={client.email ? <span dir="ltr">{client.email}</span> : "—"} />
+                <DetailRow
+                  label={t("clients.detail.email")}
+                  value={
+                    client.email ? (
+                      <span className="inline-flex items-center gap-1.5" dir="ltr">
+                        {client.email}
+                        {!client.emailVerified && (
+                          <Badge variant="warning" dir="rtl">
+                            {t("clients.detail.emailUnverified")}
+                          </Badge>
+                        )}
+                      </span>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
                 <DetailRow label={t("clients.detail.phone")} value={<span dir="ltr">{client.phone ?? "—"}</span>} />
               </DetailSection>
               <DetailSection title={t("clients.detail.emergencyContact")}>

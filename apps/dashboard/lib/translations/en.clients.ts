@@ -148,6 +148,7 @@ export const enClients: Record<string, string> = {
   "clients.detail.nationality": "Nationality",
   "clients.detail.contactInfo": "Contact Info",
   "clients.detail.email": "Email",
+  "clients.detail.emailUnverified": "Unverified",
   "clients.detail.phone": "Phone",
   "clients.detail.emergencyContact": "Emergency Contact",
   "clients.detail.name": "Name",
