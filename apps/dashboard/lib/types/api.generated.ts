@@ -3430,6 +3430,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/phone-entry/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete a phone-proven client account and issue a session */
+        post: operations["MobilePhoneEntryController_completeAccount_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/phone-entry/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a mobile phone ownership code */
+        post: operations["MobilePhoneEntryController_requestPhone_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/phone-entry/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace a mobile phone ownership challenge */
+        post: operations["MobilePhoneEntryController_resendPhone_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/phone-entry/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify phone ownership and determine the next step */
+        post: operations["MobilePhoneEntryController_verifyPhone_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/refresh": {
         parameters: {
             query?: never;
@@ -4013,6 +4081,108 @@ export interface paths {
         head?: never;
         /** Update the authenticated client's profile */
         patch: operations["MobileClientProfileController_updateProfile_v1"];
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authenticated client's email verification state */
+        get: operations["MobileClientEmailController_status_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Drop the unverified client email and resolve the prompt */
+        post: operations["MobileClientEmailController_decline_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a code to prove ownership of a new client email */
+        post: operations["MobileClientEmailController_request_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify the code and adopt the new client email */
+        post: operations["MobileClientEmailController_verify_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/phone/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a code to prove ownership of a new client phone */
+        post: operations["MobileClientPhoneController_request_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/phone/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify the code, adopt the new client phone and rotate session tokens */
+        post: operations["MobileClientPhoneController_verify_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mobile/client/programs/{id}/enroll": {
@@ -6824,6 +6994,41 @@ export interface components {
             /** @enum {string} */
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
+        ClientEmailChallengeDto: {
+            /**
+             * Format: uuid
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /** @example 300 */
+            expiresIn: number;
+            /** @example p***@example.test */
+            maskedEmail: string;
+            /** @example 60 */
+            retryAfterSeconds: number;
+        };
+        ClientEmailStatusDto: {
+            /**
+             * @description Returned only when the email is verified; a legacy unverified value is never exposed
+             * @example person@example.test
+             */
+            email: Record<string, never> | null;
+            /**
+             * @description Client-entered email awaiting proof of ownership
+             * @example new@example.test
+             */
+            pendingEmail: Record<string, never> | null;
+            /**
+             * @description Whether the one-time "add your email" prompt should be shown
+             * @example false
+             */
+            prompt: boolean;
+            /**
+             * @description Precedence: verified > pending > unverified > none
+             * @enum {string}
+             */
+            status: "none" | "unverified" | "pending" | "verified";
+        };
         /**
          * @description Client gender (case-insensitive)
          * @enum {string}
@@ -6884,6 +7089,33 @@ export interface components {
              * @description Service target for legacy flexible credits
              */
             serviceId?: string;
+        };
+        ClientPhoneChallengeDto: {
+            /**
+             * Format: uuid
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /** @example 300 */
+            expiresIn: number;
+            /** @example +966***78 */
+            maskedPhone: string;
+            /** @example 60 */
+            retryAfterSeconds: number;
+        };
+        ClientPhoneTokensDto: {
+            /** @description Fresh client access token for this device */
+            accessToken: string;
+            /** @description Fresh client refresh token for this device; every other session is revoked */
+            refreshToken: string;
+        };
+        ClientPhoneVerifiedDto: {
+            /**
+             * @description The newly verified phone
+             * @example +966512345678
+             */
+            phone: string;
+            tokens: components["schemas"]["ClientPhoneTokensDto"];
         };
         ClientRequestHandoffDto: Record<string, never>;
         ClientRescheduleBookingDto: {
@@ -7122,6 +7354,34 @@ export interface components {
              * @example Session completed successfully
              */
             completionNotes?: string;
+        };
+        CompletePhoneEntryDto: {
+            /**
+             * @description Opaque phone ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Optional pending email; not trusted until ownership is verified
+             * @example person@example.test
+             */
+            email?: string;
+            /**
+             * @description First name for the new client account
+             * @example Ali
+             */
+            firstName: string;
+            /**
+             * @description Last name for the new client account
+             * @example Saleh
+             */
+            lastName: string;
+            /**
+             * @description Explicit acceptance of the current privacy policy
+             * @example true
+             * @enum {boolean}
+             */
+            privacyAccepted: true;
         };
         ContactMessageListMetaDto: {
             /**
@@ -11155,6 +11415,76 @@ export interface components {
              */
             window: "EARLY" | "LATE";
         };
+        PhoneEntryChallengeDto: {
+            /**
+             * Format: uuid
+             * @description Opaque identifier of the delivered phone ownership challenge
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Phone challenge lifetime in seconds
+             * @example 300
+             * @enum {number}
+             */
+            expiresIn: 300;
+            /**
+             * @description Masked destination of the phone ownership code
+             * @example +966***78
+             */
+            maskedPhone: string;
+            /**
+             * @description Minimum seconds before another phone code may be requested
+             * @example 60
+             * @enum {number}
+             */
+            retryAfterSeconds: 60;
+        };
+        PhoneEntryContinueDto: {
+            /**
+             * @description Opaque continuation held only in memory; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Maximum continuation lifetime in seconds
+             * @example 600
+             * @enum {number}
+             */
+            expiresIn: 600;
+            /**
+             * @description Required next step for a proven phone without an existing account (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "PhoneEntryContinueDto";
+        };
+        PhoneEntrySessionDto: {
+            /**
+             * @description Whether to show the unresolved legacy email prompt after authentication
+             * @example false
+             */
+            emailPrompt: boolean;
+            /**
+             * @description Authenticated outcome discriminator (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "PhoneEntrySessionDto";
+            /**
+             * @description Client session namespace; phone entry does not issue staff sessions
+             * @example client
+             * @enum {string}
+             */
+            sessionKind: "client";
+            /** @description Native client access and refresh token pair */
+            tokens: components["schemas"]["EmailEntryTokensDto"];
+        };
+        PhoneEntryUnavailableDto: {
+            /**
+             * @description Generic outcome for an identity unable to use client phone entry (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "PhoneEntryUnavailableDto";
+        };
         PreviewEmailTemplateDto: {
             /**
              * @description Template variable values for the preview render
@@ -11771,6 +12101,20 @@ export interface components {
             /** @description Cards in their requested display order, with last known update timestamps. */
             items: components["schemas"]["ReorderMobileHomeCardItemDto"][];
         };
+        RequestClientEmailDto: {
+            /**
+             * @description New email to prove ownership of with a six-digit code
+             * @example person@example.test
+             */
+            email: string;
+        };
+        RequestClientPhoneDto: {
+            /**
+             * @description New Saudi mobile number to prove ownership of with a six-digit SMS code
+             * @example 0512345678
+             */
+            phone: string;
+        };
         RequestDashboardOtpDto: {
             /**
              * @description Email address or Saudi mobile number (E.164 format)
@@ -11863,6 +12207,13 @@ export interface components {
              */
             email: string;
         };
+        RequestPhoneEntryDto: {
+            /**
+             * @description Saudi mobile phone to prove ownership of
+             * @example +966512345678
+             */
+            phone: string;
+        };
         RequestRefundDto: {
             /**
              * @description ID of the invoice to request a refund for
@@ -11905,6 +12256,14 @@ export interface components {
              * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
              */
             phoneChallengeId: string;
+        };
+        ResendPhoneEntryDto: {
+            /**
+             * Format: uuid
+             * @description Current phone ownership challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
         };
         ResetPasswordDto: {
             /**
@@ -13583,6 +13942,32 @@ export interface components {
          * @enum {string}
          */
         UserRole: "SUPER_ADMIN" | "ADMIN" | "RECEPTIONIST" | "ACCOUNTANT" | "EMPLOYEE" | "CLIENT";
+        VerifyClientEmailDto: {
+            /**
+             * Format: uuid
+             * @description Challenge returned by the request endpoint
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit ownership code
+             * @example 123456
+             */
+            code: string;
+        };
+        VerifyClientPhoneDto: {
+            /**
+             * Format: uuid
+             * @description Challenge returned by the request endpoint
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit SMS code sent to the new number
+             * @example 123456
+             */
+            code: string;
+        };
         VerifyDashboardOtpDto: {
             /**
              * @description 6-digit OTP code
@@ -13692,6 +14077,19 @@ export interface components {
              * @example TRF-20260501-001
              */
             transferRef?: string;
+        };
+        VerifyPhoneEntryDto: {
+            /**
+             * Format: uuid
+             * @description Current phone ownership challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Exactly six ASCII digits from the delivered ownership code
+             * @example 123456
+             */
+            code: string;
         };
     };
     responses: never;
@@ -31360,6 +31758,242 @@ export interface operations {
             };
         };
     };
+    MobilePhoneEntryController_completeAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompletePhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntrySessionDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_requestPhone_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestPhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntryChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_resendPhone_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendPhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntryChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_verifyPhone_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyPhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntrySessionDto"] | components["schemas"]["PhoneEntryContinueDto"] | components["schemas"]["PhoneEntryUnavailableDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientAuthController_refresh_v1: {
         parameters: {
             query?: never;
@@ -33707,6 +34341,352 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_status_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailStatusDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_decline_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailStatusDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_request_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestClientEmailDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_verify_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyClientEmailDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailStatusDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPhoneController_request_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestClientPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientPhoneChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPhoneController_verify_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyClientPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientPhoneVerifiedDto"];
                 };
             };
             /** @description Validation failed */

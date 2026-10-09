@@ -1,4 +1,7 @@
+import { MobilePhoneEntryController } from './phone-entry.controller';
 import { MobileEmailEntryController } from './email-entry.controller';
+import { MobileClientEmailController } from './client-email.controller';
+import { MobileClientPhoneController } from './client-phone.controller';
 import { MobileReviewAuthController } from './review-auth.controller';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../../infrastructure/database';
@@ -24,7 +27,10 @@ import { ClientPackagePurchaseStatusHandler } from '../../../modules/bookings/cl
 @Module({
   imports: [DatabaseModule, BookingsModule, PeopleModule, FinanceModule, CommsModule, OrgExperienceModule, IdentityModule],
   controllers: [
+    MobilePhoneEntryController,
     MobileEmailEntryController,
+    MobileClientEmailController,
+    MobileClientPhoneController,
     MobileReviewAuthController,
     MobileClientBookingsController,
     MobileClientProfileController,

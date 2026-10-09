@@ -2381,6 +2381,72 @@
         ],
         "type": "object"
       },
+      "ClientEmailChallengeDto": {
+        "properties": {
+          "challengeId": {
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresIn": {
+            "example": 300,
+            "type": "number"
+          },
+          "maskedEmail": {
+            "example": "p***@example.test",
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "example": 60,
+            "type": "number"
+          }
+        },
+        "required": [
+          "challengeId",
+          "maskedEmail",
+          "expiresIn",
+          "retryAfterSeconds"
+        ],
+        "type": "object"
+      },
+      "ClientEmailStatusDto": {
+        "properties": {
+          "email": {
+            "description": "Returned only when the email is verified; a legacy unverified value is never exposed",
+            "example": "person@example.test",
+            "nullable": true,
+            "type": "object"
+          },
+          "pendingEmail": {
+            "description": "Client-entered email awaiting proof of ownership",
+            "example": "new@example.test",
+            "nullable": true,
+            "type": "object"
+          },
+          "prompt": {
+            "description": "Whether the one-time \"add your email\" prompt should be shown",
+            "example": false,
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Precedence: verified > pending > unverified > none",
+            "enum": [
+              "none",
+              "unverified",
+              "pending",
+              "verified"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "email",
+          "pendingEmail",
+          "prompt"
+        ],
+        "type": "object"
+      },
       "ClientGender": {
         "description": "Client gender (case-insensitive)",
         "enum": [
@@ -2463,6 +2529,68 @@
           "creditId",
           "branchId",
           "scheduledAt"
+        ],
+        "type": "object"
+      },
+      "ClientPhoneChallengeDto": {
+        "properties": {
+          "challengeId": {
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresIn": {
+            "example": 300,
+            "type": "number"
+          },
+          "maskedPhone": {
+            "example": "+966***78",
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "example": 60,
+            "type": "number"
+          }
+        },
+        "required": [
+          "challengeId",
+          "maskedPhone",
+          "expiresIn",
+          "retryAfterSeconds"
+        ],
+        "type": "object"
+      },
+      "ClientPhoneTokensDto": {
+        "properties": {
+          "accessToken": {
+            "description": "Fresh client access token for this device",
+            "type": "string"
+          },
+          "refreshToken": {
+            "description": "Fresh client refresh token for this device; every other session is revoked",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "ClientPhoneVerifiedDto": {
+        "properties": {
+          "phone": {
+            "description": "The newly verified phone",
+            "example": "+966512345678",
+            "type": "string"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/ClientPhoneTokensDto"
+          }
+        },
+        "required": [
+          "phone",
+          "tokens"
         ],
         "type": "object"
       },
@@ -2838,6 +2966,51 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "CompletePhoneEntryDto": {
+        "properties": {
+          "continuationToken": {
+            "description": "Opaque phone ownership continuation; never an access token",
+            "example": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          },
+          "email": {
+            "description": "Optional pending email; not trusted until ownership is verified",
+            "example": "person@example.test",
+            "maxLength": 254,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name for the new client account",
+            "example": "Ali",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name for the new client account",
+            "example": "Saleh",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "privacyAccepted": {
+            "description": "Explicit acceptance of the current privacy policy",
+            "enum": [
+              true
+            ],
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "continuationToken",
+          "firstName",
+          "lastName",
+          "privacyAccepted"
+        ],
         "type": "object"
       },
       "ContactMessageListMetaDto": {
@@ -9217,6 +9390,131 @@
         ],
         "type": "object"
       },
+      "PhoneEntryChallengeDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Opaque identifier of the delivered phone ownership challenge",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Phone challenge lifetime in seconds",
+            "enum": [
+              300
+            ],
+            "example": 300,
+            "type": "number"
+          },
+          "maskedPhone": {
+            "description": "Masked destination of the phone ownership code",
+            "example": "+966***78",
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "description": "Minimum seconds before another phone code may be requested",
+            "enum": [
+              60
+            ],
+            "example": 60,
+            "type": "number"
+          }
+        },
+        "required": [
+          "challengeId",
+          "maskedPhone",
+          "expiresIn",
+          "retryAfterSeconds"
+        ],
+        "type": "object"
+      },
+      "PhoneEntryContinueDto": {
+        "properties": {
+          "continuationToken": {
+            "description": "Opaque continuation held only in memory; never an access token",
+            "example": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Maximum continuation lifetime in seconds",
+            "enum": [
+              600
+            ],
+            "example": 600,
+            "type": "number"
+          },
+          "next": {
+            "description": "Required next step for a proven phone without an existing account",
+            "enum": [
+              "register"
+            ],
+            "example": "register",
+            "type": "string"
+          }
+        },
+        "required": [
+          "next",
+          "continuationToken",
+          "expiresIn"
+        ],
+        "type": "object"
+      },
+      "PhoneEntrySessionDto": {
+        "properties": {
+          "emailPrompt": {
+            "description": "Whether to show the unresolved legacy email prompt after authentication",
+            "example": false,
+            "type": "boolean"
+          },
+          "next": {
+            "description": "Authenticated outcome discriminator",
+            "enum": [
+              "authenticated"
+            ],
+            "example": "authenticated",
+            "type": "string"
+          },
+          "sessionKind": {
+            "description": "Client session namespace; phone entry does not issue staff sessions",
+            "enum": [
+              "client"
+            ],
+            "example": "client",
+            "type": "string"
+          },
+          "tokens": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailEntryTokensDto"
+              }
+            ],
+            "description": "Native client access and refresh token pair"
+          }
+        },
+        "required": [
+          "next",
+          "tokens",
+          "sessionKind",
+          "emailPrompt"
+        ],
+        "type": "object"
+      },
+      "PhoneEntryUnavailableDto": {
+        "properties": {
+          "next": {
+            "description": "Generic outcome for an identity unable to use client phone entry",
+            "enum": [
+              "unavailable"
+            ],
+            "example": "unavailable",
+            "type": "string"
+          }
+        },
+        "required": [
+          "next"
+        ],
+        "type": "object"
+      },
       "PreviewEmailTemplateDto": {
         "properties": {
           "context": {
@@ -10178,6 +10476,32 @@
         ],
         "type": "object"
       },
+      "RequestClientEmailDto": {
+        "properties": {
+          "email": {
+            "description": "New email to prove ownership of with a six-digit code",
+            "example": "person@example.test",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "RequestClientPhoneDto": {
+        "properties": {
+          "phone": {
+            "description": "New Saudi mobile number to prove ownership of with a six-digit SMS code",
+            "example": "0512345678",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "type": "object"
+      },
       "RequestDashboardOtpDto": {
         "properties": {
           "identifier": {
@@ -10329,6 +10653,20 @@
         ],
         "type": "object"
       },
+      "RequestPhoneEntryDto": {
+        "properties": {
+          "phone": {
+            "description": "Saudi mobile phone to prove ownership of",
+            "example": "+966512345678",
+            "pattern": "^\\+9665\\d{8}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "type": "object"
+      },
       "RequestRefundDto": {
         "properties": {
           "invoiceId": {
@@ -10394,6 +10732,20 @@
         "required": [
           "continuationToken",
           "phoneChallengeId"
+        ],
+        "type": "object"
+      },
+      "ResendPhoneEntryDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Current phone ownership challenge identifier",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId"
         ],
         "type": "object"
       },
@@ -12954,6 +13306,46 @@
         ],
         "type": "string"
       },
+      "VerifyClientEmailDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Challenge returned by the request endpoint",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "description": "Six-digit ownership code",
+            "example": "123456",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
+        ],
+        "type": "object"
+      },
+      "VerifyClientPhoneDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Challenge returned by the request endpoint",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "description": "Six-digit SMS code sent to the new number",
+            "example": "123456",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
+        ],
+        "type": "object"
+      },
       "VerifyDashboardOtpDto": {
         "properties": {
           "code": {
@@ -13131,6 +13523,27 @@
         },
         "required": [
           "action"
+        ],
+        "type": "object"
+      },
+      "VerifyPhoneEntryDto": {
+        "properties": {
+          "challengeId": {
+            "description": "Current phone ownership challenge identifier",
+            "example": "b93b1499-dd38-4f61-97bc-e1bd0053903e",
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "description": "Exactly six ASCII digits from the delivered ownership code",
+            "example": "123456",
+            "pattern": "^\\d{6}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
         ],
         "type": "object"
       }
@@ -37155,6 +37568,307 @@
         ]
       }
     },
+    "/api/v1/mobile/auth/phone-entry/complete": {
+      "post": {
+        "operationId": "MobilePhoneEntryController_completeAccount_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePhoneEntryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneEntrySessionDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Complete a phone-proven client account and issue a session",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/phone-entry/request": {
+      "post": {
+        "operationId": "MobilePhoneEntryController_requestPhone_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPhoneEntryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneEntryChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Send a mobile phone ownership code",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/phone-entry/resend": {
+      "post": {
+        "operationId": "MobilePhoneEntryController_resendPhone_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendPhoneEntryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneEntryChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Replace a mobile phone ownership challenge",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
+    "/api/v1/mobile/auth/phone-entry/verify": {
+      "post": {
+        "operationId": "MobilePhoneEntryController_verifyPhone_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyPhoneEntryDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "propertyName": "next"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PhoneEntrySessionDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PhoneEntryContinueDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PhoneEntryUnavailableDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Verify phone ownership and determine the next step",
+        "tags": [
+          "Mobile Client / Identity"
+        ]
+      }
+    },
     "/api/v1/mobile/auth/refresh": {
       "post": {
         "operationId": "MobileClientAuthController_refresh_v1",
@@ -40310,6 +41024,448 @@
           }
         ],
         "summary": "Update the authenticated client's profile",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/profile/email": {
+      "get": {
+        "operationId": "MobileClientEmailController_status_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated client's email verification state",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/profile/email/decline": {
+      "post": {
+        "operationId": "MobileClientEmailController_decline_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Drop the unverified client email and resolve the prompt",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/profile/email/request": {
+      "post": {
+        "operationId": "MobileClientEmailController_request_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestClientEmailDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a code to prove ownership of a new client email",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/profile/email/verify": {
+      "post": {
+        "operationId": "MobileClientEmailController_verify_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyClientEmailDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the code and adopt the new client email",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/profile/phone/request": {
+      "post": {
+        "operationId": "MobileClientPhoneController_request_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestClientPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPhoneChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a code to prove ownership of a new client phone",
+        "tags": [
+          "Mobile Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/mobile/client/profile/phone/verify": {
+      "post": {
+        "operationId": "MobileClientPhoneController_verify_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyClientPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPhoneVerifiedDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the code, adopt the new client phone and rotate session tokens",
         "tags": [
           "Mobile Client / Profile"
         ]
