@@ -35,7 +35,9 @@ export default function AccountTabScreen() {
   const contactPhone = useBranding().data?.contactPhone ?? null;
   const [refreshing, setRefreshing] = useState(false);
 
-  const displayName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email : '—';
+  // Never fall back to the stored email: legacy client emails are often
+  // unverified and may not belong to this person.
+  const displayName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.name || '—' : '—';
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -63,7 +65,7 @@ export default function AccountTabScreen() {
     <AccountScaffold title={t('profile.title')} refreshing={refreshing} onRefresh={() => { void onRefresh(); }}>
       <AccountHeaderCard
         name={displayName}
-        secondary={user?.phone || user?.email}
+        secondary={user?.phone ?? undefined}
         avatarUrl={user?.avatarUrl}
         onEdit={() => router.push('/(client)/settings-profile')}
         stats={stats}
