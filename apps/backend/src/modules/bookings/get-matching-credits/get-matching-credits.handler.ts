@@ -6,6 +6,7 @@ import {
   specificityScore,
 } from '../package-credit-matching.helper';
 import { getPackageCreditAvailability } from '../package-credit-availability.helper';
+import { packageCreditGroupCreditSelect } from '../package-credit-group-select';
 import { GetMatchingCreditsDto } from './get-matching-credits.dto';
 
 export type GetMatchingCreditsQuery = GetMatchingCreditsDto;
@@ -72,28 +73,10 @@ export class GetMatchingCreditsHandler {
             label: true,
             sequenceMode: true,
             dependsOnGroupId: true,
-            credits: {
-              select: {
-                id: true,
-                sessionPosition: true,
-                totalQuantity: true,
-                usedQuantity: true,
-                reservedQuantity: true,
-                usages: { select: { status: true, deliveredAt: true } },
-              },
-            },
+            credits: { select: packageCreditGroupCreditSelect },
             dependsOnGroup: {
               select: {
-                credits: {
-                  select: {
-                    id: true,
-                    sessionPosition: true,
-                    totalQuantity: true,
-                    usedQuantity: true,
-                    reservedQuantity: true,
-                    usages: { select: { status: true, deliveredAt: true } },
-                  },
-                },
+                credits: { select: packageCreditGroupCreditSelect },
               },
             },
           },
