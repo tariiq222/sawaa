@@ -11477,12 +11477,12 @@ export interface components {
              */
             next: "PhoneEntrySessionDto";
             /**
-             * @description Client session namespace; phone entry does not issue staff sessions
+             * @description Server-selected native session namespace after phone verification
              * @example client
              * @enum {string}
              */
-            sessionKind: "client";
-            /** @description Native client access and refresh token pair */
+            sessionKind: "client" | "staff";
+            /** @description Native access and refresh token pair for the server-selected session */
             tokens: components["schemas"]["EmailEntryTokensDto"];
         };
         PhoneEntryUnavailableDto: {

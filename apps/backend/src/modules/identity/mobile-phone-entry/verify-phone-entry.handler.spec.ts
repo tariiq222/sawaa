@@ -4,10 +4,12 @@ import { VerifyPhoneEntryHandler } from './verify-phone-entry.handler';
 describe('VerifyPhoneEntryHandler', () => {
   function fixture() {
     const client = { id: 'c', userId: null, isActive: true, email: 'legacy@example.test', emailVerified: null, emailPromptResolvedAt: null, phoneVerified: null, lastLoginAt: null, accountType: 'WALK_IN' };
-    const tx = { user: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn() }, client: { findMany: jest.fn().mockResolvedValue([client]), update: jest.fn().mockResolvedValue(client) }, mobilePhoneEntryFlow: { update: jest.fn() } };
+    const tx = { $queryRaw: jest.fn().mockResolvedValue([]), user: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn() }, client: { findMany: jest.fn().mockResolvedValue([client]), findFirst: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue(client) }, employee: { findFirst: jest.fn().mockResolvedValue({ id: 'e' }) }, mobilePhoneEntryFlow: { update: jest.fn() } };
     const store = { transaction: async (cb: (tx: unknown) => Promise<unknown>) => cb(tx), lock: jest.fn().mockResolvedValue({ id: 'f', phone: '+966512345678', state: 'CODE_PENDING', createdAt: new Date() }), liveFlow: () => true, checkCode: jest.fn().mockResolvedValue(true), consume: jest.fn().mockResolvedValue(true) };
     const tokens = { issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'a', rawRefresh: 'r' }) };
-    return { handler: new VerifyPhoneEntryHandler(store as never, tokens as never), tx, store, tokens, client };
+    const staffTokens = { issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'staff-a', refreshToken: 'staff-r' }) };
+    const settings = { get: jest.fn().mockResolvedValue(true) };
+    return { handler: new VerifyPhoneEntryHandler(store as never, tokens as never, staffTokens as never, settings as never), tx, store, tokens, staffTokens, settings, client };
   }
   it('classifies only after proof and consumes before issuing client tokens', async () => {
     const f = fixture();
@@ -15,6 +17,31 @@ describe('VerifyPhoneEntryHandler', () => {
     expect(f.store.checkCode.mock.invocationCallOrder[0]).toBeLessThan(f.tx.user.findMany.mock.invocationCallOrder[0]);
     expect(f.store.consume.mock.invocationCallOrder[0]).toBeLessThan(f.tokens.issueTokenPair.mock.invocationCallOrder[0]);
     expect(f.tx.client.update.mock.calls[0][0].data).not.toHaveProperty('claimedAt');
+  });
+  it('authenticates an eligible staff identity through the same phone challenge', async () => {
+    const f = fixture();
+    f.tx.client.findMany.mockResolvedValue([]);
+    f.tx.user.findMany.mockResolvedValue([{ id: 'staff', role: 'EMPLOYEE', isActive: true }]);
+    expect(await f.handler.execute({ challengeId: 'f', code: '123456' })).toMatchObject({ next: 'authenticated', sessionKind: 'staff', emailPrompt: false });
+    expect(f.tokens.issueTokenPair).not.toHaveBeenCalled();
+  });
+  it('reclassifies an identity changed while acquiring its row lock', async () => {
+    const f = fixture();
+    f.tx.client.findMany.mockResolvedValue([]);
+    f.tx.user.findMany.mockResolvedValueOnce([{ id: 'staff', role: 'EMPLOYEE', isActive: true }])
+      .mockResolvedValue([{ id: 'staff', role: 'EMPLOYEE', isActive: false }]);
+    expect(await f.handler.execute({ challengeId: 'f', code: '123456' })).toEqual({ next: 'unavailable' });
+    expect(f.tx.$queryRaw).toHaveBeenCalled();
+    expect(f.staffTokens.issueTokenPair).not.toHaveBeenCalled();
+  });
+  it.each(['inactive', 'missing-employee', 'linked-client', 'two-factor-admin'])('blocks ineligible staff: %s', async kind => {
+    const f = fixture();
+    f.tx.client.findMany.mockResolvedValue([]);
+    f.tx.user.findMany.mockResolvedValue([{ id: 'staff', role: kind === 'two-factor-admin' ? 'SUPER_ADMIN' : 'EMPLOYEE', isActive: kind !== 'inactive', isSuperAdmin: kind === 'two-factor-admin' }]);
+    if (kind === 'missing-employee') f.tx.employee.findFirst.mockResolvedValue(null);
+    if (kind === 'linked-client') f.tx.client.findFirst.mockResolvedValue(f.client);
+    expect(await f.handler.execute({ challengeId: 'f', code: '123456' })).toEqual({ next: 'unavailable' });
+    expect(f.staffTokens.issueTokenPair).not.toHaveBeenCalled();
   });
   it('logs first claim with client id only and no contact/name data', async () => {
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);

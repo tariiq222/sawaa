@@ -9,7 +9,6 @@ import { usePhoneEntry } from '@/features/auth/use-phone-entry';
 import { PhoneStepForm } from '@/components/features/auth/phone-entry/PhoneStepForm';
 import { CodeStepForm } from '@/components/features/auth/phone-entry/CodeStepForm';
 import { DetailsStepForm } from '@/components/features/auth/phone-entry/DetailsStepForm';
-import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 import { goBackOrHome } from '@/lib/navigation';
 
 /** Phone-first entry: phone → SMS code → (new users) details → signed in. */
@@ -27,11 +26,7 @@ export default function LoginScreen() {
       <ThemedText variant="body">{t('auth.phoneEntry.intro')}</ThemedText>
       <PhoneStepForm phone={state.phone} onPhoneChange={flow.setPhone} submit={flow.request}
         pending={flow.pending}
-        onEmailEntry={() => router.push(flow.emailEntryHref)}
-        onStaffLogin={() => router.push({
-          pathname: '/(auth)/staff-login',
-          params: authContinuationParams(booking, redirect),
-        })} />
+        onEmailEntry={() => router.push(flow.emailEntryHref)} />
     </>}
     {state.step === 'code' && <>
       <ThemedText variant="body">{t('auth.phoneEntry.sentTo', { phone: state.maskedPhone })}</ThemedText>
