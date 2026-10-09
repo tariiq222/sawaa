@@ -24,6 +24,10 @@ packages/
 └── ui/           shadcn primitives for dashboard only today; website and mobile excluded
 ```
 
+## Automatic changelog
+
+Git-cliff generates `CHANGELOG.md` on GitHub pushes to `develop` and `main`, and the release workflow uses it for the current tagged release's notes. See [docs/operations/changelog.md](docs/operations/changelog.md). Write clear conventional commit subjects when executing authorized commit/merge/publication requests. `pnpm changelog` generates an ignored local preview; it does not stage, commit, push, tag or deploy. Do not commit generated changelogs back to protected branches or treat them as evidence of successful deployment.
+
 ## Commands (run from repo root)
 
 ```bash
