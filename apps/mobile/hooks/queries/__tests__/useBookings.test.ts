@@ -1,3 +1,7 @@
+jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => 'client-1' }));
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+jest.mock('@/services/client/bookings', () => ({ clientBookingsService: { getById: jest.fn() } }));
+
 jest.mock('@/services/client', () => ({
   clientBookingsService: {
     list: jest.fn(),
@@ -128,6 +132,7 @@ describe('useCancelBooking', () => {
       await result.current.mutateAsync({ id: 'b1', reason: 'changed plan', acceptedRefundTerms: true, quoteToken: 'quote', sourceActionId: 'action' });
     });
 
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedCancel).toHaveBeenCalledWith('b1', 'changed plan', { acceptedRefundTerms: true, quoteToken: 'quote', sourceActionId: 'action' });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.all });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.detail('b1') });
@@ -143,7 +148,7 @@ describe('useCancelBooking', () => {
         result.current.mutateAsync({ id: 'b1', reason: 'x', acceptedRefundTerms: true, quoteToken: 'quote' }),
       ).rejects.toThrow(/409/);
     });
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it.each([409, 500])('leaves cancellation error %s to the localized screen without a global alert or retry', async (status) => {
@@ -178,6 +183,7 @@ describe('useRateBooking', () => {
       await result.current.mutateAsync({ id: 'b1', score: 5, comment: 'great', isPublic: true });
     });
 
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedRate).toHaveBeenCalledWith('b1', { score: 5, comment: 'great', isPublic: true });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.detail('b1') });
   });
