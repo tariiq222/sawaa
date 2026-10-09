@@ -207,6 +207,28 @@ describe('new booking payment retries', () => {
     expect(mockGetBooking).toHaveBeenCalledWith('booking-1');
   });
 
+  it.each(['cancelled', 'expired'] as const)('opens a fresh invoice card route for the exact same slot after a verified %s checkout on re-entry', async (status) => {
+    const first = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await first.result.current.pay(); });
+    first.unmount();
+    mockGetBooking.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status, ...input });
+    mockCreate.mockResolvedValueOnce({ id: 'booking-2', invoiceId: 'invoice-2' });
+    const second = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await second.result.current.pay(); });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockCreate).toHaveBeenLastCalledWith({ branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'service-1', scheduledAt: '2026-10-01T10:00:00.000Z', deliveryType: undefined });
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(client)/payments/native-checkout', params: { bookingId: 'booking-2', invoiceId: 'invoice-2', method: 'ONLINE_CARD', fromBookingConfirm: 'true' } });
+  });
+
+  it('keeps an explicitly bound cancelled checkout closed instead of creating another reservation', async () => {
+    mockGetBooking.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1', status: 'cancelled', ...input });
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay('card', { bookingId: 'booking-1', invoiceId: 'invoice-1' }); });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(result.current.unavailableReason).toBe('BOOKING_CLOSED');
+  });
+
   it('ignores duplicate presses in the same frame', async () => {
     const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await Promise.all([result.current.pay(), result.current.pay()]); });
