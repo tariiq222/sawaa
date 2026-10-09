@@ -92,6 +92,10 @@ scripts/performance/results/
 # ─── Runtime artifacts ────────────────────────────────────────
 .runtime/
 
+# Changelogs are generated from Git; GitHub stores them as run/release outputs.
+/CHANGELOG.md
+/RELEASE-NOTES.md
+
 # ─── Python cache ─────────────────────────────────────────────
 __pycache__/
 *.pyc

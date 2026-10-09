@@ -1,0 +1,47 @@
+# Generate from the exact pushed revision, without committing back to a branch.
+name: changelog
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4
+        with:
+          version: v2.14.2
+          config: cliff.toml
+        env:
+          OUTPUT: CHANGELOG.md
+      - name: Record source revision
+        env:
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          printf 'Branch: %s\nCommit: %s\n' "$SOURCE_BRANCH" "$SOURCE_SHA" > changelog-source.txt
+          printf 'Changelog for **%s** at `%s`.\n\nDownload **CHANGELOG.md** from this run’s artifact.\n' "$SOURCE_BRANCH" "$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nThis records code changes, not deployment success.\n' >> "$GITHUB_STEP_SUMMARY"
+      - name: Save changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            CHANGELOG.md
+            changelog-source.txt
+          if-no-files-found: error
+          retention-days: 90
