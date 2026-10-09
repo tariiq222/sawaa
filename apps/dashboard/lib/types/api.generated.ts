@@ -34149,7 +34149,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paginated list of upcoming bookings with status PENDING or CONFIRMED. */
+            /** @description Paginated list of upcoming bookings with status pending, confirmed or deposit_paid, sorted by nearest future appointment. */
             200: {
                 headers: {
                     [name: string]: unknown;

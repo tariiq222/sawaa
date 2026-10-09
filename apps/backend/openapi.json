@@ -40756,7 +40756,7 @@
                 }
               }
             },
-            "description": "Paginated list of upcoming bookings with status PENDING or CONFIRMED."
+            "description": "Paginated list of upcoming bookings with status pending, confirmed or deposit_paid, sorted by nearest future appointment."
           },
           "400": {
             "content": {
