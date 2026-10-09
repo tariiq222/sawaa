@@ -2,13 +2,13 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import {
   ChatOperationStatus,
   ChatOperationType,
-  Prisma,
   type ChatOperation,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { ChatBookingQuoteService } from './chat-booking-quote.service';
-import { assistantDispatchIdempotencyKey, assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
+import { assistantDispatchIdempotencyKey, type AssistantOperationFence } from './assistant-operation-fence';
+import { createOrGetPreparedOperation } from './create-or-get-prepared-operation';
 
 export interface PrepareCancellationCommand {
   conversationId: string;
@@ -31,7 +31,7 @@ export class PrepareCancellationHandler {
     const expiresAt = new Date(Date.now() + 15 * 60_000);
     const idempotencyKey = this.key(command);
     if (!command.clientId) {
-      return this.createOrGet({
+      return createOrGetPreparedOperation(this.prisma, this.rlsTransaction, {
         conversationId: command.conversationId,
         clientId: null,
         type: ChatOperationType.CANCEL_BOOKING,
@@ -48,7 +48,7 @@ export class PrepareCancellationHandler {
       clientId: command.clientId,
       bookingId: command.bookingId,
     });
-    return this.createOrGet({
+    return createOrGetPreparedOperation(this.prisma, this.rlsTransaction, {
       conversationId: command.conversationId,
       clientId: command.clientId,
       type: ChatOperationType.CANCEL_BOOKING,
@@ -77,41 +77,4 @@ export class PrepareCancellationHandler {
     return assistantDispatchIdempotencyKey(`chat:${command.sourceMessageId}:prepareCancellation:${hash}`, command.assistantFence);
   }
 
-  private async createOrGet(data: {
-    conversationId: string;
-    clientId: string | null;
-    type: ChatOperationType;
-    status: ChatOperationStatus;
-    payload: object;
-    summary: object;
-    idempotencyKey: string;
-    requiredConfirmations: number;
-    expiresAt: Date;
-    assistantFence?: AssistantOperationFence;
-  }): Promise<ChatOperation> {
-    try {
-      return await this.rlsTransaction.withTransaction(async (tx) => {
-        await assertAssistantOperationFence(tx, data.conversationId, data.clientId, data.assistantFence);
-        const existing = await tx.chatOperation.findUnique({ where: { idempotencyKey: data.idempotencyKey } });
-        if (existing) return existing;
-        return tx.chatOperation.create({
-          data: {
-            ...this.withoutFence(data),
-            payload: data.payload as Prisma.InputJsonValue,
-            summary: data.summary as Prisma.InputJsonValue,
-          },
-        });
-      });
-    } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
-      const existing = await this.prisma.chatOperation.findUnique({ where: { idempotencyKey: data.idempotencyKey } });
-      if (!existing) throw error;
-      return existing;
-    }
-  }
-
-  private withoutFence<T extends { assistantFence?: AssistantOperationFence }>(data: T): Omit<T, 'assistantFence'> {
-    const { assistantFence: _fence, ...persisted } = data;
-    return persisted;
-  }
 }

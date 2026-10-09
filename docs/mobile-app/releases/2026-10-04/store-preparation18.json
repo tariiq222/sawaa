@@ -62,8 +62,8 @@
   },
   "submissionScreenshot": "screenshots18/apple-submitted-build18.png",
   "monitor": {
-    "checkedAt": "2026-10-08T04:35:59.780Z",
-    "checkedAtRiyadh": "2026-10-08 07:35:59 +03:00",
+    "checkedAt": "2026-10-09T18:07:27.324Z",
+    "checkedAtRiyadh": "2026-10-09 21:07:27 +03:00",
     "versionState": "REJECTED",
     "submissionState": "UNRESOLVED_ISSUES",
     "build": "18",

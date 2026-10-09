@@ -54,6 +54,16 @@ it('cancels then explicitly resumes the same invoice and reserved payment', asyn
   expect(clientPaymentsService.initNativePayment).toHaveBeenCalledTimes(2);
   expect(clientPaymentsService.initNativePayment).toHaveBeenLastCalledWith('invoice', 'APPLE_PAY');
   expect(mockReplace).not.toHaveBeenCalled();
+  expect(prepareBooking).toHaveBeenCalledTimes(1);
+});
+it('hands the bound invoice to another payment method without preparing another booking', async () => {
+  const { result } = mount();
+  const first = await press(result);
+  act(() => first?.onCancel?.());
+  let identity: unknown;
+  act(() => { identity = result.current.handoff(); });
+  expect(identity).toEqual({ bookingId: 'booking', invoiceId: 'invoice' });
+  expect(first?.isCurrent()).toBe(false);
 });
 it('returns to ready after Wallet cancellation when the server confirms no provider payment', async () => {
   const { result } = mount();

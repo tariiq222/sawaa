@@ -128,6 +128,16 @@ describe('payment resume state', () => {
     expect(clientBookingsService.getById).toHaveBeenCalledWith('booking-1');
   });
 
+  it('validates an explicitly bound invoice with the server even when the local record is corrupt', async () => {
+    storage.getItem.mockResolvedValue('{not-json');
+    clientBookingsService.getById.mockResolvedValue(booking);
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' }))
+      .resolves.toMatchObject({ kind: 'ready', checkout: { bookingId: 'booking-1', invoiceId: 'invoice-1' } });
+    clientBookingsService.getById.mockResolvedValue({ ...booking, invoiceId: 'different-invoice' });
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' }))
+      .resolves.toEqual({ kind: 'invalid' });
+  });
+
   it('resumes the same deposit booking invoice for balance collection instead of marking payment complete', async () => {
     storage.getItem.mockResolvedValue(null);
     clientBookingsService.getById.mockResolvedValue({ ...booking, status: 'deposit_paid' });

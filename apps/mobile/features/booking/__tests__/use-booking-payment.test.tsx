@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
-jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => require('@/test-utils/translation').translatedTestMessage(key) }) }));
+let mockLocale: 'ar' | 'en' = 'en';
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => require('@/test-utils/translation').translatedTestMessage(key, mockLocale) }) }));
 
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -53,6 +54,7 @@ const input = { branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'serv
 describe('new booking payment retries', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockLocale = 'en';
     mockStorage.clear();
     mockUserId = 'user-1';
     mockAppleAvailable = false;
@@ -81,6 +83,61 @@ describe('new booking payment retries', () => {
     const { result } = renderHook(() => useBookingPayment(input), { wrapper });
     await act(async () => { await result.current.pay(); });
     expect(mockQueryClient.getQueryState(['portal', 'home'])?.isInvalidated).toBe(false);
+  });
+
+  it('switches a bound checkout to cards without recreating it when its local record was lost', async () => {
+    mockCreate.mockResolvedValue({ id: 'booking-1', invoiceId: 'invoice-1' });
+    mockAppleAvailable = true;
+    const first = renderHook(() => useBookingPayment(input), { wrapper });
+    let identity: { bookingId: string; invoiceId: string | null } | null = null;
+    await act(async () => { identity = await first.result.current.prepareApplePay(); });
+    first.unmount();
+    mockStorage.clear();
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay('card', identity!); });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ bookingId: 'booking-1', invoiceId: 'invoice-1', method: 'ONLINE_CARD' }) }));
+  });
+
+  it.each(['rejected method', 'failed read'])('retains a handed-off identity after %s and storage loss', async (failure) => {
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    const identity = { bookingId: 'booking-1', invoiceId: 'invoice-1' };
+    if (failure === 'failed read') mockGetBooking.mockRejectedValueOnce(new Error('offline'));
+    await act(async () => { await result.current.pay('at_center', identity); });
+    mockStorage.clear();
+    await act(async () => { await result.current.pay('card'); });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockGetBooking).toHaveBeenCalledTimes(2);
+    expect(mockPush).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ ...identity, method: 'ONLINE_CARD' }) }));
+  });
+
+  it.each(['ar', 'en'] as const)('explains an overlapping appointment in %s and opens the existing appointments', async (locale) => {
+    mockLocale = locale;
+    mockAppleAvailable = true;
+    mockCreate.mockRejectedValueOnce({ response: { status: 409, data: { message: 'Client already has an overlapping appointment' } } });
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.prepareApplePay(); });
+
+    const [title, message, buttons] = jest.mocked(Alert.alert).mock.calls.at(-1)!;
+    expect(title).toMatch(locale === 'ar' ? /موعد/ : /appointment/i);
+    expect(message).toMatch(locale === 'ar' ? /مواعيدي/ : /My appointments/);
+    expect(message).toMatch(locale === 'ar' ? /وقتًا آخر/ : /another time/);
+    expect(message).not.toContain('Client already has');
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(result.current.submitting).toBe(false);
+    const appointmentsButton = buttons?.find((button) => (locale === 'ar' ? /^مواعيدي$/ : /appointments/i).test(button.text ?? ''));
+    expect(appointmentsButton?.onPress).toEqual(expect.any(Function));
+    appointmentsButton!.onPress!();
+    expect(mockPush).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+  });
+
+  it('uses a localized fallback instead of exposing unknown server errors', async () => {
+    mockLocale = 'ar';
+    mockCreate.mockRejectedValueOnce({ response: { status: 500, data: { message: 'Internal server details' } } });
+    const { result } = renderHook(() => useBookingPayment(input), { wrapper });
+    await act(async () => { await result.current.pay(); });
+    expect(Alert.alert).toHaveBeenCalledWith(expect.stringMatching(/خطأ/), expect.stringMatching(/تعذّر/));
+    expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[1]).not.toContain('Internal server details');
   });
 
   it('keeps confirmation in the back stack when opening the selected card form', async () => {
@@ -171,6 +228,9 @@ describe('new booking payment retries', () => {
     expect(mockInit).not.toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(result.current.unavailableReason).toBe('BOOKING_EXPIRED');
+    act(() => result.current.reviewAvailability());
+    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/[serviceId]', params: { serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1' } });
   });
 
   it('routes a completed saved booking to its result without charging again', async () => {
