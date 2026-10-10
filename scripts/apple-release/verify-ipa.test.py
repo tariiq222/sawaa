@@ -27,6 +27,13 @@ class IdentityTests(unittest.TestCase):
         profile['ExpirationDate'] = datetime.datetime(2020, 1, 1)
         with self.assertRaises(ValueError): mod.verify_identity(info, ent, profile, '1.0.0', '36')
 
+    def test_one_native_payment_view_registration_required(self):
+        mod = self.module()
+        source = "const view = requireNativeComponent('PKPaymentButton', null);"
+        mod.verify_payment_registration([source, '// PKPaymentButton documentation'])
+        for contents in [[], [source, source], [source + source]]:
+            with self.assertRaises(ValueError): mod.verify_payment_registration(contents)
+
     def test_runtime_bundle_rejects_swapped_or_missing_api(self):
         mod = self.module()
         mod.verify_api(b'config:https://staging.sawaa.sa/api/v1', 'staging')

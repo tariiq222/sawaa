@@ -40,6 +40,10 @@ def verify_api(bundle, environment):
     other = ('https://' + ('api' if environment == 'staging' else 'staging') + '.sawaa.sa/api/v1').encode()
     require(expected in bundle and other not in bundle, 'Runtime API target mismatch')
 
+def verify_payment_registration(contents):
+    count = sum(len(re.findall(r"requireNativeComponent\s*\(\s*['\"]PKPaymentButton['\"]", c or '')) for c in contents)
+    require(count == 1, 'Apple Pay native view must be registered once')
+
 def cms(path):
     return plistlib.loads(subprocess.check_output(['security', 'cms', '-D', '-i', str(path)], stderr=subprocess.DEVNULL))
 
@@ -61,7 +65,7 @@ def verify(ipa, environment, version, build, sha, profile_path, sourcemap):
         verify_identity(info, ent, embedded, version, build)
         require(embedded['UUID'] == supplied['UUID'] and embedded['DeveloperCertificates'] == supplied['DeveloperCertificates'], 'Embedded profile differs from supplied profile')
         cert_prefix = Path(tmp) / 'certificate-'
-        subprocess.run(['codesign', '-d', '--extract-certificates', str(cert_prefix), str(app)], check=True, capture_output=True)
+        subprocess.run(['codesign', '-d', '--extract-certificates=' + str(cert_prefix), str(app)], check=True, capture_output=True)
         leaf = Path(str(cert_prefix) + '0').read_bytes()
         require(leaf in supplied['DeveloperCertificates'], 'Signature certificate is not authorized by profile')
         require(info.get('SawaaSourceSha') == sha and info.get('SawaaReleaseEnvironment') == environment, 'Release provenance mismatch')
@@ -74,8 +78,7 @@ def verify(ipa, environment, version, build, sha, profile_path, sourcemap):
         require(firebase.get('BUNDLE_ID') == BUNDLE, 'Firebase app mismatch')
         require(sum('IBMPlexSansArabic' in f.name for f in app.rglob('*') if f.is_file()) >= 4, 'Arabic fonts missing')
         source_map = json.loads(Path(sourcemap).read_text())
-        registrations = sum(bool(re.search(r'requireNativeViewManager[^;]*PKPaymentButton', c or '')) for c in source_map.get('sourcesContent', []))
-        require(registrations == 1, 'Apple Pay native view must be registered once')
+        verify_payment_registration(source_map.get('sourcesContent', []))
         return {
             'verifiedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'sourceSha': sha, 'environment': environment, 'bundleIdentifier': BUNDLE,
