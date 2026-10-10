@@ -118,6 +118,7 @@ docs/testing/*
 !docs/testing/e2e-phase3-plan.md
 !docs/testing/e2e-phase3-acceptance.md
 !docs/testing/local-premerge.md
+!docs/testing/playwright-test-agents.md
 !docs/testing/evidence/
 docs/testing/evidence/*
 !docs/testing/evidence/2026-10-09-auth-login/
