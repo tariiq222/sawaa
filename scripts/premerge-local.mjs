@@ -28,8 +28,11 @@ const writeEvidence = () => writeFileSync(resolve(output, 'acceptance.json'), JS
 
 function candidate() {
   const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-  const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
-    { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).split('\0').filter(Boolean).sort();
+  const list = args => execFileSync('git', ['ls-files', ...args, '-z'],
+    { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).split('\0').filter(Boolean);
+  // Playwright ignores .gitignore, so ignored files under its testDir can run and must count.
+  const files = [...new Set([...list(['--cached', '--others', '--exclude-standard']),
+    ...list(['--others', '--ignored', '--exclude-standard', '--', 'e2e/playwright'])])].sort();
   const hash = createHash('sha256').update(sha);
   // The staged tree is what the next commit contains, so hash index entries too.
   hash.update(execFileSync('git', ['ls-files', '--stage', '-z'], { cwd: root, maxBuffer: 64 * 1024 * 1024 }));

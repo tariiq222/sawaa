@@ -9,7 +9,8 @@ test('writer tools stay under e2e/playwright', () => {
   assert.equal(policy(call('generator_write_test', { fileName: 'e2e/playwright/website/booking.spec.ts' })), null);
   assert.equal(policy(call('planner_save_plan', { fileName: 'e2e/playwright/plans/booking.plan.md' })), null);
   for (const fileName of ['apps/backend/src/main.ts', '../outside.md', 'e2e/playwright/../../package.json',
-    '/etc/passwd', 'e2e/playwright', 'e2e/playwright-evil/x.spec.ts', undefined]) {
+    '/etc/passwd', 'e2e/playwright', 'e2e/playwright-evil/x.spec.ts', undefined,
+    'e2e/playwright/website\\..\\..\\..\\playwright.local.config.ts', 'e2e/playwright/a\0.spec.ts']) {
     assert.match(policy(call('generator_write_test', { fileName })), /e2e\/playwright/, String(fileName));
     assert.match(policy(call('planner_save_plan', { fileName })), /e2e\/playwright/, String(fileName));
   }

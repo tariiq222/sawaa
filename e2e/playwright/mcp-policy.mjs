@@ -11,7 +11,8 @@ import { isAbsolute, relative, resolve } from 'node:path';
 // blocks every tool that loads specs. Git is the record, so this holds across
 // MCP restarts and every run path (test_run, test_debug, test_list, setup).
 export function unreviewedTestCode(root) {
-  const entries = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', 'e2e/playwright'],
+  // --ignored: Playwright collects specs regardless of .gitignore.
+  const entries = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignored=matching', '--', 'e2e/playwright'],
     { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
   return entries.map(entry => entry.slice(3)).filter(path => /\.[cm]?[jt]sx?$/.test(path));
 }
@@ -40,7 +41,8 @@ export function createMcpPolicy(root, ports, { unreviewed = () => unreviewedTest
     if (input.paths !== undefined && !Array.isArray(input.paths)) return `${name}: paths must be a list of paths under e2e/playwright/`;
     for (const [key, value] of paths) {
       if (value === undefined && !writers.has(name)) continue;
-      if (typeof value !== 'string' || isAbsolute(value)) return `${name}: ${key} must be a relative path under e2e/playwright/`;
+      // Playwright's writer rewrites '\\' to '/' after this check would run, so refuse it.
+      if (typeof value !== 'string' || isAbsolute(value) || /[\\\0]/.test(value)) return `${name}: ${key} must be a relative path under e2e/playwright/`;
       const target = resolve(root, value);
       const inside = relative(testRoot, target);
       if (!inside || inside.startsWith('..') || isAbsolute(inside)) return `${name}: ${key} must be under e2e/playwright/`;
