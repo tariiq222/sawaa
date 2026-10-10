@@ -23,8 +23,9 @@ export interface GenerateInvoicePdfCommand {
  *
  * Idempotent: when the invoice already has a `pdfUrl` the stored object key is
  * returned unchanged (a paid receipt's ZATCA stamp must stay frozen). Otherwise
- * it renders, uploads to MinIO, persists the key, and returns it. The caller
- * (controller) mints the short-lived presigned URL from the returned key.
+ * it renders, uploads to MinIO and returns the key; the key is persisted only
+ * for PAID invoices (non-PAID PDFs are not receipts and must not suppress
+ * receipt issuance). The caller (controller) mints the short-lived presigned URL from the returned key.
  */
 @Injectable()
 export class GenerateInvoicePdfHandler {
@@ -53,6 +54,13 @@ export class GenerateInvoicePdfHandler {
 
     const key = `invoices/${invoice.id}/${Date.now()}.pdf`;
     await this.storage.uploadFile(BUCKET, key, pdfBuffer, 'application/pdf');
+
+    // Only a PAID invoice's PDF is a receipt. A pre-payment PDF is returned but
+    // not persisted: a stored `pdfUrl` makes IssueInvoiceReceiptHandler skip,
+    // so the paid receipt would never be generated or sent.
+    if (invoice.status !== 'PAID') {
+      return key;
+    }
 
     await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
