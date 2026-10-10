@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { writeFile } from 'node:fs/promises';
 import { releaseTarget } from './target.mjs';
 
-const OPENSHIP = 'https://open.webvue.pro';
+const OPENSHIP = 'https://open.webvue.pro/api/proxy';
 const SERVICES = ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'];
 
 export function verifyDeployment(target, sha, { project, deployment, containers }) {

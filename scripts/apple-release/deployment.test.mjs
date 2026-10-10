@@ -11,6 +11,22 @@ function fixture() {
   };
 }
 
+test('self-hosted OpenShip reads use the public dashboard API proxy', async () => {
+  const { waitForDeployment } = await import('./deployment.mjs');
+  const f = fixture(); const shipReads = [];
+  const request = async url => {
+    if (url.includes('api.github.com')) return { ok: true, json: async () => ({ object: { sha } }) };
+    shipReads.push(url);
+    if (!url.startsWith('https://open.webvue.pro/api/proxy/api/')) return { ok: false, status: 404 };
+    const data = url.includes('/services/containers') ? { success: true, containers: f.containers }
+      : url.includes('/projects/') ? { data: f.project } : { data: f.deployment };
+    return { ok: true, json: async () => data };
+  };
+  const result = await waitForDeployment(target, sha, 'read', { githubToken: 'read', request });
+  assert.equal(result.deploymentId, 'dep_current');
+  assert.equal(shipReads.length, 4);
+});
+
 test('a ready deployment must be active, from the requested SHA and project', async () => {
   const { verifyDeployment } = await import('./deployment.mjs');
   assert.equal(verifyDeployment(target, sha, fixture()).deploymentId, 'dep_current');
