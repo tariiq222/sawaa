@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, RefundType } from '@prisma/client';
 import { ExpireBookingHandler } from './expire-booking.handler';
-import { buildPrisma as buildBasePrisma, buildRlsTransaction, buildEventBus, mockBooking as baseBooking } from '../testing/booking-test-helpers';
+import { buildPrisma as buildBasePrisma, buildRlsTransaction, mockBooking as baseBooking } from '../testing/booking-test-helpers';
 
 const mockBooking = { ...baseBooking, isHistoricalImport: false, expiresAt: new Date('2020-01-01') };
 const buildPrisma = () => {
@@ -20,14 +20,12 @@ const buildGroupCapacity = () => ({
 
 const newHandler = (
   prisma: ReturnType<typeof buildPrisma>,
-  eventBus: ReturnType<typeof buildEventBus> = buildEventBus(),
   refundHandler: ReturnType<typeof buildRefundHandler> = buildRefundHandler(),
   groupCapacity: ReturnType<typeof buildGroupCapacity> = buildGroupCapacity(),
 ) =>
   new ExpireBookingHandler(
     prisma as never,
     buildRlsTransaction(prisma) as never,
-    eventBus as never,
     refundHandler as never,
     groupCapacity as never,
   );
@@ -93,7 +91,7 @@ describe('ExpireBookingHandler — concurrent-status guard', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('does NOT publish a refund/cancel event when the guarded write bails', async () => {
+  it('does NOT stage a refund/cancel event when the guarded write bails', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest
       .fn()
@@ -102,17 +100,16 @@ describe('ExpireBookingHandler — concurrent-status guard', () => {
       .fn()
       .mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
     prisma.booking.updateMany = jest.fn().mockResolvedValue({ count: 0 });
-    const eventBus = buildEventBus();
     const refundHandler = buildRefundHandler();
 
     await expect(
-      newHandler(prisma, eventBus, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' }),
+      newHandler(prisma, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' }),
     ).rejects.toThrow(BadRequestException);
 
     // The refund request is created inside the tx, after the guarded write; a
     // bail rolls the whole tx back and the cancel event never publishes.
     expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
   });
 });
 
@@ -161,7 +158,7 @@ describe('ExpireBookingHandler — program enrollment capacity', () => {
     });
     const groupCapacity = buildGroupCapacity();
 
-    await newHandler(prisma, buildEventBus(), buildRefundHandler(), groupCapacity)
+    await newHandler(prisma, buildRefundHandler(), groupCapacity)
       .execute({ bookingId: 'book-1', changedBy: 'system' });
 
     // buildRlsTransaction passes `prisma` itself as the tx — asserting on it
@@ -179,7 +176,7 @@ describe('ExpireBookingHandler — program enrollment capacity', () => {
     });
     const groupCapacity = buildGroupCapacity();
 
-    await newHandler(prisma, buildEventBus(), buildRefundHandler(), groupCapacity)
+    await newHandler(prisma, buildRefundHandler(), groupCapacity)
       .execute({ bookingId: 'book-1', changedBy: 'system' });
 
     expect(groupCapacity.decrementEnrollment).not.toHaveBeenCalled();
@@ -211,7 +208,7 @@ describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
     const refundHandler = buildRefundHandler();
     refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-late', idempotencyKey: 'ik-late' });
 
-    await newHandler(prisma, buildEventBus(), refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+    await newHandler(prisma, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
 
     expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
       expect.anything(),
@@ -225,7 +222,7 @@ describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
     const refundHandler = buildRefundHandler();
     refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
 
-    await newHandler(prisma, buildEventBus(), refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+    await newHandler(prisma, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
 
     expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
       expect.anything(),
@@ -240,29 +237,48 @@ describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
     expect(call.amount).toBeUndefined();
   });
 
-  it('publishes BookingCancelledEvent carrying refundRequestId + idempotencyKey so the refund is finalized', async () => {
+  it('stages BookingCancelledEvent in the outbox (same tx) carrying refundRequestId + idempotencyKey', async () => {
     const prisma = buildPrisma();
     prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
-    const eventBus = buildEventBus();
     const refundHandler = buildRefundHandler();
     refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
 
-    await newHandler(prisma, eventBus, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+    await newHandler(prisma, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
 
-    expect(eventBus.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancelled',
-      expect.objectContaining({
-        source: 'bookings',
-        version: 1,
+    // buildRlsTransaction passes `prisma` itself as the tx, so this write is in-tx.
+    expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(prisma.outboxEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: expect.any(String),
+        aggregateId: 'book-1',
+        eventType: 'bookings.booking.cancelled',
         payload: expect.objectContaining({
-          bookingId: 'book-1',
-          refundType: RefundType.FULL,
-          paymentId: 'pay-1',
-          refundRequestId: 'rr-1',
-          idempotencyKey: 'ik-1',
+          source: 'bookings',
+          version: 1,
+          payload: expect.objectContaining({
+            bookingId: 'book-1',
+            refundType: RefundType.FULL,
+            paymentId: 'pay-1',
+            refundRequestId: 'rr-1',
+            idempotencyKey: 'ik-1',
+          }),
         }),
       }),
-    );
+    });
+  });
+
+  it('does NOT stage the event when the transaction fails after the outbox write', async () => {
+    const prisma = buildPrisma();
+    const committed: unknown[] = [];
+    prisma.outboxEvent.create.mockImplementation(async (args: unknown) => {
+      committed.push(args);
+      throw new Error('tx aborted');
+    });
+
+    await expect(
+      newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' }),
+    ).rejects.toThrow('tx aborted');
+
   });
 
   it('does NOT create a refund request when there is no COMPLETED payment', async () => {
@@ -270,7 +286,7 @@ describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
     prisma.payment.findFirst = jest.fn().mockResolvedValue(null);
     const refundHandler = buildRefundHandler();
 
-    await newHandler(prisma, buildEventBus(), refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+    await newHandler(prisma, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
 
     expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
   });
@@ -285,18 +301,16 @@ describe('ExpireBookingHandler — explicit deadline safety', () => {
   ])('leaves %s unchanged', async (_label, overrides) => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, ...overrides });
-    const eventBus = buildEventBus();
-    await expect(newHandler(prisma, eventBus).execute({ bookingId: 'book-1', changedBy: 'system' }))
+    await expect(newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' }))
       .rejects.toThrow(BadRequestException);
     expect(prisma.booking.updateMany).not.toHaveBeenCalled();
     expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it.each(['deadline extended', 'deadline removed', 'status changed', 'marked historical'])(
     'rejects stale selection when %s before mutation', async (change) => {
       const prisma = buildPrisma();
-      const eventBus = buildEventBus();
       const current = { ...mockBooking,
         ...(change === 'deadline extended' ? { expiresAt: new Date('2100-01-01') } : {}),
         ...(change === 'deadline removed' ? { expiresAt: null } : {}),
@@ -309,9 +323,9 @@ describe('ExpireBookingHandler — explicit deadline safety', () => {
           (where.isHistoricalImport === undefined || current.isHistoricalImport === where.isHistoricalImport)
           ? 1 : 0,
       }));
-      await expect(newHandler(prisma, eventBus).execute({ bookingId: 'book-1', changedBy: 'system' }))
+      await expect(newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' }))
         .rejects.toThrow(BadRequestException);
-      expect(eventBus.publish).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
       expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
     });
 });

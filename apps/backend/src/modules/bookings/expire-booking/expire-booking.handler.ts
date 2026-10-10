@@ -1,10 +1,9 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { BookingStatus, CancellationReason, RefundType } from "@prisma/client";
+import { BookingStatus, CancellationReason, Prisma, RefundType } from "@prisma/client";
 import {
 	PrismaService,
 	RlsTransactionService,
 } from "../../../infrastructure/database";
-import { EventBusService } from "../../../infrastructure/events";
 import { RefundPaymentHandler } from "../../finance/refund-payment/refund-payment.handler";
 import { DEFAULT_ORG_ID } from "../../../common/constants";
 import { BookingCancelledEvent } from "../events/booking-cancelled.event";
@@ -26,7 +25,6 @@ export class ExpireBookingHandler {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly rlsTransaction: RlsTransactionService,
-		private readonly eventBus: EventBusService,
 		private readonly refundHandler: RefundPaymentHandler,
 		private readonly groupSessionCapacity: ProgramCapacityService,
 	) {}
@@ -52,7 +50,7 @@ export class ExpireBookingHandler {
 		let refundRequestId: string | null = null;
 		let idempotencyKey: string | null = null;
 
-		const { updated, completedPayment, latePaymentReview } = await this.rlsTransaction.withTransaction(async (tx) => {
+		const { updated } = await this.rlsTransaction.withTransaction(async (tx) => {
 			// Recheck the deadline, historical flag and selected status in the same
 			// write so stale cron selections cannot expire a changed booking.
 			const expiredBooking = await updateBookingAtomically(tx, {
@@ -125,27 +123,37 @@ export class ExpireBookingHandler {
 				);
 			}
 
-			return { updated: expiredBooking, completedPayment, latePaymentReview };
-		});
+			// Reuse the existing cancellation/refund event so
+			// OnBookingCancelledRefundHandler finalizes the pre-created refund via
+			// the atomic Phase 1 + Phase 3 path (refundRequestId + idempotencyKey).
+			const event = new BookingCancelledEvent({
+				organizationId: DEFAULT_ORG_ID,
+				scheduledAt: booking.scheduledAt,
+				bookingId: booking.id,
+				bookingNumber: booking.bookingNumber,
+				clientId: booking.clientId,
+				employeeId: booking.employeeId,
+				reason: CancellationReason.SYSTEM_EXPIRED,
+				zoomMeetingId: booking.zoomMeetingId ?? null,
+				refundType: completedPayment && !latePaymentReview ? RefundType.FULL : RefundType.NONE,
+				paymentId: completedPayment?.id ?? null,
+				refundRequestId,
+				idempotencyKey,
+			});
 
-		// Reuse the existing cancellation/refund event so
-		// OnBookingCancelledRefundHandler finalizes the pre-created refund via
-		// the atomic Phase 1 + Phase 3 path (refundRequestId + idempotencyKey).
-		const event = new BookingCancelledEvent({
-			organizationId: DEFAULT_ORG_ID,
-			scheduledAt: booking.scheduledAt,
-			bookingId: booking.id,
-			bookingNumber: booking.bookingNumber,
-			clientId: booking.clientId,
-			employeeId: booking.employeeId,
-			reason: CancellationReason.SYSTEM_EXPIRED,
-			zoomMeetingId: booking.zoomMeetingId ?? null,
-			refundType: completedPayment && !latePaymentReview ? RefundType.FULL : RefundType.NONE,
-			paymentId: completedPayment?.id ?? null,
-			refundRequestId,
-			idempotencyKey,
+			// Stage in the transactional outbox (same tx as the status flip and the
+			// refund request) so a crash after commit cannot lose the event.
+			await tx.outboxEvent.create({
+				data: {
+					id: event.eventId,
+					aggregateId: booking.id,
+					eventType: event.eventName,
+					payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+				},
+			});
+
+			return { updated: expiredBooking };
 		});
-		await this.eventBus.publish(event.eventName, event.toEnvelope());
 
 		return updated;
 	}
