@@ -20,7 +20,8 @@ export interface ManualRefundPaymentCommand {
 
 /**
  * Manual (cash/bank-transfer) refund for a booking payment that was collected
- * off-gateway — i.e. has NO `gatewayRef`. The gateway path
+ * off-gateway — i.e. its method is not ONLINE_CARD. Bank transfer references
+ * are administrative references, not Moyasar payment IDs. The gateway path
  * (`RefundPaymentHandler`) refuses these ("use manual refund path"); this is
  * that path. No money moves through Moyasar — reception hands the cash back and
  * the system records the refund and reflects it on the invoice synchronously.
@@ -54,12 +55,13 @@ export class ManualRefundPaymentHandler {
           Array<{
             id: string;
             status: string;
+            method: string;
             gatewayRef: string | null;
             amount: Prisma.Decimal;
             refundedAmount: Prisma.Decimal | null;
             invoiceId: string;
           }>
-        >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
+        >`SELECT id, status, method, "gatewayRef", amount, "refundedAmount", "invoiceId"
             FROM "Payment"
             WHERE id = ${cmd.paymentId}
             FOR UPDATE`;
@@ -71,7 +73,7 @@ export class ManualRefundPaymentHandler {
           : null;
         if (cmd.refundRequestId) {
           if (!reviewed || reviewed.paymentId !== row.id || reviewed.invoiceId !== row.invoiceId) throw new NotFoundException('Refund request not found for this payment');
-          if (row.gatewayRef) throw new BadRequestException('Payment was collected through the card gateway; use the gateway refund path');
+          if (row.method === 'ONLINE_CARD') throw new BadRequestException('Payment was collected through the card gateway; use the gateway refund path');
           if (cmd.amount !== undefined && cmd.amount !== decimalToHalalas(reviewed.amount)) throw new ConflictException('Amount must match the reviewed refund request');
           if (reviewed.status === RefundStatus.COMPLETED) return { updatedPayment: await tx.payment.findUniqueOrThrow({ where: { id: row.id } }) };
           if (reviewed.status !== RefundStatus.PENDING_REVIEW) throw new ConflictException('Refund request is not pending review');
@@ -84,8 +86,8 @@ export class ManualRefundPaymentHandler {
         }
         assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);
         // This path is ONLY for off-gateway (cash/bank-transfer) payments.
-        // Card payments carry a gatewayRef and must refund through Moyasar.
-        if (row.gatewayRef) {
+        // ONLINE_CARD payments must refund through Moyasar.
+        if (row.method === 'ONLINE_CARD') {
           throw new BadRequestException(
             'Payment was collected through the card gateway; use the gateway refund path',
           );

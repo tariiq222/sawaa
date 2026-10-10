@@ -1,11 +1,12 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, MaxLength, Matches, Min, Validate, ValidateIf, ValidateNested } from 'class-validator';
+import { SelectableOptionsValidator } from './selectable-options.validator';
 import { Type } from 'class-transformer';
 import { IntakeFieldType, IntakeFormType, IntakeFormScope } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class IntakeFieldInputDto {
   @ApiProperty({ description: 'Field label in Arabic', example: 'هل لديك حساسية؟' })
-  @IsString() @MaxLength(200) labelAr!: string;
+  @IsString() @Matches(/\S/) @MaxLength(200) labelAr!: string;
 
   @ApiPropertyOptional({ nullable: true, type: String, description: 'Field label in English', example: 'Do you have any allergies?' })
   @IsOptional() @IsString() @MaxLength(200) labelEn?: string | null;
@@ -17,7 +18,7 @@ export class IntakeFieldInputDto {
   @ValidateIf((object) => object.isRequired !== undefined) @IsBoolean() isRequired?: boolean;
 
   @ApiPropertyOptional({ description: 'Selectable options for RADIO/SELECT/CHECKBOX fields', example: ['نعم', 'لا'] })
-  @ValidateIf((object) => object.options !== undefined) @IsArray() @IsString({ each: true }) options?: string[];
+  @Validate(SelectableOptionsValidator) options?: string[];
 
   @ApiPropertyOptional({ description: 'Display order position (0-based)', example: 0 })
   @ValidateIf((object) => object.position !== undefined) @IsInt() @Min(0) position?: number;
@@ -25,7 +26,7 @@ export class IntakeFieldInputDto {
 
 export class CreateIntakeFormDto {
   @ApiProperty({ description: 'Form name in Arabic', example: 'استبيان ما قبل الجلسة' })
-  @IsString() @MaxLength(200) nameAr!: string;
+  @IsString() @Matches(/\S/) @MaxLength(200) nameAr!: string;
 
   @ApiPropertyOptional({ nullable: true, type: String, description: 'Form name in English', example: 'Pre-session Questionnaire' })
   @IsOptional() @IsString() @MaxLength(200) nameEn?: string | null;

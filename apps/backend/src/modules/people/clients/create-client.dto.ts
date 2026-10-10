@@ -39,7 +39,7 @@ export class CreateClientDto {
   @IsOptional() @IsString() @MaxLength(255) middleName?: string;
 
   @ApiProperty({ description: "Client's last name", example: 'Al-Harbi' })
-  @IsString() @IsNotEmpty() @MaxLength(255) lastName!: string;
+  @IsString() @MaxLength(255) lastName!: string;
 
   @ApiProperty({ description: 'Saudi mobile number (any common format; normalized to E.164)', example: '+966501234567' })
   @IsString() @NormalizePhone() @Matches(PHONE_REGEX, { message: 'phone must be a Saudi number +9665XXXXXXXX' }) phone!: string;

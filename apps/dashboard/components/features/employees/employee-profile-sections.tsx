@@ -1,5 +1,7 @@
 "use client"
 
+import { isLeaveCurrentOrUpcoming } from "@/lib/employee-leave"
+
 /**
  * Employee Profile — Secondary sections
  * (Availability, Vacations, Services card wrapper)
@@ -100,7 +102,7 @@ export function EmployeeVacationsSection({ employeeId }: WithId) {
   const { t, locale } = useLocale()
   const { data: vacations, isLoading } = useEmployeeVacations(employeeId)
 
-  const upcoming = (vacations ?? []).filter((v) => new Date(v.endDate) >= new Date())
+  const upcoming = (vacations ?? []).filter((v) => isLeaveCurrentOrUpcoming(v.endDate))
 
   return (
     <Card>

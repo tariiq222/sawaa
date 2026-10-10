@@ -1,3 +1,4 @@
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -118,6 +119,18 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     await app.init();
+  });
+
+  it('documents the enriched organization-settings response contract', () => {
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().build());
+    expect(document.paths['/dashboard/organization/ratings']?.get?.responses['200']).toMatchObject({
+      content: {'application/json': {schema: {$ref: '#/components/schemas/OrganizationRatingsResponseDto'}}},
+    });
+    const schema = document.components?.schemas?.['OrganizationRatingsResponseDto'] as {properties: Record<string,unknown>};
+    expect(Object.keys(schema.properties)).toEqual(expect.arrayContaining(['items', 'averageRating', 'meta']));
+    expect(schema.properties.averageRating).toMatchObject({type:'number',nullable:true});
+    expect(document.components?.schemas?.OrganizationRatingResponseDto).toMatchObject({properties:{employee:{nullable:true,allOf:[{$ref:'#/components/schemas/RatingEmployeeResponseDto'}]}}});
+    expect(document.components?.schemas?.OrganizationRatingsMetaDto).toMatchObject({properties:{limit:{type:'number'},hasNextPage:{type:'boolean'}}});
   });
 
   afterAll(async () => {

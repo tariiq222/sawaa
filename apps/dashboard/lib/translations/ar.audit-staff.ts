@@ -1,0 +1,15 @@
+export const arAuditStaff = {
+  "auditStaff.passwordRequirements": "8 أحرف على الأقل، تتضمن حرفًا إنجليزيًا كبيرًا ورقمًا.",
+  "auditStaff.passwordUppercase": "يجب أن تتضمن كلمة المرور حرفًا إنجليزيًا كبيرًا.",
+  "auditStaff.passwordDigit": "يجب أن تتضمن كلمة المرور رقمًا.",
+  "auditStaff.saveProfile": "حفظ بيانات المستخدم",
+  "auditStaff.savingProfile": "جارٍ حفظ بيانات المستخدم…",
+  "auditStaff.profileSaved": "تم حفظ بيانات المستخدم.",
+  "auditStaff.defaultRole": "الدور الافتراضي",
+  "auditStaff.role": "الدور",
+  "auditStaff.saveRole": "حفظ الدور",
+  "auditStaff.roleSaved": "تم حفظ الدور.",
+  "auditStaff.roleSaveError": "تعذر حفظ الدور. لم تتغير بيانات المستخدم.",
+  "auditStaff.roleSaveDescription": "يُحفظ الدور بشكل مستقل عن بيانات المستخدم. استخدم زر حفظ الدور لتطبيق التغيير.",
+  "auditStaff.roleNameRequired": "اسم الدور مطلوب.",
+} as const

@@ -29,11 +29,13 @@ import type { User } from "@/lib/types/user"
 export function UserListPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const activeTab = searchParams.get("tab") === "roles" ? "roles" : "users"
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
   const { users, meta, isLoading, error, search, setSearch, page, setPage } = useUsers()
   const canReadRoles = canDo("role", "read")
+  const activeTab = searchParams.get("tab") === "roles" && canReadRoles ? "roles" : "users"
+  const canManageUser = canDo("user", "manage")
+  const canManageRole = canDo("role", "manage")
   const { activateMut, deactivateMut } = useUserMutations()
 
   const [createRoleOpen, setCreateRoleOpen] = useState(false)
@@ -59,14 +61,14 @@ export function UserListPage() {
   }, [activateMut, deactivateMut, t])
 
   const canEditUser = canDo("user", "update")
-  const canDeleteUser = canDo("user", "delete")
+  const canDeleteUser = canManageUser
   const canViewUser = canDo("user", "read")
   const columns = getUserColumns(
-    (canViewUser || canEditUser || canDeleteUser) ? {
+    (canViewUser || canEditUser || canManageUser) ? {
       onView: canViewUser ? (u) => router.push(`/users/${formatRef("USR", u.ref)}`) : undefined,
       onEdit: canEditUser ? (u) => router.push(`/users/${formatRef("USR", u.ref)}/edit`) : undefined,
       onDelete: canDeleteUser ? setDeleteUser : undefined,
-      onToggleActive: canEditUser ? handleToggleActive : undefined,
+      onToggleActive: canManageUser ? handleToggleActive : undefined,
     } : undefined,
     t,
     locale,
@@ -82,13 +84,13 @@ export function UserListPage() {
         title={t("users.title")}
         description={t("users.description")}
       >
-        {isUsersTab && canDo("user", "create") && (
+        {isUsersTab && canManageUser && (
           <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/users/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("users.addUser")}
           </Button>
         )}
-        {isRolesTab && canDo("user", "create") && (
+        {isRolesTab && canManageRole && (
           <Button className="gap-2 rounded-lg px-5" onClick={() => setCreateRoleOpen(true)}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("users.roles.createRole")}
@@ -122,7 +124,7 @@ export function UserListPage() {
               data={users}
               emptyTitle={t("users.empty.title")}
               emptyDescription={t("users.empty.description")}
-              emptyAction={canDo("user", "create") ? { label: t("users.addUser"), onClick: () => router.push("/users/create") } : undefined}
+              emptyAction={canManageUser ? { label: t("users.addUser"), onClick: () => router.push("/users/create") } : undefined}
               serverPaginated
               page={meta?.page ?? page}
               totalPages={meta?.totalPages ?? 1}
@@ -136,11 +138,11 @@ export function UserListPage() {
         {canReadRoles && <TabsContent value="roles" className="mt-6"><RolesTab ref={rolesTabRef} /></TabsContent>}
       </Tabs>
 
-      <CreateRoleDialog
+      {canManageRole && <CreateRoleDialog
         open={createRoleOpen}
         onOpenChange={setCreateRoleOpen}
         onCreated={(role) => rolesTabRef.current?.highlightRole(role.id)}
-      />
+      />}
       <DeleteUserDialog user={deleteUser} open={!!deleteUser} onOpenChange={(o) => !o && setDeleteUser(null)} />
     </ListPageShell>
   )

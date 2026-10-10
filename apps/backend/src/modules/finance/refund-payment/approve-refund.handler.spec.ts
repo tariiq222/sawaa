@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PaymentMethod, Prisma } from '@prisma/client';
 import { ApproveRefundHandler } from './approve-refund.handler';
 
 describe('ApproveRefundHandler', () => {
@@ -26,6 +26,7 @@ describe('ApproveRefundHandler', () => {
       },
       payment: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
+          method: PaymentMethod.ONLINE_CARD,
           gatewayRef: 'moyasar-pay-1',
           amount: new Prisma.Decimal(100),
           refundedAmount: new Prisma.Decimal(0),
@@ -42,6 +43,35 @@ describe('ApproveRefundHandler', () => {
     await expect(handler.execute({ refundRequestId: 'missing', approvedBy: 'admin' }))
       .rejects.toThrow(NotFoundException);
     expect(refunds.finalizeRefundFromCancellation).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [PaymentMethod.BANK_TRANSFER, 'bank-transfer-admin-reference'],
+    [PaymentMethod.CASH, null],
+  ])('rejects %s approval before claiming the request or entering the provider engine', async (method, gatewayRef) => {
+    const pendingRequest = { ...refundRequest };
+    prisma.refundRequest.findFirst.mockResolvedValue(pendingRequest);
+    prisma.refundRequest.updateMany.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+      Object.assign(pendingRequest, data);
+      return { count: 1 };
+    });
+    prisma.payment.findUniqueOrThrow.mockResolvedValue({
+      method,
+      gatewayRef,
+      amount: new Prisma.Decimal(100),
+      refundedAmount: new Prisma.Decimal(0),
+    });
+    refunds.finalizeRefundFromCancellation.mockRejectedValue(
+      new BadRequestException('Payment cannot be refunded via Moyasar'),
+    );
+
+    await expect(handler.execute({ refundRequestId: 'rr-1', approvedBy: 'admin' }))
+      .rejects.toThrow(BadRequestException);
+    expect(pendingRequest).toEqual(refundRequest);
+    expect(pendingRequest.status).toBe('PENDING_REVIEW');
+    expect(prisma.refundRequest.updateMany).not.toHaveBeenCalled();
+    expect(refunds.finalizeRefundFromCancellation).not.toHaveBeenCalled();
+    expect(prisma.refundRequest.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
   it('delegates an approved refund to the leased reconciliation engine without a direct provider call', async () => {
@@ -65,6 +95,20 @@ describe('ApproveRefundHandler', () => {
     expect(result).toEqual({ id: 'rr-1', status: 'COMPLETED', gatewayRef: 'moyasar-pay-1' });
   });
 
+  it('keeps a card request pending when its provider reference is missing', async () => {
+    prisma.payment.findUniqueOrThrow.mockResolvedValue({
+      method: PaymentMethod.ONLINE_CARD,
+      gatewayRef: null,
+      amount: new Prisma.Decimal(100),
+      refundedAmount: new Prisma.Decimal(0),
+    });
+
+    await expect(handler.execute({ refundRequestId: 'rr-1', approvedBy: 'admin' }))
+      .rejects.toThrow(NotFoundException);
+    expect(prisma.refundRequest.updateMany).not.toHaveBeenCalled();
+    expect(refunds.finalizeRefundFromCancellation).not.toHaveBeenCalled();
+  });
+
   it('never enters reconciliation when another approval wins the status CAS', async () => {
     prisma.refundRequest.updateMany.mockResolvedValue({ count: 0 });
 
@@ -75,6 +119,7 @@ describe('ApproveRefundHandler', () => {
 
   it('rejects a request above the remaining local refundable balance', async () => {
     prisma.payment.findUniqueOrThrow.mockResolvedValue({
+      method: PaymentMethod.ONLINE_CARD,
       gatewayRef: 'moyasar-pay-1',
       amount: new Prisma.Decimal(100),
       refundedAmount: new Prisma.Decimal(60),

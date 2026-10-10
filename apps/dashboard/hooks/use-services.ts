@@ -35,6 +35,9 @@ export function useServices() {
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [categoryId, setCategoryId] = useState<string | undefined>()
   const [departmentId, setDepartmentId] = useState<string | undefined>()
+  const [branchId, setBranchId] = useState<string | undefined>()
+  const [sortBy, setSortBy] = useState<ServiceListQuery["sortBy"]>("createdAt")
+  const [sortOrder, setSortOrder] = useState<ServiceListQuery["sortOrder"]>("desc")
   const [isActive, setIsActive] = useState<boolean | undefined>()
 
   useEffect(() => {
@@ -44,7 +47,8 @@ export function useServices() {
 
   const query: ServiceListQuery = {
     ...DEFAULT_SERVICES_LIST_QUERY,
-    page,
+    page, sortBy, sortOrder,
+    ...(branchId ? { branchId } : {}),
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
     ...(categoryId ? { categoryId } : {}),
     ...(departmentId ? { departmentId } : {}),
@@ -63,6 +67,7 @@ export function useServices() {
     setDebouncedSearch("")
     setCategoryId(undefined)
     setDepartmentId(undefined)
+    setBranchId(undefined)
     setIsActive(undefined)
     setPage(1)
   }, [])
@@ -76,6 +81,10 @@ export function useServices() {
     setPage,
     search,
     setSearch: (s: string) => { setSearch(s); setPage(1) },
+    branchId,
+    setBranchId: (id: string | undefined) => { setBranchId(id); setPage(1) },
+    sortBy, sortOrder,
+    setSorting: (field: ServiceListQuery["sortBy"], order: ServiceListQuery["sortOrder"]) => { setSortBy(field); setSortOrder(order); setPage(1) },
     categoryId,
     setCategoryId: (id: string | undefined) => { setCategoryId(id); setPage(1) },
     departmentId,

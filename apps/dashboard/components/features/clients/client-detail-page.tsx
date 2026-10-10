@@ -17,6 +17,7 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { ClientPageSkeleton } from "@/components/features/clients/client-page-skeleton"
 import { DeleteClientDialog } from "@/components/features/clients/delete-client-dialog"
 import { ClientBookingsPanel } from "@/components/features/clients/client-bookings-panel"
+import { ClientStatisticsPanel } from "@/components/features/clients/client-statistics-panel"
 import { ClientInvoicesPanel } from "@/components/features/clients/client-invoices-panel"
 import { ClientPackageBalancesPanel } from "@/components/features/clients/client-package-balances-panel"
 import { SellPackageDialog } from "@/components/features/clients/sell-package-dialog"
@@ -137,31 +138,31 @@ export function ClientDetailPage({ clientId }: Props) {
               {t("packages.sell.button")}
             </Button>
           )}
-          <Button
+          {canDo("client", "update") && <Button
             className="gap-2 rounded-lg px-6"
             onClick={() => router.push(`/clients/${clientId}/edit`)}
           >
             <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
             {t("clients.detail.edit")}
-          </Button>
-          <Button
+          </Button>}
+          {canDo("client", "delete") && <Button
             variant="outline"
             className="gap-2 rounded-lg px-6 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:ring-2 hover:ring-destructive/20 hover:shadow-sm transition-all"
             onClick={() => setDeleteOpen(true)}
           >
             <HugeiconsIcon icon={Delete02Icon} size={16} />
             {t("clients.actions.delete")}
-          </Button>
+          </Button>}
         </div>
       </div>
 
       <Tabs defaultValue="info" dir={locale === "ar" ? "rtl" : "ltr"}>
         <TabsList variant="line">
           <TabsTrigger value="info">{t("clients.dialog.tabs.contact")}</TabsTrigger>
-          <TabsTrigger value="bookings">{t("clients.dialog.tabs.bookings")}</TabsTrigger>
+          {canDo("booking", "read") && <TabsTrigger value="bookings">{t("clients.dialog.tabs.bookings")}</TabsTrigger>}
           <TabsTrigger value="balances">{t("packages.balances.title")}</TabsTrigger>
-          <TabsTrigger value="invoices">{t("clients.dialog.tabs.invoices")}</TabsTrigger>
-          <TabsTrigger value="stats">{t("clients.dialog.tabs.stats")}</TabsTrigger>
+          {canDo("invoice", "read") && <TabsTrigger value="invoices">{t("clients.dialog.tabs.invoices")}</TabsTrigger>}
+          {canDo("booking", "read") && <TabsTrigger value="stats">{t("clients.dialog.tabs.stats")}</TabsTrigger>}
         </TabsList>
 
         {/* ── Tab 1: التواصل والبيانات ── */}
@@ -252,15 +253,15 @@ export function ClientDetailPage({ clientId }: Props) {
                   </>
                 )}
               </DetailSection>
-              <ClientAccountToggle client={client} />
+              {canDo("client", "update") && <ClientAccountToggle client={client} />}
             </div>
           </div>
         </TabsContent>
 
         {/* ── Tab 2: المواعيد ── */}
-        <TabsContent value="bookings" className="pt-4">
+        {canDo("booking", "read") && <TabsContent value="bookings" className="pt-4">
           <ClientBookingsPanel clientId={client.id} t={t} formatDate={formatDate} />
-        </TabsContent>
+        </TabsContent>}
 
         {/* ── Tab 3: أرصدة الباقات (Phase 2) ── */}
         <TabsContent value="balances" className="pt-4">
@@ -269,15 +270,13 @@ export function ClientDetailPage({ clientId }: Props) {
 
         {/* ── Tab 4: الفواتير ── */}
         <TabsContent value="invoices" className="pt-4">
-          <ClientInvoicesPanel t={t} />
+          {canDo("invoice", "read") && <ClientInvoicesPanel clientId={client.id} t={t} />}
         </TabsContent>
 
         {/* ── Tab 5: الإحصائيات ── */}
-        <TabsContent value="stats" className="pt-4">
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            {t("clients.dialog.noBookings")}
-          </div>
-        </TabsContent>
+        {canDo("booking", "read") && <TabsContent value="stats" className="pt-4">
+          <ClientStatisticsPanel clientId={client.id} t={t} />
+        </TabsContent>}
       </Tabs>
 
       <DeleteClientDialog

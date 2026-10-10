@@ -16,7 +16,7 @@ export class GetUserHandler {
     const idf = parseEntityRef(query.userId, 'USR');
     const user = await this.prisma.user.findUnique({
       where: idf.kind === 'uuid' ? { id: idf.id } : { ref: idf.ref },
-      omit: { passwordHash: true },
+      omit: { passwordHash: true }, include: { customRole: { select: { id: true, name: true } } },
     });
 
     if (!user) throw new NotFoundException('User not found');

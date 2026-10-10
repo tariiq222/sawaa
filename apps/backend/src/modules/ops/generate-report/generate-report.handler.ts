@@ -1,3 +1,4 @@
+import { startOfDayInTz, endOfDayInTz } from '../../../common/helpers/date-tz.helper';
 import { Injectable } from '@nestjs/common';
 import { ReportType, ReportFormat, ReportStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
@@ -54,9 +55,11 @@ export class GenerateReportHandler {
       ({ from, toExclusive } = revenueReportDateRange(dto.from, dto.to));
       to = toExclusive;
     } else {
-      from = new Date(dto.from);
-      to = new Date(dto.to);
-      if (from > to) [from, to] = [to, from];
+      const [fromInput, toInput] = new Date(dto.from) <= new Date(dto.to)
+        ? [dto.from, dto.to] : [dto.to, dto.from];
+      const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+      from = dateOnly.test(fromInput) ? startOfDayInTz(fromInput)! : new Date(fromInput);
+      to = dateOnly.test(toInput) ? endOfDayInTz(toInput)! : new Date(toInput);
       toExclusive = to;
     }
 

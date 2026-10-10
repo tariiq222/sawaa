@@ -1,0 +1,15 @@
+export const enAuditStaff = {
+  "auditStaff.passwordRequirements": "At least 8 characters, including an uppercase letter and a digit.",
+  "auditStaff.passwordUppercase": "Include an uppercase letter in the password.",
+  "auditStaff.passwordDigit": "Include a digit in the password.",
+  "auditStaff.saveProfile": "Save user profile",
+  "auditStaff.savingProfile": "Saving user profile…",
+  "auditStaff.profileSaved": "User profile saved.",
+  "auditStaff.defaultRole": "Default role",
+  "auditStaff.role": "Role",
+  "auditStaff.saveRole": "Save role",
+  "auditStaff.roleSaved": "Role saved.",
+  "auditStaff.roleSaveError": "Could not save the role. The user profile was not changed.",
+  "auditStaff.roleSaveDescription": "The role is saved separately from the user profile. Use Save role to apply the change.",
+  "auditStaff.roleNameRequired": "Role name is required.",
+} as const

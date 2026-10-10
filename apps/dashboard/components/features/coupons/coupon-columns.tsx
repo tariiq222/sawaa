@@ -15,7 +15,7 @@ import {
 } from "@sawaa/ui"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
-import { formatPrice } from "@/lib/money"
+import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import type { Coupon } from "@/lib/types/coupon"
 
 type TFn = (key: string) => string
@@ -48,7 +48,7 @@ export function getCouponColumns(
           <span className="tabular-nums text-sm font-medium">
             {c.discountType === "PERCENTAGE"
               ? `${c.discountValue}%`
-              : `${formatPrice(c.discountValue)} SAR`}
+              : <FormattedCurrency amount={Number(c.discountValue)} locale={locale} decimals={2} />}
           </span>
         )
       },

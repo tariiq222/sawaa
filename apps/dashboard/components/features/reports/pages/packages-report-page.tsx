@@ -21,7 +21,8 @@
 import { useState } from "react"
 
 import { useLocale } from "@/components/locale-provider"
-import { Skeleton } from "@sawaa/ui"
+import { downloadPackageReport } from "@/lib/package-report-export"
+import { Button, Skeleton } from "@sawaa/ui"
 import { usePackageReport } from "@/hooks/use-package-reports"
 import { useReportsPeriodCtx } from "@/components/features/reports/reports-period-context"
 import { ReportPageShell } from "@/components/features/reports/report-page-shell"
@@ -36,7 +37,10 @@ import { cn } from "@/lib/utils"
 
 const REPORT_TYPES: { value: PackageReportType; labelKey: string }[] = [
   { value: "SALES", labelKey: "reports.packages.type.sales" },
-  { value: "OUTSTANDING_CREDIT", labelKey: "reports.packages.type.outstanding" },
+  {
+    value: "OUTSTANDING_CREDIT",
+    labelKey: "reports.packages.type.outstanding",
+  },
   { value: "CONSUMPTION", labelKey: "reports.packages.type.consumption" },
   { value: "REFUNDED", labelKey: "reports.packages.type.refunded" },
 ]
@@ -57,7 +61,7 @@ export function PackagesReportPage() {
   const { data, isLoading, error, refetch } = usePackageReport(
     params.report,
     params.from,
-    params.to,
+    params.to
   )
   const errMsg =
     error instanceof Error ? t("error.server") : t("error.unexpected")
@@ -68,7 +72,25 @@ export function PackagesReportPage() {
       description={t("reports.packages.description")}
     >
       <div className="flex flex-col gap-5">
-        <PackageTypeSelector value={type} onChange={setType} t={t} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <PackageTypeSelector value={type} onChange={setType} t={t} />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!data || isLoading || !!error}
+            onClick={() =>
+              data &&
+              downloadPackageReport(
+                data,
+                period.normalizedFrom,
+                period.normalizedTo,
+                t
+              )
+            }
+          >
+            {t("reports.packageExport")}
+          </Button>
+        </div>
 
         {isLoading ? (
           <KpiRow>
@@ -119,7 +141,7 @@ function PackageTypeSelector({
               "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
               active
                 ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             {t(opt.labelKey)}

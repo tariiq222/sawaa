@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState } from "react"
 import { Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
@@ -33,17 +34,8 @@ export function ContactMessagesTable() {
   const columns = getContactMessageColumns({
     locale,
     t,
-    onUpdate: (id, status) => update.mutate({ id, status }),
+    onUpdate: (id, status) => update.mutate({ id, status }, { onSuccess: () => toast.success(t("auditOperations.saved")), onError: () => toast.error(t("auditOperations.saveError")) }),
   })
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-12 w-full rounded-2xl" />
-        <Skeleton className="h-64 w-full rounded-lg" />
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -72,7 +64,7 @@ export function ContactMessagesTable() {
         }
       />
 
-      <DataTable
+      {isLoading ? <Skeleton className="h-64 w-full rounded-lg" /> : <DataTable
         columns={columns}
         data={data?.items ?? []}
         emptyTitle={t("contactMessages.empty")}
@@ -83,7 +75,7 @@ export function ContactMessagesTable() {
         hasPreviousPage={data?.meta.hasPreviousPage ?? false}
         hasNextPage={data?.meta.hasNextPage ?? false}
         onPageChange={setPage}
-      />
+      />}
     </div>
   )
 }

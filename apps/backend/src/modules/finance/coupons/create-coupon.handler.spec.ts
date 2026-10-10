@@ -65,3 +65,9 @@ describe('CreateCouponHandler', () => {
     expect(prisma.coupon.create).not.toHaveBeenCalled();
   });
 });
+
+it('rejects a percentage greater than 100 before storing it', async () => {
+ const prisma=buildPrisma(); const handler=new CreateCouponHandler(prisma as never);
+ await expect(handler.execute({...cmd,discountValue:101})).rejects.toThrow();
+ expect(prisma.coupon.create).not.toHaveBeenCalled();
+});

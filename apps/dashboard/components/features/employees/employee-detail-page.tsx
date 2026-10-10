@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/components/providers/auth-provider"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -42,6 +43,7 @@ interface Props {
 export function EmployeeDetailPage({ employeeId }: Props) {
   const router = useRouter()
   const { t, locale } = useLocale()
+  const { canDo } = useAuth()
   const isAr = locale === "ar"
 
   const { data: employee, isLoading, error, refetch } = useEmployee(employeeId)
@@ -84,7 +86,7 @@ export function EmployeeDetailPage({ employeeId }: Props) {
   const fullName =
     p.nameAr && isAr
       ? p.nameAr
-      : `${p.title ? p.title + " " : ""}${p.user.firstName} ${p.user.lastName}`
+      : `${p.title ? p.title + " " : ""}${p.nameEn || `${p.user.firstName} ${p.user.lastName}`}`
   const initials = `${p.user.firstName[0] ?? ""}${p.user.lastName[0] ?? ""}`.toUpperCase()
   const specialty = isAr ? (p.specialtyAr ?? p.specialty) : p.specialty
   const bio = (isAr ? p.bioAr : p.bio) ?? (isAr ? p.bio : p.bioAr)
@@ -101,13 +103,13 @@ export function EmployeeDetailPage({ employeeId }: Props) {
       <Breadcrumbs items={breadcrumbItems} />
 
       <PageHeader title={fullName} description={specialty ?? ""}>
-        <Button
+        {canDo("employee", "update") && <Button
           className="gap-2 rounded-lg px-5"
           onClick={() => router.push(`/employees/${employeeId}/edit`)}
         >
           <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
           {t("employees.detail.edit")}
-        </Button>
+        </Button>}
       </PageHeader>
 
       {/* Hero Card */}
@@ -176,7 +178,7 @@ export function EmployeeDetailPage({ employeeId }: Props) {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 pt-4">
-          <EmployeeBookingsChart employeeId={employeeId} />
+          <EmployeeBookingsChart employeeId={p.id} />
           <CombinedInfoCard
             email={p.user.email}
             phone={p.user.phone ?? null}
@@ -191,17 +193,17 @@ export function EmployeeDetailPage({ employeeId }: Props) {
         </TabsContent>
 
         <TabsContent value="services" className="pt-4">
-          <EmployeeServicesSectionCard employeeId={employeeId} />
+          <EmployeeServicesSectionCard employeeId={p.id} />
         </TabsContent>
 
         <TabsContent value="schedule" className="space-y-4 pt-4">
-          <EmployeeAvailabilitySection employeeId={employeeId} />
-          <EmployeeVacationsSection employeeId={employeeId} />
+          <EmployeeAvailabilitySection employeeId={p.id} />
+          <EmployeeVacationsSection employeeId={p.id} />
         </TabsContent>
 
         <TabsContent value="ratings" className="pt-4">
           <EmployeeRatingsSection
-            employeeId={employeeId}
+            employeeId={p.id}
             averageRating={p.averageRating}
             totalRatings={p.ratingCount ?? 0}
           />
@@ -212,7 +214,7 @@ export function EmployeeDetailPage({ employeeId }: Props) {
         </TabsContent>
 
         <TabsContent value="account" className="pt-4">
-          <EmployeeAccountTab employeeId={employeeId} />
+          <EmployeeAccountTab employeeId={p.id} />
         </TabsContent>
       </Tabs>
     </ListPageShell>

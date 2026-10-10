@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
@@ -41,7 +42,7 @@ export function DepartmentListPage() {
     t,
     canDo("department", "update") ? (d) => router.push(`/departments/${d.id}/edit`) : undefined,
     canDo("department", "delete") ? (d) => setDeleteTarget(d) : undefined,
-    canDo("department", "update") ? (d) => updateMut.mutate({ id: d.id, isActive: !d.isActive }) : undefined,
+    canDo("department", "update") ? (d) => updateMut.mutate({ id: d.id, isActive: !d.isActive }, { onSuccess: () => toast.success(t("catalog.statusSaved")), onError: () => toast.error(t("catalog.statusError")) }) : undefined,
   )
 
   return (
@@ -52,10 +53,10 @@ export function DepartmentListPage() {
         title={t("departments.title")}
         description={t("departments.description")}
       >
-        <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/departments/create")}>
+        {canDo("department", "create") && <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/departments/create")}>
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {t("departments.addDepartment")}
-        </Button>
+        </Button>}
       </PageHeader>
 
       <FilterBar
@@ -95,7 +96,7 @@ export function DepartmentListPage() {
           emptyAction={
             hasFilters
               ? { label: t("departments.filters.reset"), onClick: resetFilters }
-              : { label: t("departments.addDepartment"), onClick: () => router.push("/departments/create") }
+              : canDo("department", "create") ? { label: t("departments.addDepartment"), onClick: () => router.push("/departments/create") } : undefined
           }
           serverPaginated
           page={page}

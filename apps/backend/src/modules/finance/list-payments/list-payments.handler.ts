@@ -22,6 +22,7 @@ export class ListPaymentsHandler {
     // invoice. Resolve the matching invoice IDs first (by invoice number or by
     // client name), then constrain payments to them — mirrors list-bookings.
     const searchTerm = query.search?.trim();
+    const invoiceNumber = searchTerm?.match(/^(?:INV-)?(\d+)$/i)?.[1];
     let searchInvoiceIds: string[] | undefined;
     if (searchTerm) {
       const tokens = searchTerm.split(/\s+/).filter(Boolean);
@@ -49,7 +50,7 @@ export class ListPaymentsHandler {
 
       const invoiceOr: Prisma.InvoiceWhereInput[] = [
         ...(clientIds.length ? [{ clientId: { in: clientIds } }] : []),
-        ...(/^\d+$/.test(searchTerm) ? [{ number: Number(searchTerm) }] : []),
+        ...(invoiceNumber ? [{ number: Number(invoiceNumber) }] : []),
       ];
       const matchedInvoices = invoiceOr.length
         ? await this.prisma.invoice.findMany({
@@ -71,7 +72,7 @@ export class ListPaymentsHandler {
         ? paymentCollectionDateWhere({gte: query.fromDate, lte: query.toDate}, 'CREATED')
         : {}),
       ...(searchInvoiceIds !== undefined && !query.invoiceId
-        ? { invoiceId: { in: searchInvoiceIds } }
+        ? { AND: [{OR: [{invoiceId: {in: searchInvoiceIds}}, {gatewayRef: {contains: searchTerm, mode: "insensitive" as const}}]}] }
         : {}),
     };
 
@@ -88,7 +89,7 @@ export class ListPaymentsHandler {
       ${query.fromDate ? Prisma.sql`AND ${paymentCollectionDateSql('CREATED')} >= ${query.fromDate}` : Prisma.empty}
       ${query.toDate ? Prisma.sql`AND ${paymentCollectionDateSql('CREATED')} <= ${query.toDate}` : Prisma.empty}
       ${searchInvoiceIds !== undefined && !query.invoiceId
-        ? searchInvoiceIds.length ? Prisma.sql`AND p."invoiceId" IN (${Prisma.join(searchInvoiceIds)})` : Prisma.sql`AND FALSE`
+        ? Prisma.sql`AND (${searchInvoiceIds.length ? Prisma.sql`p."invoiceId" IN (${Prisma.join(searchInvoiceIds)})` : Prisma.sql`FALSE`} OR p."gatewayRef" ILIKE ${"%" + searchTerm!.replace(/[\\%_]/g, "\\$&") + "%"})`
         : Prisma.empty}
       ORDER BY ${paymentCollectionDateSql('CREATED')} DESC, p."id" DESC
       LIMIT ${limit} OFFSET ${(page - 1) * limit}

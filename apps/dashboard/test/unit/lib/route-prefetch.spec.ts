@@ -47,6 +47,8 @@ describe("prefetchRouteData", () => {
         page: 1,
         limit: 20,
         includeHidden: true,
+        sortBy: "createdAt",
+        sortOrder: "desc",
       }),
     }
     for (const [href, queryKey] of Object.entries(expected)) {
@@ -66,6 +68,8 @@ describe("prefetchRouteData", () => {
           page: 1,
           limit: 20,
           includeHidden: true,
+        sortBy: "createdAt",
+        sortOrder: "desc",
         }),
       }),
     )
@@ -80,12 +84,16 @@ describe("prefetchRouteData", () => {
       page: 1,
       limit: 20,
       includeHidden: true,
+        sortBy: "createdAt",
+        sortOrder: "desc",
     }]
     expect(actualKey).toEqual(expectedKey)
     expect(Object.keys(actualKey[2] as object)).toEqual([
       "page",
       "limit",
       "includeHidden",
+      "sortBy",
+      "sortOrder",
     ])
   })
 

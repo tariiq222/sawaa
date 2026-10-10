@@ -83,6 +83,9 @@ function generateBreadcrumbs(pathname: string, t: (key: string) => string): Brea
     profile: t("nav.profile"),
     create: t("nav.create"),
     edit: t("nav.edit"),
+    sms: t("nav.sms"),
+    financial: t("reports.financial.title"),
+    summary: t("reports.summary.title"),
   }
 
   const isUuid = (s: string) =>
@@ -95,7 +98,9 @@ function generateBreadcrumbs(pathname: string, t: (key: string) => string): Brea
   let currentPath = ""
   for (const [index, segment] of segments.entries()) {
     currentPath += `/${segment}`
-    const label = isUuid(segment)
+    const label = segments[0] === "reports" && index === 1
+      ? t(`reports.${segment}.title`)
+      : isUuid(segment)
       ? `${segment.slice(0, 8)}…`
       : (routeLabels[segment] ?? segment)
     // There is no standalone /packages/families index route; return to the

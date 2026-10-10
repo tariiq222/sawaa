@@ -1,32 +1,27 @@
-// EXCEPTION: 381 lines — multi-tab wizard with avatar upload, booking mode, and edit/create modes; approved 2026-06-19
 "use client"
-
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm, Controller, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { showApiError } from "@/lib/mutation-helpers"
-
-import { useCategories, useCategoryMutations } from "@/hooks/use-services"
+import { useCategoryMutations } from "@/hooks/use-services"
 import { useDepartmentOptions } from "@/hooks/use-departments"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { FormSection, FormField } from "@/components/features/shared/form-section"
+import { CategoryInfoFields } from "./category-info-fields"
+import { FormSection } from "@/components/features/shared/form-section"
 import {
   Button, Skeleton, Tabs, TabsContent,
-  Input, Switch, Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue, Label,
+  Switch, Label,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
   createCategorySchema, editCategorySchema,
   type EditCategoryFormData,
 } from "@/lib/schemas/service.schema"
-import type { ServiceCategory } from "@/lib/types/service"
 import { formatRef } from "@/lib/utils"
-import { uploadCategoryImage } from "@/lib/api/services"
 import { CategorySettingsTab } from "./category-settings-tab"
 import { CategoryServicesTab } from "./category-services-tab"
 import { CategoryEmployeesTab } from "./category-employees-tab"
@@ -34,8 +29,10 @@ import { ServiceAvatarPicker } from "@/components/features/shared/service-avatar
 import { CategoryWizardNav } from "./category-wizard-nav"
 import { CategoryWizardStepper } from "./category-wizard-stepper"
 import { CategoryKindBookingFields, resolveEffectiveCategoryKind } from "./category-kind-booking-fields"
-import { buildCategoryCreatePayload, buildCategoryUpdatePayload } from "./category-create-payload"
-
+import { useCategory } from "@/hooks/use-categories"
+import { useCategoryCreation } from "@/hooks/use-category-creation"
+import { ErrorBanner } from "@/components/features/error-banner"
+import { buildCategoryUpdatePayload } from "./category-create-payload"
 interface CategoryFormPageProps {
   mode: "create" | "edit"
   categoryId?: string
@@ -46,21 +43,22 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isAr = locale === "ar"
+  const submitting = useRef(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") ?? "info")
+  const [requestedTab, setActiveTab] = useState<string>(searchParams.get("tab") ?? "info")
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false)
   const pendingExit = useRef<(() => void) | null>(null)
   const pendingNextTab = useRef<string | null>(null)
   const pendingAvatarFile = useRef<File | null>(null)
   const [localAvatarPreview, setLocalAvatarPreview] = useState<string | null>(null)
 
-  const { data: allCategoriesData, isLoading: categoriesLoading } = useCategories()
-  const allCategories = Array.isArray(allCategoriesData) ? allCategoriesData : (allCategoriesData?.items ?? [])
-  const { createMut, updateMut } = useCategoryMutations()
+  const categoryQuery = useCategory(mode === "edit" ? categoryId : undefined)
+  const categoriesLoading = categoryQuery.isLoading
+  const { createMut, updateMut, uploadMut } = useCategoryMutations()
   const { options: departmentOptions, isLoading: departmentsLoading } = useDepartmentOptions()
 
-  const category: ServiceCategory | undefined =
-    mode === "edit" && categoryId ? allCategories?.find((c) => c.id === categoryId || formatRef("CAT", c.ref) === categoryId) : undefined
+  const category = categoryQuery.data
+  const {save: saveCreatedCategory, record: createdCategory} = useCategoryCreation({create: createMut.mutateAsync, update: (id, payload) => updateMut.mutateAsync({id, ...payload}), upload: (id, file) => uploadMut.mutateAsync({id, file})}, pendingAvatarFile, () => setLocalAvatarPreview(null))
 
   const form = useForm<EditCategoryFormData>({
     resolver: zodResolver(
@@ -68,12 +66,13 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     ) as Resolver<EditCategoryFormData>,
     defaultValues: { nameAr: "", nameEn: "", sortOrder: undefined, isActive: true, departmentId: "", kind: "CLINIC" as const, bookingMode: "DIRECT" as const, iconName: undefined, iconBgColor: undefined, imageUrl: undefined },
   })
-  const { register, handleSubmit, control, reset, formState: { errors } } = form
+  const { handleSubmit, control, reset } = form
   const watchedMode = form.watch("bookingMode")
   const watchedKind = form.watch("kind")
   const effectiveKind = resolveEffectiveCategoryKind(mode, watchedKind, category?.kind)
-  const effectiveMode = mode === "edit" ? (category?.bookingMode ?? "SERVICES") : (watchedMode ?? "DIRECT")
+  const effectiveMode = mode === "edit" ? (category?.bookingMode ?? "SERVICES") : (createdCategory?.bookingMode ?? watchedMode ?? "DIRECT")
   const tabs = effectiveMode === "SERVICES" ? ["info", "services"] : ["info", "settings", "employees"]
+  const activeTab = tabs.includes(requestedTab) ? requestedTab : "info"
   const tabIndex = tabs.indexOf(activeTab)
   const isFirst = tabIndex === 0
   const isLast = tabIndex === tabs.length - 1
@@ -83,11 +82,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   const hydratedForId = useRef<string | null>(null)
   useEffect(() => {
     if (mode !== "edit" || !category) return
-    // Wait for department options before hydrating: the controlled Radix Select
-    // can only reflect the saved departmentId once its matching <SelectItem> is
-    // mounted. Hydrating earlier leaves the field blank, and a later save would
-    // wipe the clinic's department. Guard per-category so the user's own edits
-    // aren't reset by a background departments refetch.
+    // Wait for saved department options, then hydrate once per category.
     if (departmentsLoading) return
     if (hydratedForId.current === category.id) return
     hydratedForId.current = category.id
@@ -115,48 +110,39 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   }, [mode, form.formState.isDirty])
 
   const saveAndGoToTab = async (target: string) => {
-    if (!(await form.trigger())) return
+    if (submitting.current) return
+    submitting.current = true
     setIsSubmitting(true)
     try {
-      const created = await createMut.mutateAsync(buildCategoryCreatePayload(form.getValues()))
-
-      if (pendingAvatarFile.current) {
-        await uploadCategoryImage(created.id, pendingAvatarFile.current)
-        pendingAvatarFile.current = null
-        setLocalAvatarPreview(null)
-      }
-
+      if (!(await form.trigger())) return
+      const created = await saveCreatedCategory(form.getValues())
       toast.success(t("services.categories.create.success"))
       router.push(`/categories/${formatRef("CAT", created.ref)}/edit?tab=${target}`)
     } catch (err) {
       showApiError(err, { fallback: t("services.categories.create.error"), t })
-    } finally { setIsSubmitting(false) }
+    } finally { submitting.current = false; setIsSubmitting(false) }
   }
 
   const onSubmit = async (data: EditCategoryFormData) => {
+    if (submitting.current) return
+    submitting.current = true
     setIsSubmitting(true)
     try {
       if (mode === "create") {
-        const created = await createMut.mutateAsync(buildCategoryCreatePayload(data))
-
-        if (pendingAvatarFile.current) {
-          await uploadCategoryImage(created.id, pendingAvatarFile.current)
-          pendingAvatarFile.current = null
-          setLocalAvatarPreview(null)
-        }
+        const created = await saveCreatedCategory(data)
 
         toast.success(t("services.categories.create.success"))
-        const secondTab = ((data.kind === "SERVICE_GROUP" ? "SERVICES" : data.bookingMode) ?? "DIRECT") === "SERVICES" ? "services" : "settings"
+        const secondTab = created.bookingMode === "SERVICES" ? "services" : "settings"
         router.push(`/categories/${formatRef("CAT", created.ref)}/edit?tab=${secondTab}`)
       } else {
         const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
         // imageUrl in payload only when set from the server (not a pending file upload)
-        const imageUrlValue = pendingAvatarFile.current ? undefined : (data.imageUrl ?? undefined)
+        const imageUrlValue = pendingAvatarFile.current || data.imageUrl === category?.imageUrl ? undefined : data.imageUrl
         const resolvedId = category?.id ?? categoryId!
         await updateMut.mutateAsync(buildCategoryUpdatePayload(resolvedId, data, imageUrlValue, deptId ?? null))
 
         if (pendingAvatarFile.current) {
-          await uploadCategoryImage(resolvedId, pendingAvatarFile.current)
+          await uploadMut.mutateAsync({id: resolvedId, file: pendingAvatarFile.current})
           pendingAvatarFile.current = null
           setLocalAvatarPreview(null)
         }
@@ -172,7 +158,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
       }
     } catch (err) {
       showApiError(err, { fallback: t(mode === "create" ? "services.categories.create.error" : "services.categories.edit.error"), t })
-    } finally { setIsSubmitting(false) }
+    } finally { submitting.current = false; setIsSubmitting(false) }
   }
 
   const handleNext = () => {
@@ -204,6 +190,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   if (mode === "edit" && categoriesLoading) return (
     <ListPageShell><div className="space-y-4"><Skeleton className="h-6 w-48 rounded" /><Skeleton className="h-8 w-72 rounded" /><Skeleton className="h-8 rounded" /><Skeleton className="h-8 rounded" /></div></ListPageShell>
   )
+  if (mode === "edit" && categoryQuery.isError) return <ErrorBanner message={t("common.errorLoading")} onRetry={() => categoryQuery.refetch()} />
   if (mode === "edit" && !categoriesLoading && !category) return (
     <ListPageShell>
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
@@ -227,6 +214,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         description={mode === "edit" ? t("services.categories.edit.description") : t("services.categories.create.description")}
       />
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 pb-24">
+        <fieldset disabled={isSubmitting} className="contents">
         <Tabs
           value={activeTab}
           onValueChange={(val) => {
@@ -239,6 +227,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         >
           <CategoryWizardStepper
             tabs={tabs}
+            disabled={isSubmitting}
             activeTab={activeTab}
             onTabChange={(val) => {
               if (mode === "create" && val !== "info") {
@@ -284,39 +273,13 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                   <p className="text-xs text-muted-foreground">{t("services.categories.avatar.hint")}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                <FormField label={t("services.categories.create.nameAr")} required error={errors.nameAr ? t(errors.nameAr.message ?? "common.required") : undefined}><Input id="nameAr" {...register("nameAr")} placeholder={t("services.categories.create.nameAr")} /></FormField>
-                <FormField label={t("services.categories.create.nameEn")}><Input id="nameEn" {...register("nameEn")} placeholder={t("services.categories.create.nameEn")} /></FormField>
-                <FormField label={t("services.categories.create.department")}>
-                  <Controller
-                    name="departmentId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select key={field.value || "none"} value={field.value ?? ""} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder={t("services.categories.create.departmentPlaceholder")} /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">{t("services.categories.create.departmentPlaceholder")}</SelectItem>
-                          {departmentOptions.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id}>
-                              {isAr ? dept.nameAr : (dept.nameEn ?? dept.nameAr)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("services.categories.create.departmentHint")}
-                  </p>
-                </FormField>
-                <FormField label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder", { valueAsNumber: true })} placeholder="0" /></FormField>
-              </div>
+              <CategoryInfoFields form={form} departmentOptions={departmentOptions} isAr={isAr} t={t} />
             </FormSection>
 
             <CategoryKindBookingFields
               kind={effectiveKind}
               bookingMode={effectiveMode}
-              mode={mode}
+              mode={createdCategory ? "edit" : mode}
               onKindChange={(value) => form.setValue("kind", value, { shouldDirty: true })}
               onBookingModeChange={(value) => form.setValue("bookingMode", value, { shouldDirty: true })}
             />
@@ -356,6 +319,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
             </>
           )}
         </Tabs>
+        </fieldset>
         <CategoryWizardNav
           mode={mode}
           isFirst={isFirst}

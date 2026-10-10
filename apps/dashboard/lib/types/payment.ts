@@ -35,6 +35,7 @@ export interface Payment {
   createdAt: string
   updatedAt: string
   invoice?: {
+    number?: number
     bookingId: string
     clientId: string
     total: number

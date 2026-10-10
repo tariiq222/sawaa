@@ -49,7 +49,8 @@ export function FinancialReportPage() {
     queryFn: () => fetchRevenueReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
-  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
+  const errMsg =
+    error instanceof Error ? t("error.server") : t("error.unexpected")
 
   return (
     <ReportPageShell
@@ -69,32 +70,49 @@ export function FinancialReportPage() {
         <ReportsEmptyState />
       ) : (
         <>
+          <p className="text-sm text-muted-foreground">
+            {t("reports.revenueBasis")}
+          </p>
           <KpiRow>
             <KpiCard
               label={t("reports.financial.totalRevenue")}
-              value={<FormattedCurrency amount={data.totalRevenue} locale={locale} />}
-              delta={computeDelta(data.totalRevenue, data.previous?.totalRevenue)}
+              value={
+                <FormattedCurrency amount={data.totalRevenue} locale={locale} />
+              }
+              delta={computeDelta(
+                data.totalRevenue,
+                data.previous?.totalRevenue
+              )}
             />
             <KpiCard
               label={t("reports.financial.netRevenue")}
-              value={<FormattedCurrency amount={data.netRevenue} locale={locale} />}
+              value={
+                <FormattedCurrency amount={data.netRevenue} locale={locale} />
+              }
               delta={computeDelta(data.netRevenue, data.previous?.netRevenue)}
             />
             <KpiCard
               label={t("reports.financial.avgPerBooking")}
-              value={<FormattedCurrency amount={data.averagePerBooking} locale={locale} />}
+              value={
+                <FormattedCurrency
+                  amount={data.averagePerBooking}
+                  locale={locale}
+                />
+              }
               delta={computeDelta(
                 data.averagePerBooking,
-                data.previous?.averagePerBooking,
+                data.previous?.averagePerBooking
               )}
             />
             <KpiCard
               label={t("reports.financial.refunds")}
-              value={<FormattedCurrency amount={data.refundsTotal} locale={locale} />}
+              value={
+                <FormattedCurrency amount={data.refundsTotal} locale={locale} />
+              }
               delta={computeDelta(
                 data.refundsTotal,
                 data.previous?.refundsTotal,
-                { inverse: true },
+                { inverse: true }
               )}
             />
           </KpiRow>
@@ -102,21 +120,24 @@ export function FinancialReportPage() {
           {data.byDay.length > 0 && (
             <Section title={t("reports.financial.revenueTrend")}>
               <TrendChart
+                currentFrom={period.normalizedFrom}
+                previousFrom={period.previousRange.from}
                 data={data.byDay.map((d) => ({
                   date: d.date,
-                  revenue: d.amount,
+                  revenue: d.amount / 100,
                 }))}
                 series={[
                   {
                     key: "revenue",
                     label: t("reports.financial.revenueSeries"),
+                    unit: "SAR",
                     color: "var(--chart-1)",
                     type: "area",
                   },
                 ]}
                 previous={data.previous?.byDay.map((d) => ({
                   date: d.date,
-                  revenue: d.amount,
+                  revenue: d.amount / 100,
                 }))}
               />
             </Section>
@@ -161,19 +182,26 @@ export function FinancialReportPage() {
                   {
                     key: "code",
                     header: t("reports.financial.couponCode"),
-                    render: (c) => <span className="font-medium">{c.code}</span>,
+                    render: (c) => (
+                      <span className="font-medium">{c.code}</span>
+                    ),
                   },
                   {
                     key: "uses",
                     header: t("reports.financial.couponUses"),
-                    render: (c) => <span className="tabular-nums">{c.uses}</span>,
+                    render: (c) => (
+                      <span className="tabular-nums">{c.uses}</span>
+                    ),
                   },
                   {
                     key: "discount",
                     header: t("reports.financial.couponDiscount"),
                     render: (c) => (
                       <span className="tabular-nums">
-                        <FormattedCurrency amount={c.discountAmount} locale={locale} />
+                        <FormattedCurrency
+                          amount={c.discountAmount}
+                          locale={locale}
+                        />
                       </span>
                     ),
                   },
@@ -225,7 +253,9 @@ export function FinancialReportPage() {
                     key: "method",
                     header: t("reports.method"),
                     render: (p) => (
-                      <span className="text-xs">{t(`reports.paymentMethod.${p.method}`)}</span>
+                      <span className="text-xs">
+                        {t(`reports.paymentMethod.${p.method}`)}
+                      </span>
                     ),
                   },
                   {

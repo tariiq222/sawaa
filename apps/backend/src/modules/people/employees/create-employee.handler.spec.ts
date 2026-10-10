@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { Test } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -24,6 +25,7 @@ describe('CreateEmployeeHandler', () => {
 
     const module = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         CreateEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },

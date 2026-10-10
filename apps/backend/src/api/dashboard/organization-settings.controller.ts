@@ -1,3 +1,4 @@
+import { OrganizationRatingsResponseDto } from './dto/organization-ratings-response.dto';
 import {
   Controller, Get, Post, Patch, Put, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
@@ -332,7 +333,7 @@ export class DashboardOrganizationSettingsController {
   @Get('ratings')
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'List ratings' })
-  @ApiOkResponse({ description: 'Paginated list of ratings' })
+  @ApiOkResponse({ description: 'Paginated list of ratings', type: OrganizationRatingsResponseDto })
   listRatingsEndpoint(@Query() query: ListRatingsDto) {
     return this.listRatings.execute(query);
   }

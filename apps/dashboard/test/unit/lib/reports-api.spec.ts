@@ -31,7 +31,7 @@ describe("reports api", () => {
     await fetchOverviewReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
-      expect.objectContaining({ type: "OVERVIEW", from: "2026-01-01" }),
+      expect.objectContaining({ type: "OVERVIEW", from: "2025-12-31T21:00:00.000Z" }),
     )
   })
 
@@ -46,8 +46,8 @@ describe("reports api", () => {
       "/dashboard/ops/reports",
       expect.objectContaining({
         type: "REVENUE",
-        from: "2026-01-01",
-        to: "2026-01-31",
+        from: "2025-12-31T21:00:00.000Z",
+        to: "2026-01-31T20:59:59.999Z",
         branchId: "branch-1",
       }),
     )

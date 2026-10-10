@@ -22,10 +22,10 @@ import type {
 
 export function useEmployeeServiceMutations(employeeId: string) {
   const queryClient = useQueryClient()
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.employees.services(employeeId),
-    })
+  const invalidate = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.employees.services(employeeId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.services.all }),
+  ])
   const invalidateServiceList = (serviceId: string) =>
     queryClient.invalidateQueries({
       queryKey: queryKeys.services.employees(serviceId),

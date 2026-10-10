@@ -68,7 +68,7 @@ const buildHandler = (overrides: {
       findUnique: jest.fn().mockResolvedValue(client),
     },
   };
-  const handler = new GetPaymentHandler(prisma as never);
+  const handler = new GetPaymentHandler(prisma as never, {getSignedUrl:jest.fn()} as never);
   return { handler, prisma };
 };
 
@@ -114,7 +114,7 @@ describe('GetPaymentHandler', () => {
         where: { id: 'pay-1' },
         include: expect.objectContaining({
           invoice: expect.objectContaining({
-            select: { bookingId: true, clientId: true, total: true },
+            select: { number: true, bookingId: true, clientId: true, total: true },
           }),
           refundRequests: expect.objectContaining({
             select: expect.objectContaining({
@@ -201,4 +201,12 @@ describe('GetPaymentHandler', () => {
       }),
     );
   });
+});
+it('returns a signed private receipt link and invoice number for transfer review',async()=>{
+ const payment=buildPayment({receiptUrl:'https://storage.test/finance-receipts/invoices/i/receipt.png',invoice:{...buildInvoice(),number:12}});
+ const prisma={payment:{findUnique:jest.fn().mockResolvedValue(payment)},client:{findUnique:jest.fn().mockResolvedValue(buildClient())}};
+ const storage={getSignedUrl:jest.fn().mockResolvedValue('https://storage.test/signed-receipt')};
+ const handler=new (GetPaymentHandler as any)(prisma,storage);
+ const result=await handler.execute({paymentId:'pay-1'});
+ expect(result.receiptUrl).toBe('https://storage.test/signed-receipt'); expect(result.invoice.number).toBe(12);
 });

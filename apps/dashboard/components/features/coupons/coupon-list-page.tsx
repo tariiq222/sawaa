@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
@@ -36,7 +38,7 @@ export function CouponListPage() {
     canDo("coupon", "update") ? (c) => router.push(`/coupons/${formatRef("CPN", c.ref)}/edit`) : undefined,
     canDo("coupon", "delete") ? (c) => setDeleteTarget(c) : undefined,
     t,
-    canDo("coupon", "update") ? (c) => updateMut.mutate({ id: c.id, isActive: !c.isActive }) : undefined,
+    canDo("coupon", "update") ? (c) => updateMut.mutate({ id: c.id, isActive: !c.isActive }, {onSuccess:() => toast.success(t("coupons.toggle.success")),onError:(error) => showApiError(error, {fallback:t("coupons.toggle.error"),t})}) : undefined,
   )
 
   return (

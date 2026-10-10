@@ -160,4 +160,10 @@ describe('CreateClientDto', () => {
     const errors = await validateDto({ ...validPayload, notes: 'A'.repeat(2001) });
     expect(errors.some((e) => e.property === 'notes')).toBe(true);
   });
+  it('accepts a mononym with an explicit empty family name', async () => {
+    const dto = plainToInstance(CreateClientDto, {...validPayload, firstName:'سارة', lastName:''});
+    const errors = await validate(dto);
+    expect(errors).toEqual([]);
+  });
+
 });

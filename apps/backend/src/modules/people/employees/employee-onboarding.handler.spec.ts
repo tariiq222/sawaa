@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
@@ -39,6 +40,7 @@ describe('EmployeeOnboardingHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         EmployeeOnboardingHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },

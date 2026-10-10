@@ -14,6 +14,7 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { FilterBar } from "@/components/features/filter-bar"
 import { getClientColumns } from "@/components/features/clients/client-columns"
 import { DeleteClientDialog } from "@/components/features/clients/delete-client-dialog"
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useClients, useClientMutations } from "@/hooks/use-clients"
@@ -27,9 +28,10 @@ export function ClientListPage() {
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
   const titleLabel = t("nav.clients")
-  const { clients, meta, isLoading, error, search, setSearch, isActive, setIsActive, resetSearch, page, setPage } = useClients()
+  const { clients, meta, isLoading, error, search, setSearch, isActive, setIsActive, resetSearch, page, setPage, sortBy, sortOrder, setSort } = useClients()
   const { toggleActiveMut } = useClientMutations()
 
+  const [pendingStatus, setPendingStatus] = useState<Client | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
 
   const hasFilters = isActive !== undefined || search.length > 0
@@ -38,17 +40,7 @@ export function ClientListPage() {
     onRowClick: (p) => router.push(`/clients/${formatRef("CL", p.ref)}`),
     onViewClick: (p) => router.push(`/clients/${formatRef("CL", p.ref)}`),
     onEditClick: canDo("client", "update") ? (p) => router.push(`/clients/${formatRef("CL", p.ref)}/edit`) : undefined,
-    onToggleActive: canDo("client", "update") ? (p) => {
-      toggleActiveMut.mutate(
-        { id: p.id, isActive: !p.isActive },
-        {
-          onSuccess: () =>
-            toast.success(p.isActive ? t("clients.deactivated") : t("clients.activated")),
-          onError: () =>
-            toast.error(p.isActive ? t("clients.deactivateError") : t("clients.activateError")),
-        },
-      )
-    } : undefined,
+    onToggleActive: canDo("client", "update") ? setPendingStatus : undefined,
     onDeleteClick: canDo("client", "delete") ? (p) => setPendingDelete(p) : undefined,
     t,
     locale,
@@ -102,6 +94,13 @@ export function ClientListPage() {
         <DataTable
           columns={columns}
           data={clients}
+          manualSorting
+          sorting={sortBy ? [{id: sortBy === "name" ? "client" : sortBy === "isActive" ? "status" : sortBy, desc: sortOrder === "desc"}] : []}
+          onSortingChange={(sorting) => {
+            const selected = sorting[0]
+            const field = selected?.id === "client" ? "name" : selected?.id === "status" ? "isActive" : selected?.id === "createdAt" ? "createdAt" : undefined
+            setSort(field, selected?.desc ? "desc" : "asc")
+          }}
           emptyTitle={hasFilters ? t("clients.empty.noMatches.title") : t("clients.empty.title")}
           emptyDescription={hasFilters ? t("clients.empty.noMatches.description") : t("clients.empty.description")}
           emptyAction={
@@ -120,6 +119,22 @@ export function ClientListPage() {
         />
       )}
 
+      <AlertDialog open={!!pendingStatus} onOpenChange={(open) => !open && setPendingStatus(null)}>
+        <AlertDialogContent><AlertDialogHeader>
+          <AlertDialogTitle>{t(pendingStatus?.isActive ? "clients.account.disableTitle" : "clients.account.enableTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{t(pendingStatus?.isActive ? "clients.account.disableDescription" : "clients.account.enableDescription")}</AlertDialogDescription>
+        </AlertDialogHeader><AlertDialogFooter>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={() => {
+            if (!pendingStatus) return
+            toggleActiveMut.mutate({id: pendingStatus.id, isActive:!pendingStatus.isActive}, {
+              onSuccess: () => toast.success(t("clients.edit.changesSaved")),
+              onError: () => toast.error(t("clients.edit.error")),
+            })
+            setPendingStatus(null)
+          }}>{t("common.confirm")}</AlertDialogAction>
+        </AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
       <DeleteClientDialog
         client={pendingDelete}
         open={!!pendingDelete}

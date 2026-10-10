@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { RemoveEmployeeServiceHandler } from './remove-employee-service.handler';
@@ -10,6 +11,7 @@ describe('RemoveEmployeeServiceHandler', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         RemoveEmployeeServiceHandler,
         { provide: PrismaService, useValue: {
     employeeService: { findUnique: jest.fn(), delete: jest.fn() },

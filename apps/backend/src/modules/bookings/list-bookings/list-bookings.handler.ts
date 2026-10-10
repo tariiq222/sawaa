@@ -185,7 +185,7 @@ export class ListBookingsHandler {
         where,
         skip: (query.page - 1) * query.limit,
         take: query.limit,
-        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        orderBy: [{ scheduledAt: query.sortOrder ?? 'asc' }, { id: query.sortOrder ?? 'asc' }],
         // See BOOKING_LIST_SELECT — narrow SELECT keeps the dashboard list
         // independent of columns that may not yet exist on every dev DB.
         select: BOOKING_LIST_SELECT,

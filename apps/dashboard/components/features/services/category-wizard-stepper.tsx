@@ -4,13 +4,14 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons"
 
 interface CategoryWizardStepperProps {
+  disabled?: boolean
   tabs: string[]
   activeTab: string
   onTabChange: (tab: string) => void
   t: (key: string) => string
 }
 
-export function CategoryWizardStepper({ tabs, activeTab, onTabChange, t }: CategoryWizardStepperProps) {
+export function CategoryWizardStepper({ tabs, activeTab, onTabChange, t, disabled }: CategoryWizardStepperProps) {
   const tabIndex = tabs.indexOf(activeTab)
 
   return (
@@ -25,6 +26,7 @@ export function CategoryWizardStepper({ tabs, activeTab, onTabChange, t }: Categ
             {/* Step */}
             <button
               type="button"
+              disabled={disabled}
               onClick={() => onTabChange(tab)}
               className="flex flex-col items-center gap-1.5 focus:outline-none"
             >

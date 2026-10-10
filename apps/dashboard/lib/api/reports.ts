@@ -4,6 +4,7 @@
  */
 
 import { api } from "@/lib/api"
+import { riyadhDayStart, riyadhDayEnd } from "@/lib/audit-date"
 import type {
   BookingReport,
   ClientsReport,
@@ -15,6 +16,11 @@ import type {
   ServicesReport,
   WithPrevious,
 } from "@/lib/types/report"
+
+const startInstant = (value: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) ? riyadhDayStart(value) : value
+const endInstant = (value: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) ? riyadhDayEnd(value) : value
 
 type ReportType =
   | "OVERVIEW"
@@ -28,12 +34,12 @@ type ReportType =
 
 function buildBody(
   type: ReportType,
-  q: ReportQuery & { employeeId?: string },
+  q: ReportQuery & { employeeId?: string }
 ): Record<string, unknown> {
   return {
     type,
-    from: q.dateFrom,
-    to: q.dateTo,
+    from: startInstant(q.dateFrom),
+    to: endInstant(q.dateTo),
     branchId: q.branchId,
     employeeId: q.employeeId,
     compareWithPrevious: q.compareWithPrevious,
@@ -41,43 +47,43 @@ function buildBody(
 }
 
 export async function fetchOverviewReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<OverviewReport>> {
   return api.post("/dashboard/ops/reports", buildBody("OVERVIEW", q))
 }
 
 export async function fetchRevenueReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<RevenueReport>> {
   return api.post("/dashboard/ops/reports", buildBody("REVENUE", q))
 }
 
 export async function fetchBookingReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<BookingReport>> {
   return api.post("/dashboard/ops/reports", buildBody("BOOKINGS", q))
 }
 
 export async function fetchClientsReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<ClientsReport>> {
   return api.post("/dashboard/ops/reports", buildBody("CLIENTS", q))
 }
 
 export async function fetchPractitionersReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<PractitionersReport>> {
   return api.post("/dashboard/ops/reports", buildBody("EMPLOYEES", q))
 }
 
 export async function fetchServicesReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<ServicesReport>> {
   return api.post("/dashboard/ops/reports", buildBody("SERVICES", q))
 }
 
 export async function fetchRatingsReport(
-  q: ReportQuery,
+  q: ReportQuery
 ): Promise<WithPrevious<RatingsReport>> {
   return api.post("/dashboard/ops/reports", buildBody("RATINGS", q))
 }
@@ -104,8 +110,8 @@ export async function exportReportExcel(params: {
   const blob = await api.postBlob("/dashboard/ops/reports", {
     type: params.type,
     format: "EXCEL",
-    from: params.dateFrom,
-    to: params.dateTo,
+    from: startInstant(params.dateFrom),
+    to: endInstant(params.dateTo),
     branchId: params.branchId,
     employeeId: params.employeeId,
   })

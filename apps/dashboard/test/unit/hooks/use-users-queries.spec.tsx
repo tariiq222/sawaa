@@ -116,6 +116,18 @@ describe("useUsers", () => {
     )
   })
 
+  it("debounces rapid search edits before sending a request", async () => {
+    fetchUsers.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { result } = renderHook(() => useUsers(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    fetchUsers.mockClear()
+    act(() => { result.current.setSearch("a") })
+    act(() => { result.current.setSearch("ali") })
+    expect(fetchUsers).not.toHaveBeenCalled()
+    await waitFor(() => expect(fetchUsers).toHaveBeenCalledWith(expect.objectContaining({ search: "ali", page: 1 })))
+    expect(fetchUsers).toHaveBeenCalledTimes(1)
+  })
+
   it("setRole resets page but does not send role to the api (role is no longer a query param)", async () => {
     fetchUsers.mockResolvedValue({ items: [], meta: { total: 0 } })
 

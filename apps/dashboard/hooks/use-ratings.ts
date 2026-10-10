@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ApiError } from "@/lib/api"
-import { fetchAllRatings, updateRatingVisibility } from "@/lib/api/employees"
+import { fetchAllRatings, updateRatingVisibility } from "@/lib/api/ratings"
 import { queryKeys } from "@/lib/query-keys"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type { Rating } from "@/lib/types/rating"
@@ -24,6 +24,7 @@ export function useRatings({ page = 1, limit = 20 }: { page?: number; limit?: nu
 
   return {
     ratings: data?.items ?? [] as Rating[],
+    averageRating: data?.averageRating ?? null,
     meta: data?.meta ?? null as PaginatedResponse<Rating>["meta"] | null,
     isLoading,
     error: errorMessage,

@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
 	PrismaService,
@@ -19,6 +21,7 @@ export class RemoveEmployeeServiceHandler {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly rlsTransaction: RlsTransactionService,
+		private readonly cache: CacheService,
 	) {}
 
 	async execute(cmd: RemoveEmployeeServiceCommand): Promise<void> {
@@ -56,5 +59,6 @@ export class RemoveEmployeeServiceHandler {
 				}),
 			]),
 		);
+		await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
 	}
 }

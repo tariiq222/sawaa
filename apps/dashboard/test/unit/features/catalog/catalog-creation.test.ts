@@ -1,0 +1,30 @@
+import { expect, it, vi } from 'vitest'
+import { createResumableSave } from '@/lib/catalog-creation'
+it('retains the created record after a failed upload so retry cannot create another', async () => {
+  const save = createResumableSave<{id:string}>()
+  const create = vi.fn().mockResolvedValue({id:'persisted'})
+  const complete = vi.fn().mockRejectedValueOnce(new Error('upload failed')).mockResolvedValueOnce(undefined)
+  await expect(save.run({create, complete})).rejects.toThrow('upload failed')
+  expect(await save.run({create, complete})).toEqual({id:'persisted'})
+  expect(create).toHaveBeenCalledTimes(1)
+  expect(complete.mock.calls.map(call => call[0].id)).toEqual(['persisted','persisted'])
+})
+it('coalesces synchronous double clicks before React can disable the stepper', async () => {
+  const save = createResumableSave<{id:string}>()
+  const create = vi.fn().mockResolvedValue({id:'one'})
+  const complete = vi.fn().mockResolvedValue(undefined)
+  await Promise.all([save.run({create,complete}),save.run({create,complete})])
+  expect(create).toHaveBeenCalledTimes(1)
+  expect(complete).toHaveBeenCalledTimes(1)
+})
+it('a failed create remains retryable and retry updates edited inputs on the retained record', async () => {
+  const save = createResumableSave<{id:string}>()
+  const create = vi.fn().mockRejectedValueOnce(new Error('create failed')).mockResolvedValue({id:'one'})
+  const complete = vi.fn().mockRejectedValueOnce(new Error('step failed')).mockResolvedValue(undefined)
+  const resume = vi.fn().mockResolvedValue(undefined)
+  await expect(save.run({create,complete,resume})).rejects.toThrow('create failed')
+  await expect(save.run({create,complete,resume})).rejects.toThrow('step failed')
+  await save.run({create,complete,resume})
+  expect(create).toHaveBeenCalledTimes(2)
+  expect(resume).toHaveBeenCalledWith({id:'one'})
+})

@@ -261,7 +261,7 @@ export class RefundPaymentHandler {
       throw new BadRequestException('Payment refund is already processing');
     }
 
-    const isOffGateway = !row.gatewayRef;
+    const isOffGateway = row.method !== 'ONLINE_CARD';
 
     const invoice = await tx.invoice.findUniqueOrThrow({
       where: { id: paymentIdentity.invoiceId },
@@ -287,7 +287,7 @@ export class RefundPaymentHandler {
     // sneaking in from the caller's percent math.
     const fullAmount = decimalToHalalas(row.amount);
     const outstanding = fullAmount - decimalToHalalas(row.refundedAmount ?? 0);
-    const requestedAmount = cmd.amount === undefined ? fullAmount : Math.round(cmd.amount);
+    const requestedAmount = cmd.amount === undefined ? outstanding : Math.round(cmd.amount);
     if (requestedAmount <= 0 || requestedAmount > outstanding) {
       throw new BadRequestException(
         `Refund amount ${requestedAmount} exceeds the refundable balance of ${outstanding} halalas`,
@@ -303,8 +303,8 @@ export class RefundPaymentHandler {
     // refundRequestId; this aligns both code paths.
     const idempotencyKey = `refund:${refundRequestId}`;
 
-    // P1-1 (money-safety): off-gateway payments (cash/bank-transfer) have NO
-    // gatewayRef, so there is no external call to make. Throwing here used to
+    // P1-1 (money-safety): off-gateway methods (cash/bank-transfer) have no
+    // external refund call; bank transfer references are administrative. Throwing here used to
     // abort the entire cancellation transaction, leaving the booking un-cancelled
     // and the customer with no refund. Instead, settle the refund fully inside
     // THIS transaction (RefundRequest born COMPLETED, Payment + Invoice updated)
@@ -502,14 +502,15 @@ export class RefundPaymentHandler {
         where: { id: refundReq.paymentId },
         select: {
           id: true,
+          method: true,
           gatewayRef: true,
           amount: true,
           refundedAmount: true,
           currency: true,
         },
       });
-      if (!payment.gatewayRef) {
-        throw new ConflictException('Gateway refund has no payment reference');
+      if (payment.method !== 'ONLINE_CARD' || !payment.gatewayRef) {
+        throw new ConflictException('Gateway refund requires an ONLINE_CARD payment reference');
       }
       // A RefundRequest lease is not enough: two distinct requests for the
       // same Payment can otherwise baseline the same cumulative amount and
@@ -968,7 +969,7 @@ export class RefundPaymentHandler {
         }
         // Outstanding-balance clamp below is the real over-refund guard.
         assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);
-        if (!row.gatewayRef) {
+        if (row.method !== 'ONLINE_CARD' || !row.gatewayRef) {
           throw new BadRequestException('Payment has no gateway reference; use manual refund path');
         }
 

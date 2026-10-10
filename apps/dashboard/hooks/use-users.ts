@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { queryKeys } from "@/lib/query-keys"
 import {
   fetchUsers,
@@ -27,17 +27,23 @@ import type { UserListQuery, UserRole, UpdateUserRolePayload } from "@/lib/types
 export function useUsers() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
+    return () => window.clearTimeout(timer)
+  }, [search])
   const [role, setRole] = useState<UserRole | undefined>()
 
   const query: UserListQuery = {
     page,
     limit: 20,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   }
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.users.list(query),
     queryFn: () => fetchUsers(query),
+    placeholderData: (previous) => previous,
   })
 
   const resetFilters = useCallback(() => {

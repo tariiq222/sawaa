@@ -36,12 +36,13 @@ export function useDashboardHome(visible: VisibleWidgets) {
   const homeStats = useQuery({
     queryKey: queryKeys.reports.dashboardHome(),
     queryFn: () => fetchDashboardStats(),
-    enabled: statsEnabled,
+    enabled: visible.todayPulse || statsEnabled || visible.attentionAlerts.cancelRequests || visible.stats.pendingPayments,
     staleTime: 60_000,
   })
 
   return {
     overview: overview.data,
+    error: overview.error || homeStats.error,
     todayBookingsCount: homeStats.data?.todayBookings ?? 0,
     todayConfirmedCount: homeStats.data?.confirmedToday ?? 0,
     todayPendingCount: homeStats.data?.pendingToday ?? 0,

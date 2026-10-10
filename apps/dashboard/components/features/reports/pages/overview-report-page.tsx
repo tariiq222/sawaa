@@ -35,7 +35,8 @@ export function OverviewReportPage() {
     queryFn: () => fetchOverviewReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
-  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
+  const errMsg =
+    error instanceof Error ? t("error.server") : t("error.unexpected")
 
   return (
     <ReportPageShell
@@ -55,11 +56,19 @@ export function OverviewReportPage() {
         <ReportsEmptyState />
       ) : (
         <>
+          <p className="text-sm text-muted-foreground">
+            {t("reports.revenueBasis")}
+          </p>
           <KpiRow>
             <KpiCard
               label={t("reports.overview.totalRevenue")}
-              value={<FormattedCurrency amount={data.totalRevenue} locale={locale} />}
-              delta={computeDelta(data.totalRevenue, data.previous?.totalRevenue)}
+              value={
+                <FormattedCurrency amount={data.totalRevenue} locale={locale} />
+              }
+              delta={computeDelta(
+                data.totalRevenue,
+                data.previous?.totalRevenue
+              )}
             />
             <KpiCard
               label={t("reports.overview.totalBookings")}
@@ -67,7 +76,7 @@ export function OverviewReportPage() {
               delta={computeDelta(
                 data.totalBookings,
                 data.previous?.totalBookings,
-                { format: "count" },
+                { format: "count" }
               )}
             />
             <KpiCard
@@ -75,17 +84,15 @@ export function OverviewReportPage() {
               value={`${Math.round(data.completionRate * 100)}٪`}
               delta={computeDelta(
                 data.completionRate,
-                data.previous?.completionRate,
+                data.previous?.completionRate
               )}
             />
             <KpiCard
               label={t("reports.overview.newClients")}
               value={data.newClients.toLocaleString(locale)}
-              delta={computeDelta(
-                data.newClients,
-                data.previous?.newClients,
-                { format: "count" },
-              )}
+              delta={computeDelta(data.newClients, data.previous?.newClients, {
+                format: "count",
+              })}
             />
           </KpiRow>
 
@@ -95,20 +102,24 @@ export function OverviewReportPage() {
               subtitle={t("reports.overview.trendSubtitle")}
             >
               <TrendChart
+                currentFrom={period.normalizedFrom}
+                previousFrom={period.previousRange.from}
                 data={data.trend.map((d) => ({
                   date: d.date,
-                  revenue: d.revenue,
+                  revenue: d.revenue / 100,
                   bookings: d.bookings,
                 }))}
                 series={[
                   {
                     key: "revenue",
                     label: t("reports.overview.revenueSeries"),
+                    unit: "SAR",
                     color: "var(--chart-1)",
                     type: "area",
                   },
                   {
                     key: "bookings",
+                    axis: "right",
                     label: t("reports.overview.bookingsSeries"),
                     color: "var(--chart-3)",
                     type: "line",
@@ -116,7 +127,7 @@ export function OverviewReportPage() {
                 ]}
                 previous={data.previous?.trend.map((d) => ({
                   date: d.date,
-                  revenue: d.revenue,
+                  revenue: d.revenue / 100,
                   bookings: d.bookings,
                 }))}
               />
@@ -140,7 +151,10 @@ export function OverviewReportPage() {
               )}
             </Section>
 
-            <Section title={t("reports.overview.topPractitioners")}>
+            <Section
+              title={t("reports.overview.topPractitioners")}
+              subtitle={t("reports.bookingPriceBasis")}
+            >
               {data.topPractitioners.length === 0 ? (
                 <p className="text-sm text-muted-foreground">—</p>
               ) : (
@@ -173,7 +187,10 @@ export function OverviewReportPage() {
               <span className="inline-flex items-center gap-2">
                 <HugeiconsIcon icon={InformationCircleIcon} size={16} />
                 {t("reports.overview.insightRevenueUp")}{" "}
-                <FormattedCurrency amount={data.totalRevenue - data.previous.totalRevenue} locale={locale} />
+                <FormattedCurrency
+                  amount={data.totalRevenue - data.previous.totalRevenue}
+                  locale={locale}
+                />
               </span>
             </InsightBanner>
           )}

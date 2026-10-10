@@ -72,7 +72,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Settings"
+            aria-label={t("nav.settings")}
             className="size-9 hover:text-primary hover:bg-primary/8"
           >
             <HugeiconsIcon icon={Settings02Icon} size={18} />
@@ -157,7 +157,7 @@ export function Header() {
                 {user ? user.name || user.email || "—" : "—"}
               </span>
               <span className="text-[11px] text-muted-foreground">
-                {t("header.role")}
+                {user?.role ? t(`users.role.${user.role}`) : "—"}
               </span>
             </div>
           </button>

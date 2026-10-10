@@ -2089,7 +2089,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a category */
+        get: operations["DashboardOrganizationCategoriesController_getCategoryEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete a category */
@@ -2125,7 +2126,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a department */
+        get: operations["DashboardOrganizationDepartmentsController_getDepartmentEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete a department */
@@ -8899,6 +8901,164 @@ export interface components {
              */
             price: number;
         };
+        DashboardUserCustomRoleDto: {
+            /**
+             * Format: uuid
+             * @description Assigned custom role identifier
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            id: string;
+            /**
+             * @description Display name of the assigned custom role
+             * @example Program coordinator
+             */
+            name: string;
+        };
+        DashboardUserResponseDto: {
+            /**
+             * @description User avatar URL, or null when no avatar is stored
+             * @example null
+             */
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description User creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Assigned custom role identity only; permissions are not included
+             * @example {
+             *       "id": "55555555-5555-4555-8555-555555555555",
+             *       "name": "Program coordinator"
+             *     }
+             */
+            customRole: components["schemas"]["DashboardUserCustomRoleDto"] | null;
+            /**
+             * Format: uuid
+             * @description Assigned custom role identifier, or null when no custom role is assigned
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            customRoleId: string | null;
+            /**
+             * Format: email
+             * @description User email address
+             * @example coordinator@example.test
+             */
+            email: string;
+            /**
+             * @description User gender, or null when unspecified
+             * @example FEMALE
+             */
+            gender: components["schemas"]["UserGender"] | null;
+            /**
+             * Format: uuid
+             * @description Unique user identifier
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            id: string;
+            /**
+             * @description Whether the user account is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description User display name
+             * @example Program Coordinator
+             */
+            name: string;
+            /**
+             * @description User phone number, or null when no number is stored
+             * @example null
+             */
+            phone: string | null;
+            /**
+             * @description Numeric user reference used in USR-prefixed dashboard links
+             * @example 42
+             */
+            ref: number;
+            /**
+             * @description Assigned built-in user role
+             * @example EMPLOYEE
+             */
+            role: components["schemas"]["UserRole"];
+            /**
+             * Format: date-time
+             * @description Most recent user update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        DashboardUsersMetaDto: {
+            /**
+             * @description Whether another page follows the current page
+             * @example false
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a page precedes the current page
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Maximum number of items returned per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description Current page number, starting at one
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total number of matching users
+             * @example 1
+             */
+            total: number;
+            /**
+             * @description Total number of pages for the matching result set
+             * @example 1
+             */
+            totalPages: number;
+        };
+        DashboardUsersResponseDto: {
+            /**
+             * @description Users on the requested page
+             * @example [
+             *       {
+             *         "avatarUrl": null,
+             *         "createdAt": "2026-10-10T09:00:00.000Z",
+             *         "customRole": {
+             *           "id": "55555555-5555-4555-8555-555555555555",
+             *           "name": "Program coordinator"
+             *         },
+             *         "customRoleId": "55555555-5555-4555-8555-555555555555",
+             *         "email": "coordinator@example.test",
+             *         "gender": "FEMALE",
+             *         "id": "11111111-1111-4111-8111-111111111111",
+             *         "isActive": true,
+             *         "name": "Program Coordinator",
+             *         "phone": null,
+             *         "ref": 42,
+             *         "role": "EMPLOYEE",
+             *         "updatedAt": "2026-10-10T09:00:00.000Z"
+             *       }
+             *     ]
+             */
+            items: components["schemas"]["DashboardUserResponseDto"][];
+            /**
+             * @description Pagination metadata for all matching users
+             * @example {
+             *       "hasNextPage": false,
+             *       "hasPreviousPage": false,
+             *       "limit": 20,
+             *       "page": 1,
+             *       "total": 1,
+             *       "totalPages": 1
+             *     }
+             */
+            meta: components["schemas"]["DashboardUsersMetaDto"];
+        };
         DeleteCategoryResponseDto: {
             /**
              * @description Category booking mode
@@ -9693,6 +9853,11 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             id: string;
+            /**
+             * @description Employee activation permits booking admission; does not guarantee a free slot
+             * @example true
+             */
+            isAcceptingBookings: boolean;
             /**
              * @description Whether the employee is active
              * @example true
@@ -11272,6 +11437,146 @@ export interface components {
             /** @description Operation state version shown on the action card */
             expectedVersion: number;
         };
+        OrganizationRatingResponseDto: {
+            /**
+             * Format: uuid
+             * @description Booking that the client rated
+             * @example 44444444-4444-4444-8444-444444444444
+             */
+            bookingId: string;
+            /**
+             * @description Current client display details, or null when unavailable
+             * @example {
+             *       "id": "22222222-2222-4222-8222-222222222222",
+             *       "name": "عميل تجريبي"
+             *     }
+             */
+            client: components["schemas"]["RatingClientResponseDto"] | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the client who submitted the rating
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Client feedback text, or null when no comment was submitted
+             * @example Helpful session
+             */
+            comment: string | null;
+            /**
+             * Format: date-time
+             * @description Rating submission time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Current employee display details, or null when unavailable
+             * @example {
+             *       "id": "33333333-3333-4333-8333-333333333333",
+             *       "name": "أخصائي تجريبي",
+             *       "nameEn": "Example Counselor"
+             *     }
+             */
+            employee: components["schemas"]["RatingEmployeeResponseDto"] | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the employee being rated
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Unique rating identifier
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            id: string;
+            /**
+             * @description Whether the rating is approved for public display
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Rating score from one to five stars
+             * @example 5
+             */
+            score: number;
+        };
+        OrganizationRatingsMetaDto: {
+            /**
+             * @description Whether another page follows the current page
+             * @example false
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a page precedes the current page
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Maximum number of items returned per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description Current page number, starting at one
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total number of matching ratings
+             * @example 1
+             */
+            total: number;
+            /**
+             * @description Total number of pages for the matching result set
+             * @example 1
+             */
+            totalPages: number;
+        };
+        OrganizationRatingsResponseDto: {
+            /**
+             * @description Average score across all matching ratings, independent of pagination; null when empty
+             * @example 5
+             */
+            averageRating: number | null;
+            /**
+             * @description Ratings on the requested page
+             * @example [
+             *       {
+             *         "bookingId": "44444444-4444-4444-8444-444444444444",
+             *         "client": {
+             *           "id": "22222222-2222-4222-8222-222222222222",
+             *           "name": "عميل تجريبي"
+             *         },
+             *         "clientId": "22222222-2222-4222-8222-222222222222",
+             *         "comment": "Helpful session",
+             *         "createdAt": "2026-10-10T09:00:00.000Z",
+             *         "employee": {
+             *           "id": "33333333-3333-4333-8333-333333333333",
+             *           "name": "أخصائي تجريبي",
+             *           "nameEn": "Example Counselor"
+             *         },
+             *         "employeeId": "33333333-3333-4333-8333-333333333333",
+             *         "id": "55555555-5555-4555-8555-555555555555",
+             *         "isPublic": false,
+             *         "score": 5
+             *       }
+             *     ]
+             */
+            items: components["schemas"]["OrganizationRatingResponseDto"][];
+            /**
+             * @description Pagination metadata for all matching ratings
+             * @example {
+             *       "hasNextPage": false,
+             *       "hasPreviousPage": false,
+             *       "limit": 20,
+             *       "page": 1,
+             *       "total": 1,
+             *       "totalPages": 1
+             *     }
+             */
+            meta: components["schemas"]["OrganizationRatingsMetaDto"];
+        };
         PackageConstraintInputDto: {
             /**
              * @description Constraint dimension
@@ -11676,6 +11981,269 @@ export interface components {
              */
             status: string;
         };
+        ProgramDetailResponseDto: {
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Cancellation time as an ISO 8601 UTC timestamp, or null when not cancelled
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Recorded cancellation reason, or null for a program without a reason
+             * @example null
+             */
+            cancelReason: string | null;
+            /**
+             * Format: date-time
+             * @description Program creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Program price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
+            daysCount: number;
+            /**
+             * Format: uuid
+             * @description Department that owns the program
+             * @example 77777777-7777-4777-8777-777777777777
+             */
+            departmentId: string;
+            /**
+             * @description Deposit in halalas, serialized as a decimal string
+             * @example 30000
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether the program accepts a deposit
+             * @example true
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Arabic staff-facing program description, or null when unspecified
+             * @example برنامج لتنمية مهارات التواصل الأسري
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English staff-facing program description, or null when unspecified
+             * @example A program for family communication skills
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Current number of program enrollments
+             * @example 1
+             */
+            enrolledCount: number;
+            /**
+             * @description Enrollments and their associated clients and bookings
+             * @example [
+             *       {
+             *         "booking": {
+             *           "bookingNumber": 1024,
+             *           "clientId": "22222222-2222-4222-8222-222222222222",
+             *           "currency": "SAR",
+             *           "id": "44444444-4444-4444-8444-444444444444",
+             *           "price": "150000",
+             *           "scheduledAt": "2026-10-10T09:00:00.000Z",
+             *           "status": "CONFIRMED"
+             *         },
+             *         "clientId": "22222222-2222-4222-8222-222222222222",
+             *         "clientName": "عميل تجريبي",
+             *         "enrolledAt": "2026-10-10T09:00:00.000Z",
+             *         "id": "99999999-9999-4999-8999-999999999999"
+             *       }
+             *     ]
+             */
+            enrollments: components["schemas"]["ProgramEnrollmentResponseDto"][];
+            /**
+             * @description Number of program hours per day
+             * @example 2
+             */
+            hoursPerDay: number;
+            /**
+             * Format: uuid
+             * @description Unique program identifier
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Whether enrolled count has reached the maximum participant capacity
+             * @example false
+             */
+            isFull: boolean;
+            /**
+             * @description Whether the program is published in the public catalog
+             * @example true
+             */
+            isPublic: boolean;
+            /**
+             * @description Maximum number of enrolled participants
+             * @example 12
+             */
+            maxParticipants: number;
+            /**
+             * @description Minimum participants required for the program
+             * @example 3
+             */
+            minParticipants: number;
+            /**
+             * @description Arabic program name
+             * @example برنامج التواصل الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English program name, or null when unspecified
+             * @example Family Communication Program
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * @description Arabic public catalog description, or null when unspecified
+             * @example تعرف على مهارات التواصل الأسري
+             */
+            publicDescriptionAr: string | null;
+            /**
+             * @description English public catalog description, or null when unspecified
+             * @example Learn family communication skills
+             */
+            publicDescriptionEn: string | null;
+            /**
+             * @description Numeric program reference accepted by the program detail lookup
+             * @example 24
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Program start time as an ISO 8601 UTC timestamp, or null when unscheduled
+             * @example null
+             */
+            startDate: string | null;
+            /**
+             * @description Current program lifecycle status
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+            /**
+             * @description Identifiers of employees supervising the program
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
+            supervisorIds: string[];
+            /**
+             * @description Display details of the program supervisors
+             * @example [
+             *       {
+             *         "id": "33333333-3333-4333-8333-333333333333",
+             *         "name": "أخصائي البرامج",
+             *         "nameEn": "Program Counselor"
+             *       }
+             *     ]
+             */
+            supervisors: components["schemas"]["ProgramSupervisorResponseDto"][];
+            /**
+             * Format: date-time
+             * @description Most recent program update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ProgramEnrollmentBookingResponseDto: {
+            /**
+             * @description Numeric reference of the associated booking
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * Format: uuid
+             * @description Client identifier associated with the booking
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Booking price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: uuid
+             * @description Booking identifier associated with this enrollment
+             * @example 44444444-4444-4444-8444-444444444444
+             */
+            id: string;
+            /**
+             * @description Price in halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * Format: date-time
+             * @description Scheduled booking time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Current booking lifecycle status
+             * @example CONFIRMED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        };
+        ProgramEnrollmentResponseDto: {
+            /**
+             * @description Booking associated with the enrollment
+             * @example {
+             *       "bookingNumber": 1024,
+             *       "clientId": "22222222-2222-4222-8222-222222222222",
+             *       "currency": "SAR",
+             *       "id": "44444444-4444-4444-8444-444444444444",
+             *       "price": "150000",
+             *       "scheduledAt": "2026-10-10T09:00:00.000Z",
+             *       "status": "CONFIRMED"
+             *     }
+             */
+            booking: components["schemas"]["ProgramEnrollmentBookingResponseDto"];
+            /**
+             * Format: uuid
+             * @description Enrolled client identifier
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Current client display name, or null if unavailable
+             * @example عميل تجريبي
+             */
+            clientName: string | null;
+            /**
+             * Format: date-time
+             * @description Enrollment creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            enrolledAt: string;
+            /**
+             * Format: uuid
+             * @description Program enrollment identifier
+             * @example 99999999-9999-4999-8999-999999999999
+             */
+            id: string;
+        };
         ProgramParticipantRefundDto: {
             /** @description Additional refund in integer halalas */
             amount: number;
@@ -11685,6 +12253,24 @@ export interface components {
              * @example 11111111-1111-4111-8111-111111111111
              */
             bookingId: string;
+        };
+        ProgramSupervisorResponseDto: {
+            /**
+             * Format: uuid
+             * @description Program supervisor employee identifier
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            id: string;
+            /**
+             * @description Program supervisor display name in the default language
+             * @example أخصائي البرامج
+             */
+            name: string;
+            /**
+             * @description English supervisor display name, or null when unavailable
+             * @example Program Counselor
+             */
+            nameEn: string | null;
         };
         PublicBrandingDto: {
             /**
@@ -11911,6 +12497,37 @@ export interface components {
             titleAr: string;
             /** @description Card title in English. */
             titleEn: string | null;
+        };
+        RatingClientResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identifier of the person associated with the rating
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            id: string;
+            /**
+             * @description Display name of the person associated with the rating
+             * @example عميل تجريبي
+             */
+            name: string;
+        };
+        RatingEmployeeResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identifier of the person associated with the rating
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            id: string;
+            /**
+             * @description Display name of the person associated with the rating
+             * @example عميل تجريبي
+             */
+            name: string;
+            /**
+             * @description English employee display name, or null when unavailable
+             * @example Example Counselor
+             */
+            nameEn: string | null;
         };
         RecordLateSessionDto: {
             /**
@@ -12897,30 +13514,31 @@ export interface components {
              */
             discountValue?: number;
             /**
-             * @description ISO datetime when the coupon expires
+             * Format: date-time
+             * @description ISO datetime when the coupon expires; null clears expiry
              * @example 2026-12-31T23:59:59.000Z
              */
-            expiresAt?: string;
+            expiresAt?: string | null;
             /**
              * @description Whether the coupon is active and redeemable
              * @example true
              */
             isActive?: boolean;
             /**
-             * @description Maximum number of total redemptions allowed
+             * @description Maximum number of total redemptions allowed; null clears limit
              * @example 100
              */
-            maxUses?: number;
+            maxUses?: number | null;
             /**
-             * @description Maximum redemptions per individual user
+             * @description Maximum redemptions per individual user; null clears limit
              * @example 1
              */
-            maxUsesPerUser?: number;
+            maxUsesPerUser?: number | null;
             /**
-             * @description Minimum order amount required to use this coupon
+             * @description Minimum order amount required to use this coupon; null clears limit
              * @example 50
              */
-            minOrderAmt?: number;
+            minOrderAmt?: number | null;
             /**
              * @description Restrict coupon to specific service UUIDs
              * @example [
@@ -12931,20 +13549,20 @@ export interface components {
         };
         UpdateDepartmentDto: {
             /**
-             * @description Department description in Arabic
+             * @description Department description in Arabic; null clears it
              * @example قسم طب وجراحة الفم والأسنان
              */
-            descriptionAr?: string;
+            descriptionAr?: string | null;
             /**
-             * @description Department description in English
+             * @description Department description in English; null clears it
              * @example Oral and dental surgery department
              */
-            descriptionEn?: string;
+            descriptionEn?: string | null;
             /**
-             * @description Icon identifier (e.g. Lucide icon name)
+             * @description Icon identifier; null clears it
              * @example tooth
              */
-            icon?: string;
+            icon?: string | null;
             /**
              * @description Whether the department is active
              * @example true
@@ -13058,22 +13676,22 @@ export interface components {
              * @description Short biography in English
              * @example Specialist with 10 years of experience.
              */
-            bio?: string;
+            bio?: string | null;
             /**
              * @description Short biography in Arabic
              * @example متخصص بخبرة 10 سنوات.
              */
-            bioAr?: string;
+            bioAr?: string | null;
             /**
              * @description Education details in English
              * @example King Saud University — BSc Physical Therapy
              */
-            education?: string;
+            education?: string | null;
             /**
              * @description Education details in Arabic
              * @example جامعة الملك سعود — بكالوريوس علاج طبيعي
              */
-            educationAr?: string;
+            educationAr?: string | null;
             /**
              * @description Email address
              * @example user@example.com
@@ -13118,33 +13736,33 @@ export interface components {
              * @description Phone number (any common format; normalized to E.164)
              * @example +966501234567
              */
-            phone?: string;
+            phone?: string | null;
             /** @description Public biography (Arabic) */
-            publicBioAr?: Record<string, never>;
+            publicBioAr?: string | null;
             /** @description Public biography (English) */
-            publicBioEn?: Record<string, never>;
+            publicBioEn?: string | null;
             /** @description Public profile image URL */
-            publicImageUrl?: Record<string, never>;
+            publicImageUrl?: string | null;
             /**
              * @description Public slug (unique, URL-safe)
              * @example dr-khalid
              */
-            slug?: Record<string, never>;
+            slug?: string | null;
             /**
              * @description Specialty label in English
              * @example Physiotherapy
              */
-            specialty?: string;
+            specialty?: string | null;
             /**
              * @description Specialty label in Arabic
              * @example العلاج الطبيعي
              */
-            specialtyAr?: string;
+            specialtyAr?: string | null;
             /**
              * @description Professional title (e.g. Dr.)
              * @example Dr.
              */
-            title?: string;
+            title?: string | null;
         };
         UpdateIntakeFormDto: {
             /** @description Optional replacement field list (max 100) */
@@ -13499,10 +14117,10 @@ export interface components {
              */
             name?: string;
             /**
-             * @description Updated phone number
+             * @description Updated phone number; null clears the stored number
              * @example +966501234567
              */
-            phone?: string;
+            phone?: string | null;
         };
         UpdateUserRoleDto: {
             /**
@@ -13940,12 +14558,12 @@ export interface components {
             zoomClientSecret?: string;
         };
         /**
-         * @description Gender
+         * @description User gender, or null when unspecified
          * @enum {string}
          */
         UserGender: "MALE" | "FEMALE";
         /**
-         * @description System role
+         * @description Assigned built-in user role
          * @enum {string}
          */
         UserRole: "SUPER_ADMIN" | "ADMIN" | "RECEPTIONIST" | "ACCOUNTANT" | "EMPLOYEE" | "CLIENT";
@@ -15575,6 +16193,8 @@ export interface operations {
     DashboardBookingsController_listBookings_v1: {
         parameters: {
             query?: {
+                /** @description Appointment date ordering before pagination */
+                sortOrder?: "asc" | "desc";
                 /** @description Filter sessions entered through late recording */
                 isLateEntry?: boolean;
                 /** @description Filter by client */
@@ -21684,24 +22304,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items?: {
-                            email?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            isActive?: boolean;
-                            name?: string;
-                            role?: string;
-                        }[];
-                        meta?: {
-                            hasNextPage?: boolean;
-                            hasPreviousPage?: boolean;
-                            limit?: number;
-                            page?: number;
-                            total?: number;
-                            totalPages?: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["DashboardUsersResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -21830,21 +22433,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        customRoleId?: string | null;
-                        /** Format: email */
-                        email?: string;
-                        gender?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        isActive?: boolean;
-                        name?: string;
-                        phone?: string | null;
-                        role?: string;
-                    };
+                    "application/json": components["schemas"]["DashboardUserResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -24273,6 +24862,74 @@ export interface operations {
             };
         };
     };
+    DashboardOrganizationCategoriesController_getCategoryEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Category UUID or readable CAT reference */
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardOrganizationCategoriesController_deleteCategoryEndpoint_v1: {
         parameters: {
             query?: never;
@@ -24520,6 +25177,74 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationDepartmentsController_getDepartmentEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Department UUID */
+                departmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Department details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Department not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26164,7 +26889,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationRatingsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -26326,6 +27053,14 @@ export interface operations {
     DashboardOrganizationSettingsController_listServicesEndpoint_v1: {
         parameters: {
             query?: {
+                /** @description Filter by a branch where an active assigned practitioner works */
+                branchId?: string;
+                /** @description Filter by the category department */
+                departmentId?: string;
+                /** @description Global ordering field */
+                sortBy?: "createdAt" | "nameAr" | "nameEn" | "price" | "durationMins" | "isActive";
+                /** @description Global ordering direction */
+                sortOrder?: "asc" | "desc";
                 /** @description Include historical inactive/archived references for staff recording */
                 historicalContext?: boolean;
                 /** @description Filter by active status */
@@ -27144,6 +27879,8 @@ export interface operations {
     DashboardPeopleController_listClientsEndpoint_v1: {
         parameters: {
             query?: {
+                sortBy?: "name" | "createdAt" | "isActive";
+                sortOrder?: "asc" | "desc";
                 /** @description Search by name or phone */
                 search?: string;
                 /** @description Filter by active status */
@@ -29098,6 +29835,10 @@ export interface operations {
                             total?: number;
                             totalPages?: number;
                         };
+                        /** @description Score counts across every rating for this employee */
+                        starCounts?: {
+                            [key: string]: number;
+                        };
                     };
                 };
             };
@@ -30683,7 +31424,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34818,6 +35561,8 @@ export interface operations {
     MobileEmployeeBookingsController_listMyBookings_v1: {
         parameters: {
             query?: {
+                /** @description Appointment date ordering before pagination */
+                sortOrder?: "asc" | "desc";
                 /** @description Filter sessions entered through late recording */
                 isLateEntry?: boolean;
                 /** @description Filter by client */

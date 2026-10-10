@@ -33,6 +33,7 @@ vi.mock("@/hooks/use-employee-mutations", () => ({
   useEmployeeMutations: () => ({
     onboardMutation: { mutateAsync: vi.fn() },
     updateMutation: { mutateAsync: mocks.updateEmployee },
+    invalidateCatalog: vi.fn(),
   }),
   useSetAvailability: () => ({ mutateAsync: mocks.setAvailability }),
   useSetBreaks: () => ({ mutateAsync: mocks.setBreaks }),

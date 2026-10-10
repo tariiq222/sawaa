@@ -1,3 +1,5 @@
+import { GetDepartmentHandler } from './departments/get-department.handler';
+import { GetCategoryHandler } from './categories/get-category.handler';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
@@ -43,12 +45,12 @@ const branchHandlers = [
 ];
 
 const departmentHandlers = [
-  CreateDepartmentHandler, UpdateDepartmentHandler, ListDepartmentsHandler,
+  GetDepartmentHandler, CreateDepartmentHandler, UpdateDepartmentHandler, ListDepartmentsHandler,
   DeleteDepartmentHandler,
 ];
 
 const categoryHandlers = [
-  CreateCategoryHandler, UpdateCategoryHandler, ListCategoriesHandler,
+  GetCategoryHandler, CreateCategoryHandler, UpdateCategoryHandler, ListCategoriesHandler,
   DeleteCategoryHandler,
 ];
 

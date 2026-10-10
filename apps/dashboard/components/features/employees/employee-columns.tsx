@@ -36,7 +36,7 @@ function RatingDisplay({ value }: { value: number | null | undefined }) {
 
 export function getEmployeeColumns(
   onRowClick: (p: Employee) => void,
-  _locale: "en" | "ar" = "en",
+  locale: "en" | "ar" = "en",
   onEdit?: (p: Employee) => void,
   onDelete?: (p: Employee) => void,
   t?: (key: string) => string,
@@ -51,9 +51,9 @@ export function getEmployeeColumns(
       enableSorting: true,
       cell: ({ row }) => {
         const p = row.original
-        const name = formatName(p.user.firstName, p.user.lastName)
+        const name = (locale === "ar" ? p.nameAr : p.nameEn) || formatName(p.user.firstName, p.user.lastName)
         const initials = getInitials(p.user.firstName, p.user.lastName)
-        const specialty = p.specialty
+        const specialty = locale === "ar" ? (p.specialtyAr || p.specialty) : p.specialty
         return (
           <button
             onClick={() => onRowClick(p)}

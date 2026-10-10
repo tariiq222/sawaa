@@ -15,14 +15,18 @@ vi.mock("@/components/locale-provider", () => ({
 }))
 vi.mock("@/components/features/contact-messages/contact-message-columns", () => ({ getContactMessageColumns: () => [] }))
 vi.mock("@/components/features/error-banner", () => ({ ErrorBanner: () => <div /> }))
-vi.mock("@/components/features/filter-bar", () => ({ FilterBar: ({ resultCount }: { resultCount?: string }) => <div>{resultCount}</div> }))
 vi.mock("@/components/features/data-table", () => ({ DataTable: (props: { onPageChange?: (page: number) => void }) => <button onClick={() => props.onPageChange?.(2)}>next-page</button> }))
-vi.mock("@sawaa/ui", () => ({ Skeleton: () => <div /> }))
 
 import { ContactMessagesTable } from "@/components/features/contact-messages/contact-messages-table"
 
 describe("ContactMessagesTable", () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it("keeps the filter visible during loading", () => {
+    useContactMessages.mockReturnValue({data: undefined, isLoading: true})
+    render(<ContactMessagesTable />)
+    expect(screen.getByRole("combobox")).toBeVisible()
+  })
 
   it("requests later pages instead of truncating the inbox at 50", () => {
     useContactMessages.mockReturnValue({ data: { items: [], meta: { total: 120, page: 1, totalPages: 3, hasPreviousPage: false, hasNextPage: true } }, isLoading: false })

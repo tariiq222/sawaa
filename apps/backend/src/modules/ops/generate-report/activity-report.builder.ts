@@ -48,7 +48,7 @@ export async function buildActivityReport(
     entityMap.set(log.entity, (entityMap.get(log.entity) ?? 0) + 1);
     actionMap.set(log.action, (actionMap.get(log.action) ?? 0) + 1);
 
-    const day = log.occurredAt.toISOString().slice(0, 10);
+    const day = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(log.occurredAt);
     dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
 
     if (log.userId) {

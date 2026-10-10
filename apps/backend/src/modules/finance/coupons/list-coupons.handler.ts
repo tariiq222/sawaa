@@ -21,7 +21,10 @@ export class ListCouponsHandler {
     if (query.search) {
       where['code'] = { contains: query.search, mode: 'insensitive' };
     }
-    if (query.status === 'active') where['isActive'] = true;
+    if (query.status === 'active') {
+      where['isActive'] = true;
+      where['OR'] = [{expiresAt: null}, {expiresAt: {gt: new Date()}}];
+    }
     else if (query.status === 'inactive') where['isActive'] = false;
     else if (query.status === 'expired') {
       where['expiresAt'] = { lt: new Date() };

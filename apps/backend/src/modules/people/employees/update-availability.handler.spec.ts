@@ -136,4 +136,25 @@ describe('UpdateAvailabilityHandler', () => {
 
     expect(prisma.employeeAvailabilityException.createMany).not.toHaveBeenCalled();
   });
+  it('preserves stored leave when an ordinary schedule edit omits exceptions', async () => {
+    const leave = { id: 'leave-1', startDate: new Date('2026-10-11'), endDate: new Date('2026-10-13') };
+    let storedLeave = [leave];
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.employeeAvailability.findMany.mockResolvedValue([]);
+    prisma.employeeAvailabilityException.deleteMany.mockImplementation(async () => { storedLeave = []; });
+    prisma.employeeAvailabilityException.findMany.mockImplementation(async () => storedLeave);
+    const result = await handler.execute({ employeeId: 'emp-1', windows: [] });
+    expect(result.exceptions).toEqual([leave]);
+  });
+
+  it('clears leave only when an explicit empty exceptions collection is supplied', async () => {
+    let storedLeave = [{ id: 'leave-1' }];
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.employeeAvailability.findMany.mockResolvedValue([]);
+    prisma.employeeAvailabilityException.deleteMany.mockImplementation(async () => { storedLeave = []; });
+    prisma.employeeAvailabilityException.findMany.mockImplementation(async () => storedLeave);
+    const result = await handler.execute({ employeeId: 'emp-1', windows: [], exceptions: [] });
+    expect(result.exceptions).toEqual([]);
+  });
+
 });

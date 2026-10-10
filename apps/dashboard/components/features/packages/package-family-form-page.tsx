@@ -9,6 +9,7 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { useLocale } from "@/components/locale-provider"
 import { usePackageFamily, usePackageFamilyMutations } from "@/hooks/use-package-families"
 import type { PackageFamily, PackageFamilyInput } from "@sawaa/shared/types"
+import { normalizePackageFamilyInput } from "@/lib/package-family-form"
 import { PackageFamilyEditor } from "./package-family-editor"
 
 type Props = { mode: "create" } | { mode: "edit"; familyId: string }
@@ -35,6 +36,8 @@ export function PackageFamilyFormPage(props: Props) {
         onCancel={() => router.push("/packages")}
         onSubmit={async (input) => {
           try {
+            input = normalizePackageFamilyInput(input, isEdit)
+            if (isEdit && input.imageUrl === family?.imageUrl) input = { ...input, imageUrl: undefined }
             if (isEdit) await updateMut.mutateAsync({ id: props.familyId, input })
             else await createMut.mutateAsync(input)
             toast.success(t(isEdit ? "packages.family.editSuccess" : "packages.family.createSuccess"))

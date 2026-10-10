@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { toListResponse } from '../../../common/dto';
+import type { Rating } from '@prisma/client';
+import { toListResponse, type ListResponse } from '../../../common/dto';
 
 export interface ListEmployeeRatingsQuery {
   employeeId: string;
@@ -15,7 +16,7 @@ export class ListEmployeeRatingsHandler {
     private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
-  async execute(query: ListEmployeeRatingsQuery) {
+  async execute(query: ListEmployeeRatingsQuery): Promise<ListResponse<Rating> & {starCounts: Record<number, number>}> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
@@ -27,13 +28,16 @@ export class ListEmployeeRatingsHandler {
     if (!employee) throw new NotFoundException('Employee not found');
 
     const where = { employeeId: query.employeeId };
-    const [items, total] = await this.rlsTransaction.withTransaction((tx) =>
+    const [items, total, distribution] = await this.rlsTransaction.withTransaction((tx) =>
       Promise.all([
         tx.rating.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
         tx.rating.count({ where }),
+        tx.rating.groupBy({by: ['score'], where, _count: {_all: true}}),
       ]),
     );
 
-    return toListResponse(items, total, page, limit);
+    const starCounts: Record<number, number> = {1:0,2:0,3:0,4:0,5:0};
+    for (const group of distribution) starCounts[group.score] = group._count._all;
+    return {...toListResponse(items, total, page, limit), starCounts};
   }
 }

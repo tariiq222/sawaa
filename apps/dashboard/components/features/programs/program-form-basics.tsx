@@ -57,6 +57,12 @@ export function ProgramFormBasics({ form }: { form: UseFormReturn<CreateProgramF
           <Textarea rows={3} {...form.register('descriptionEn')} />
         </Field>
       </div>
+      <label className="flex items-center gap-2 text-sm md:col-span-2">
+        <input type="checkbox" {...form.register('isPublic')} />
+        {t('auditOperations.programPublic')}
+      </label>
+      <Field label={t('auditOperations.publicDescriptionAr')}><Textarea {...form.register('publicDescriptionAr')} /></Field>
+      <Field label={t('auditOperations.publicDescriptionEn')}><Textarea {...form.register('publicDescriptionEn')} /></Field>
     </div>
   );
 }

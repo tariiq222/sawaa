@@ -26,6 +26,7 @@ const PAYMENT_STATUS_KEYS: Record<string, string> = {
   PENDING_VERIFICATION: "payments.status.waiting",
   COMPLETED: "payments.status.paid",
   REFUNDED: "payments.status.refunded",
+  PARTIALLY_REFUNDED: "payments.status.partiallyRefunded",
   FAILED: "payments.status.failed",
 }
 
@@ -33,6 +34,8 @@ const METHOD_KEYS: Record<string, string> = {
   ONLINE_CARD: "payments.method.moyasar",
   BANK_TRANSFER: "payments.method.bankTransfer",
   CASH: "payments.method.cash",
+  MADA: "payments.method.mada",
+  TABBY: "payments.method.tabby",
   COUPON: "payments.method.coupon",
 }
 

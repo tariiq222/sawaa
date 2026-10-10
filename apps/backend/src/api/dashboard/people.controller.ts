@@ -960,6 +960,7 @@ export class DashboardPeopleController {
     schema: {
       type: 'object',
       properties: {
+        starCounts: { type: 'object', additionalProperties: { type: 'integer' }, description: 'Score counts across every rating for this employee' },
         items: {
           type: 'array',
           items: {

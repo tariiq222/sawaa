@@ -6,7 +6,7 @@
  * type mirrors this exactly.
  */
 
-interface ListMeta {
+export interface ListMeta {
   total: number;
   page: number;
   limit: number;

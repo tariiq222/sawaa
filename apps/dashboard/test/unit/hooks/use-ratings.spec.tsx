@@ -24,7 +24,7 @@ const { fetchAllRatings, updateRatingVisibility } = vi.hoisted(() => ({
   updateRatingVisibility: vi.fn(),
 }))
 
-vi.mock("@/lib/api/employees", () => ({
+vi.mock("@/lib/api/ratings", () => ({
   fetchAllRatings,
   updateRatingVisibility,
 }))

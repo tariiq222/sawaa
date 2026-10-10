@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useRoleMutations } from "@/hooks/use-users"
+import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
 import { STANDARD_ACTION_ORDER } from "@sawaa/shared/constants/permissions-catalog"
 import { toast } from "sonner"
@@ -17,6 +18,8 @@ interface Props {
 
 export function PermissionMatrix({ role, allPermissions }: Props) {
   const { t } = useLocale()
+  const { canDo } = useAuth()
+  const canManage = canDo("role", "manage")
   const { setPermsMut } = useRoleMutations()
 
   // Group permissions by module — dynamic, driven by what the DB returns
@@ -56,6 +59,7 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
   const isPending = setPermsMut.isPending
 
   const handleToggle = (module: string, action: string, checked: boolean) => {
+    if (!canManage) return
     const nextPermissions = buildNextPermissions(role.permissions, {
       subject: module,
       action,
@@ -162,7 +166,7 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
                             onCheckedChange={(v) =>
                               handleToggle(mod, action, v === true)
                             }
-                            disabled={isPending}
+                            disabled={isPending || !canManage}
                             className="mx-auto"
                           />
                         </td>

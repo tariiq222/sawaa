@@ -39,13 +39,13 @@ export function EmployeeRatingsSection({
     queryKey: [...queryKeys.employees.ratings(employeeId), page],
     queryFn: () => fetchEmployeeRatings(employeeId, { page, limit: 5 }),
     enabled: !!employeeId,
+    staleTime: 60_000,
   })
 
   const ratings = data?.items ?? []
   const meta = data?.meta ?? null
 
-  const starCounts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
-  ratings.forEach((r) => { if (r.stars >= 1 && r.stars <= 5) starCounts[r.stars]++ })
+  const starCounts = data?.starCounts ?? {}
 
   return (
     <Card>
@@ -88,7 +88,7 @@ export function EmployeeRatingsSection({
           <div className="flex flex-1 flex-col gap-1.5">
             {[5, 4, 3, 2, 1].map((star) => {
               const count = starCounts[star] ?? 0
-              const pct = ratings.length > 0 ? (count / ratings.length) * 100 : 0
+              const pct = totalRatings > 0 ? (count / totalRatings) * 100 : 0
               return (
                 <div key={star} className="flex items-center gap-2">
                   <span className="w-3 text-end text-xs tabular-nums text-muted-foreground">

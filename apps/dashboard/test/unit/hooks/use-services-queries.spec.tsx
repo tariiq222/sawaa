@@ -42,6 +42,7 @@ const {
 }))
 
 vi.mock("@/lib/api/services", () => ({
+  fetchAllCategories: fetchCategories,
   fetchServices,
   fetchCategories,
   fetchDurationOptions,

@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   setBreaks: vi.fn(),
   createVacation: vi.fn(),
   updateEmployeeService: vi.fn(),
+  removeEmployeeService: vi.fn(),
+  setEmployeeDurations: vi.fn(),
+  setEmployeePricingMode: vi.fn(),
   assignService: vi.fn(),
   deleteEmployee: vi.fn(),
   setEmployeeServiceOptions: vi.fn(),
@@ -39,6 +42,7 @@ vi.mock("@/components/locale-provider", () => ({
 
 vi.mock("@/hooks/use-employee-mutations", () => ({
   useEmployeeMutations: () => ({
+    invalidateCatalog: vi.fn(),
     onboardMutation: { mutateAsync: mocks.onboardEmployee },
     updateMutation: { mutateAsync: mocks.updateEmployee },
   }),
@@ -49,6 +53,7 @@ vi.mock("@/hooks/use-employee-mutations", () => ({
   }),
   useEmployeeServiceMutations: () => ({
     updateMut: { mutateAsync: mocks.updateEmployeeService },
+    removeMut: { mutateAsync: mocks.removeEmployeeService },
   }),
 }))
 
@@ -57,6 +62,8 @@ vi.mock("@/lib/api/employees", () => ({
   deleteEmployee: mocks.deleteEmployee,
   setEmployeeServiceOptions: mocks.setEmployeeServiceOptions,
   uploadEmployeeAvatar: mocks.uploadEmployeeAvatar,
+  setEmployeeDurations: mocks.setEmployeeDurations,
+  setEmployeePricingMode: mocks.setEmployeePricingMode,
 }))
 
 vi.mock("@/lib/api/branches", () => ({
@@ -275,4 +282,41 @@ describe("useEmployeeForm service price units", () => {
     expect(mocks.toastWarning).not.toHaveBeenCalled()
     expect(mocks.routerPush).not.toHaveBeenCalled()
   })
+  it("hydrates the real English name rather than the Arabic display name", () => {
+    const form = makeForm(employeeFormData)
+    renderHook(() => useEmployeeForm({...baseOptions, isEdit:true, employeeId:"emp-1", employee: {nameEn:"Dana Smith", nameAr:"دانا سميث", user:{firstName:"دانا",lastName:"سميث"},isActive:true} as never, form:form as never}))
+    expect(form.reset).toHaveBeenCalledWith(expect.objectContaining({nameEn:"Dana Smith"}))
+  })
+
+  it("hydrates an empty persisted schedule with all days disabled", () => {
+    const setSchedule = vi.fn()
+    renderHook(() => useEmployeeForm({...baseOptions, isEdit:true, availability:[], setSchedule, form:makeForm(employeeFormData) as never}))
+    expect(setSchedule).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({dayOfWeek:0,isActive:false})]))
+  })
+
+  it("persists explicit removal of all windows and breaks", async () => {
+    const {result} = renderHook(() => useEmployeeForm({...baseOptions,isEdit:true,employeeId:"emp-1",availability:[],existingBreaks:[],draftServices:[],form:makeForm(employeeFormData) as never}))
+    await act(async () => { await result.current.onSubmit() })
+    expect(mocks.setAvailability).toHaveBeenCalledWith({id:"emp-1",schedule:[]})
+    expect(mocks.setBreaks).toHaveBeenCalledWith({id:"emp-1",breaks:[]})
+  })
+
+  it("removes service links absent from the edited form", async () => {
+    const {result} = renderHook(() => useEmployeeForm({...baseOptions,isEdit:true,employeeId:"emp-1",existingServices:[{serviceId:"removed",id:"link",service:null,isActive:true}],draftServices:[],form:makeForm(employeeFormData) as never}))
+    await act(async () => { await result.current.onSubmit() })
+    expect(mocks.removeEmployeeService).toHaveBeenCalledWith("removed")
+  })
+
+  it("does not repeat successful leave or service assignment after a later edit step fails", async () => {
+    mocks.setEmployeePricingMode.mockRejectedValueOnce(new Error("pricing failed")).mockResolvedValue(undefined)
+    const {result} = renderHook(() => useEmployeeForm({...baseOptions, isEdit:true, employeeId:"emp-1", draftServices:[draftService], existingServices:[], vacation:{enabled:true,startDate:"2026-11-01",endDate:"2026-11-02",reason:"Leave"},form:makeForm(employeeFormData) as never}))
+    await act(async () => { await result.current.onSubmit() })
+    expect(mocks.routerPush).not.toHaveBeenCalled()
+    await act(async () => { await result.current.onSubmit() })
+    expect(mocks.createVacation).toHaveBeenCalledTimes(1)
+    expect(mocks.assignService).toHaveBeenCalledTimes(1)
+    expect(mocks.updateEmployeeService).toHaveBeenCalledTimes(1)
+    expect(mocks.routerPush).toHaveBeenCalledWith("/employees")
+  })
+
 })

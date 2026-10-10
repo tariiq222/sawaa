@@ -5,17 +5,25 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import {
   fetchCategories,
+  fetchAllCategories,
+  fetchCategory,
   createCategory,
   updateCategory,
   deleteCategory,
+  uploadCategoryImage,
 } from "@/lib/api/services"
 import type { CategoryListQuery } from "@/lib/types/service"
 
 export function useCategories() {
   return useQuery({
-    queryKey: queryKeys.services.categories(),
-    queryFn: () => fetchCategories(),
+    queryKey: [...queryKeys.services.categories(), "complete-options"],
+    queryFn: () => fetchAllCategories(),
+    staleTime: 5 * 60 * 1000,
   })
+}
+
+export function useCategory(id: string | undefined) {
+  return useQuery({ queryKey: ["services", "categories", "detail", id], queryFn: () => fetchCategory(id!), enabled: Boolean(id), staleTime: 5 * 60 * 1000 })
 }
 
 export function useCategoriesList() {
@@ -68,7 +76,7 @@ export function useCategoriesList() {
 export function useCategoryMutations() {
   const queryClient = useQueryClient()
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["services", "categories"], refetchType: "all" })
+    queryClient.invalidateQueries({ queryKey: queryKeys.services.all, refetchType: "all" })
 
   const createMut = useMutation({
     mutationFn: createCategory,
@@ -86,5 +94,10 @@ export function useCategoryMutations() {
     onSuccess: invalidate,
   })
 
-  return { createMut, updateMut, deleteMut }
+  const uploadMut = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => uploadCategoryImage(id, file),
+    onSuccess: invalidate,
+  })
+
+  return { createMut, updateMut, deleteMut, uploadMut }
 }

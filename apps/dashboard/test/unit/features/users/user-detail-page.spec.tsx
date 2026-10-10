@@ -201,7 +201,7 @@ describe("UserDetailPage", () => {
       error: null,
       refetch: vi.fn(),
     })
-    canDo.mockImplementation((mod, act) => mod === "user" && act === "delete")
+    canDo.mockImplementation((mod, act) => mod === "user" && act === "manage")
 
     render(<UserDetailPage userId="u-1" />, { wrapper: makeWrapper() })
 
@@ -210,7 +210,14 @@ describe("UserDetailPage", () => {
     expect(screen.queryByText("تعديل")).not.toBeInTheDocument()
     expect(screen.getByText("حذف")).toBeInTheDocument()
     expect(canDo).toHaveBeenCalledWith("user", "update")
-    expect(canDo).toHaveBeenCalledWith("user", "delete")
+    expect(canDo).toHaveBeenCalledWith("user", "manage")
+  })
+
+  it("shows the custom role name without its UUID", () => {
+    useUser.mockReturnValue({ data: makeUser({ role: "EMPLOYEE", customRoleId: "custom-role-id", customRole: { id: "custom-role-id", name: "Counseling coordinator" } }), isLoading: false, error: null, refetch: vi.fn() })
+    render(<UserDetailPage userId="u-1" />, { wrapper: makeWrapper() })
+    expect(screen.getAllByText("Counseling coordinator").length).toBeGreaterThan(0)
+    expect(screen.queryByText("custom-role-id")).not.toBeInTheDocument()
   })
 
   it("renders the not-found banner when useUser surfaces a 404 ApiError", async () => {

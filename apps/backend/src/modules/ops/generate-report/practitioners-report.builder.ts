@@ -210,7 +210,7 @@ export async function buildPractitionerDetail(
 
   for (const b of bookings) {
     totalBookings += 1;
-    const day = b.scheduledAt.toISOString().slice(0, 10);
+    const day = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(b.scheduledAt);
     const entry = dayMap.get(day) ?? {
       bookings: 0,
       revenue: new Prisma.Decimal(0),

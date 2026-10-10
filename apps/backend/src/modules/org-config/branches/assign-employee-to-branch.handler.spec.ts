@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { Test } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -17,6 +18,7 @@ describe('AssignEmployeeToBranchHandler', () => {
 
     const module = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         AssignEmployeeToBranchHandler,
         { provide: PrismaService, useValue: prisma },
       ],

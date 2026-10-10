@@ -288,7 +288,9 @@ describe("ProgramFormPage — real component tree, edit vs create routing", () =
         expect(calls.some((url) => url.includes(`/dashboard/programs/${PROGRAM_ID}`))).toBe(true)
       }, { timeout: 3000 })
 
-      // Submit the form (fireEvent.submit triggers the real RHF pipeline).
+      fireEvent.click(container.querySelector('[name="isPublic"]')!)
+      fireEvent.change(container.querySelector('[name="publicDescriptionAr"]')!, { target: { value: "الوصف العام" } })
+      fireEvent.change(container.querySelector('[name="publicDescriptionEn"]')!, { target: { value: "Public description" } })
       fireEvent.submit(form)
 
       await waitFor(() => {
@@ -309,12 +311,27 @@ describe("ProgramFormPage — real component tree, edit vs create routing", () =
         maxParticipants: expect.any(Number),
         price: expect.any(Number),
         supervisorIds: expect.any(Array),
+        isPublic: true,
+        publicDescriptionAr: "الوصف العام",
+        publicDescriptionEn: "Public description",
       })
       // POST /dashboard/programs MUST NOT have been called — that's the bug.
       expect(apiPost).not.toHaveBeenCalled()
     },
     10000,
   )
+
+  it("shows an actionable save error and keeps the edited form", async () => {
+    setupApiMocksForEdit()
+    apiPatch.mockReset().mockRejectedValue(new Error("failed"))
+    const { Wrapper } = makeWrapper()
+    const { container } = render(<Wrapper><ProgramFormPage mode="edit" programId={PROGRAM_ID} /></Wrapper>)
+    await waitFor(() => expect(container.querySelector('[name="nameAr"]')).toHaveValue("قديم"))
+    fireEvent.submit(container.querySelector("form")!)
+    await waitFor(() => expect(screen.getByRole("alert")).toBeVisible())
+    expect(container.querySelector('[name="nameAr"]')).toHaveValue("قديم")
+    expect(pushMock).not.toHaveBeenCalled()
+  })
 
   it(
     "create mode: real page submits via POST /dashboard/programs (NOT PATCH)",

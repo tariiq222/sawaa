@@ -91,7 +91,7 @@ export async function buildOverviewReport(
   // Trend: bookings count by day + revenue by day (revenue from payments, bookings from bookings)
   const trendMap = new Map<string, { revenue: Prisma.Decimal; bookings: number }>();
   for (const b of bookings) {
-    const day = b.scheduledAt.toISOString().slice(0, 10);
+    const day = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(b.scheduledAt);
     const entry = trendMap.get(day) ?? {
       revenue: new Prisma.Decimal(0),
       bookings: 0,

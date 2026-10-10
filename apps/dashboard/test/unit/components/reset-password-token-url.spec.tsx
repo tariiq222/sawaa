@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react"
 import type { ComponentProps, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -63,4 +63,23 @@ describe("ResetPasswordForm token handling", () => {
       expect(params.get("source")).toBe("email")
     })
   })
+})
+
+it("returns to the dedicated login page", () => {
+  render(<ResetPasswordForm />)
+  expect(screen.getByRole("link", { name: "resetPassword.backToLogin" })).toHaveAttribute("href", "/login")
+})
+
+it("redirects a successful password reset to login", async () => {
+  window.history.pushState(null, "", "/reset-password?token=synthetic-test-token")
+  render(<ResetPasswordForm />)
+  vi.useFakeTimers()
+  try {
+    fireEvent.change(screen.getByLabelText("resetPassword.newPasswordLabel"), { target: { value: "NewPassword1" } })
+    fireEvent.change(screen.getByLabelText("resetPassword.confirmLabel"), { target: { value: "NewPassword1" } })
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "resetPassword.submit" })) })
+    expect(screen.getByText("resetPassword.successTitle")).toBeInTheDocument()
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(router.push).toHaveBeenCalledWith("/login")
+  } finally { vi.useRealTimers() }
 })

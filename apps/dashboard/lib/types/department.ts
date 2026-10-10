@@ -37,9 +37,9 @@ export interface CreateDepartmentPayload {
 export interface UpdateDepartmentPayload {
   nameAr?: string
   nameEn?: string
-  descriptionAr?: string
-  descriptionEn?: string
-  icon?: string
+  descriptionAr?: string | null
+  descriptionEn?: string | null
+  icon?: string | null
   sortOrder?: number
   isActive?: boolean
   isVisible?: boolean

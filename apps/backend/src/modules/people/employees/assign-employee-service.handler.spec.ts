@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { AssignEmployeeServiceHandler } from './assign-employee-service.handler';
@@ -15,7 +16,8 @@ describe('AssignEmployeeServiceHandler', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AssignEmployeeServiceHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },AssignEmployeeServiceHandler, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     handler = module.get<AssignEmployeeServiceHandler>(AssignEmployeeServiceHandler);

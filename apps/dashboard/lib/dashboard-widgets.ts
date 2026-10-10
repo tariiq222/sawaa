@@ -39,6 +39,8 @@ export function getVisibleWidgets(
   const canPaymentCreate = canDo('payment', 'create')
   const canReportRead = canDo('report', 'read')
 
+  const paymentStatsAvailable = canPaymentRead && ['OWNER','ADMIN','ACCOUNTANT'].includes(role)
+
   const quickActions: QuickActionKey[] = []
   if (role !== 'EMPLOYEE') {
     if (canBookingCreate) quickActions.push('newBooking')
@@ -48,13 +50,13 @@ export function getVisibleWidgets(
 
   return {
     stats: {
-      bookings: canBookingRead,
-      clients: canClientRead,
-      revenue: canPaymentRead,
-      pendingPayments: canPaymentRead,
+      bookings: canBookingRead && canReportRead,
+      clients: canClientRead && canReportRead,
+      revenue: canPaymentRead && canReportRead,
+      pendingPayments: paymentStatsAvailable,
     },
     attentionAlerts: {
-      pendingPayments: canPaymentRead,
+      pendingPayments: paymentStatsAvailable,
       cancelRequests: canBookingUpdate,
     },
     quickActions,

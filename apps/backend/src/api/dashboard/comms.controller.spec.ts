@@ -371,6 +371,15 @@ describe('DashboardCommsController (e2e)', () => {
       });
     });
 
+    it('rejects a caller-supplied recipient and never forwards it', async () => {
+      await request(app.getHttpServer())
+        .patch('/dashboard/comms/notifications/mark-read')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ recipientId: 'another-user' })
+        .expect(400);
+      expect(mockMarkRead.execute).not.toHaveBeenCalled();
+    });
+
     it('rejects an invalid notificationId', async () => {
       await request(app.getHttpServer())
         .patch('/dashboard/comms/notifications/mark-read')
@@ -716,5 +725,13 @@ describe('trusted privacy actor wiring', () => {
     const user = { sub: 'user-a', role: 'EMPLOYEE' };
     (DashboardCommsController.prototype.listMessagesEndpoint as any).apply({ listMessages: { execute } }, ['conv-1', { requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
+  });
+});
+
+// Mutation of one's own inbox uses the same access as reading it.
+describe('notification own-record permission', () => {
+  it('does not require booking update permission to mark the current inbox read', () => {
+    expect(Reflect.getMetadata('requiredPermissions', DashboardCommsController.prototype.markReadEndpoint))
+      .toEqual([{action:'read',subject:'Booking'}]);
   });
 });

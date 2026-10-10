@@ -17,21 +17,26 @@ import { useCouponMutations } from "@/hooks/use-coupons"
 import { useLocale } from "@/components/locale-provider"
 import { fetchCoupon } from "@/lib/api/coupons"
 import { queryKeys } from "@/lib/query-keys"
-import { formatDateTimeLocalValue } from "@/lib/date"
+import { riyadhDateTimeValue, riyadhDateTimeInstant } from "@/lib/audit-date"
 import { CouponFormFields } from "./coupon-form-fields"
 import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
 import { couponSchema, type CouponFormData } from "@/lib/schemas/coupon.schema"
 
 /* ─── Types ─── */
 
-type Props =
-  | { mode: "create" }
-  | { mode: "edit"; couponId: string }
+type Props = { mode: "create" } | { mode: "edit"; couponId: string }
 
 const DEFAULT_VALUES: CouponFormData = {
-  code: "", descriptionEn: "", descriptionAr: "",
-  discountType: "PERCENTAGE", discountValue: 10,
-  minOrderAmt: "", maxUses: "", maxUsesPerUser: "", expiresAt: "", isActive: true,
+  code: "",
+  descriptionEn: "",
+  descriptionAr: "",
+  discountType: "PERCENTAGE",
+  discountValue: 10,
+  minOrderAmt: "",
+  maxUses: "",
+  maxUsesPerUser: "",
+  expiresAt: "",
+  isActive: true,
 }
 
 /* ─── Helpers ─── */
@@ -47,12 +52,16 @@ function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
 }
 
 // minOrderAmt is stored in halalas; the form collects SAR.
-export function toDisplayMinOrderAmt(value: number | null | undefined): number | "" {
+export function toDisplayMinOrderAmt(
+  value: number | null | undefined
+): number | "" {
   if (value == null) return ""
   return halalasToSarNumber(value)
 }
 
-export function toStorageMinOrderAmt(value: number | "" | undefined): number | undefined {
+export function toStorageMinOrderAmt(
+  value: number | "" | undefined
+): number | undefined {
   if (value === "" || value == null) return undefined
   return sarToHalalas(value)
 }
@@ -86,25 +95,43 @@ export function CouponFormPage(props: Props) {
       descriptionEn: coupon.descriptionEn ?? "",
       descriptionAr: coupon.descriptionAr ?? "",
       discountType: coupon.discountType as "PERCENTAGE" | "FIXED",
-      discountValue: toDisplayValue(coupon.discountValue, coupon.discountType as "PERCENTAGE" | "FIXED"),
+      discountValue: toDisplayValue(
+        coupon.discountValue,
+        coupon.discountType as "PERCENTAGE" | "FIXED"
+      ),
       minOrderAmt: toDisplayMinOrderAmt(coupon.minOrderAmt),
       maxUses: coupon.maxUses ?? "",
       maxUsesPerUser: coupon.maxUsesPerUser ?? "",
-      expiresAt: formatDateTimeLocalValue(coupon.expiresAt),
+      expiresAt: riyadhDateTimeValue(coupon.expiresAt),
       isActive: coupon.isActive,
     })
   }, [coupon, form])
 
   const onSubmit = form.handleSubmit(async (data) => {
     const payload = {
-      descriptionEn: data.descriptionEn || undefined,
-      descriptionAr: data.descriptionAr || undefined,
+      descriptionEn: data.descriptionEn || (isEdit ? "" : undefined),
+      descriptionAr: data.descriptionAr || (isEdit ? "" : undefined),
       discountType: data.discountType,
       discountValue: toStorageValue(data.discountValue, data.discountType),
-      minOrderAmt: toStorageMinOrderAmt(data.minOrderAmt),
-      maxUses: data.maxUses !== "" && data.maxUses !== undefined ? Number(data.maxUses) : undefined,
-      maxUsesPerUser: data.maxUsesPerUser !== "" && data.maxUsesPerUser !== undefined ? Number(data.maxUsesPerUser) : undefined,
-      expiresAt: data.expiresAt || undefined,
+      minOrderAmt:
+        toStorageMinOrderAmt(data.minOrderAmt) ?? (isEdit ? null : undefined),
+      maxUses:
+        data.maxUses !== "" && data.maxUses !== undefined
+          ? Number(data.maxUses)
+          : isEdit
+            ? null
+            : undefined,
+      maxUsesPerUser:
+        data.maxUsesPerUser !== "" && data.maxUsesPerUser !== undefined
+          ? Number(data.maxUsesPerUser)
+          : isEdit
+            ? null
+            : undefined,
+      expiresAt: data.expiresAt
+        ? riyadhDateTimeInstant(data.expiresAt)
+        : isEdit
+          ? null
+          : undefined,
       isActive: data.isActive,
     }
     try {
@@ -113,12 +140,22 @@ export function CouponFormPage(props: Props) {
         await updateMut.mutateAsync({ id: coupon!.id, ...payload })
         toast.success(t("coupons.edit.success"))
       } else {
-        await createMut.mutateAsync({ code: data.code.toUpperCase(), ...payload })
+        await createMut.mutateAsync({
+          code: data.code.toUpperCase(),
+          ...payload,
+          minOrderAmt: payload.minOrderAmt ?? undefined,
+          maxUses: payload.maxUses ?? undefined,
+          maxUsesPerUser: payload.maxUsesPerUser ?? undefined,
+          expiresAt: payload.expiresAt ?? undefined,
+        })
         toast.success(t("coupons.create.success"))
       }
       router.push("/coupons")
     } catch (err) {
-      showApiError(err, { fallback: t(isEdit ? "coupons.edit.error" : "coupons.create.error"), t })
+      showApiError(err, {
+        fallback: t(isEdit ? "coupons.edit.error" : "coupons.create.error"),
+        t,
+      })
     }
   })
 
@@ -128,7 +165,10 @@ export function CouponFormPage(props: Props) {
         <Skeleton className="h-8 w-48" />
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={`skeleton-${i}`} className="h-48 w-full rounded-xl" />
+            <Skeleton
+              key={`skeleton-${i}`}
+              className="h-48 w-full rounded-xl"
+            />
           ))}
         </div>
       </ListPageShell>
@@ -136,7 +176,9 @@ export function CouponFormPage(props: Props) {
   }
 
   const title = isEdit ? t("coupons.edit.title") : t("coupons.create.title")
-  const description = isEdit ? (coupon?.code ?? "") : t("coupons.create.description")
+  const description = isEdit
+    ? (coupon?.code ?? "")
+    : t("coupons.create.description")
   const submitLabel = isPending
     ? t(isEdit ? "coupons.edit.submitting" : "coupons.create.submitting")
     : t(isEdit ? "coupons.edit.submit" : "coupons.create.submit")
@@ -147,11 +189,24 @@ export function CouponFormPage(props: Props) {
       <PageHeader title={title} description={description} />
       <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
         <CouponFormFields form={form} isEdit={isEdit} mode={props.mode} />
-        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/coupons")}>
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-border bg-background px-4 py-3 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="rounded-lg"
+            onClick={() => router.push("/coupons")}
+          >
             {t(isEdit ? "coupons.edit.cancel" : "coupons.create.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="rounded-lg" disabled={isPending}>{submitLabel}</Button>
+          <Button
+            type="submit"
+            size="lg"
+            className="rounded-lg"
+            disabled={isPending}
+          >
+            {submitLabel}
+          </Button>
         </div>
       </form>
     </ListPageShell>

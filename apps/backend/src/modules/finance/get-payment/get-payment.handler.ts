@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface GetPaymentQuery {
@@ -7,7 +8,7 @@ export interface GetPaymentQuery {
 
 @Injectable()
 export class GetPaymentHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly storage: MinioService) {}
 
   async execute(query: GetPaymentQuery) {
     const payment = await this.prisma.payment.findUnique({
@@ -15,6 +16,7 @@ export class GetPaymentHandler {
       include: {
         invoice: {
           select: {
+            number: true,
             bookingId: true,
             clientId: true,
             total: true,
@@ -44,8 +46,18 @@ export class GetPaymentHandler {
         })
       : null;
 
+    let receiptUrl = payment.receiptUrl;
+    if (receiptUrl) {
+      const path = receiptUrl.startsWith("http") ? new URL(receiptUrl).pathname : receiptUrl;
+      const marker = "finance-receipts/";
+      const index = path.indexOf(marker);
+      const key = index >= 0 ? path.slice(index + marker.length) : path.replace(/^\//, "");
+      receiptUrl = await this.storage.getSignedUrl("finance-receipts", key);
+    }
+
     return {
       ...payment,
+      receiptUrl,
       invoice: payment.invoice
         ? {
             ...payment.invoice,

@@ -189,6 +189,10 @@ export class EmployeeResponseDto {
   @ApiProperty({ description: 'Whether the employee is active', example: true })
   isActive!: boolean;
 
+  @ApiProperty({ description: 'Employee activation permits booking admission; does not guarantee a free slot', example: true })
+  isAcceptingBookings!: boolean;
+
+
   @ApiProperty({ description: 'Average rating (0–5)', example: 4.7, nullable: true })
   averageRating!: number | null;
 

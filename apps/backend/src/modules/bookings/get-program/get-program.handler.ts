@@ -40,7 +40,20 @@ export class GetProgramHandler {
 
     if (!program) throw new NotFoundException('Program not found');
 
+    const [clients, supervisors] = await Promise.all([
+      program.enrollments.length ? this.prisma.client.findMany({
+        where: { id: { in: [...new Set(program.enrollments.map(e => e.clientId))] } },
+        select: { id: true, name: true },
+      }) : [],
+      program.supervisors.length ? this.prisma.employee.findMany({
+        where: { id: { in: program.supervisors.map(s => s.employeeId) } },
+        select: { id: true, name: true, nameEn: true },
+      }) : [],
+    ]);
+    const clientNames = new Map(clients.map(c => [c.id, c.name]));
+
     return {
+      supervisors,
       id: program.id,
       ref: program.ref,
       departmentId: program.departmentId,
@@ -72,6 +85,7 @@ export class GetProgramHandler {
       enrollments: program.enrollments.map((e) => ({
         id: e.id,
         clientId: e.clientId,
+        clientName: clientNames.get(e.clientId) ?? null,
         enrolledAt: e.enrolledAt,
         booking: {
           id: e.booking.id,

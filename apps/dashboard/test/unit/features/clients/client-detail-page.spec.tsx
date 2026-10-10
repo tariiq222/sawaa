@@ -112,6 +112,13 @@ beforeEach(() => vi.clearAllMocks())
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe("ClientDetailPage — email verification badge", () => {
+  it("hides edit, delete, account controls and invoice tab without their permissions", () => {
+    renderPage(makeClient())
+    expect(screen.queryByRole("button", { name: "clients.detail.edit" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "clients.actions.delete" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("tab", { name: "clients.dialog.tabs.invoices" })).not.toBeInTheDocument()
+  })
+
   it("shows the unverified badge next to the email when emailVerified is false", () => {
     renderPage(makeClient({ emailVerified: false }))
     expect(screen.getByText(BADGE_KEY)).toBeInTheDocument()

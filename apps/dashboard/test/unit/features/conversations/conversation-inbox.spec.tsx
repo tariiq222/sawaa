@@ -182,8 +182,8 @@ describe("ConversationList", () => {
     fireEvent.change(screen.getByLabelText("إلى تاريخ"), { target: { value: "2026-08-31" } })
 
     expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ assigned: "me" }))
-    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ from: "2026-08-01T00:00:00.000Z" }))
-    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ to: "2026-08-31T23:59:59.999Z" }))
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ from: "2026-07-31T21:00:00.000Z" }))
+    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ to: "2026-08-31T20:59:59.999Z" }))
   })
 
   it("formats the latest-message time with the selected locale", () => {
@@ -307,5 +307,14 @@ describe("ConversationDetail", () => {
   it("allows an administrator to close an AI-active conversation", () => {
     render(<ConversationDetail conversation={conversation({ status: "AI_ACTIVE" })} isDetailLoading={false} detailError={null} messages={[]} isMessagesLoading={false} messagesError={null} hasOlderMessages={false} isLoadingOlderMessages={false} onLoadOlderMessages={vi.fn()} canManage canUpdate staffUsers={[]} pendingAction={null} actionError={null} t={t} {...handlers} />)
     expect(screen.getByRole("button", { name: "إغلاق المحادثة" })).toBeInTheDocument()
+  })
+})
+
+describe('conversation transcript context', () => {
+  it('renders dated system events separately from client messages', () => {
+    const {container} = render(<ConversationDetail conversation={conversation()} isDetailLoading={false} detailError={null} messages={[{id:'system-1',conversationId:'conversation-1',senderType:'SYSTEM',kind:'SYSTEM_EVENT',body:'تم تحويل المحادثة',clientMessageId:null,createdAt:'2026-08-14T06:00:00.000Z'}]} isMessagesLoading={false} messagesError={null} hasOlderMessages={false} isLoadingOlderMessages={false} onLoadOlderMessages={vi.fn()} canManage={false} canUpdate={false} staffUsers={[]} pendingAction={null} actionError={null} t={t} onClaim={vi.fn()} onReply={vi.fn()} onAssign={vi.fn()} onRelease={vi.fn()} onClose={vi.fn()} />)
+    expect(container.querySelector('time')).toHaveAttribute('datetime','2026-08-14T06:00:00.000Z')
+    expect(screen.getByRole('status')).toHaveTextContent('تم تحويل المحادثة')
+    expect(container.querySelector('[role="log"]')).toBeInTheDocument()
   })
 })

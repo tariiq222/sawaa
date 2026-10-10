@@ -7,8 +7,8 @@ import {
 } from "@/lib/schemas/client.schema"
 
 describe("splitFullName", () => {
-  it("splits 1 part into firstName and lastName", () => {
-    expect(splitFullName("محمد")).toEqual({ firstName: "محمد", lastName: "محمد" })
+  it("preserves a mononym without duplicating it", () => {
+    expect(splitFullName("محمد")).toEqual({ firstName: "محمد", lastName: "" })
   })
 
   it("splits 2 parts into firstName and lastName", () => {

@@ -117,3 +117,9 @@ describe('ListInvoicesHandler', () => {
     expect(prisma.client.findMany).not.toHaveBeenCalled();
   });
 });
+
+it('finds displayed invoice numbers including INV-0012', async () => {
+ const prisma=buildPrisma(); const handler=new ListInvoicesHandler(prisma as never);
+ await handler.execute({search:'INV-0012'});
+ expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({OR:expect.arrayContaining([{number:12}])})}));
+});

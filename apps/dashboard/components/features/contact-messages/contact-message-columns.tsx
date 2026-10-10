@@ -33,9 +33,11 @@ export function getContactMessageColumns(
       accessorKey: "email",
       header: t("contactMessages.table.contact"),
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.email ?? row.original.phone ?? "—"}
-        </span>
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {row.original.email && <p dir="ltr">{row.original.email}</p>}
+          {row.original.phone && <p dir="ltr">{row.original.phone}</p>}
+          {!row.original.email && !row.original.phone && '—'}
+        </div>
       ),
     },
     {
@@ -49,9 +51,10 @@ export function getContactMessageColumns(
       accessorKey: "body",
       header: t("contactMessages.table.body"),
       cell: ({ row }) => (
-        <span className="max-w-xs truncate text-sm text-muted-foreground block">
-          {row.original.body}
-        </span>
+        <details className="max-w-md text-sm text-muted-foreground">
+          <summary className="cursor-pointer text-primary">{t('auditOperations.readMessage')}</summary>
+          <p className="mt-2 whitespace-pre-wrap break-words">{row.original.body}</p>
+        </details>
       ),
     },
     {

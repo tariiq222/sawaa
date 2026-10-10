@@ -117,3 +117,9 @@ describe("createRoleSchema", () => {
     expect(createRoleSchema.safeParse({ name: "Cashier", description: "Handles POS" }).success).toBe(false)
   })
 })
+
+it("rejects blank role names with a localizable validation key", () => {
+  const parsed = createRoleSchema.safeParse({ name: "   " })
+  expect(parsed.success).toBe(false)
+  if (!parsed.success) expect(parsed.error.issues[0].message).toBe("auditStaff.roleNameRequired")
+})

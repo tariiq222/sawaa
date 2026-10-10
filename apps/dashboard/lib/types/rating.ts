@@ -7,6 +7,7 @@ import type { PaginatedQuery } from "./common"
 /* ─── Entities ─── */
 
 export interface Rating {
+  employee?: { id: string; name: string; nameEn?: string | null } | null
   id: string
   bookingId: string
   stars: number

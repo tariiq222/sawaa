@@ -15,7 +15,7 @@ vi.mock("@sawaa/ui", () => ({
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }))
 const request = { id: "req-1", amount: 2500, status: "PENDING_REVIEW" as const, reason: "Cancellation", createdAt: "2026-10-03T09:00:00Z" }
-const payment = { id: "pay-1", invoiceId: "inv-1", invoice: { bookingId: "booking-1", clientId: "client-1" }, gatewayRef: null, refundRequests: [request] } as Payment
+const payment = { id: "pay-1", invoiceId: "inv-1", invoice: { bookingId: "booking-1", clientId: "client-1" }, method: "CASH", gatewayRef: null, refundRequests: [request] } as Payment
 function setup(value = payment) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: 3 } } })
   const invalidate = vi.spyOn(client, "invalidateQueries")
@@ -44,7 +44,7 @@ describe("payment refund requests", () => {
   })
   it("keeps a processing gateway approval distinct from completion", async () => {
     post.mockResolvedValue({ id: "req-1", status: "PROCESSING" })
-    setup({ ...payment, gatewayRef: "gateway-1" })
+    setup({ ...payment, method: "ONLINE_CARD", gatewayRef: "gateway-1" })
     fireEvent.click(screen.getByRole("button", { name: "refund.review.approve" }))
     await waitFor(() => expect(post).toHaveBeenCalledWith("/dashboard/refunds/approve", { refundRequestId: "req-1" }))
     expect(await screen.findByText("refund.review.status.PROCESSING")).toBeInTheDocument()
@@ -53,7 +53,7 @@ describe("payment refund requests", () => {
   })
   it("requires a reason to deny and never mutates the booking", async () => {
     post.mockResolvedValue({ id: "req-1", status: "DENIED" })
-    setup({ ...payment, gatewayRef: "gateway-1" })
+    setup({ ...payment, method: "ONLINE_CARD", gatewayRef: "gateway-1" })
     const deny = screen.getByRole("button", { name: "refund.review.deny" })
     expect(deny).toBeDisabled()
     fillReason(); fireEvent.click(deny)
@@ -61,15 +61,60 @@ describe("payment refund requests", () => {
     expect(post).toHaveBeenCalledWith("/dashboard/refunds/deny", { refundRequestId: "req-1", reason: "Money returned at reception" })
     expect(patch).not.toHaveBeenCalled()
   })
-  it.each([null, "gateway-1"])("hides actions without the exact permission for %s", (gatewayRef) => {
-    canDo.mockImplementation((subject: string) => subject === (gatewayRef ? "invoice" : "setting"))
-    setup({ ...payment, gatewayRef })
-    expect(screen.queryAllByRole("button")).toHaveLength(0)
-    expect(canDo).toHaveBeenCalledWith(gatewayRef ? "setting" : "invoice", "manage")
-  })
+  it.each([null, "bank-transfer-admin-reference"])(
+    "settles a bank transfer with reference %s using update:Payment",
+    async (gatewayRef) => {
+      canDo.mockImplementation(
+        (subject: string, action: string) =>
+          subject === "payment" && action === "update"
+      )
+      patch.mockResolvedValue({ ...payment, status: "PARTIALLY_REFUNDED" })
+      setup({ ...payment, method: "BANK_TRANSFER", gatewayRef })
+      expect(
+        screen.queryByRole("button", { name: "refund.review.approve" })
+      ).not.toBeInTheDocument()
+      expect(canDo).toHaveBeenCalledWith("payment", "update")
+      fillReason()
+      fireEvent.click(
+        screen.getByRole("checkbox", {
+          name: "refund.review.returnedConfirmation",
+        })
+      )
+      fireEvent.click(
+        screen.getByRole("button", { name: "refund.review.recordReturn" })
+      )
+      await waitFor(() =>
+        expect(patch).toHaveBeenCalledWith(
+          "/dashboard/finance/payments/pay-1/manual-refund",
+          {
+            reason: "Money returned at reception",
+            refundRequestId: "req-1",
+            amount: 2500,
+          }
+        )
+      )
+      expect(
+        await screen.findByText("refund.review.status.COMPLETED")
+      ).toBeInTheDocument()
+      expect(post).not.toHaveBeenCalled()
+    }
+  )
+  it.each([
+    ["CASH", null, "payment", "update"],
+    ["BANK_TRANSFER", "bank-transfer-admin-reference", "payment", "update"],
+    ["ONLINE_CARD", "gateway-1", "setting", "manage"],
+  ] as const)(
+    "hides %s actions without their endpoint permission",
+    (method, gatewayRef, subject, action) => {
+      canDo.mockImplementation((candidate: string) => candidate === "invoice")
+      setup({ ...payment, method, gatewayRef })
+      expect(screen.queryAllByRole("button")).toHaveLength(0)
+      expect(canDo).toHaveBeenCalledWith(subject, action)
+    }
+  )
   it("preserves the row on errors without automatic retry and permits an explicit retry", async () => {
     post.mockRejectedValueOnce(new Error("offline")).mockResolvedValue({ id: "req-1", status: "COMPLETED" })
-    setup({ ...payment, gatewayRef: "gateway-1" })
+    setup({ ...payment, method: "ONLINE_CARD", gatewayRef: "gateway-1" })
     fireEvent.click(screen.getByRole("button", { name: "refund.review.approve" }))
     expect(await screen.findByRole("alert")).toHaveTextContent("refund.errorToast")
     expect(post).toHaveBeenCalledTimes(1)
@@ -79,7 +124,7 @@ describe("payment refund requests", () => {
   })
   it("blocks duplicate submissions while busy", async () => {
     post.mockReturnValue(new Promise(() => {}))
-    setup({ ...payment, gatewayRef: "gateway-1" })
+    setup({ ...payment, method: "ONLINE_CARD", gatewayRef: "gateway-1" })
     const approve = screen.getByRole("button", { name: "refund.review.approve" })
     fireEvent.click(approve); fireEvent.click(approve)
     await waitFor(() => expect(approve).toBeDisabled())

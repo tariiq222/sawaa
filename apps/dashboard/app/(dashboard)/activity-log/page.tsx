@@ -9,7 +9,7 @@ import { useLocale } from "@/components/locale-provider"
 
 export default function ActivityLogPage() {
   return (
-    <PermissionGuard module="setting" action="read">
+    <PermissionGuard module="report" action="read">
       <ActivityLogPageInner />
     </PermissionGuard>
   )

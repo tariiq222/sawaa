@@ -5,13 +5,12 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
-import { ApiError } from "@/lib/api"
 import { Button } from "@sawaa/ui"
 import { useClientMutations } from "@/hooks/use-clients"
 import { useLocale } from "@/components/locale-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import {
-  createClientSchema,
+  createClientSchemaWithI18n,
   type CreateClientFormData,
   splitFullName,
 } from "@/lib/schemas/client.schema"
@@ -33,7 +32,7 @@ export function CreateClientForm() {
   const { createMut } = useClientMutations()
 
   const form = useForm<CreateClientFormData>({
-    resolver: zodResolver(createClientSchema),
+    resolver: zodResolver(createClientSchemaWithI18n(t)),
     defaultValues: {
       fullName: "",
       phone: "",
@@ -52,12 +51,10 @@ export function CreateClientForm() {
     try {
       const created = await createMut.mutateAsync(payload)
       const id = created?.id
-      toast.success(t("clients.toasts.created"))
+      toast.success(t(created.isExisting ? "clients.toasts.existing" : "clients.toasts.created"))
       router.push(id ? `/clients/${id}` : "/clients")
     } catch (error) {
-      if (error instanceof ApiError) {
-        showApiError(error, { fallback: t("clients.create.error"), t })
-      }
+      showApiError(error, { fallback: t("clients.create.error"), t })
     }
   })
 

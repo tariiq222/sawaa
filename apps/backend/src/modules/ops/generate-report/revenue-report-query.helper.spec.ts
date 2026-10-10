@@ -63,20 +63,20 @@ describe('revenue report query helper', () => {
     expect(bookings.summary.strings.join('')).toContain('b."scheduledAt" <=');
   });
 
-  it('pins booking calendar and heatmap extraction to UTC', () => {
+  it('pins booking calendar and heatmap extraction to Riyadh', () => {
     const queries = buildBookingsReportQueries({
       from: new Date('2026-01-01T00:00:00Z'),
       to: new Date('2026-01-02T00:00:00Z'),
     });
 
     expect(queries.byDay.strings.join('')).toContain(
-      '(b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'UTC\')',
+      '(b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'Asia/Riyadh\')',
     );
     expect(queries.byHourDow.strings.join('')).toContain(
-      'DOW FROM (b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'UTC\')',
+      'DOW FROM (b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'Asia/Riyadh\')',
     );
     expect(queries.byHourDow.strings.join('')).toContain(
-      'HOUR FROM (b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'UTC\')',
+      'HOUR FROM (b."scheduledAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'Asia/Riyadh\')',
     );
   });
 });
@@ -87,4 +87,15 @@ it('uses effective collection for SQL filtering and Riyadh grouping', () => {
   expect(sql.sql).toContain('COALESCE(p."effectiveReceivedAt", p."createdAt")');
  }
  expect(q.paymentDayAggregate.sql).toContain(`(COALESCE(p."effectiveReceivedAt", p."createdAt") AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')`);
+});
+
+it('includes the final millisecond when dashboard sends inclusive Riyadh day-end',()=>{
+ const range=revenueReportDateRange('2026-10-09T21:00:00.000Z','2026-10-10T20:59:59.999Z');
+ expect(range.toExclusive).toEqual(new Date('2026-10-10T21:00:00.000Z'));
+});
+
+it('excludes actual cancellations from averages without dropping still-open cancellation requests',()=>{
+ const sql=buildRevenueReportQuery({from:new Date('2026-10-01'),toExclusive:new Date('2026-11-01')}).bookingAggregate.sql;
+ expect(sql).toContain('CANCELLED');
+ expect(sql).not.toContain('CANCEL_REQUESTED');
 });

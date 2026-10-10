@@ -96,6 +96,19 @@ describe("useIntakeForms", () => {
     expect(result.current.forms).toEqual(forms)
   })
 
+  it("filters all fetched forms by Arabic and English names without unsupported API search", async () => {
+    fetchIntakeForms.mockResolvedValue([{ id: "first", nameAr: "استقبال", nameEn: "Intake" }, { id: "later", nameAr: "متابعة", nameEn: "Follow Up" }])
+    const { result } = renderHook(() => useIntakeForms(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    act(() => result.current.setSearch(" follow "))
+    await waitFor(() => expect(result.current.forms.map(f => f.id)).toEqual(["later"]))
+    expect(fetchIntakeForms).toHaveBeenCalledTimes(1)
+    act(() => result.current.setSearch("استقبال"))
+    await waitFor(() => expect(result.current.forms.map(f => f.id)).toEqual(["first"]))
+    act(() => result.current.resetFilters())
+    await waitFor(() => expect(result.current.forms).toHaveLength(2))
+  })
+
   it("returns loading state initially", () => {
     fetchIntakeForms.mockReturnValueOnce(new Promise(() => undefined))
 

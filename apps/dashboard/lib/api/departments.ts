@@ -1,3 +1,4 @@
+import { api } from "@/lib/api"
 import {
   openApi,
   type OpenApiRequestBody,
@@ -34,6 +35,11 @@ export async function fetchDepartments(
     },
   })
   return { ...response, items: response.items.map(toDepartment) }
+}
+
+export async function fetchDepartment(id: string): Promise<Department> {
+  const department = await api.get<Department>(`/dashboard/organization/departments/${id}`)
+  return { ...department, nameEn: department.nameEn ?? "" }
 }
 
 export async function createDepartment(

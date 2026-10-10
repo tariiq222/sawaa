@@ -9,31 +9,29 @@ import {
 import { Button } from "@sawaa/ui"
 import { InvoiceStatusBadge } from "@/components/features/status-badge"
 import { ApiError } from "@/lib/api"
-import { generateInvoicePdf } from "@/lib/api/invoices"
+import { generateInvoicePdf, fetchInvoicePdf } from "@/lib/api/invoices"
 import type { InvoiceListItem } from "@/lib/types/invoice"
 import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 
-async function handleGeneratePdf(id: string, t: (key: string) => string) {
+export async function handleInvoicePdf(invoice: InvoiceListItem, t: (key:string)=>string) {
+  const popup = window.open("about:blank", "_blank")
+  if (popup) popup.opener = null
   const toastId = toast.loading(t("invoices.generatingPdf"))
   try {
-    const { url } = await generateInvoicePdf(id)
-    toast.dismiss(toastId)
-    window.open(url, "_blank")
+    const {url} = await (invoice.hasPdf ? fetchInvoicePdf(invoice.id) : generateInvoicePdf(invoice.id))
+    if (popup) popup.location.href = url
+    else toast.error(t("invoices.popupBlocked"))
   } catch (err) {
-    toast.dismiss(toastId)
-    if (err instanceof ApiError && err.status === 404) {
-      toast.error(t("invoices.noPdfYet"))
-      return
-    }
-    toast.error(t("invoices.downloadPdfError"))
-  }
+    popup?.close()
+    toast.error(t(err instanceof ApiError && err.status === 404 ? "invoices.noPdfYet" : "invoices.downloadPdfError"))
+  } finally { toast.dismiss(toastId) }
 }
 
 export function getInvoiceColumns(
   t: (key: string) => string = (k) => k,
-  config?: { dateFormat?: DateFormat },
+  config?: { dateFormat?: DateFormat; canGeneratePdf?: boolean },
 ): ColumnDef<InvoiceListItem>[] {
   const dateFormat = config?.dateFormat ?? "Y-m-d"
   const columns: ColumnDef<InvoiceListItem>[] = [
@@ -110,7 +108,8 @@ export function getInvoiceColumns(
           title={actionLabel}
           variant="ghost"
           size="icon-sm"
-          onClick={() => handleGeneratePdf(invoice.id, t)}
+          disabled={!invoice.hasPdf && config?.canGeneratePdf === false}
+          onClick={() => void handleInvoicePdf(invoice, t)}
         >
           <HugeiconsIcon icon={DocumentAttachmentIcon} size={16} />
         </Button>

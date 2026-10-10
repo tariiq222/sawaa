@@ -67,7 +67,7 @@ export class ListInboxHandler {
 
     if (command.cursor) {
       const cursor = await this.prisma.chatConversation.findFirst({
-        where: { ...where, id: command.cursor },
+        where: { ...(accessPredicate ? { AND: [accessPredicate] } : {}), id: command.cursor },
         select: { id: true },
       });
       if (!cursor) throw new NotFoundException('Conversation cursor not found');

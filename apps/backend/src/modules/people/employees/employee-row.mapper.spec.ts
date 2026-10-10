@@ -42,6 +42,7 @@ describe('mapEmployeeRow', () => {
     const result = mapEmployeeRow(employee, { avg: 4.5, count: 10 }, 25);
 
     expect(result.id).toBe('e1');
+    expect(result.isAcceptingBookings).toBe(true);
     expect(result).toMatchObject({ isPublic: true, slug: 'khalid', publicBioAr: 'نبذة عامة', publicBioEn: 'Public bio', publicImageUrl: 'org/public.png' });
     expect(result.branchIds).toEqual(['b1']);
     expect(result.serviceIds).toEqual(['s1']);
@@ -90,6 +91,7 @@ describe('mapEmployeeRow', () => {
 
     const result = mapEmployeeRow(employee);
 
+    expect(result.isAcceptingBookings).toBe(false);
     expect(result.branchIds).toEqual([]);
     expect(result.serviceIds).toEqual([]);
     expect(result.availability).toEqual([]);

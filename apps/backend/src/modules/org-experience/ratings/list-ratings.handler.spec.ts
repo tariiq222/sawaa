@@ -10,7 +10,7 @@ describe('ListRatingsHandler', () => {
       providers: [
         ListRatingsHandler,
     { provide: PrismaService, useValue: { $transaction: jest.fn(), service: { findMany: jest.fn() } } },
-    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb({ rating: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) } })) } }
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb({ rating: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0), aggregate: jest.fn().mockResolvedValue({_avg:{score:null}}) } })) } }
       ],
     }).compile();
 
@@ -22,10 +22,9 @@ describe('ListRatingsHandler', () => {
   });
 
   it('executes without throwing', async () => {
-    try {
-      await handler.execute({});
-    } catch (e) {
-      // Expected for incomplete mocks
-    }
+    const result = await handler.execute({});
+    expect(result.items).toEqual([]);
+    expect(result.meta.total).toBe(0);
+    expect(result.averageRating).toBeNull();
   });
 });

@@ -23,12 +23,14 @@ import {
   useTestSms,
   useUpsertSmsConfig,
 } from "@/hooks/use-sms-config"
-import type { SmsProvider, UpsertSmsConfigInput } from "@/lib/types/sms"
+import { toast } from "sonner"
+import { buildSmsConfigInput } from "@/lib/sms-config-input"
+import type { SmsProvider } from "@/lib/types/sms"
 
 export function SmsSettingsForm() {
   const { locale, t } = useLocale()
   const isAr = locale === "ar"
-  const { config, loading } = useSmsConfig()
+  const { config, loading, error } = useSmsConfig()
   const upsert = useUpsertSmsConfig()
   const test = useTestSms()
 
@@ -50,26 +52,32 @@ export function SmsSettingsForm() {
   }, [config])
 
   const onSave = async () => {
-    const input: UpsertSmsConfigInput = { provider }
-    if (senderId.trim()) input.senderId = senderId.trim()
-    if (provider === "UNIFONIC") input.unifonic = { appSid, apiKey }
-    if (provider === "TAQNYAT") input.taqnyat = { apiToken }
-    await upsert.mutateAsync(input)
-    setAppSid("")
-    setApiKey("")
-    setApiToken("")
+    try {
+      await upsert.mutateAsync(buildSmsConfigInput(provider, senderId, appSid, apiKey, apiToken))
+      setAppSid("")
+      setApiKey("")
+      setApiToken("")
+      toast.success(t("sms.form.saved"))
+    } catch (err) {
+      toast.error(err instanceof Error && err.message === "SMS_CREDENTIALS_REQUIRED" ? t("sms.form.credentialsRequired") : t("sms.form.saveFailed"))
+    }
   }
 
   const onTest = async () => {
     if (!testPhone.trim()) return
-    const result = await test.mutateAsync(testPhone.trim())
-    if (result.ok) {
-      setTestMessage(
-        t("sms.form.testSent").replace("{id}", result.providerMessageId ?? "")
-      )
-    } else {
-      const err = result.error
-      setTestMessage(err ? (isAr ? err.ar : err.en) : t("sms.form.testFailed"))
+    try {
+      const result = await test.mutateAsync(testPhone.trim())
+      if (result.ok) {
+        setTestMessage(t("sms.form.testSent").replace("{id}", result.providerMessageId ?? ""))
+        toast.success(t("sms.form.testSent").replace("{id}", result.providerMessageId ?? ""))
+      } else {
+        const message = result.error ? (isAr ? result.error.ar : result.error.en) : t("sms.form.testFailed")
+        setTestMessage(message)
+        toast.error(message)
+      }
+    } catch {
+      setTestMessage(t("sms.form.testFailed"))
+      toast.error(t("sms.form.testFailed"))
     }
   }
 
@@ -79,7 +87,7 @@ export function SmsSettingsForm() {
         <CardTitle>{t("sms.form.title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {loading ? (
+        {error ? <p role="alert" className="text-destructive">{t("error.server")}</p> : loading ? (
           <p className="text-muted-foreground">{t("sms.form.loading")}</p>
         ) : (
           <>

@@ -50,7 +50,7 @@ export function parseRoleSelection(value: string): RoleSelectionResult {
 /* ─── Create role schema (create-role-dialog) ─── */
 
 export const createRoleSchema = z.object({
-  name: z.string().min(1, "Role name is required"),
+  name: z.string().trim().min(1, "auditStaff.roleNameRequired"),
 }).strict()
 
 export type CreateRoleFormData = z.infer<typeof createRoleSchema>
