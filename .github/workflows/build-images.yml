@@ -16,6 +16,7 @@ on:
     paths:
       - ".github/workflows/build-images.yml"
       - "docker/openship/**"
+      - "scripts/openship/**"
       - "apps/backend/Dockerfile"
       - "apps/dashboard/Dockerfile"
       - "apps/website/Dockerfile"
@@ -119,10 +120,13 @@ jobs:
           # Pull requests only prove the build; they never publish an image.
           push: ${{ github.event_name != 'pull_request' }}
           build-args: ${{ steps.args.outputs.build_args }}
-          # Environment-specific tag, immutable by commit. Frontend images bake
-          # public URLs at build time, so staging and production tags differ.
+          # Environment-specific tags. Frontend images bake public URLs at build
+          # time, so staging and production tags differ. `<env>-<sha>` is
+          # immutable (rollback target); the moving `<env>` tag is what OpenShip
+          # pulls through compose.prebuilt.yml, and only develop/main move it.
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:${{ env.TARGET_ENV }}-${{ github.sha }}
+            ${{ (github.ref_name == 'develop' || github.ref_name == 'main') && format('{0}-{1}:{2}', env.IMAGE_PREFIX, matrix.image, env.TARGET_ENV) || '' }}
           cache-from: type=gha,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
           provenance: false
@@ -137,3 +141,47 @@ jobs:
           else
             printf '`%s-%s:%s-%s` digest `%s`\n' "$IMAGE_PREFIX" "$IMAGE" "$TARGET_ENV" "$GITHUB_SHA" "$DIGEST" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  # Staging only: trigger the OpenShip deploy once all four images are pushed,
+  # then prove the running backend is this commit. Production stays agent-driven
+  # (see .claude/skills/sawaa-release). Enabled by repository variable
+  # STAGING_PREBUILT_DEPLOY=true after the staging project uses compose.prebuilt.yml.
+  deploy-staging:
+    name: deploy-staging
+    needs: build
+    if: github.event_name == 'push' && github.ref_name == 'develop' && vars.STAGING_PREBUILT_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Records each verified run as a GitHub deployment, so the repository's
+    # Environments page shows which commit staging runs now.
+    environment:
+      name: staging
+      url: https://staging.sawaa.sa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Trigger OpenShip staging deploy
+        env:
+          HOOK_URL: ${{ secrets.OPENSHIP_STAGING_DEPLOY_HOOK_URL }}
+          HOOK_TOKEN: ${{ secrets.OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${HOOK_URL:?OPENSHIP_STAGING_DEPLOY_HOOK_URL secret is missing}"
+          : "${HOOK_TOKEN:?OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN secret is missing}"
+          curl -fsS --max-time 60 -X POST -H "Authorization: Bearer ${HOOK_TOKEN}" "$HOOK_URL"
+          echo
+
+      - name: Verify staging runs this commit
+        env:
+          OPENSHIP_READ_TOKEN: ${{ secrets.OPENSHIP_STAGING_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/openship/verify-prebuilt-deploy.mjs

@@ -81,6 +81,7 @@ scripts/performance/results/
 # ─── Local Claude Code / agent config ─────────────────────────
 .claude/*
 !.claude/commands/
+!.claude/skills/
 .kilo/
 .kilocode/
 .opencode/

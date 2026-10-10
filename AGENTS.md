@@ -13,6 +13,8 @@ These are project law for every AI tool; details in [the deployment policy](docs
 - Local `develop` is auto-synced every 5 minutes by `scripts/sync-develop.sh` (launchd `sa.sawaa.develop-sync`, installed with `scripts/install-develop-sync.sh`). After any merge you perform, run `scripts/sync-develop.sh` and confirm local `develop` matches `origin/develop`; report divergence instead of resolving it silently.
 - Production promotes a frozen `release/<YYYY-MM-DD>` branch cut from the exact SHA the owner accepted on staging (observed `ready` on OpenShip). Never open the production PR from `develop`. A `cancelled` check counts as failed.
 
+The step-by-step release procedure (staging automation, production backup/restore test, merge, verification, main→develop sync, receipt) lives in [the sawaa-release skill](.claude/skills/sawaa-release/SKILL.md). Follow it for every publish.
+
 
 Single-tenant family counseling platform for one counseling center (مركز سواء).
 
