@@ -62,6 +62,18 @@ describe('LoginHandler', () => {
 
   const cmd = { email: 'a@b.com', password: 'secret', ip: '1.2.3.4' };
 
+  it.each([null, { isActive: false, passwordHash: 'hash' }, { isActive: true, passwordHash: null },
+    { isActive: true, passwordHash: 'hash', lockedUntil: new Date(Date.now() + 600_000) }])(
+    'uses generic failure and dummy comparison for rejected staff account %j', async (state) => {
+      prisma.user.findUnique.mockResolvedValue(state);
+      password.verify.mockResolvedValue(true);
+      await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
+      expect(password.verify).toHaveBeenCalledWith('secret', expect.stringMatching(/^\$2[aby]\$12\$/));
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(tokens.issueTokenPair).not.toHaveBeenCalled();
+      expect(challenges.create).not.toHaveBeenCalled();
+    });
+
   it('returns tokens on successful login', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1',
@@ -105,7 +117,7 @@ describe('LoginHandler', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1', email: 'a@b.com', isActive: false, passwordHash: 'hash', failedLoginAttempts: 0, lockedUntil: null, isSuperAdmin: false,
     });
-    await expect(handler.execute(cmd)).rejects.toThrow('Account is inactive');
+    await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
   });
 
   it('throws when passwordHash is missing', async () => {
@@ -119,7 +131,7 @@ describe('LoginHandler', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1', email: 'a@b.com', isActive: true, passwordHash: 'hash', failedLoginAttempts: 0, lockedUntil: new Date(Date.now() + 60000), isSuperAdmin: false,
     });
-    await expect(handler.execute(cmd)).rejects.toThrow('Account locked');
+    await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
   });
 
   it('increments failed attempts atomically on wrong password', async () => {
@@ -182,14 +194,14 @@ describe('LoginHandler', () => {
   it('rate limits by email', async () => {
     const chain = { incr: jest.fn().mockReturnThis(), expire: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue([[null, 11], [null, 1]]) };
     redisClient.multi.mockReturnValue(chain);
-    await expect(handler.execute(cmd)).rejects.toThrow('Too many attempts');
+    await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
   });
 
   it('rate limits by ip', async () => {
     const ipChain = { incr: jest.fn().mockReturnThis(), expire: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue([[null, 31], [null, 1]]) };
     const emailChain = { incr: jest.fn().mockReturnThis(), expire: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]]) };
     redisClient.multi.mockReturnValueOnce(emailChain).mockReturnValueOnce(ipChain);
-    await expect(handler.execute(cmd)).rejects.toThrow('Too many attempts');
+    await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
   });
 
   it('uses unknown ip when not provided', async () => {
