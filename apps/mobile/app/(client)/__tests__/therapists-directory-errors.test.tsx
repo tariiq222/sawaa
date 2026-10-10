@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
 const mockParams: Record<string, string> = {};
+const mockCatalog = { data: undefined as unknown };
 const mockTherapists = { data: undefined as unknown, isLoading: false, isError: false, refetch: jest.fn() };
 const mockClinics = { data: undefined as unknown, isLoading: false, isError: false, refetch: jest.fn() };
 
@@ -13,6 +14,7 @@ jest.mock('expo-router', () => ({
 jest.mock('@/hooks/queries', () => ({
   useTherapists: () => mockTherapists,
   useClinics: () => mockClinics,
+  usePublicCatalog: () => mockCatalog,
   useServicePriceFloors: () => ({}),
 }));
 jest.mock('@/hooks/useA11y', () => ({
@@ -43,9 +45,9 @@ import { DirContext, buildDirState } from '@/hooks/useDir';
 import i18n from '@/i18n';
 import TherapistsListScreen from '../therapists';
 
-function renderScreen() {
+function renderScreen(locale: 'ar' | 'en' = 'en') {
   return render(
-    <DirContext.Provider value={buildDirState('en')}>
+    <DirContext.Provider value={buildDirState(locale)}>
       <TherapistsListScreen />
     </DirContext.Provider>,
   );
@@ -54,7 +56,8 @@ function renderScreen() {
 describe('therapist directory query failures', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
-    mockParams.clinicId = '';
+    Object.keys(mockParams).forEach((key) => delete mockParams[key]);
+    mockCatalog.data = undefined;
     mockTherapists.data = undefined;
     mockTherapists.isLoading = false;
     mockTherapists.isError = false;
@@ -126,5 +129,50 @@ describe('therapist directory query failures', () => {
     const screen = renderScreen();
     expect(screen.getAllByText('Available today')).toHaveLength(1);
     expect(screen.getAllByText(/^From /)).toHaveLength(1);
+  });
+});
+
+describe('selected service presentation', () => {
+  function setup(mode = 'SERVICES', hidden = false) {
+    Object.keys(mockParams).forEach((key) => delete mockParams[key]);
+    Object.assign(mockParams, { clinicId: 'c1', serviceId: 's1', steps: '4' });
+    mockClinics.data = [{ id: 'c1', nameAr: 'القياس والتقييم', nameEn: 'Assessment', serviceIds: ['s1'], bookingMode: mode }];
+    mockClinics.isLoading = false; mockClinics.isError = false;
+    mockTherapists.data = [{ id: 'a', serviceIds: ['s1'] }, { id: 'b', serviceIds: ['s1'] }];
+    mockTherapists.isLoading = false; mockTherapists.isError = false;
+    mockCatalog.data = {
+      departments: [],
+      categories: [{ id: 'c1', departmentId: null, kind: 'CLINIC', nameAr: 'القياس والتقييم', nameEn: 'Assessment', sortOrder: 0, bookingMode: mode }],
+      services: [{ id: 's1', categoryId: 'c1', nameAr: 'فحص الحالة العقلية', nameEn: 'Mental Status Examination', price: 5000, currency: 'SAR', imageUrl: null, isHidden: hidden }],
+    };
+  }
+  it.each(['ar', 'en'] as const)('keeps the selected service and booking progress visible in %s', async (locale) => {
+    setup();
+    await i18n.changeLanguage(locale);
+    const screen = renderScreen(locale);
+    const name = locale === 'ar' ? 'فحص الحالة العقلية' : 'Mental Status Examination';
+    expect(screen.getByText(name)).toBeTruthy();
+    expect(screen.getByText(name).props.numberOfLines).toBeUndefined();
+    expect(screen.getByText(i18n.getFixedT(locale)('booking.stepOf', { step: locale === 'ar' ? '٢' : '2', total: locale === 'ar' ? '٤' : '4' }))).toBeTruthy();
+  });
+  it('does not disclose internal DIRECT service names', () => {
+    setup('DIRECT', true);
+    const screen = renderScreen();
+    expect(screen.queryByText('Mental Status Examination')).toBeNull();
+    expect(screen.queryByText('فحص الحالة العقلية')).toBeNull();
+  });
+  it('does not show a service belonging to another selected category', () => {
+    setup(); mockParams.clinicId = 'other';
+    expect(renderScreen().queryByText('Mental Status Examination')).toBeNull();
+  });
+  it('falls back to the Arabic name when the English service name is missing', async () => {
+    setup(); await i18n.changeLanguage('en');
+    const catalog = mockCatalog.data as { services: { nameEn: string | null }[] };
+    catalog.services[0].nameEn = null;
+    expect(renderScreen().getByText('فحص الحالة العقلية')).toBeTruthy();
+  });
+  it('keeps the directory usable while catalog context is missing', () => {
+    setup(); mockCatalog.data = undefined;
+    expect(renderScreen().getByText(i18n.t('booking.chooseTherapist'))).toBeTruthy();
   });
 });

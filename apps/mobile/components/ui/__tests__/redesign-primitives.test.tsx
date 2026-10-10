@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
-import { fireEvent, render } from '@testing-library/react-native';
-import { Clock } from 'lucide-react-native';
+import { Image, Text } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { Clock, User } from 'lucide-react-native';
 
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/hooks/useDir', () => ({
@@ -90,4 +90,27 @@ it('reports changing footer height including its full wrapper', () => {
   const view = render(<FloatingCta onHeightChange={onHeightChange}><Text>Continue</Text></FloatingCta>);
   for (const height of [140, 200, 0]) fireEvent(view.getByTestId('floating-cta'), 'layout', { nativeEvent: { layout: { width: 320, height, x: 0, y: 0 } } });
   expect(onHeightChange.mock.calls).toEqual([[140], [200]]);
+});
+
+it('replaces a failed Thumb photo with its glyph and retries a changed URI', () => {
+  const onError = jest.fn();
+  const screen = render(<Thumb uri="https://cdn.example/broken.jpg" width={88} height={88} onError={onError} />);
+  const oldError = screen.UNSAFE_getByType(Image).props.onError;
+  fireEvent(screen.UNSAFE_getByType(Image), 'error');
+  expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+  expect(screen.UNSAFE_getByType(User)).toBeTruthy();
+  expect(onError).toHaveBeenCalledTimes(1);
+  screen.rerender(<Thumb uri="https://cdn.example/new.jpg" width={88} height={88} />);
+  expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: 'https://cdn.example/new.jpg' });
+  act(() => oldError());
+  expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: 'https://cdn.example/new.jpg' });
+  fireEvent(screen.UNSAFE_getByType(Image), 'error');
+  expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+  act(() => oldError());
+  expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+  expect(screen.UNSAFE_getByType(User)).toBeTruthy();
+  screen.rerender(<Thumb uri="https://cdn.example/broken.jpg" width={88} height={88} />);
+  expect(screen.UNSAFE_getByType(Image)).toBeTruthy();
+  act(() => oldError());
+  expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: 'https://cdn.example/broken.jpg' });
 });
