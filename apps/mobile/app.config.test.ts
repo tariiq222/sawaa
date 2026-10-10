@@ -31,11 +31,11 @@ describe('Expo app config resolution', () => {
     );
   });
 
-  it('loads the app config with a public DNS API URL', () => {
+  it('loads the production config with its fixed public API URL', () => {
     const result = resolveExpoConfig({
       EAS_BUILD_PROFILE: 'production',
       NODE_ENV: 'production',
-      EXPO_PUBLIC_API_URL: 'https://fcm.example.com/api/v1',
+      EXPO_PUBLIC_API_URL: 'https://api.sawaa.sa/api/v1',
     });
 
     expect(result.status).toBe(0);
