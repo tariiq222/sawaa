@@ -152,6 +152,11 @@ jobs:
     if: github.event_name == 'push' && github.ref_name == 'develop' && vars.STAGING_PREBUILT_DEPLOY == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Records each verified run as a GitHub deployment, so the repository's
+    # Environments page shows which commit staging runs now.
+    environment:
+      name: staging
+      url: https://staging.sawaa.sa
     permissions:
       contents: read
     steps:
