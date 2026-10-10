@@ -30,6 +30,13 @@ const getRequestInterceptor = () => {
   return interceptor.handlers[0]!.fulfilled;
 };
 
+const getResponseSuccessInterceptor = () => {
+  const interceptor = api.interceptors.response as unknown as {
+    handlers: Array<{ fulfilled: (response: { data: unknown; config: { _sessionEpoch?: number } }) => Promise<unknown> | unknown }>;
+  };
+  return interceptor.handlers[0]!.fulfilled;
+};
+
 const getResponseErrorInterceptor = () => {
   const interceptor = api.interceptors.response as unknown as {
     handlers: Array<{
@@ -97,6 +104,7 @@ describe('api client', () => {
     expect(axios.post).toHaveBeenCalledWith(
       expect.stringContaining('/mobile/auth/refresh'),
       { refreshToken: 'stored-refresh-token' },
+      { timeout: 15000 },
     );
     expect(setSecureItem).toHaveBeenCalledWith('refreshToken', 'rotated-refresh-token');
     expect(originalRequest.headers.Authorization).toBe('Bearer new-access-token');
@@ -211,5 +219,21 @@ describe('api client', () => {
     await expect(retry).rejects.toMatchObject({ response: { status: 401 } });
     expect(adapter).not.toHaveBeenCalled();
     persistSpy.mockRestore();
+  });
+
+  it('drops a successful response that belongs to a previous session', async () => {
+    const priorEpoch = beginSession();
+    beginSession();
+
+    await expect(
+      Promise.resolve(getResponseSuccessInterceptor()({ data: { name: 'previous user' }, config: { _sessionEpoch: priorEpoch } })),
+    ).rejects.toMatchObject({ code: 'ERR_CANCELED' });
+  });
+
+  it('passes through a successful response from the current session', async () => {
+    const epoch = beginSession();
+    const response = { data: { name: 'current user' }, config: { _sessionEpoch: epoch } };
+
+    await expect(Promise.resolve(getResponseSuccessInterceptor()(response))).resolves.toBe(response);
   });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -119,6 +120,34 @@ describe('bank transfer screen', () => {
     expect(screen.getByRole('button', { name: 'Sending…' }).props.accessibilityState).toMatchObject({ disabled: true, busy: true });
   });
 
+  it('uploads once on a double tap and passes the outstanding amount to success', async () => {
+    mockInvoice = { ...mockInvoice, data: { id: 'inv-1', status: 'ISSUED', total: '15000', payments: [] } };
+    const screen = render(<BankTransferScreen />);
+    fireEvent.press(screen.getByText('Tap to upload receipt image'));
+    await waitFor(() => expect(screen.getByText('Receipt selected')).toBeTruthy());
+    const button = screen.getByRole('button', { name: 'Send for review' });
+    await act(async () => { fireEvent.press(button); fireEvent.press(button); });
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith(expect.objectContaining({
+      params: expect.objectContaining({ amount: '15000', currency: 'SAR' }),
+    }));
+  });
+
+  it.each([
+    [new Error('Request failed with status code 500'), 'Failed to upload receipt. Please try again.'],
+    [new Error('Unsupported receipt file type'), 'PNG, JPG · max 10 MB'],
+  ])('shows translated text instead of the raw error (%s)', async (error, expected) => {
+    mockUpload.mockRejectedValueOnce(error);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    try {
+      const screen = render(<BankTransferScreen />);
+      fireEvent.press(screen.getByText('Tap to upload receipt image'));
+      await waitFor(() => expect(screen.getByText('Receipt selected')).toBeTruthy());
+      await act(async () => { fireEvent.press(screen.getByText('Send for review')); });
+      expect(alert).toHaveBeenCalledWith('Could not upload receipt', expected);
+    } finally { alert.mockRestore(); }
+  });
+
   it('tells the client nothing is owed instead of uploading for a settled invoice', () => {
     mockInvoice = { ...mockInvoice, data: { id: 'inv-1', status: 'PAID', total: '18000', payments: [{ id: 'p-1', status: 'COMPLETED', amount: '18000' }] } };
     const screen = render(<BankTransferScreen />);
@@ -152,5 +181,5 @@ it('blocks repeated upload while the receipt is pending and announces busy state
   expect(mockUpload).toHaveBeenCalledTimes(1);
   expect(mockReplace).not.toHaveBeenCalled();
   await act(async () => { resolveUpload?.({ id: 'pay-1' }); });
-  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { bookingId: 'book-1', invoiceId: 'inv-1', paymentId: 'pay-1' } });
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/success', params: { bookingId: 'book-1', invoiceId: 'inv-1', paymentId: 'pay-1', amount: '15000', currency: 'SAR' } });
 });

@@ -112,11 +112,14 @@ export default function PackagePaymentReturnScreen() {
   // A declined, abandoned, or unconfirmed checkout must not keep sending the
   // client back here from the package screen. The attempt key is kept so a
   // retry resumes the same purchase instead of being rejected as a duplicate.
+  // A native purchase that is merely unconfirmed may still settle, so its record
+  // is kept; once the server reports a non-PENDING status it is final.
+  const serverSettled = Boolean(query.data && query.data.id === purchaseId && query.data.status !== 'PENDING');
   useEffect(() => {
-    if (stopped && belongsToUser && userId && purchaseId && params.origin !== 'native') {
+    if (stopped && belongsToUser && userId && purchaseId && (params.origin !== 'native' || serverSettled)) {
       void clearPendingPackagePurchase({ clientId: userId, purchaseId });
     }
-  }, [belongsToUser, params.origin, purchaseId, stopped, userId]);
+  }, [belongsToUser, params.origin, purchaseId, serverSettled, stopped, userId]);
 
   const checkAgain = useCallback(() => {
     lastCountedUpdate.current = 0;

@@ -51,6 +51,6 @@ it('continues to alert for ordinary query failures', async () => {
     queryFn: async () => { throw new Error('ordinary failure'); },
     retry: false,
   })).rejects.toThrow('ordinary failure');
-  await waitFor(() => expect(alert).toHaveBeenCalledWith(expect.any(String), 'ordinary failure'));
+  await waitFor(() => expect(alert).toHaveBeenCalledWith(expect.any(String), 'تعذّر تحميل البيانات. حاول مرة أخرى.'));
 });
 });

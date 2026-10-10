@@ -70,14 +70,15 @@ export default function RateScreen() {
         },
         onError: (error) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          const responseMessage = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
-          const duplicateRating = typeof responseMessage === 'string'
-            && responseMessage.toLowerCase().includes('rating already submitted');
+          const response = (error as { response?: { status?: number; data?: { message?: unknown } } })?.response;
+          const responseMessage = response?.data?.message;
+          const duplicateRating = response?.status === 409
+            || (typeof responseMessage === 'string'
+              && responseMessage.toLowerCase().includes('rating already submitted'));
+          // Never surface raw server text; only translated copy reaches the user.
           Alert.alert(
+            t('common.error'),
             duplicateRating ? t('appointments.ratingAlreadySubmitted') : t('appointments.rateFailed'),
-            duplicateRating
-              ? t('appointments.ratingAlreadySubmitted')
-              : error instanceof Error ? error.message : String(error),
           );
         },
       },

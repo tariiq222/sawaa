@@ -186,5 +186,8 @@ describe('useRateBooking', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedRate).toHaveBeenCalledWith('b1', { score: 5, comment: 'great', isPublic: true });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: clientBookingsKeys.detail('b1') });
+    // Lists and overviews that show the rating state refresh too.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['bookings'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['portal'] });
   });
 });

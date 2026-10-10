@@ -166,7 +166,21 @@ describe('rate screen shows the booking being rated, not a placeholder therapist
     fireEvent.press(view.getByLabelText('تقييم 5 نجوم'));
     fireEvent.press(view.getByText('إرسال التقييم'));
 
-    expect(alertSpy).toHaveBeenCalledWith('تعذّر إرسال التقييم', 'server rejected');
+    expect(alertSpy).toHaveBeenCalledWith('حدث خطأ', 'تعذّر إرسال التقييم');
+    alertSpy.mockRestore();
+  });
+
+  it('shows a titled duplicate-rating message for a 409 conflict', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    mockMutate.mockImplementation((_vars: unknown, options: { onError?: (error: unknown) => void }) => {
+      options.onError?.(Object.assign(new Error('Conflict'), { response: { status: 409, data: { message: 'Rating already submitted for this booking' } } }));
+    });
+    const view = await renderIn('ar');
+
+    fireEvent.press(view.getByLabelText('تقييم 5 نجوم'));
+    fireEvent.press(view.getByText('إرسال التقييم'));
+
+    expect(alertSpy).toHaveBeenCalledWith('حدث خطأ', 'سبق إرسال تقييم لهذا الموعد');
     alertSpy.mockRestore();
   });
 
