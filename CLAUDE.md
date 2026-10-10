@@ -4,6 +4,8 @@
 
 Read and follow [the approved deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. «انشر» / «ننشر» means **develop + staging only**, followed by the owner's manual test. Only an explicit «انشر للإنتاج» / «انشر للبرودكشن» authorizes **develop → main → production**, after verifying the manually accepted release content and required checks. This policy supersedes older deployment guidance.
 
+The step-by-step release procedure (staging automation, production backup/restore test, merge, verification, main→develop sync, receipt) lives in [the sawaa-release skill](.claude/skills/sawaa-release/SKILL.md). Follow it for every publish.
+
 
 Single-tenant family counseling platform for one counseling center (مركز سواء).
 

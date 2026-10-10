@@ -26,6 +26,10 @@ This is the shared deployment policy for every AI tool and contributor working o
 6. Verify the deployed revision and affected flows, then record release/deployment identifiers, evidence and the prior working version. A merge, tag or green CI alone is not proof of successful deployment.
 7. Preserve history between the long-lived branches; synchronize `main` back into `develop` through a PR when needed. Do not rewrite/reimplement the change in reverse. Use a merge strategy that preserves their ancestry; do not squash the long-lived branch promotion.
 
+## Staging automation and release procedure — 2026-10-11
+
+Staging no longer builds on the OpenShip host. `build-images.yml` builds the four images on GitHub, pushes them to GHCR (`<env>-<sha>` immutable, `<env>` moving), and its `deploy-staging` job triggers the staging deploy webhook and requires the running backend's `/api/v1/health` `gitSha` to equal the merged commit. Staging git auto-deploy is off. Production remains agent-driven on the explicit production command. The procedure for both is [the sawaa-release skill](../../.claude/skills/sawaa-release/SKILL.md).
+
 ## Data and failure boundaries
 
 - Staging and production have separate databases and credentials. Promote code and compatible additive migrations, never staging data into production.

@@ -85,6 +85,9 @@ jobs:
       - name: Staging OTP relay recipient boundary
         run: node --test docker/openship/otp-relay.test.mjs
 
+      - name: OpenShip prebuilt compose parity and deploy verifier
+        run: node --test scripts/openship/prebuilt-compose.test.mjs scripts/openship/verify-prebuilt-deploy.test.mjs scripts/apple-release/target.test.mjs
+
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
         # latest tagged code release on main; does not verify deployment. Catches the
