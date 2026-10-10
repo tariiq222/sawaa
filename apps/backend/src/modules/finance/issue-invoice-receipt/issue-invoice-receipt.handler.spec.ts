@@ -151,16 +151,21 @@ describe('IssueInvoiceReceiptHandler', () => {
     prisma.invoice.updateMany.mockResolvedValue({ count: 0 });
     await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
     expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
-    expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', 'receipts/inv-1/p1.pdf');
+    expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/));
   });
 
-  it('keeps the winner object when the loser computed the same key', async () => {
-    prisma.invoice.findUnique
-      .mockResolvedValueOnce(paidInvoice())
-      .mockResolvedValueOnce({ receiptPdfKey: 'receipts/inv-1/p1.pdf' });
-    prisma.invoice.updateMany.mockResolvedValue({ count: 0 });
-    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
-    expect(storage.deleteFile).not.toHaveBeenCalled();
+  it('uses a distinct key per attempt and the loser deletes exactly its own key', async () => {
+    prisma.invoice.findUnique.mockResolvedValue(paidInvoice());
+    prisma.invoice.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    await handler.issue('inv-1', 'p1');
+    await handler.issue('inv-1', 'p1');
+    const [winnerKey, loserKey] = storage.uploadFile.mock.calls.map((c: any[]) => c[1]);
+    expect(winnerKey).not.toBe(loserKey);
+    expect(prisma.invoice.updateMany.mock.calls[0][0].data.receiptPdfKey).toBe(winnerKey);
+    expect(storage.deleteFile).toHaveBeenCalledTimes(1);
+    expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', loserKey);
   });
 
   it('renders, uploads, and saves invoice metadata with its delivery event on PAID', async () => {
@@ -196,11 +201,11 @@ describe('IssueInvoiceReceiptHandler', () => {
     expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
       where: { id: 'inv-1', status: 'PAID', receiptIssuedAt: null },
       data: {
-        receiptPdfKey: 'receipts/inv-1/p1.pdf',
+        receiptPdfKey: expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/),
         receiptIssuedAt: expect.any(Date),
         receiptPaymentId: 'p1',
         // Legacy columns dual-written for rollback / mixed-version readers.
-        pdfUrl: 'receipts/inv-1/p1.pdf',
+        pdfUrl: expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/),
         pdfGeneratedAt: expect.any(Date),
       },
     });
@@ -287,7 +292,7 @@ describe('IssueInvoiceReceiptHandler', () => {
       storage.uploadFile.mockImplementation(async () => { invoice.receiptIssuedAt = new Date(); invoice.receiptPdfKey = 'receipts/inv-1/winner.pdf'; });
       await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
       expect(invoice.receiptPdfKey).toBe('receipts/inv-1/winner.pdf');
-      expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', 'receipts/inv-1/p1.pdf');
+      expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/));
       expect(events).toHaveLength(0);
     });
   });

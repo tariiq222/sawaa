@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
@@ -24,7 +25,8 @@ export interface IssueReceiptOptions {
  * Subscribes to `finance.payment.completed`. When the related invoice has
  * reached PAID status and no receipt has been issued yet, renders the receipt
  * PDF (listing every COMPLETED payment), uploads it to MinIO under
- * `receipts/<invoiceId>/<paymentId>.pdf`, and atomically records the key
+ * `receipts/<invoiceId>/<paymentId>-<uuid>.pdf` (attempt-specific, so a
+ * concurrent loser can never overwrite the winner's object), and atomically records the key
  * (`receiptPdfKey`, `receiptIssuedAt`, `receiptPaymentId`, plus the legacy
  * `pdfUrl`/`pdfGeneratedAt` for mixed-version safety) together with an
  * outbox event for `finance.invoice.receipt.issued`.
@@ -117,7 +119,9 @@ export class IssueInvoiceReceiptHandler {
     const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, 'receipt');
     const pdfBuffer = await this.renderer.render(data);
 
-    const key = `receipts/${invoice.id}/${paymentId}.pdf`;
+    // Attempt-specific key: only the winner's key is ever persisted, and a loser
+    // deletes only its own object.
+    const key = `receipts/${invoice.id}/${paymentId}-${randomUUID()}.pdf`;
     // Perform the upload for its side effect, but DISCARD the raw public URL it
     // returns. We persist the storage KEY (bucket = 'finance-invoices') instead,
     // so read endpoints/email can mint short-lived presigned URLs and no raw,
@@ -171,22 +175,13 @@ export class IssueInvoiceReceiptHandler {
     });
     if (!won) {
       this.logger.log(`Receipt: invoice ${invoiceId} was receipted concurrently — discarding ${key}`);
-      await this.discardLostUpload(invoice.id, key);
+      await this.discardLostUpload(key);
     }
   }
 
   /** Best-effort cleanup of an upload whose guarded update lost the race. */
-  private async discardLostUpload(invoiceId: string, key: string): Promise<void> {
+  private async discardLostUpload(key: string): Promise<void> {
     try {
-      const current = await this.cls.run(async () => {
-        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-        return this.prisma.invoice.findUnique({
-          where: { id: invoiceId },
-          select: { receiptPdfKey: true },
-        });
-      });
-      // Same payment => same key: never delete the object the winner stored.
-      if (current?.receiptPdfKey === key) return;
       await this.storage.deleteFile(BUCKET, key);
     } catch (err) {
       this.logger.warn(`Receipt: could not delete orphan ${key}: ${(err as Error).message}`);
