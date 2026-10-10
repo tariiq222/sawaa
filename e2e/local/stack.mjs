@@ -83,8 +83,12 @@ async function shutdown() {
   // Premerge runs are disposable, so drop their volumes; the default set keeps them for debugging.
   if (composeStarted) command('docker', [...compose, 'down', ...(portSet === 'premerge' ? ['-v'] : [])]);
 }
-process.once('SIGINT', () => { void shutdown().finally(() => process.exit(0)); });
-process.once('SIGTERM', () => { void shutdown().finally(() => process.exit(0)); });
+// A failed `compose down` leaves owned containers or volumes behind, so report it.
+function exitAfterShutdown() {
+  shutdown().then(() => process.exit(0), error => { console.error(`Shutdown failed: ${error.message}`); process.exit(1); });
+}
+process.once('SIGINT', exitAfterShutdown);
+process.once('SIGTERM', exitAfterShutdown);
 try {
   for (const port of [55200, 55203, 55205, dbPort, redisPort, minioPort]) await available(port);
   composeStarted = true;

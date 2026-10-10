@@ -7,6 +7,12 @@ import { once } from 'node:events';
 import { assertPlaywrightReport, assertE2eReport } from './premerge-local-results.mjs';
 
 const root = resolve(import.meta.dirname, '..');
+// The `e2e` CLI used for the booking journeys needs Node 22.12+; fail before the long build.
+const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+if (nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 12)) {
+  console.error(`pnpm test:premerge requires Node 22.12 or newer (found ${process.versions.node}); run \`nvm use\` with the repo's .nvmrc.`);
+  process.exit(1);
+}
 if (process.argv.includes('--help')) {
   console.log('Usage: pnpm test:premerge\nBuilds and tests a fresh isolated local stack, records results, then stops its owned resources.');
   process.exit(0);
@@ -99,7 +105,7 @@ try {
   evidence.candidate = candidate();
   writeEvidence();
   await command('Local isolation and acceptance guards', process.execPath,
-    ['--test', 'e2e/local/safety.test.mjs', 'scripts/premerge-local-results.test.mjs']);
+    ['--test', 'e2e/local/safety.test.mjs', 'e2e/playwright/mcp-policy.test.mjs', 'scripts/premerge-local-results.test.mjs']);
   await command('Build shared types', 'pnpm', ['--filter', '@sawaa/shared', 'build']);
   await command('Build backend', 'pnpm', ['--filter', 'backend', 'build']);
   console.log('\nStarting fresh local test stack…');

@@ -1,8 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
 import { assertIsolatedDatabase } from '../local/safety.mjs';
+import { createMcpPolicy } from './mcp-policy.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const e2eRoot = resolve(root, '.e2e');
@@ -81,7 +83,19 @@ const args = [
   '--dir', 'apps/dashboard', 'exec', 'node', '../../scripts/run-playwright.cjs',
   'run-test-mcp-server', '--headless', '--config', '../../playwright.local.config.ts',
 ];
-const child = spawn(process.execPath, args, { cwd: root, stdio: 'inherit', detached: true });
+const policyViolation = createMcpPolicy(root, Object.values(ports));
+
+const child = spawn(process.execPath, args, { cwd: root, stdio: ['pipe', 'pipe', 'inherit'], detached: true });
+// MCP stdio is newline-delimited JSON; relay whole lines so replies never interleave.
+createInterface({ input: child.stdout }).on('line', line => process.stdout.write(`${line}\n`));
+createInterface({ input: process.stdin }).on('line', line => {
+  let message;
+  try { message = JSON.parse(line); } catch { child.stdin.write(`${line}\n`); return; }
+  const violation = Array.isArray(message) ? 'Batched MCP requests are not supported' : policyViolation(message);
+  if (!violation) { child.stdin.write(`${line}\n`); return; }
+  const id = Array.isArray(message) ? null : message.id;
+  process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: violation }], isError: true } })}\n`);
+}).on('close', () => child.stdin.end());
 child.on('error', error => { console.error(error.message); process.exitCode = 1; });
 child.on('exit', (code, signal) => { process.exitCode = code ?? (signal ? 1 : 0); });
 function stopGroup(signal) {
