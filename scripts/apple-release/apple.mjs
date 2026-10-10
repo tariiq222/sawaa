@@ -64,7 +64,7 @@ export async function findBuild(api,version,number){
 }
 export async function distribute(api,build,notes,{now=Date.now,sleep=delay,timeoutMs=10*60*1000}={}){
  const id=build.id;
- await api(`/v1/builds/${id}`,{method:'PATCH',body:{data:{type:'builds',id,attributes:{usesNonExemptEncryption:false}}}});
+ if(build.attributes?.usesNonExemptEncryption!==false)await api(`/v1/builds/${id}`,{method:'PATCH',body:{data:{type:'builds',id,attributes:{usesNonExemptEncryption:false}}}});
  const {rows}=await all(api,`/v1/builds/${id}/betaBuildLocalizations?limit=200`);
  const existing=rows.find(x=>x.attributes.locale==='ar-SA');
  if(existing)await api(`/v1/betaBuildLocalizations/${existing.id}`,{method:'PATCH',body:{data:{type:'betaBuildLocalizations',id:existing.id,attributes:{whatsNew:notes}}}});
