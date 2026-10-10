@@ -28,7 +28,7 @@ const writeEvidence = () => writeFileSync(resolve(output, 'acceptance.json'), JS
 
 function candidate() {
   const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-  const list = args => execFileSync('git', ['ls-files', ...args, '-z'],
+  const list = args => execFileSync('git', ['ls-files', '-z', ...args],
     { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).split('\0').filter(Boolean);
   // Playwright ignores .gitignore, so ignored files under its testDir can run and must count.
   const files = [...new Set([...list(['--cached', '--others', '--exclude-standard']),
@@ -120,6 +120,8 @@ try {
     ['--test', 'e2e/local/safety.test.mjs', 'scripts/premerge-local-results.test.mjs']);
   await command('Build shared types', 'pnpm', ['--filter', '@sawaa/shared', 'build']);
   await command('Build backend', 'pnpm', ['--filter', 'backend', 'build']);
+  // Same CLI as the smoke run below; a no-op when the matching Chromium is present.
+  await command('Ensure Playwright Chromium', process.execPath, ['scripts/run-playwright.cjs', 'install', 'chromium']);
   console.log('\nStarting fresh local test stack…');
   const runDir = await startStack();
   evidence.runDir = runDir;
