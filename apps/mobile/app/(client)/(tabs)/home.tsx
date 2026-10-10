@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
-import { useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +22,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { HomeTopBar } from '@/components/features/home/HomeTopBar';
 import { TherapistsRow } from '@/components/features/home/TherapistsRow';
 import { UpNextCard } from '@/components/features/home/UpNextCard';
+import { nextPortalBooking, portalBookingInstant } from '@/lib/portal-booking-time';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { useClientEmailPrompt } from '@/hooks/useClientEmailPrompt';
 
@@ -53,7 +54,22 @@ export default function HomeScreen() {
   const therapistsQuery = useTherapists();
   const clinicsQuery = useClinics();
   const [refreshing, setRefreshing] = useState(false);
-  const nextBooking = homeQuery.data?.upcomingBookings?.[0] ?? null;
+  const [now, setNow] = useState(Date.now);
+  const nextBooking = nextPortalBooking(homeQuery.data?.upcomingBookings ?? [], now);
+  const nextAt = nextBooking ? new Date(portalBookingInstant(nextBooking)!).getTime() : null;
+  const { refetch: refetchHome } = homeQuery;
+  useFocusEffect(React.useCallback(() => {
+    setNow(Date.now());
+    if (isClient) void refetchHome();
+  }, [isClient, refetchHome]));
+  React.useEffect(() => {
+    if (!isClient || nextAt === null) return;
+    const timer = setTimeout(() => {
+      setNow(Date.now());
+      void refetchHome();
+    }, Math.min(Math.max(nextAt - Date.now(), 1), 2_147_483_647));
+    return () => clearTimeout(timer);
+  }, [isClient, nextAt, refetchHome]);
   const loading = homeQuery.isLoading;
 
   const onRefresh = async () => {
@@ -91,7 +107,7 @@ export default function HomeScreen() {
 
         {isClient ? (
           <Animated.View entering={fade(60)}>
-            <HomeSectionState loading={loading} error={homeQuery.isError} hasData={Boolean(nextBooking)} onRetry={() => { void homeQuery.refetch(); }}><UpNextCard loading={false} booking={nextBooking} dir={dir} f600={f600} f700={f700} /></HomeSectionState>
+            <HomeSectionState loading={loading} error={homeQuery.isError} hasData={Boolean(homeQuery.data)} onRetry={() => { void homeQuery.refetch(); }}><UpNextCard loading={false} booking={nextBooking} dir={dir} f600={f600} f700={f700} /></HomeSectionState>
           </Animated.View>
         ) : null}
 

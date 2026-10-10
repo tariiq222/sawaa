@@ -14,6 +14,12 @@ describe('session-format', () => {
     expect(result?.month).toBe('Sep');
   });
 
+  it('shows Riyadh time and Gregorian calendar even on a UTC device', () => {
+    expect(formatTimeOfDay('2026-10-09T13:00:00Z', false)).toBe('4:00 PM');
+    expect(formatDayMonth('2026-10-09T22:30:00Z', false)).toEqual({ day: '10', month: 'Oct' });
+    expect(formatDayMonth('2026-10-09T22:30:00Z', true)?.day).toBe('١٠');
+  });
+
   it('formats integer halalas as riyals', () => {
     expect(formatHalalasPrice('15000', false, 'SAR')).toBe('150 SAR');
     expect(formatHalalasPrice(0, false, 'SAR')).toBe('0 SAR');

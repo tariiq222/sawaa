@@ -321,8 +321,11 @@
     "amountUnavailable": "Amount unavailable",
     "continue": "Continue to secure payment",
     "processing": "Preparing payment…",
-    "pending": "Payment is processing",
-    "pendingDescription": "We are waiting for the center to confirm your payment and booking.",
+    "pending": "Payment status is not confirmed",
+    "pendingDescription": "An invoice or reserved attempt does not confirm payment. Check its status before paying again.",
+    "checkPaymentStatus": "Check payment status",
+    "paidAwaitingConfirmation": "Payment received; confirming your appointment",
+    "paidAwaitingConfirmationDescription": "Your payment was received. We are waiting for your appointment to be confirmed. Contact the center if confirmation is delayed.",
     "success": "Booking confirmed",
     "successDescription": "View your booking details in My appointments.",
     "freeSuccess": "Enrollment confirmed",
@@ -362,7 +365,7 @@
       "available": "Available",
       "women": "Women",
       "remote": "Remote",
-      "under300": "< 300 ﷼"
+      "under300": "Under 300 SAR"
     }
   },
   "employeeProfile": {
@@ -871,6 +874,7 @@
     "dismiss": "Dismiss verification reminder"
   },
   "common": {
+    "ok": "OK",
     "loading": "Loading...",
     "error": "An error occurred",
     "retry": "Retry",
@@ -1077,6 +1081,7 @@
     "loading": "Preparing payment…",
     "checking": "Verifying payment…",
     "ready": "Complete payment securely with your chosen method.",
+    "prepared": "No payment has been submitted for this reserved attempt. Resume it to continue securely.",
     "pending": "Payment is not confirmed yet. Complete the open bank verification, or check again.",
     "completed": "Payment confirmed.",
     "failed": "Payment was unsuccessful. Try another card or change the payment method for the same appointment or order.",

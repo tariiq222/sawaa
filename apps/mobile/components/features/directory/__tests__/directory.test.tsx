@@ -81,3 +81,11 @@ describe('ClinicCard and filterClinics', () => {
     expect(filterClinics([clinic, other], 'none')).toEqual([]);
   });
 });
+
+it.each([
+  { rtl: true, specialtyAr: 'إرشاد أسري', title: '  إرشاد   أسري  ', expected: 'إرشاد أسري' },
+  { rtl: false, specialtyAr: null, title: ' family counselling ', expected: 'Family counselling' },
+  { rtl: true, specialtyAr: '  ', title: 'أخصائية إرشاد', expected: 'أخصائية إرشاد' },
+])('does not repeat equivalent or blank practitioner descriptions: $expected', ({ rtl, specialtyAr, title, expected }) => {
+  expect(therapistDisplay({ ...therapist, specialtyAr, title }, rtl, 'unknown').subtitle).toBe(expected);
+});

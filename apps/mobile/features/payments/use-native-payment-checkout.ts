@@ -87,10 +87,11 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
       if (!valid() || terminalUnavailable || !paymentId) return;
       if (busy) { if (verifying) recheckRequested = true; return; }
       busy = true;
+      canInitialize = false; payable = false;
       clearTimeout(timer);
       // Keep the live SDK/WebView mounted while checking a bank challenge. An explicit blocked
       // state (conflict, in-progress payment) keeps its message across checks.
-      update({ phase: settling ? 'processing' : 'checking', ...(initBlocked ? {} : { error: null }) });
+      update({ phase: settling ? 'processing' : 'checking', canResume: false, ...(initBlocked ? {} : { error: null }) });
       try {
         const result = await clientPaymentsService.reconcileNativePayment(paymentId);
         if (!valid()) return;
@@ -134,7 +135,7 @@ export function useNativePaymentCheckout(input: CheckoutInput) {
         }
       } catch {
         if (settling) schedule();
-        update({ phase: settling ? 'processing' : 'error', error: settling ? null : 'nativePayment.verificationError' });
+        update({ phase: settling ? 'processing' : 'error', canResume: false, error: settling ? null : 'nativePayment.verificationError' });
       } finally {
         busy = false;
         // A Wallet result can arrive while the foreground request is still running.

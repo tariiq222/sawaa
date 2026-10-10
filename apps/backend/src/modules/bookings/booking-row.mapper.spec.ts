@@ -83,6 +83,11 @@ describe('mapBookingRow', () => {
     expect(result.serviceId).toBe('svc-1');
   });
 
+  it('keeps canonical UTC instants alongside Riyadh wall-clock fields for portal cards', () => {
+    const result = mapBookingRow({ ...mockBooking, scheduledAt: new Date('2026-10-09T13:00:00Z'), endsAt: new Date('2026-10-09T14:00:00Z') }, relations);
+    expect(result).toMatchObject({ scheduledAt: '2026-10-09T13:00:00.000Z', endsAt: '2026-10-09T14:00:00.000Z', date: '2026-10-09', startTime: '16:00', endTime: '17:00' });
+  });
+
   it.each([true, false])('preserves pay-at-center intent %s without inventing a payment', (payAtClinic) => {
     const result = mapBookingRow({ ...mockBooking, payAtClinic }, relations);
     expect(result).toMatchObject({ payAtClinic, payment: null });

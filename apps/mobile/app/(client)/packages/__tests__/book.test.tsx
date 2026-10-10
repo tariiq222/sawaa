@@ -8,8 +8,8 @@ const mockBook = jest.fn();
 const mockBranches = jest.fn();
 const mockRefetch = jest.fn();
 const mockReplace = jest.fn();
-const mockSlotA = { startTime: new Date(2026, 9, 2, 9).toISOString(), endTime: new Date(2026, 9, 2, 10).toISOString() };
-const mockSlotB = { startTime: new Date(2026, 9, 2, 14).toISOString(), endTime: new Date(2026, 9, 2, 15).toISOString() };
+const mockSlotA = { startTime: new Date('2026-10-02T09:00:00+03:00').toISOString(), endTime: new Date('2026-10-02T10:00:00+03:00').toISOString() };
+const mockSlotB = { startTime: new Date('2026-10-02T14:00:00+03:00').toISOString(), endTime: new Date('2026-10-02T15:00:00+03:00').toISOString() };
 let mockSlotsA = [mockSlotA];
 let mockSlotsError = false;
 
