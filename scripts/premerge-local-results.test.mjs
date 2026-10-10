@@ -4,9 +4,14 @@ import { assertPlaywrightReport, assertE2eReport } from './premerge-local-result
 
 test('a zero-exit Playwright run cannot pass with skipped, flaky, or missing tests', () => {
   const result = { expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed', errors: [] }] };
+  const website = { ...result, projectName: 'website' };
+  const dashboard = { ...result, projectName: 'dashboard' };
   const report = { stats: { expected: 2, skipped: 0, unexpected: 0, flaky: 0 }, errors: [],
-    suites: [{ specs: [{ tests: [result] }], suites: [{ specs: [{ tests: [result] }] }] }] };
+    suites: [{ specs: [{ tests: [website] }], suites: [{ specs: [{ tests: [dashboard] }] }] }] };
   assert.equal(assertPlaywrightReport(report), 2);
+  // A renamed or unmatched smoke spec must not let one project satisfy the gate alone.
+  assert.throws(() => assertPlaywrightReport({ ...report,
+    suites: [{ specs: [{ tests: [website] }], suites: [{ specs: [{ tests: [website] }] }] }] }), /dashboard ran no tests/);
   for (const stats of [
     { ...report.stats, expected: 0 }, { ...report.stats, skipped: 1 },
     { ...report.stats, flaky: 1 }, { ...report.stats, unexpected: 1 },

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export function assertPlaywrightReport(report) {
+export function assertPlaywrightReport(report, requiredProjects = ['website', 'dashboard']) {
   const stats = report?.stats;
   assert.ok(stats && Number.isInteger(stats.expected) && stats.expected > 0,
     'Playwright must execute at least one passing test');
@@ -28,6 +28,10 @@ export function assertPlaywrightReport(report) {
     assert.ok(Array.isArray(test.results) && test.results.length === 1
       && test.results[0].status === 'passed' && Array.isArray(test.results[0].errors)
       && test.results[0].errors.length === 0, 'Every Playwright test must pass without retries or errors');
+  }
+  const projects = new Set(tests.map(test => test.projectName));
+  for (const project of requiredProjects) {
+    assert.ok(projects.has(project), `Playwright project ${project} ran no tests`);
   }
   return stats.expected;
 }

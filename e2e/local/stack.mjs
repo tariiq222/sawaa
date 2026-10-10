@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync, openSync } from 'node:fs';
+import { mkdirSync, writeFileSync, openSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { seed } from './seed.mjs';
@@ -57,12 +57,23 @@ function command(bin, args, cwd = root) {
   const result = spawnSync(bin, args, { cwd, env, stdio: ['ignore', openSync(resolve(runDir, 'setup.log'), 'a'), 'pipe'] });
   if (result.status !== 0) throw new Error(`${bin} ${args[0]} failed; see setup.log. ${result.stderr?.toString().slice(-1500)}`);
 }
-function start(name, bin, args, cwd) {
+function start(name, bin, args, cwd, childEnv = env) {
   const log = openSync(resolve(runDir, `${name}.log`), 'a');
-  const child = spawn(bin, args, { cwd, env, detached: true, stdio: ['ignore', log, log] });
+  const child = spawn(bin, args, { cwd, env: childEnv, detached: true, stdio: ['ignore', log, log] });
   children.push(child);
   child.on('error', err => console.error(`${name}: ${err.message}`));
   return child;
+}
+// Next loads the app's ignored .env* files for any variable not already set, so
+// pin every key they define to the allowlist value or an empty string.
+function nextEnv(appDir) {
+  const pinned = { ...env };
+  for (const file of readdirSync(appDir).filter(name => /^\.env(\..+)?$/.test(name) && !name.endsWith('.example'))) {
+    for (const [, key] of readFileSync(resolve(appDir, file), 'utf8').matchAll(/^\s*(?:export\s+)?([A-Za-z_]\w*)\s*=/gm)) {
+      if (!(key in pinned)) pinned[key] = '';
+    }
+  }
+  return pinned;
 }
 async function available(port) {
   await new Promise((ok, fail) => { const s = createServer(); s.once('error', fail); s.listen(port, '127.0.0.1', () => s.close(ok)); });
@@ -103,8 +114,8 @@ try {
   // Run outside apps/backend so Nest cannot read that checkout's .env files.
   start('backend', 'node', [resolve(root, 'apps/backend/dist/src/main.js')], runDir);
   await ready('http://127.0.0.1:55200/api/v1/health');
-  start('website', 'pnpm', ['exec', 'next', 'dev', '--port', '55205', '--hostname', '127.0.0.1'], resolve(root, 'apps/website'));
-  start('dashboard', 'pnpm', ['exec', 'next', 'dev', '--port', '55203', '--hostname', '127.0.0.1'], resolve(root, 'apps/dashboard'));
+  start('website', 'pnpm', ['exec', 'next', 'dev', '--port', '55205', '--hostname', '127.0.0.1'], resolve(root, 'apps/website'), nextEnv(resolve(root, 'apps/website')));
+  start('dashboard', 'pnpm', ['exec', 'next', 'dev', '--port', '55203', '--hostname', '127.0.0.1'], resolve(root, 'apps/dashboard'), nextEnv(resolve(root, 'apps/dashboard')));
   await Promise.all([ready(env.E2E_WEBSITE_URL), ready(env.E2E_DASHBOARD_URL)]);
   // Next dev compiles routes lazily; finish the first compilation before browsers
   // navigate so Fast Refresh cannot reset the initial booking journey.
