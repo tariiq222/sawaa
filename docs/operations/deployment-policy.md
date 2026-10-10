@@ -5,7 +5,7 @@ This is the shared deployment policy for every AI tool and contributor working o
 ## Meaning of the owner's commands
 
 - **«انشر» / «ننشر» / «انشر على الاستيج»** authorizes scoped commits, pushing the task branch, a PR and merge into `develop`, and deployment to OpenShip staging after the required checks. Stop there and provide the staging URL, tested revision, change summary, and manual test steps. It never authorizes a merge into `main` or production deployment.
-- **«انشر للبرودكشن» / «انشر للإنتاج» / «اعتمد وانشر للإنتاج»** authorizes the release PR from `develop` to `main` and production deployment only after confirming the owner's manual staging test and the exact tested release content, plus successful required checks. Do not ask again for actions already covered by this command.
+- **«انشر للبرودكشن» / «انشر للإنتاج» / «اعتمد وانشر للإنتاج»** authorizes the release PR from the frozen `release/<date>` branch to `main` and production deployment only after confirming the owner's manual staging test and the exact tested release content, plus successful required checks. Do not ask again for actions already covered by this command.
 - Approval of this policy alone does not request a deployment. A request to implement a fix alone does not authorize committing, pushing or deploying it.
 
 ## Normal path
@@ -18,11 +18,29 @@ This is the shared deployment policy for every AI tool and contributor working o
 - Promote the accepted release through a PR from remote `develop` to remote `main` only after explicit production authorization, then deploy and verify production under the rules below.
 - Approval of this workflow does not itself execute branch cleanup, commit, push, merge, or deployment.
 
+### Local `develop` workflow and automatic sync — owner-approved 2026-10-10
+
+The owner works directly on local `develop`. Every AI tool must keep that working and keep local `develop` identical to `origin/develop`:
+
+- **Local `develop` is a mirror of `origin/develop` plus the owner's not-yet-published commits.** Never reset, rebase, force-update or discard local `develop` or its uncommitted changes. Never push `develop` directly to GitHub.
+- **Publishing local commits:** on «انشر», push the unpublished local commits to a temporary branch (`git push origin develop:refs/heads/publish/<topic>`), open a PR from it into `develop`, and merge it with a **merge commit**. Squash and rebase merges are disabled on GitHub (2026-10-10): they rewrite the owner's commits so local `develop` could never fast-forward again.
+- **Automatic sync:** the launchd agent `sa.sawaa.develop-sync`, installed by `scripts/install-develop-sync.sh`, runs `scripts/sync-develop.sh` every 5 minutes. It only fast-forwards local `develop`, skips while a git operation is in progress, lets git refuse any update that would overwrite uncommitted changes, and sends a macOS notification when local `develop` has diverged or is blocked. Log: `~/Library/Logs/sawaa-develop-sync.log`. Reinstall it after editing the script.
+- **After every merge into `develop` or `main`**, the AI tool that merged runs `scripts/sync-develop.sh` immediately, then confirms `git rev-parse develop` equals `git rev-parse origin/develop` (or that local `develop` is only ahead by unpublished owner commits). If it reports divergence, stop and tell the owner; do not resolve it silently.
+- Task branches and worktrees remain allowed for AI tools working in parallel. Create them from `origin/develop`, merge them through PRs with merge commits, then delete the branch and worktree after the merge.
+
+### Frozen release candidate — owner-approved 2026-10-10
+
+- The owner's manual acceptance applies to one exact SHA, observed `ready` on OpenShip staging with that same commit. Acceptance given before staging is ready on that SHA does not count.
+- When the owner starts the manual test, create `release/<YYYY-MM-DD>` from that SHA. The production PR is `release/<date>` → `main`, never `develop` → `main`, so later merges into `develop` cannot enter the release.
+- If the accepted test finds a problem, fix it in `develop`, redeploy staging, retest, and cut a new `release/<date>` branch from the new SHA.
+- A `cancelled`, skipped or failed required check counts as failed.
+- After production is verified, sync `main` back into `develop` through a PR, record the deployment the same day, and delete the release branch.
+
 1. Start a task branch (Codex default: `codex/<task>`) from current `develop`; use an isolated worktree when needed to keep concurrent work separate. Preserve unrelated work.
 2. Implement and verify the scoped change. Use PRs; never push directly to `main`, force-push protected branches or bypass required checks.
 3. On a staging publication command, merge the reviewed task into `develop`, deploy staging and verify that the intended revision actually runs. Automated tests do not replace the owner's manual staging test.
 4. Record the staging revision and manual acceptance. If additional changes enter the release candidate, stop promotion until those changes are tested and accepted too. Never silently include unrelated/unaccepted changes from `develop`.
-5. Only on an explicit production command, verify the accepted content matches the `develop` → `main` release PR, check backup readiness and migration compatibility, merge and deploy production. Prevent concurrent updates from changing the candidate during promotion; recheck if either branch moves.
+5. Only on an explicit production command, verify the accepted SHA matches the `release/<date>` → `main` release PR, check backup readiness and migration compatibility, merge and deploy production. Prevent concurrent updates from changing the candidate during promotion; recheck if either branch moves.
 6. Verify the deployed revision and affected flows, then record release/deployment identifiers, evidence and the prior working version. A merge, tag or green CI alone is not proof of successful deployment.
 7. Preserve history between the long-lived branches; synchronize `main` back into `develop` through a PR when needed. Do not rewrite/reimplement the change in reverse. Use a merge strategy that preserves their ancestry; do not squash the long-lived branch promotion.
 
