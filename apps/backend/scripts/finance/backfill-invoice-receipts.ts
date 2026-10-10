@@ -23,11 +23,15 @@
  *   pnpm exec tsx scripts/finance/backfill-invoice-receipts.ts \
  *     --database-url-env=HISTORICAL_AUDIT_DATABASE_URL --dry-run
  *   pnpm exec tsx scripts/finance/backfill-invoice-receipts.ts \
- *     --database-url-env=HISTORICAL_AUDIT_DATABASE_URL --apply --confirm-database=<DB_NAME>
+ *     --database-url-env=HISTORICAL_AUDIT_DATABASE_URL --apply --confirm-database=<DB_NAME> \
+ *     --confirm-storage=<MINIO_ENDPOINT[:PORT]>/finance-invoices
  *
  * The connection string is read from the NAMED env var, never from the app's
  * default DATABASE_URL. Apply mode needs an exact --confirm-database and
- * refuses shared or production-shaped database names. Class B constructs only
+ * refuses shared or production-shaped database names. Apply also needs an
+ * exact --confirm-storage equal to the MINIO_ENDPOINT[:MINIO_PORT]/bucket the
+ * receipt issuer will upload to, and refuses production-shaped storage hosts
+ * (e.g. files.sawaa.sa). Dry-run touches no storage. Class B constructs only
  * the receipt handler's dependencies (Prisma on the named database, renderer,
  * MinIO from MINIO_* env, CLS, transaction wrapper, inert event bus); it never
  * boots AppModule, so no queues, schedulers or bootstraps run.
@@ -37,7 +41,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { decimalToHalalas } from '../../src/modules/finance/money.helper';
-import { extractInvoicePdfKey } from '../../src/modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
+import { extractInvoicePdfKey, FINANCE_INVOICES_BUCKET_NAME } from '../../src/modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
 
 export const RECEIPT_EMAIL_ERA_START = new Date('2026-09-25T00:00:00+03:00');
 export const RECEIPT_ISSUED_EVENT_TYPE = 'finance.invoice.receipt.issued';
@@ -205,6 +209,7 @@ export interface CliOptions {
   apply: boolean;
   databaseUrlEnv: string;
   confirmDatabase?: string;
+  confirmStorage?: string;
 }
 
 function fail(message: string): never {
@@ -216,6 +221,7 @@ export function parseCliArgs(args: readonly string[]): CliOptions {
   let dryRun = false;
   let databaseUrlEnv: string | undefined;
   let confirmDatabase: string | undefined;
+  let confirmStorage: string | undefined;
   for (const arg of args) {
     if (arg === '--apply') {
       if (apply || dryRun) fail('--apply cannot be combined with --dry-run or repeated');
@@ -227,6 +233,8 @@ export function parseCliArgs(args: readonly string[]): CliOptions {
       databaseUrlEnv = arg.slice('--database-url-env='.length).trim();
     } else if (arg.startsWith('--confirm-database=')) {
       confirmDatabase = arg.slice('--confirm-database='.length).trim();
+    } else if (arg.startsWith('--confirm-storage=')) {
+      confirmStorage = arg.slice('--confirm-storage='.length).trim();
     } else {
       fail(`Unknown argument: ${arg}`);
     }
@@ -235,7 +243,9 @@ export function parseCliArgs(args: readonly string[]): CliOptions {
   if (databaseUrlEnv === 'DATABASE_URL') fail('--database-url-env must not be DATABASE_URL');
   if (apply && !confirmDatabase) fail('--apply requires --confirm-database=<DB_NAME>');
   if (!apply && confirmDatabase) fail('--confirm-database requires --apply');
-  return { apply, databaseUrlEnv, confirmDatabase };
+  if (apply && !confirmStorage) fail('--apply requires --confirm-storage=<MINIO_ENDPOINT[:PORT]>/<BUCKET>');
+  if (!apply && confirmStorage) fail('--confirm-storage requires --apply');
+  return { apply, databaseUrlEnv, confirmDatabase, confirmStorage };
 }
 
 const PROTECTED_NAME_PATTERNS = [
@@ -266,6 +276,28 @@ export function resolveDatabaseUrl(options: CliOptions, env: NodeJS.ProcessEnv):
     }
   }
   return raw;
+}
+
+const PROTECTED_STORAGE_HOST = /(^|[.-])sawaa?([.-]|$)/i;
+
+/**
+ * Apply mode only: the storage target the receipt issuer will upload to
+ * (`MINIO_ENDPOINT[:MINIO_PORT]/finance-invoices`). Must equal --confirm-storage
+ * and must not look like a shared or production host. Returns null in dry-run.
+ */
+export function resolveStorageTarget(options: CliOptions, env: NodeJS.ProcessEnv): string | null {
+  if (!options.apply) return null;
+  const host = env.MINIO_ENDPOINT?.trim();
+  if (!host) fail('MINIO_ENDPOINT is not set');
+  const port = env.MINIO_PORT?.trim();
+  const target = `${host}${port ? `:${port}` : ''}/${FINANCE_INVOICES_BUCKET_NAME}`;
+  if (target !== options.confirmStorage) {
+    fail(`--confirm-storage must exactly match the receipt storage target "${target}"`);
+  }
+  if (PROTECTED_STORAGE_HOST.test(host) || PROTECTED_NAME_PATTERNS.some((p) => p.test(host.split('.')[0]))) {
+    fail(`Refusing to upload to storage "${target}" — it looks like a shared or production bucket.`);
+  }
+  return target;
 }
 
 function buildPrismaDeps(
@@ -365,6 +397,7 @@ async function main(): Promise<void> {
   try {
     const options = parseCliArgs(process.argv.slice(2));
     const databaseUrl = resolveDatabaseUrl(options, process.env);
+    resolveStorageTarget(options, process.env);
     const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
     let issuer: Awaited<ReturnType<typeof createReceiptIssuer>> | undefined;
     try {

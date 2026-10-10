@@ -7,6 +7,7 @@ import {
   classifyInvoice,
   parseCliArgs,
   resolveDatabaseUrl,
+  resolveStorageTarget,
   runBackfill,
 } from './backfill-invoice-receipts';
 
@@ -138,11 +139,38 @@ describe('CLI guards', () => {
 
   it('apply needs an exact confirmation and refuses production-shaped names', () => {
     expect(() => parseCliArgs(['--database-url-env=X', '--apply'])).toThrow('--confirm-database');
-    const opts = parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=scratch']);
+    const opts = parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=scratch', '--confirm-storage=localhost:9000/finance-invoices']);
     const url = (db: string) => ({ X: `postgresql://u:p@localhost:5432/${db}` });
     expect(resolveDatabaseUrl(opts, url('scratch'))).toContain('/scratch');
     expect(() => resolveDatabaseUrl(opts, url('other'))).toThrow('exactly match');
-    const prod = parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=sawaa_prod']);
+    const prod = parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=sawaa_prod', '--confirm-storage=localhost:9000/finance-invoices']);
     expect(() => resolveDatabaseUrl(prod, url('sawaa_prod'))).toThrow('Refusing');
+  });
+
+  it('apply also needs --confirm-storage; dry-run rejects it', () => {
+    expect(() => parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=scratch'])).toThrow('--confirm-storage');
+    expect(() => parseCliArgs(['--database-url-env=X', '--confirm-storage=a/b'])).toThrow('requires --apply');
+  });
+});
+
+describe('resolveStorageTarget', () => {
+  const apply = (target: string) =>
+    parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=scratch', `--confirm-storage=${target}`]);
+  const env = (host: string, port = '9000') => ({ MINIO_ENDPOINT: host, MINIO_PORT: port }) as NodeJS.ProcessEnv;
+
+  it('dry-run never inspects storage', () => {
+    expect(resolveStorageTarget(parseCliArgs(['--database-url-env=X']), {} as NodeJS.ProcessEnv)).toBeNull();
+  });
+
+  it('apply requires the exact endpoint/bucket the issuer will use', () => {
+    expect(resolveStorageTarget(apply('localhost:9000/finance-invoices'), env('localhost'))).toBe('localhost:9000/finance-invoices');
+    expect(() => resolveStorageTarget(apply('localhost:9000/other'), env('localhost'))).toThrow('exactly match');
+    expect(() => resolveStorageTarget(apply('localhost:9000/finance-invoices'), {} as NodeJS.ProcessEnv)).toThrow('MINIO_ENDPOINT');
+  });
+
+  it('apply refuses production-shaped storage hosts even when confirmed', () => {
+    for (const host of ['files.sawaa.sa', 'minio.sawaa.sa', 'sawaa-minio', 'sawa.internal']) {
+      expect(() => resolveStorageTarget(apply(`${host}:9000/finance-invoices`), env(host))).toThrow('Refusing');
+    }
   });
 });

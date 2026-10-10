@@ -64,10 +64,10 @@ describe('InvoicePdf template', () => {
       status: 'PAID',
       outstanding: 0,
       paidAt: new Date('2026-05-24T10:05:00Z'),
-      paymentMethod: 'CARD',
+      paymentMethod: 'ONLINE_CARD',
       payments: [
         { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 5000 },
-        { date: new Date('2026-05-24T10:05:00Z'), method: 'CARD', amount: 6500 },
+        { date: new Date('2026-05-24T10:05:00Z'), method: 'ONLINE_CARD', amount: 6500 },
       ],
     });
     expect(text).toContain('إيصال دفع');
@@ -90,5 +90,48 @@ describe('InvoicePdf template', () => {
     expect(text).toContain('فاتورة');
     expect(text).toContain('تاريخ الدفع');
     expect(text).toContain('طريقة الدفع');
+  });
+
+  it('shows settled payments on refunded and partially paid statements, date only when paidAt exists', () => {
+    const pay = [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 5000 }];
+    for (const status of ['PARTIALLY_REFUNDED', 'REFUNDED']) {
+      const text = render({ ...base, status, paidAt: new Date('2026-05-24T10:05:00Z'), paymentMethod: 'CASH', payments: pay });
+      expect(text).toContain('طريقة الدفع');
+      expect(text).toContain('تاريخ الدفع');
+      expect(text).toContain('2026-05-24 10:05');
+    }
+    const partial = render({ ...base, status: 'PARTIALLY_PAID', paidAt: null, paymentMethod: 'CASH', payments: pay });
+    expect(partial).toContain('2026-05-24 10:05');
+    expect(partial).not.toContain('تاريخ الدفع');
+    expect(render(base)).not.toContain('طريقة الدفع');
+  });
+
+  it('labels every PaymentMethod in plain Arabic', () => {
+    const expected: Record<string, string> = {
+      ONLINE_CARD: 'بطاقة إلكترونية', BANK_TRANSFER: 'تحويل بنكي', CASH: 'نقداً',
+      COUPON: 'قسيمة', MADA: 'مدى', TABBY: 'تابي',
+    };
+    for (const [method, label] of Object.entries(expected)) {
+      const text = render({
+        ...base, kind: 'receipt', status: 'PAID', paidAt: new Date('2026-05-24T10:05:00Z'),
+        paymentMethod: method,
+        payments: [{ date: new Date('2026-05-24T10:05:00Z'), method, amount: 100 }],
+      });
+      expect(text).toContain(label);
+      expect(text).not.toContain(method);
+    }
+  });
+
+  it('titles a statement by VAT: simplified tax invoice with VAT, plain invoice without', () => {
+    const withVat = render(base);
+    expect(withVat).toContain('فاتورة ضريبية مبسطة');
+    expect(withVat).toContain('SIMPLIFIED TAX INVOICE');
+    const noVat = render({ ...base, vatAmt: 0, total: 10000, outstanding: 10000 });
+    expect(noVat).not.toContain('ضريبية');
+    expect(noVat).toContain('INVOICE');
+    expect(noVat).not.toContain('SIMPLIFIED TAX INVOICE');
+    const receipt = render({ ...base, kind: 'receipt', status: 'PAID' });
+    expect(receipt).toContain('PAYMENT RECEIPT');
+    expect(receipt).not.toContain('SIMPLIFIED TAX INVOICE');
   });
 });

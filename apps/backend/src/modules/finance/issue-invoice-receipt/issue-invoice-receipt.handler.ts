@@ -9,6 +9,7 @@ import type { PaymentCompletedPayload } from '../events/payment-completed.event'
 import { InvoicePdfRendererService } from './invoice-pdf-renderer.service';
 import { InvoiceReceiptIssuedEvent } from './invoice-receipt-issued.event';
 import { buildInvoicePdfData } from './build-invoice-pdf-data';
+import { resolveReceiptPdfKey } from './invoice-pdf-key.helper';
 
 const BUCKET = 'finance-invoices';
 
@@ -81,6 +82,13 @@ export class IssueInvoiceReceiptHandler {
     }
     if (invoice.receiptIssuedAt) {
       this.logger.log(`Receipt: invoice ${invoiceId} already has a receipt — skipping`);
+      return;
+    }
+
+    // A valid legacy receipt (pdfUrl generated at/after paidAt) is already the
+    // receipt: a replayed or delayed event must not issue and email a second one.
+    if (resolveReceiptPdfKey(invoice)) {
+      this.logger.log(`Receipt: invoice ${invoiceId} already has a legacy receipt — skipping`);
       return;
     }
 

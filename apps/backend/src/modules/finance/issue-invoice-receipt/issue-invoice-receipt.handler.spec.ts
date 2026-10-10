@@ -98,6 +98,30 @@ describe('IssueInvoiceReceiptHandler', () => {
     expect(prisma.outboxEvent.create).toHaveBeenCalled();
   });
 
+  it('skips a replayed event when a valid legacy receipt (pdf generated at/after paidAt) exists', async () => {
+    const paidAt = new Date('2026-05-24T10:05:00Z');
+    prisma.invoice.findUnique.mockResolvedValue({
+      ...paidInvoice(), paidAt, receiptPdfKey: null,
+      pdfUrl: 'invoices/inv-1/2.pdf', pdfGeneratedAt: new Date('2026-05-24T10:06:00Z'),
+    });
+    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(storage.uploadFile).not.toHaveBeenCalled();
+    expect(prisma.invoice.updateMany).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('still issues when the legacy pdf was generated before paidAt (statement, not receipt)', async () => {
+    const paidAt = new Date('2026-05-24T10:05:00Z');
+    prisma.invoice.findUnique.mockResolvedValue({
+      ...paidInvoice(), paidAt, receiptPdfKey: null,
+      pdfUrl: 'invoices/inv-1/1.pdf', pdfGeneratedAt: new Date('2026-05-24T10:00:00Z'),
+    });
+    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
+    expect(renderer.render).toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).toHaveBeenCalled();
+  });
+
   it('lists every settled payment (date, method, halalas) and uses paidAt in the rendered data', async () => {
     const paidAt = new Date('2026-05-24T10:05:00Z');
     prisma.invoice.findUnique.mockResolvedValue({ ...paidInvoice(), paidAt });

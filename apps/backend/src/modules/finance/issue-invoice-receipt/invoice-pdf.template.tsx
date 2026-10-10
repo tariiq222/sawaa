@@ -147,10 +147,12 @@ export interface InvoicePdfData {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
-  CASH: 'نقدي',
-  CARD: 'بطاقة',
-  TRANSFER: 'تحويل بنكي',
-  MOYASAR: 'دفع إلكتروني',
+  ONLINE_CARD: 'بطاقة إلكترونية',
+  BANK_TRANSFER: 'تحويل بنكي',
+  CASH: 'نقداً',
+  COUPON: 'قسيمة',
+  MADA: 'مدى',
+  TABBY: 'تابي',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -174,8 +176,10 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
   const hasVat = data.vatAmt > 0;
   const paymentLabel = PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod;
   const isReceipt = data.kind === 'receipt';
-  // A statement shows payment details only once the invoice is fully paid.
-  const showPaymentDetails = isReceipt || data.status === 'PAID';
+  // Payment details show whenever there are settled payments (or on a receipt).
+  const showPaymentDetails = isReceipt || data.payments.length > 0;
+  const titleAr = isReceipt ? 'إيصال دفع' : hasVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة';
+  const titleEn = isReceipt ? 'PAYMENT RECEIPT' : hasVat ? 'SIMPLIFIED TAX INVOICE' : 'INVOICE';
   const statusLabel = STATUS_LABELS[data.status] ?? data.status;
 
   return (
@@ -196,8 +200,8 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             ) : null}
           </View>
           <View style={styles.docTypeBox}>
-            <Text style={styles.docTitleAr}>{isReceipt ? 'إيصال دفع' : 'فاتورة'}</Text>
-            <Text style={styles.docTitleEn}>{isReceipt ? 'PAYMENT RECEIPT' : 'INVOICE'}</Text>
+            <Text style={styles.docTitleAr}>{titleAr}</Text>
+            <Text style={styles.docTitleEn}>{titleEn}</Text>
             <Text style={styles.invoiceNo}>رقم الفاتورة</Text>
             <Text style={styles.invoiceNoVal}>#{data.invoiceNumber}</Text>
           </View>
@@ -224,10 +228,10 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
               <Text style={styles.infoKey}>تاريخ الإصدار</Text>
               <Text style={styles.infoVal}>{formatDate(data.issuedAt)}</Text>
             </View>
-            {showPaymentDetails && (
+            {showPaymentDetails && data.paidAt && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoKey}>تاريخ الدفع</Text>
-                <Text style={styles.infoVal}>{data.paidAt ? formatDateTime(data.paidAt) : '—'}</Text>
+                <Text style={styles.infoVal}>{formatDateTime(data.paidAt)}</Text>
               </View>
             )}
             {!isReceipt && (
