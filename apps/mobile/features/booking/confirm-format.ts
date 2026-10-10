@@ -1,4 +1,4 @@
-import { formatTimeOfDay } from '@/lib/session-format';
+import { APPOINTMENT_TIME_ZONE, formatTimeOfDay } from '@/lib/session-format';
 
 export function formatConfirmTime(date: Date, isRTL: boolean): string {
   if (!Number.isFinite(date.getTime())) return '—';
@@ -8,6 +8,6 @@ export function formatConfirmTime(date: Date, isRTL: boolean): string {
 export function formatConfirmDate(date: Date, isRTL: boolean): string {
   if (!Number.isFinite(date.getTime())) return '—';
   return new Intl.DateTimeFormat(isRTL ? 'ar-SA' : 'en-US', {
-    calendar: 'gregory', day: 'numeric', month: 'short', year: 'numeric',
+    timeZone: APPOINTMENT_TIME_ZONE, calendar: 'gregory', day: 'numeric', month: 'short', year: 'numeric',
   }).format(date);
 }

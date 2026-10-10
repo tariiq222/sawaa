@@ -1,6 +1,8 @@
 import React from 'react';
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => 'client-1' }));
 jest.mock('@/services/native-session-state', () => ({ getSessionEpoch: () => 1, isSessionCurrent: () => true }));
@@ -40,6 +42,7 @@ it('cancellation makes portal, invoice, balances and availability stale after su
   const { client, wrapper } = setup();
   const { result } = renderHook(() => useCancelBooking(), { wrapper });
   await act(async () => { await result.current.mutateAsync({ id: 'booking-1', reason: 'change', acceptedRefundTerms: true, quoteToken: 'quote' }); });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
   resources.forEach((key) => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
   expect(client.getQueryState(['public-branches', 'list'])?.isInvalidated).toBe(false);
 });
@@ -48,6 +51,7 @@ it('a rejected cancellation preserves every cached resource', async () => {
   const { client, wrapper } = setup();
   const { result } = renderHook(() => useCancelBooking(), { wrapper });
   await act(async () => { await expect(result.current.mutateAsync({ id: 'booking-1', reason: 'change', acceptedRefundTerms: true, quoteToken: 'quote' })).rejects.toThrow('stale quote'); });
+  await waitFor(() => expect(result.current.isError).toBe(true));
   resources.forEach((key) => expect(client.getQueryState(key)?.isInvalidated).toBe(false));
 });
 it('booking a credit refreshes all client resources after success', async () => {
@@ -55,6 +59,7 @@ it('booking a credit refreshes all client resources after success', async () => 
   const { client, wrapper } = setup();
   const { result } = renderHook(() => useBookPackageCredit(), { wrapper });
   await act(async () => { await result.current.mutateAsync({ creditId: 'credit-1', branchId: 'branch-1', scheduledAt: '2026-10-07T10:00:00Z' }); });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
   resources.forEach((key) => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
 });
 it('a rejected credit booking preserves the portal and balance', async () => {
@@ -62,6 +67,7 @@ it('a rejected credit booking preserves the portal and balance', async () => {
   const { client, wrapper } = setup();
   const { result } = renderHook(() => useBookPackageCredit(), { wrapper });
   await act(async () => { await expect(result.current.mutateAsync({ creditId: 'credit-1', branchId: 'branch-1', scheduledAt: '2026-10-07T10:00:00Z' })).rejects.toThrow('slot unavailable'); });
+  await waitFor(() => expect(result.current.isError).toBe(true));
   resources.forEach((key) => expect(client.getQueryState(key)?.isInvalidated).toBe(false));
 });
 it('group enrollment refreshes the portal, bookings and invoice', async () => {
@@ -69,6 +75,7 @@ it('group enrollment refreshes the portal, bookings and invoice', async () => {
   const { client, wrapper } = setup();
   const { result } = renderHook(() => useBookGroupSession(), { wrapper });
   await act(async () => { await result.current.mutateAsync('program-1'); });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
   resources.forEach((key) => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
 });
 it('a rejected group enrollment preserves cached resources', async () => {
@@ -76,5 +83,6 @@ it('a rejected group enrollment preserves cached resources', async () => {
   const { client, wrapper } = setup();
   const { result } = renderHook(() => useBookGroupSession(), { wrapper });
   await act(async () => { await expect(result.current.mutateAsync('program-1')).rejects.toThrow('full'); });
+  await waitFor(() => expect(result.current.isError).toBe(true));
   resources.forEach((key) => expect(client.getQueryState(key)?.isInvalidated).toBe(false));
 });

@@ -47,9 +47,9 @@ it('offers only verification when the provider-created challenge cannot be recov
   fireEvent.press(view.getByText('nativePayment.checkAgain'));
   expect(mockReconcile).toHaveBeenCalled(); expect(mockRetry).not.toHaveBeenCalled();
 });
-it('keeps pending results on screen and allows explicit reconciliation', () => {
+it('keeps unsubmitted reserved attempts on screen and allows explicit reconciliation', () => {
   const view = render(<NativeCheckout />);
-  expect(view.getByText('nativePayment.pending')).toBeTruthy();
+  expect(view.getByText('nativePayment.prepared')).toBeTruthy();
   fireEvent.press(view.getByText('nativePayment.checkAgain'));
   expect(mockReconcile).toHaveBeenCalled(); expect(mockReplace).not.toHaveBeenCalled();
 });

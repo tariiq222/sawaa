@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import { formatDayWeekday, formatTimeOfDay } from '@/lib/session-format';
+import { portalBookingInstant } from '@/lib/portal-booking-time';
 import { Glass } from '@/theme/components/Glass';
 import { sawaaRadius, sawaaSpacing, sawaaType, getSawaaRoles, withAlpha } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
@@ -30,7 +32,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
   const router = useRouter();
   const { t } = useTranslation();
   const ArrowIcon = dir.isRTL ? ChevronLeft : ChevronRight;
-  const locale = dir.isRTL ? 'ar-SA' : 'en-US';
+  const iso = booking ? portalBookingInstant(booking) : null;
 
   if (loading) {
     return (
@@ -40,7 +42,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
     );
   }
 
-  if (!booking) {
+  if (!booking || !iso) {
     return (
       <Glass variant="strong" radius={sawaaRadius.xl} style={[styles.card, styles.empty]}>
         <Text style={[styles.emptyText, { fontFamily: f600, textAlign: dir.textAlign }]}>{t('home.noUpcoming')}</Text>
@@ -51,11 +53,8 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
     );
   }
 
-  const iso = booking.scheduledAt ?? `${booking.date}T${booking.startTime}:00Z`;
-  const when = new Date(iso);
-  const day = when.toLocaleDateString(locale, { day: 'numeric' });
-  const weekday = when.toLocaleDateString(locale, { weekday: 'short' });
-  const time = when.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  const { day, weekday } = formatDayWeekday(iso, dir.isRTL)!;
+  const time = formatTimeOfDay(iso, dir.isRTL)!;
   const employeeName = booking.employee
     ? `${booking.employee.user.firstName} ${booking.employee.user.lastName}`.trim()
     : '';

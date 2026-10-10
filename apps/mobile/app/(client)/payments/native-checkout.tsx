@@ -132,11 +132,15 @@ export default function NativeCheckout() {
     return () => { active = false; };
   }, [checkout.phase, checkout.paymentId, clientId, invoiceId, bookingId, purchaseId, fromBookingConfirm, router]);
   const loading = capabilities.isLoading || (!appleUnavailable && (checkout.phase === 'loading' || checkout.phase === 'checking' || checkout.phase === 'processing'));
+  // Pause payer controls during an unresolved check without remounting the SDK
+  // or losing its bank challenge. A fresh server verdict restores interaction.
+  const paymentInteractionBlocked = checkout.phase === 'checking' || checkout.phase === 'error';
   const unavailable = capabilities.isError || !capabilities.enabled || !clientId;
   const terminalUnavailable = checkout.phase === 'unavailable';
   const choosing = !method && !unavailable && (checkout.phase === 'choosing' || (checkout.canResume && !checkout.config));
   const statusKey = terminalUnavailable ? `nativePayment.${checkout.unavailableReason}` : choosing ? 'nativePayment.choosing' : unavailable ? 'nativePayment.unavailable' : appleUnavailable ? 'nativePayment.appleUnavailable'
-    : checkout.error ?? (checkout.phase === 'pending' && !checkout.config && !checkout.canResume ? 'nativePayment.awaitingVerification' : `nativePayment.${checkout.phase}`);
+    : checkout.error ?? (checkout.phase === 'pending' && checkout.canResume ? 'nativePayment.prepared'
+      : checkout.phase === 'pending' && !checkout.config ? 'nativePayment.awaitingVerification' : `nativePayment.${checkout.phase}`);
   return (
     <AquaBackground>
     <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing['2xl'], paddingBottom: insets.bottom + sawaaSpacing['2xl'] }]} keyboardShouldPersistTaps="handled">
@@ -148,7 +152,10 @@ export default function NativeCheckout() {
         <AppButton variant="secondary" onPress={() => selectMethod('APPLE_PAY')} label={t('nativePayment.useApplePay')} />
         <AppButton variant="secondary" onPress={() => selectMethod('ONLINE_CARD')} label={t('nativePayment.useCard')} />
       </View> : null}
-      {['ready', 'checking', 'pending', 'error'].includes(checkout.phase) && checkout.config && method && !unavailable && !appleUnavailable ? <View style={[styles.form, { backgroundColor: roles.surface }]}>
+      {['ready', 'checking', 'pending', 'error'].includes(checkout.phase) && checkout.config && method && !unavailable && !appleUnavailable ? <View style={[styles.form, { backgroundColor: roles.surface }]}
+        pointerEvents={paymentInteractionBlocked ? 'none' : 'auto'}
+        accessibilityElementsHidden={paymentInteractionBlocked}
+        importantForAccessibility={paymentInteractionBlocked ? 'no-hide-descendants' : 'auto'}>
         <ThemedText variant="bodySm" align={dir.textAlign}>{t('nativePayment.cardNetworks')}</ThemedText>
         {cardRejected ? <ThemedText variant="bodySm" align={dir.textAlign} accessibilityLiveRegion="polite">{t('nativePayment.cardRejected')}</ThemedText> : null}
         <NativePaymentForm config={checkout.config} method={method} applePayAvailable={capabilities.applePayAvailable}
