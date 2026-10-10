@@ -17,7 +17,7 @@ const mockBack = jest.fn();
 const mockRefetch = jest.fn();
 let mockRTL = false;
 let mockQuery = { isLoading: false, isError: false, isFetching: false, data: undefined as unknown, refetch: mockRefetch };
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }), useLocalSearchParams: () => ({ id: 'family' }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }), useLocalSearchParams: () => ({ id: 'family' }), useNavigation: () => ({ getState: () => undefined }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, row: mockRTL ? 'row-reverse' : 'row', textAlign: mockRTL ? 'right' : 'left' }) }));

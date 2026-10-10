@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -15,7 +15,7 @@ import { formatHalalas } from '@/lib/package-utils';
 import { purchaseChargedHalalas } from '@/lib/package-vat';
 import { PackageCreditCard } from '@/components/features/packages/PackageCreditCard';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { goBackOrHome } from '@/lib/navigation';
+import { goBackOrHome, openOrReturnTo } from '@/lib/navigation';
 import { MenuGroup } from '@/components/ui/MenuGroup';
 import { Store } from 'lucide-react-native';
 
@@ -23,6 +23,7 @@ export default function PackagePurchasesScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -35,7 +36,7 @@ export default function PackagePurchasesScreen() {
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg }]}>
         <ScreenHeader title={t('profile.myPackages')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')} />
-        <MenuGroup entries={[{ key: 'browse', icon: Store, label: t('packages.browse'), onPress: () => router.push('/(client)/packages') }]} />
+        <MenuGroup entries={[{ key: 'browse', icon: Store, label: t('packages.browse'), onPress: () => openOrReturnTo(router, navigation.getState(), 'packages/index', '/(client)/packages') }]} />
         {query.isLoading ? <Text style={[styles.message, { fontFamily: f600 }]}>{t('packages.loading')}</Text> : null}
         {!query.isLoading && query.isError ? (
           <>
