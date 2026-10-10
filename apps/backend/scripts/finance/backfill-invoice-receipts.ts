@@ -251,6 +251,8 @@ export function parseCliArgs(args: readonly string[]): CliOptions {
 const PROTECTED_NAME_PATTERNS = [
   /^(?:sawaa|sawa)(?:[-_]?)(?:dev|prod(?:uction)?|stage|staging|live|primary)?(?:[-_].*)?$/i,
   /^postgres(?:[-_].*)?$/i,
+  /^deqah(?:[-_].*)?$/i,
+  /(^|[-_])(prod|production|live|primary)([-_]|$)/i,
 ];
 
 export function resolveDatabaseUrl(options: CliOptions, env: NodeJS.ProcessEnv): string {
@@ -293,6 +295,10 @@ export function resolveStorageTarget(options: CliOptions, env: NodeJS.ProcessEnv
   const target = `${host}${port ? `:${port}` : ''}/${FINANCE_INVOICES_BUCKET_NAME}`;
   if (target !== options.confirmStorage) {
     fail(`--confirm-storage must exactly match the receipt storage target "${target}"`);
+  }
+  const bareHost = !host.includes('.') && !host.includes(':');
+  if (bareHost && host.toLowerCase() !== 'localhost') {
+    fail(`Refusing to upload to storage "${target}" — a bare hostname such as a compose service name is not a local scratch endpoint.`);
   }
   if (PROTECTED_STORAGE_HOST.test(host) || PROTECTED_NAME_PATTERNS.some((p) => p.test(host.split('.')[0]))) {
     fail(`Refusing to upload to storage "${target}" — it looks like a shared or production bucket.`);

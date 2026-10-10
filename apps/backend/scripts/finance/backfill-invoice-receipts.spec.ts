@@ -154,6 +154,22 @@ describe('CLI guards', () => {
   });
 });
 
+describe('protected database names', () => {
+  const run = (db: string) => {
+    const o = parseCliArgs(['--database-url-env=X', '--apply', `--confirm-database=${db}`, '--confirm-storage=localhost:9000/finance-invoices']);
+    return () => resolveDatabaseUrl(o, { X: `postgresql://u:p@localhost:5432/${db}` });
+  };
+  it('refuses documented production names and generic production tokens', () => {
+    for (const db of ['deqah', 'deqah_prod', 'foo_prod', 'live', 'app-production-1']) {
+      expect(run(db)).toThrow('Refusing');
+    }
+  });
+  it('allows scratch names', () => {
+    expect(run('scratch')).not.toThrow();
+    expect(run('receipt_audit_copy')).not.toThrow();
+  });
+});
+
 describe('resolveStorageTarget', () => {
   const apply = (target: string) =>
     parseCliArgs(['--database-url-env=X', '--apply', '--confirm-database=scratch', `--confirm-storage=${target}`]);
@@ -167,6 +183,14 @@ describe('resolveStorageTarget', () => {
     expect(resolveStorageTarget(apply('localhost:9000/finance-invoices'), env('localhost'))).toBe('localhost:9000/finance-invoices');
     expect(() => resolveStorageTarget(apply('localhost:9000/other'), env('localhost'))).toThrow('exactly match');
     expect(() => resolveStorageTarget(apply('localhost:9000/finance-invoices'), {} as NodeJS.ProcessEnv)).toThrow('MINIO_ENDPOINT');
+  });
+
+  it('refuses bare single-label hosts such as the compose service minio; allows loopback', () => {
+    expect(() => resolveStorageTarget(apply('minio:9000/finance-invoices'), env('minio'))).toThrow('Refusing');
+    expect(() => resolveStorageTarget(apply('storage:9000/finance-invoices'), env('storage'))).toThrow('Refusing');
+    for (const host of ['localhost', '127.0.0.1', '::1']) {
+      expect(resolveStorageTarget(apply(`${host}:3455/finance-invoices`), env(host, '3455'))).toBe(`${host}:3455/finance-invoices`);
+    }
   });
 
   it('apply refuses production-shaped storage hosts even when confirmed', () => {

@@ -154,6 +154,28 @@ describe('IssueInvoiceReceiptHandler', () => {
     expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/));
   });
 
+  it('guards the update against a legacy receipt committed by an old worker mid-flight', async () => {
+    const paidAt = new Date('2026-05-24T10:05:00Z');
+    prisma.invoice.findUnique.mockResolvedValue({ ...paidInvoice(), paidAt, receiptPdfKey: null, pdfUrl: null, pdfGeneratedAt: null });
+    // Simulate the legacy guard excluding the row (an old worker committed first).
+    prisma.invoice.updateMany.mockResolvedValue({ count: 0 });
+    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
+    expect(prisma.invoice.updateMany.mock.calls[0][0].where).toEqual({
+      id: 'inv-1', status: 'PAID', receiptIssuedAt: null,
+      OR: [{ pdfUrl: null }, { pdfGeneratedAt: null }, { pdfGeneratedAt: { lt: paidAt } }],
+    });
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+    expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', expect.stringMatching(/^receipts\/inv-1\/p1-/));
+  });
+
+  it('falls back to requiring pdfUrl null when paidAt is null', async () => {
+    prisma.invoice.findUnique.mockResolvedValue({ ...paidInvoice(), paidAt: null, receiptPdfKey: null });
+    await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
+    expect(prisma.invoice.updateMany.mock.calls[0][0].where).toEqual({
+      id: 'inv-1', status: 'PAID', receiptIssuedAt: null, pdfUrl: null,
+    });
+  });
+
   it('uses a distinct key per attempt and the loser deletes exactly its own key', async () => {
     prisma.invoice.findUnique.mockResolvedValue(paidInvoice());
     prisma.invoice.updateMany
@@ -199,7 +221,10 @@ describe('IssueInvoiceReceiptHandler', () => {
     // S2.3a: the invoice persists the storage KEY, NOT the raw public URL that
     // uploadFile returns. The key is `receipts/<invoiceId>/<paymentId>.pdf`.
     expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
-      where: { id: 'inv-1', status: 'PAID', receiptIssuedAt: null },
+      where: {
+        id: 'inv-1', status: 'PAID', receiptIssuedAt: null,
+        OR: [{ pdfUrl: null }, { pdfGeneratedAt: null }, { pdfGeneratedAt: { lt: expect.any(Date) } }],
+      },
       data: {
         receiptPdfKey: expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/),
         receiptIssuedAt: expect.any(Date),

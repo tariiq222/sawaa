@@ -144,7 +144,22 @@ export class IssueInvoiceReceiptHandler {
         // write also prevents concurrent payment events from issuing two.
         const issuedAt = new Date();
         const { count } = await tx.invoice.updateMany({
-          where: { id: invoice.id, status: 'PAID', receiptIssuedAt: null },
+          where: {
+            id: invoice.id,
+            status: 'PAID',
+            receiptIssuedAt: null,
+            // An old-version worker may have committed a legacy receipt (pdfUrl +
+            // pdfGeneratedAt >= paidAt) since our read; never overwrite it.
+            ...(invoice.paidAt
+              ? {
+                  OR: [
+                    { pdfUrl: null },
+                    { pdfGeneratedAt: null },
+                    { pdfGeneratedAt: { lt: invoice.paidAt } },
+                  ],
+                }
+              : { pdfUrl: null }),
+          },
           data: {
             receiptPdfKey: key,
             receiptIssuedAt: issuedAt,
