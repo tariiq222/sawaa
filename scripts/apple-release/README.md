@@ -32,4 +32,4 @@ The intent is saved to GitHub before altool. An uncertain transport result queri
 
 `bash scripts/apple-release/test.sh`; `pnpm --dir apps/mobile test --runInBand`; mobile typecheck/lint; actionlint on the workflow. Native archive/export must also be proven using `build-ios.sh` and verified output before release delivery is claimed.
 
-Local verified IPA36 exists as recipe evidence only; it has not been uploaded. The first actual GitHub run must build its own merged source and record fresh Apple delivery. See the [dated record](../../docs/mobile-app/releases/2026-10-10-apple-automation.md).
+The local recipe IPA36 was never uploaded. GitHub run38062744728 independently built/uploaded36 from merged733094c. Apple accepted it; distribution initially failed on a redundant encryption PATCH forbidden to the existing key. The corrected helper preserves an observed false declaration, then resumed that exact build to verified internal availability. A complete automatic run after this correction remains to be observed. See the [dated record](../../docs/mobile-app/releases/2026-10-10-apple-automation.md).

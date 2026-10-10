@@ -75,3 +75,13 @@ test('a source superseded during Apple processing cannot be distributed', async 
   assert.deepEqual(JSON.parse(await readFile(join(dir,'writes.json'),'utf8')),[]);
  }finally{await rm(dir,{recursive:true,force:true});}
 });
+
+test('distribution preserves an already declared encryption exemption without a forbidden rewrite',async()=>{
+ const {distribute}=await import('./apple.mjs');const writes=[];
+ const api=async(path,options={})=>{if(options.method){writes.push({path,...options});if(path==='/v1/builds/build')throw Error('Apple API HTTP 403');return {};}
+ if(path.includes('/betaBuildLocalizations'))return {data:[{id:'notes',attributes:{locale:'ar-SA'}}]};
+ if(path.includes('/betaGroups/'))return {data:[{id:'build'}]};
+ if(path.endsWith('/buildBetaDetail'))return {data:{attributes:{internalBuildState:'IN_BETA_TESTING'}}};throw Error('Unexpected API path');};
+ await distribute(api,{id:'build',attributes:{usesNonExemptEncryption:false}},'staging source');
+ assert.equal(writes.length,1);assert.equal(writes[0].path,'/v1/betaBuildLocalizations/notes');
+});
