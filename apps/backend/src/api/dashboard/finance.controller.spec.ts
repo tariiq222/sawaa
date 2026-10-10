@@ -116,6 +116,14 @@ describe('DashboardFinanceController', () => {
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
 
+  it('generateInvoicePdfEndpoint presigns the key returned by the generator (receipt or statement)', async () => {
+    handlers.generateInvoicePdf.mockResolvedValue('statements/inv-1.pdf');
+    const res = await controller.generateInvoicePdfEndpoint('inv-1');
+    expect(handlers.generateInvoicePdf).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('finance-invoices', 'statements/inv-1.pdf', 300);
+    expect(res).toEqual({ url: 'https://minio.test/presigned' });
+  });
+
   it('listInvoicesEndpoint should call listInvoices.execute with inclusive Asia/Riyadh date bounds', async () => {
     const query = { page: 1, limit: 10, fromDate: '2026-01-01', toDate: '2026-01-31', clientId: 'c1', bookingId: 'b1', status: 'PAID' as const };
     await controller.listInvoicesEndpoint(query as any);

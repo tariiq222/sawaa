@@ -99,7 +99,7 @@ export class ListInvoicesHandler {
           issuedAt: true,
           paidAt: true,
           sentToClientAt: true,
-          pdfUrl: true,
+          receiptPdfKey: true,
           createdAt: true,
         },
       }),
@@ -134,7 +134,7 @@ export class ListInvoicesHandler {
         issuedAt: inv.issuedAt,
         paidAt: inv.paidAt,
         sentToClientAt: inv.sentToClientAt,
-        hasPdf: !!inv.pdfUrl,
+        hasPdf: !!inv.receiptPdfKey,
         createdAt: inv.createdAt,
       };
     });

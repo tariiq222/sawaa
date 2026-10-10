@@ -46,11 +46,10 @@ export class PublicInvoicesController {
   ) {
     const invoice = await this.getPublicInvoice.execute(id, client.id);
     if (!invoice.pdfUrl) {
-      throw new NotFoundException('No PDF has been generated for this invoice yet');
+      throw new NotFoundException('No paid receipt has been issued for this invoice');
     }
-    // `pdfUrl` stores the MinIO object key (S2.3a). Mint a short-lived presigned
-    // URL instead of returning the raw stored value. Legacy rows that hold a
-    // full URL are normalised back to the key first.
+    // `pdfUrl` here is the frozen receipt object key (Invoice.receiptPdfKey).
+    // Only a short-lived presigned URL is returned, never the bare key.
     const key = extractInvoicePdfKey(invoice.pdfUrl);
     const url = await this.storage.getSignedUrl(
       FINANCE_INVOICES_BUCKET_NAME,

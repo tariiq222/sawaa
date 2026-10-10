@@ -24,6 +24,7 @@ export function mapInvoiceResult(invoice: Invoice, sellerName: string): GetPubli
     dueAt: invoice.dueAt?.toISOString() ?? null,
     paidAt: invoice.paidAt?.toISOString() ?? null,
     createdAt: invoice.createdAt.toISOString(),
-    pdfUrl: invoice.pdfUrl ?? null,
+    // Field name kept for API compatibility; it now carries the paid-receipt key only.
+    pdfUrl: invoice.receiptPdfKey ?? null,
   };
 }

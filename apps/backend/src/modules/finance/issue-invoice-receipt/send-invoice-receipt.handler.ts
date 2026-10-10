@@ -47,9 +47,11 @@ export class SendInvoiceReceiptHandler {
 
     const invoice = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return this.prisma.invoice.findUnique({where: {id: invoiceId}, select: {bookingId: true}});
+      return this.prisma.invoice.findUnique({where: {id: invoiceId}, select: {bookingId: true, sentToClientAt: true}});
     });
     if (!invoice) return;
+    // Already delivered (e.g. a retried or replayed event): never email twice.
+    if (invoice.sentToClientAt) return;
     const booking = invoice.bookingId ? await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.booking.findUnique({where: {id: invoice.bookingId!}, select: {lateEntryRecordedAt: true}});

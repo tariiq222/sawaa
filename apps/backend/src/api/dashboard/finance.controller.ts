@@ -157,11 +157,10 @@ export class DashboardFinanceController {
   async getInvoicePdf(@Param('id', ParseUUIDPipe) id: string) {
     const invoice = await this.getInvoice.execute({ invoiceId: id });
     if (!invoice.pdfUrl) {
-      throw new NotFoundException('No PDF has been generated for this invoice yet');
+      throw new NotFoundException('No paid receipt has been issued for this invoice');
     }
-    // `pdfUrl` stores the MinIO object key (S2.3a). Mint a short-lived presigned
-    // URL instead of returning the raw stored value. Legacy rows that hold a
-    // full URL are normalised back to the key first.
+    // `pdfUrl` here is the frozen receipt object key (Invoice.receiptPdfKey).
+    // Mint a short-lived presigned URL instead of returning the raw key.
     const key = extractInvoicePdfKey(invoice.pdfUrl);
     const url = await this.storage.getSignedUrl(
       FINANCE_INVOICES_BUCKET_NAME,
@@ -179,8 +178,8 @@ export class DashboardFinanceController {
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
   @HttpCode(HttpStatus.OK)
   async generateInvoicePdfEndpoint(@Param('id', ParseUUIDPipe) id: string) {
-    // Renders on demand for invoices in any status; returns the stored key
-    // unchanged when a PDF already exists. We presign here, matching the GET.
+    // Returns the frozen receipt key when one exists, otherwise renders a
+    // statement (never stored on the invoice). We presign here, matching the GET.
     const storedKey = await this.generateInvoicePdf.execute({ invoiceId: id });
     const url = await this.storage.getSignedUrl(
       FINANCE_INVOICES_BUCKET_NAME,
