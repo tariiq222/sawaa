@@ -7,6 +7,7 @@ const expoCli = path.join(mobileRoot, 'node_modules/.bin/expo');
 function resolveExpoConfig(overrides: NodeJS.ProcessEnv, json = true) {
   // Keep local dotenv files from supplying values deliberately absent in a test.
   const env: NodeJS.ProcessEnv = { ...process.env, ...overrides, EXPO_NO_DOTENV: '1' };
+  if (overrides.EXPO_PUBLIC_RELEASE_ENVIRONMENT === undefined) delete env.EXPO_PUBLIC_RELEASE_ENVIRONMENT;
   if (overrides.EXPO_PUBLIC_API_URL === undefined) {
     delete env.EXPO_PUBLIC_API_URL;
   }
@@ -61,5 +62,21 @@ describe('Apple Pay build entitlement', () => {
   });
   it.each(['invalid/id', ' ', 'merchant.sa..sawa'])('rejects malformed merchant id %p before a native build', (merchantId) => {
     expect(resolveExpoConfig({ ...env, EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID: merchantId }, false).status).not.toBe(0);
+  });
+});
+
+
+describe('Release environment and build profile agreement', () => {
+  it.each([
+    ['production', 'staging', 'https://staging.sawaa.sa/api/v1'],
+    ['staging', 'production', 'https://api.sawaa.sa/api/v1'],
+    ['production', 'unknown', 'https://api.sawaa.sa/api/v1'],
+  ])('rejects profile %s with public release environment %s before prebuild', (profile, releaseEnvironment, apiUrl) => {
+    const result = resolveExpoConfig({
+      EAS_BUILD_PROFILE: profile, EXPO_PUBLIC_RELEASE_ENVIRONMENT: releaseEnvironment,
+      EXPO_PUBLIC_API_URL: apiUrl, NODE_ENV: 'production',
+    }, false);
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toMatch(/release environment|build profile/i);
   });
 });

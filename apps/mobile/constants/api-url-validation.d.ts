@@ -1,6 +1,7 @@
 export interface ApiUrlResolutionEnv {
   configuredApiUrl?: string;
   easBuildProfile?: string;
+  releaseEnvironment?: string;
   nodeEnv?: string;
 }
 

@@ -66,9 +66,18 @@ function assertProductionApiUrl(apiUrl) {
   }
 }
 
-function resolveApiUrl({ configuredApiUrl, easBuildProfile, nodeEnv }) {
+function resolveApiUrl({ configuredApiUrl, easBuildProfile, releaseEnvironment, nodeEnv }) {
+  if (releaseEnvironment !== undefined) {
+    if (!Object.prototype.hasOwnProperty.call(RELEASE_API_HOSTS, releaseEnvironment)) {
+      throw new Error('Unknown EXPO_PUBLIC release environment');
+    }
+    if (easBuildProfile && easBuildProfile !== releaseEnvironment) {
+      throw new Error('EXPO_PUBLIC release environment conflicts with EAS build profile');
+    }
+  }
+  const releaseProfile = releaseEnvironment || easBuildProfile;
   const apiUrl = configuredApiUrl?.trim();
-  const releaseHost = RELEASE_API_HOSTS[easBuildProfile];
+  const releaseHost = RELEASE_API_HOSTS[releaseProfile];
   const expectedUrl = releaseHost ? `https://${releaseHost}/api/v1` : undefined;
   const isProduction = Boolean(expectedUrl) || nodeEnv === 'production';
 
@@ -82,7 +91,7 @@ function resolveApiUrl({ configuredApiUrl, easBuildProfile, nodeEnv }) {
 
   assertProductionApiUrl(apiUrl);
   if (expectedUrl && apiUrl !== expectedUrl) {
-    throw new Error(`EXPO_PUBLIC_API_URL must match ${easBuildProfile}: ${expectedUrl}`);
+    throw new Error(`EXPO_PUBLIC_API_URL must match ${releaseProfile}: ${expectedUrl}`);
   }
   return apiUrl;
 }

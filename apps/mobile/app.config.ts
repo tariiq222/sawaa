@@ -5,7 +5,8 @@ import { resolveApiUrl, resolveIosBuildNumber } from './constants/api-url-valida
 // a native bundle is created when the API target is missing or unsafe.
 const apiUrl = resolveApiUrl({
   configuredApiUrl: process.env.EXPO_PUBLIC_API_URL,
-  easBuildProfile: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT || process.env.EAS_BUILD_PROFILE,
+  easBuildProfile: process.env.EAS_BUILD_PROFILE,
+  releaseEnvironment: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT,
   nodeEnv: process.env.NODE_ENV,
 });
 

@@ -5,7 +5,8 @@ export type { ApiUrlResolutionEnv } from './api-url-validation';
 // Keep the EXPO_PUBLIC access direct so Expo can inline it during bundling.
 export const API_URL = resolveApiUrl({
   configuredApiUrl: process.env.EXPO_PUBLIC_API_URL,
-  easBuildProfile: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT || process.env.EAS_BUILD_PROFILE,
+  easBuildProfile: process.env.EAS_BUILD_PROFILE,
+  releaseEnvironment: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT,
   nodeEnv: process.env.NODE_ENV,
 });
 

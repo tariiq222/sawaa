@@ -52,3 +52,18 @@ describe('resolveApiUrl', () => {
     );
   });
 });
+
+
+describe('Runtime release environment validation', () => {
+  it('rejects an environment that conflicts with the build profile', () => {
+    jest.isolateModules(() => {
+      const before = { ...process.env };
+      try {
+        process.env.EAS_BUILD_PROFILE = 'production';
+        process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT = 'staging';
+        process.env.EXPO_PUBLIC_API_URL = 'https://staging.sawaa.sa/api/v1';
+        expect(() => require('./config')).toThrow(/release environment|build profile/i);
+      } finally { process.env = before; }
+    });
+  });
+});

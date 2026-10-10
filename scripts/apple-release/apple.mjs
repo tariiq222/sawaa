@@ -123,6 +123,7 @@ async function cli(){
  }else{assert.equal(run.mode,'resume');await recoverIntent(run,expected,find);}
  const build=await waitForValid(find);
  const notes=`بيئة ${target.profile==='staging'?'التجربة':'الإنتاج'} — البناء ${run.buildNumber}\nالمصدر: ${sha}\nيرجى اختبار الدخول والحجز والدفع والإشعارات. سجّل الخروج قبل تثبيت بناء البيئة الأخرى ثم ادخل بحسابها.`;
+ await assertCurrentSource(target,sha,process.env.GITHUB_TOKEN);
  await distribute(api,build,notes);
  const receipt={...expected,buildNumber:run.buildNumber,buildId:build.id,processingState:'VALID',groupId:GROUP,internalBuildState:'IN_BETA_TESTING',observedAt:new Date().toISOString()};
  await save('apple-release.json',receipt);console.log(JSON.stringify(receipt));
