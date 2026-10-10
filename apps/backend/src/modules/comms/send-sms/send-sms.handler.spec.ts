@@ -102,4 +102,22 @@ describe('SendSmsHandler', () => {
       }),
     );
   });
+
+  it('does not rethrow (no duplicate send) when the audit insert fails after the provider accepted', async () => {
+    const send = jest.fn().mockResolvedValue({ status: 'SENT', providerMessageId: 'msg-3' });
+    factory.resolve.mockResolvedValue({ name: 'TAQNYAT', send });
+    prisma.smsDelivery.create.mockRejectedValueOnce(new Error('db down'));
+    const errorSpy = jest.spyOn((handler as any).logger, 'error').mockImplementation(() => {});
+
+    await expect(handler.execute(cmd)).resolves.toEqual({ sent: true });
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(prisma.smsDelivery.create).toHaveBeenCalledTimes(1);
+    expect(prisma.smsDelivery.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }),
+    );
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(String(errorSpy.mock.calls[0][0])).not.toContain(cmd.phone);
+    errorSpy.mockRestore();
+  });
 });
