@@ -10,6 +10,8 @@ The project, branch, active ready deployment, six unique running containers and 
 
 A mobile-only push may produce OpenShip `no_changes`. It unlocks the build only with a matching new-SHA no_changes record and identical Git blob/mode/type identities for all server inputs in the active ready revision. Only mobile, docs, GitHub workflow files, this Apple helper and root Markdown are excluded. Both release `sourceSha` and runtime `deployedSha` are recorded. Any changed server input, truncated tree, failed deployment, duplicate container, stale branch or changed active deployment blocks upload.
 
+If OpenShip reports `partial_failure`, Apple stops before building or uploading. A dashboard error `no active session` can result from the Dockerode session-health defect: Docker closes a session whose Health/Check RPC is missing. The checksum-pinned control-image repair and real regression evidence are documented in [OpenShip control recovery](../../docker/openship/control/README.md#buildkit-session-health-dependency). Restore a fully ready matching staging deployment before rerunning Apple; do not bypass the gate or substitute production.
+
 ## Existing Secrets
 
 - `APPLE_DISTRIBUTION_P12_BASE64`, `APPLE_P12_PASSWORD`
