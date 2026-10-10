@@ -89,7 +89,16 @@ describe('DashboardProgramsController (authorization)', () => {
     });
     const schema = document.components?.schemas?.['ProgramDetailResponseDto'] as {properties: Record<string,unknown>};
     expect(Object.keys(schema.properties)).toEqual(expect.arrayContaining(['supervisors', 'enrollments']));
-    expect(document.components?.schemas?.ProgramEnrollmentResponseDto).toMatchObject({properties:{clientName:{type:'string',nullable:true},booking:{$ref:'#/components/schemas/ProgramEnrollmentBookingResponseDto'}}});
+    expect(document.components?.schemas?.ProgramEnrollmentResponseDto).toMatchObject({
+      properties: {
+        clientName: { type: 'string', nullable: true },
+        booking: {
+          allOf: [{ $ref: '#/components/schemas/ProgramEnrollmentBookingResponseDto' }],
+          description: expect.any(String),
+          example: expect.objectContaining({ currency: 'SAR', bookingNumber: 1024 }),
+        },
+      },
+    });
     expect(document.components?.schemas?.ProgramSupervisorResponseDto).toMatchObject({properties:{name:{type:'string'},nameEn:{type:'string',nullable:true}}});
   });
 

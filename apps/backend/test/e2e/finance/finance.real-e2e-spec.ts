@@ -768,14 +768,16 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
       // the stats handler MUST hold:
       expect(res.body.completed).toBeGreaterThanOrEqual(2);
       expect(res.body.completedAmount).toBeGreaterThanOrEqual(16_500); // 11500 + 5000
-      // Sum of per-status counts must equal the grand total.
+      // The total includes every DB status, including PARTIALLY_REFUNDED,
+      // which the existing stats response does not expose as its own bucket.
       const perStatusSum =
         res.body.completed +
         res.body.pending +
         res.body.pendingVerification +
         res.body.refunded +
         res.body.failed;
-      expect(res.body.total).toBe(perStatusSum);
+      expect(res.body.total).toBe(await prisma.payment.count());
+      expect(res.body.total).toBeGreaterThanOrEqual(perStatusSum);
     });
   });
 
@@ -811,7 +813,10 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
   });
 
   describe("Refund: happy path + over-refund rejection", () => {
-    async function seedCompletedPaymentWithGatewayRef(amount: number) {
+    async function seedCompletedPaymentWithGatewayRef(
+      amount: number,
+      method: 'ONLINE_CARD' | 'BANK_TRANSFER' = 'ONLINE_CARD',
+    ) {
       const invoice = await seedIssuedInvoice({
         subtotalHalalas: amount,
         vatRate: 0,
@@ -821,7 +826,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
           invoiceId: invoice.id,
           amount: new Prisma.Decimal(amount),
           currency: "SAR",
-          method: "MADA",
+          method,
           status: "COMPLETED",
           gatewayRef: `pay_e2e_${suffix}_${Math.random().toString(36).slice(2, 8)}`,
           processedAt: new Date(),
@@ -830,6 +835,24 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
       ctx.paymentIds.push(payment.id);
       return { invoice, payment };
     }
+
+    it("rejects a bank reference through the gateway path without a provider call or ledger change", async () => {
+      const { invoice, payment } = await seedCompletedPaymentWithGatewayRef(50_000, 'BANK_TRANSFER');
+      const provider = app.get(MoyasarApiClient);
+      const callsBefore = (provider.createRefund as jest.Mock).mock.calls.length;
+      const res = await withAuth(ctx.authToken)(
+        api().patch(`/api/v1/dashboard/finance/payments/${payment.id}/refund`),
+      ).send({ reason: 'Administrative bank reference', amount: 20_000 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/manual refund/i);
+      expect((provider.createRefund as jest.Mock).mock.calls.length).toBe(callsBefore);
+      expect(await prisma.refundRequest.count({ where: { paymentId: payment.id } })).toBe(0);
+      const paymentAfter = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
+      expect(paymentAfter.status).toBe('COMPLETED');
+      expect(Number(paymentAfter.refundedAmount)).toBe(0);
+      expect(Number((await prisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).refundedAmount)).toBe(0);
+    });
 
     it("happy path: partial refund marks payment PARTIALLY_REFUNDED, invoice PARTIALLY_REFUNDED", async () => {
       const { invoice, payment } = await seedCompletedPaymentWithGatewayRef(50_000);
