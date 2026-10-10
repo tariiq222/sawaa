@@ -84,6 +84,19 @@ export class IssueInvoiceReceiptHandler {
       return;
     }
 
+    // Owner rule: an invoice containing a "previous receipt" payment gets no receipt.
+    const previousReceipt = await this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      return this.prisma.payment.findFirst({
+        where: { invoiceId: invoice.id, receiptRecordedBy: { not: null } },
+        select: { id: true },
+      });
+    });
+    if (previousReceipt) {
+      this.logger.log(`Receipt: invoice ${invoiceId} has a previous-receipt payment — skipping`);
+      return;
+    }
+
     // Invoice keeps a scalar cross-domain bookingId, not a Prisma relation.
     const booking = invoice.bookingId ? await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);

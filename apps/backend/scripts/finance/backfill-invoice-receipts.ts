@@ -12,7 +12,10 @@
  *   B   stuck: `pdfUrl` was generated before `paidAt` (a statement, not a receipt).
  *       -> PAID only: IssueInvoiceReceiptHandler.issue(..., { deliver: false }),
  *          silently (no email). Refunded statuses are report only.
- *   C   PAID, no `pdfUrl`, not a previous-receipt invoice, total > 0. Report only.
+ *   C   PAID, no `pdfUrl`, total > 0. Report only.
+ *
+ * Invoices with a previous-receipt payment (receiptRecordedBy set) get no
+ * receipt: they are SKIPped before A / A2 / B / C and listed in the report.
  *
  * Dry-run is the default and never writes. Money stays in integer halalas.
  *
@@ -24,9 +27,10 @@
  *
  * The connection string is read from the NAMED env var, never from the app's
  * default DATABASE_URL. Apply mode needs an exact --confirm-database and
- * refuses shared or production-shaped database names. Class B boots the Nest
- * application context (so Redis/MinIO env must be configured) pointed at the
- * same named database.
+ * refuses shared or production-shaped database names. Class B constructs only
+ * the receipt handler's dependencies (Prisma on the named database, renderer,
+ * MinIO from MINIO_* env, CLS, transaction wrapper, inert event bus); it never
+ * boots AppModule, so no queues, schedulers or bootstraps run.
  */
 
 import 'dotenv/config';
@@ -53,11 +57,13 @@ export interface CandidateInvoice {
 export interface InvoiceFacts {
   /** Latest payment in COMPLETED / PARTIALLY_REFUNDED / REFUNDED, or null. */
   latestPaymentId: string | null;
-  /** True when a COMPLETED payment was recorded as a previous receipt (receiptRecordedBy set). */
+  /** True when any payment on the invoice was recorded as a previous receipt (receiptRecordedBy set). */
   isPreviousReceipt: boolean;
   hasReceiptOutboxEvent: boolean;
   bookingLateEntry: boolean;
 }
+
+const PREVIOUS_RECEIPT_REASON = 'previous receipt invoice';
 
 export type Classification =
   | { kind: 'A'; key: string; issuedAt: Date; paymentId: string; unsent: boolean }
@@ -67,6 +73,7 @@ export type Classification =
 
 /** Pure classification of one candidate invoice. */
 export function classifyInvoice(inv: CandidateInvoice, facts: InvoiceFacts): Classification {
+  if (facts.isPreviousReceipt) return { kind: 'SKIP', reason: PREVIOUS_RECEIPT_REASON };
   if (inv.pdfUrl) {
     if (!inv.paidAt || !inv.pdfGeneratedAt) return { kind: 'SKIP', reason: 'undated pdf or paidAt' };
     if (!facts.latestPaymentId) return { kind: 'SKIP', reason: 'no completed payment' };
@@ -87,7 +94,6 @@ export function classifyInvoice(inv: CandidateInvoice, facts: InvoiceFacts): Cla
   }
   if (
     inv.status === 'PAID' &&
-    !facts.isPreviousReceipt &&
     decimalToHalalas(inv.total as never) > 0
   ) {
     return { kind: 'C' };
@@ -114,6 +120,7 @@ export interface BackfillReport {
   stuckIssued: string[]; // class B ids (issued, or would be)
   stuckReportOnly: string[]; // class B on refunded statuses
   missingReceipt: string[]; // class C numbers
+  previousReceipt: string[]; // skipped: previous-receipt invoices (any class)
   skipped: number;
   errors: string[];
 }
@@ -131,6 +138,7 @@ export async function runBackfill(
     stuckIssued: [],
     stuckReportOnly: [],
     missingReceipt: [],
+    previousReceipt: [],
     skipped: 0,
     errors: [],
   };
@@ -162,6 +170,9 @@ export async function runBackfill(
         report.missingReceipt.push(`#${inv.number} (${inv.id})`);
       } else {
         report.skipped += 1;
+        if (c.reason === PREVIOUS_RECEIPT_REASON) {
+          report.previousReceipt.push(`#${inv.number} (${inv.id})`);
+        }
       }
     } catch (error) {
       report.errors.push(`#${inv.number} (${inv.id}): ${error instanceof Error ? error.message : 'unknown error'}`);
@@ -182,6 +193,7 @@ export function formatReport(r: BackfillReport): string {
     ...list(`B stuck ${r.dryRun ? 'to issue silently' : 'issued silently'}`, r.stuckIssued),
     ...list('B stuck on refunded statuses (report only)', r.stuckReportOnly),
     ...list('C paid without any pdf (report only)', r.missingReceipt),
+    ...list('skipped: previous-receipt invoices (no receipt by rule)', r.previousReceipt),
     `skipped: ${r.skipped}`,
     ...list('errors', r.errors),
   ].join('\n');
@@ -273,10 +285,14 @@ function buildPrismaDeps(
     async loadFacts(inv) {
       const payments = await prisma.payment.findMany({
         where: { invoiceId: inv.id, status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED'] } },
-        select: { id: true, status: true, receiptRecordedBy: true },
+        select: { id: true },
         orderBy: [{ processedAt: 'desc' }, { createdAt: 'desc' }],
       });
-      const [outbox, booking] = await Promise.all([
+      const [previousReceipt, outbox, booking] = await Promise.all([
+        prisma.payment.findFirst({
+          where: { invoiceId: inv.id, receiptRecordedBy: { not: null } },
+          select: { id: true },
+        }),
         prisma.outboxEvent.findFirst({
           where: { aggregateId: inv.id, eventType: RECEIPT_ISSUED_EVENT_TYPE },
           select: { id: true },
@@ -287,7 +303,7 @@ function buildPrismaDeps(
       ]);
       return {
         latestPaymentId: payments[0]?.id ?? null,
-        isPreviousReceipt: payments.some((p) => p.status === 'COMPLETED' && p.receiptRecordedBy),
+        isPreviousReceipt: !!previousReceipt,
         hasReceiptOutboxEvent: !!outbox,
         bookingLateEntry: !!booking?.lateEntryRecordedAt,
       };
@@ -307,34 +323,62 @@ function buildPrismaDeps(
   };
 }
 
+/** Minimal wiring for IssueInvoiceReceiptHandler.issue(): no AppModule, queues or schedulers. */
+export async function createReceiptIssuer(
+  databaseUrl: string,
+  env: NodeJS.ProcessEnv,
+): Promise<{ issue: BackfillDeps['issueSilently']; close(): Promise<void> }> {
+  const [{ AsyncLocalStorage }, { ClsService }, { ConfigService }] = await Promise.all([
+    import('async_hooks'),
+    import('nestjs-cls'),
+    import('@nestjs/config'),
+  ]);
+  const [{ PrismaService }, { RlsTransactionService }, { MinioService }, { InvoicePdfRendererService }, { IssueInvoiceReceiptHandler }] =
+    await Promise.all([
+      import('../../src/infrastructure/database/prisma.service'),
+      import('../../src/common/database/rls-transaction'),
+      import('../../src/infrastructure/storage/minio.service'),
+      import('../../src/modules/finance/issue-invoice-receipt/invoice-pdf-renderer.service'),
+      import('../../src/modules/finance/issue-invoice-receipt/issue-invoice-receipt.handler'),
+    ]);
+  // PrismaService reads DATABASE_URL at construction: point it at the named database.
+  process.env.DATABASE_URL = databaseUrl;
+  const cls = new ClsService(new AsyncLocalStorage());
+  const prisma = new PrismaService(undefined, cls);
+  await prisma.$connect();
+  const handler = new IssueInvoiceReceiptHandler(
+    prisma,
+    new InvoicePdfRendererService(),
+    new MinioService(new ConfigService(env)),
+    // issue() never publishes; subscribe/publish are not reachable here.
+    {} as never,
+    cls,
+    new RlsTransactionService(prisma),
+  );
+  return {
+    issue: (invoiceId, paymentId) => handler.issue(invoiceId, paymentId, { deliver: false }),
+    close: () => prisma.$disconnect(),
+  };
+}
+
 async function main(): Promise<void> {
   try {
     const options = parseCliArgs(process.argv.slice(2));
     const databaseUrl = resolveDatabaseUrl(options, process.env);
     const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
-    let app: { close(): Promise<void> } | undefined;
+    let issuer: Awaited<ReturnType<typeof createReceiptIssuer>> | undefined;
     try {
       await prisma.$connect();
       const issueSilently: BackfillDeps['issueSilently'] = async (invoiceId, paymentId) => {
-        // Boot the Nest context lazily, only when a class B write is needed,
-        // pointed at the named database (never the ambient DATABASE_URL).
-        const { NestFactory } = await import('@nestjs/core');
-        const { AppModule } = await import('../../src/app.module');
-        const { IssueInvoiceReceiptHandler } = await import(
-          '../../src/modules/finance/issue-invoice-receipt/issue-invoice-receipt.handler'
-        );
-        if (!app) {
-          process.env.DATABASE_URL = databaseUrl;
-          app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
-        }
-        const ctx = app as unknown as { get<T>(t: new (...a: never[]) => T): T };
-        await ctx.get(IssueInvoiceReceiptHandler).issue(invoiceId, paymentId, { deliver: false });
+        // Built lazily, only when a class B write is needed.
+        issuer ??= await createReceiptIssuer(databaseUrl, process.env);
+        await issuer.issue(invoiceId, paymentId);
       };
       const report = await runBackfill(buildPrismaDeps(prisma, issueSilently), { apply: options.apply });
       console.log(formatReport(report));
       if (report.errors.length > 0) process.exitCode = 1;
     } finally {
-      await app?.close().catch(() => undefined);
+      await issuer?.close().catch(() => undefined);
       await prisma.$disconnect().catch(() => undefined);
     }
   } catch (error) {

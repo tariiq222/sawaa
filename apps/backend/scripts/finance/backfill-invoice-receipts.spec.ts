@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   type BackfillDeps,
   type CandidateInvoice,
@@ -51,6 +53,15 @@ describe('classifyInvoice', () => {
     expect(classifyInvoice(inv(), facts({ isPreviousReceipt: true })).kind).toBe('SKIP');
     expect(classifyInvoice(inv({ total: 0 }), facts()).kind).toBe('SKIP');
     expect(classifyInvoice(inv({ status: 'REFUNDED' }), facts()).kind).toBe('SKIP');
+  });
+
+  it('previous-receipt invoices are SKIP in every class (A, A2, B)', () => {
+    const f = facts({ isPreviousReceipt: true, hasReceiptOutboxEvent: false });
+    const a = inv({ pdfUrl: 'k', pdfGeneratedAt: after });
+    const b = inv({ pdfUrl: 'k', pdfGeneratedAt: before });
+    expect(classifyInvoice(a, f)).toEqual({ kind: 'SKIP', reason: 'previous receipt invoice' });
+    expect(classifyInvoice(b, f)).toEqual({ kind: 'SKIP', reason: 'previous receipt invoice' });
+    expect(classifyInvoice(inv(), f)).toEqual({ kind: 'SKIP', reason: 'previous receipt invoice' });
   });
 
   it('skips undated or payment-less pdf rows instead of guessing', () => {
@@ -107,6 +118,14 @@ describe('runBackfill', () => {
     expect(r.skipped).toBe(1);
     expect(r.errors).toEqual(['#2 (b): boom']);
     expect(r.missingReceipt).toHaveLength(1);
+  });
+});
+
+describe('script wiring', () => {
+  it('does not boot the full AppModule for class B', () => {
+    const src = readFileSync(join(__dirname, 'backfill-invoice-receipts.ts'), 'utf8');
+    expect(src).not.toMatch(/app\.module|NestFactory|createApplicationContext/);
+    expect(src).toContain('IssueInvoiceReceiptHandler');
   });
 });
 

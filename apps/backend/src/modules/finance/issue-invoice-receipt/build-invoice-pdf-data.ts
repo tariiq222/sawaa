@@ -3,7 +3,8 @@ import type { ClsService } from 'nestjs-cls';
 import { PLATFORM_BRAND } from '@sawaa/shared';
 import type { PrismaService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
-import { calculateInvoiceBalance } from '../invoice-balance.helper';
+import { decimalToHalalas } from '../money.helper';
+import { SETTLED_PAYMENT_STATUSES, calculateInvoiceBalance } from '../invoice-balance.helper';
 import type { InvoicePdfData, InvoicePdfKind } from './invoice-pdf.template';
 
 /**
@@ -11,10 +12,11 @@ import type { InvoicePdfData, InvoicePdfKind } from './invoice-pdf.template';
  * payment-completed receipt handler and the on-demand dashboard generator.
  * All lookups run inside a system CLS context.
  *
- * `payments` lists every COMPLETED payment (oldest first) with its effective
+ * `payments` lists every settled payment (COMPLETED, PARTIALLY_REFUNDED, REFUNDED) (oldest first) with its effective
  * date, method and amount in halalas. `paidAt` is the invoice's real paidAt
  * and stays null until the invoice is PAID — never a render-time clock.
- * `outstanding` is total minus completed payments (never below zero).
+ * `outstanding` comes from calculateInvoiceBalance: total minus settled payments
+ * net of their refunds (never below zero).
  */
 export async function buildInvoicePdfData(
   prisma: PrismaService,
@@ -33,10 +35,11 @@ export async function buildInvoicePdfData(
         select: { firstName: true, lastName: true },
       }),
       prisma.payment.findMany({
-        where: { invoiceId: invoice.id, status: 'COMPLETED' },
+        where: { invoiceId: invoice.id, status: { in: [...SETTLED_PAYMENT_STATUSES] } },
         select: {
           method: true,
           amount: true,
+          refundedAmount: true,
           effectiveReceivedAt: true,
           processedAt: true,
           createdAt: true,
@@ -63,7 +66,7 @@ export async function buildInvoicePdfData(
   const { outstanding } = calculateInvoiceBalance({
     invoiceTotal: total,
     grossSettled: payments.reduce((sum, p) => sum + p.amount, 0),
-    refundedSettled: 0,
+    refundedSettled: paymentRows.reduce((sum, p) => sum + decimalToHalalas(p.refundedAmount ?? 0), 0),
     reservedPending: 0,
     newCollectionBlocked: false,
   });

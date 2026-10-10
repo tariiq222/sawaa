@@ -44,7 +44,7 @@ describe('GenerateInvoicePdfHandler', () => {
       booking: {
         findFirst: jest.fn().mockResolvedValue({ serviceNameSnapshot: 'استشارة' }),
       },
-      payment: { findMany: jest.fn().mockResolvedValue([]) },
+      payment: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) },
     };
     renderer = { render: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 fake')) };
     storage = { uploadFile: jest.fn().mockResolvedValue('http://minio/finance-invoices/inv-1.pdf') };
@@ -70,6 +70,22 @@ describe('GenerateInvoicePdfHandler', () => {
     expect(renderer.render).not.toHaveBeenCalled();
     expect(storage.uploadFile).not.toHaveBeenCalled();
     expect(prisma.invoice.update).not.toHaveBeenCalled();
+  });
+
+  it('returns a valid legacy receipt (pdfUrl generated at/after paidAt) instead of overwriting it with a statement', async () => {
+    const paidAt = new Date('2026-10-01T10:00:00Z');
+    prisma.invoice.findUnique.mockResolvedValue({
+      ...baseInvoice,
+      status: 'PAID',
+      paidAt,
+      receiptPdfKey: null,
+      pdfUrl: 'https://minio/finance-invoices/invoices/inv-1/1.pdf',
+      pdfGeneratedAt: new Date('2026-10-01T10:00:05Z'),
+    });
+    const key = await handler.execute({ invoiceId: 'inv-1' });
+    expect(key).toBe('invoices/inv-1/1.pdf');
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(storage.uploadFile).not.toHaveBeenCalled();
   });
 
   it('renders a statement to the fixed statements key and never writes the Invoice', async () => {

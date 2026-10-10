@@ -39,6 +39,7 @@ describe('IssueInvoiceReceiptHandler', () => {
         findFirst: jest.fn().mockResolvedValue({ serviceNameSnapshot: 'استشارة' }),
       },
       payment: {
+        findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([
           { method: 'CASH', amount: 6000, effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-20T10:00:00Z') },
           { method: 'CARD', amount: 4000, effectiveReceivedAt: null, processedAt: new Date('2026-05-24T10:00:00Z'), createdAt: new Date('2026-05-24T09:00:00Z') },
@@ -97,12 +98,14 @@ describe('IssueInvoiceReceiptHandler', () => {
     expect(prisma.outboxEvent.create).toHaveBeenCalled();
   });
 
-  it('lists every COMPLETED payment (date, method, halalas) and uses paidAt in the rendered data', async () => {
+  it('lists every settled payment (date, method, halalas) and uses paidAt in the rendered data', async () => {
     const paidAt = new Date('2026-05-24T10:05:00Z');
     prisma.invoice.findUnique.mockResolvedValue({ ...paidInvoice(), paidAt });
     await handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any);
     expect(prisma.payment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { invoiceId: 'inv-1', status: 'COMPLETED' } }),
+      expect.objectContaining({
+        where: { invoiceId: 'inv-1', status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED'] } },
+      }),
     );
     const data = renderer.render.mock.calls[0][0];
     expect(data.paidAt).toEqual(paidAt);
@@ -260,4 +263,19 @@ describe('IssueInvoiceReceiptHandler', () => {
     });
   });
 
+
+  it('skips a previous-receipt invoice: no render, upload or outbox', async () => {
+    prisma.invoice.findUnique.mockResolvedValue(paidInvoice());
+    prisma.payment.findFirst.mockResolvedValue({ id: 'p1' });
+    await handler.issue('inv-1', 'p1');
+    expect(prisma.payment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { invoiceId: 'inv-1', receiptRecordedBy: { not: null } },
+      }),
+    );
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(storage.uploadFile).not.toHaveBeenCalled();
+    expect(prisma.invoice.updateMany).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
+  });
 });

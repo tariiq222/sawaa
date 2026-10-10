@@ -1,4 +1,5 @@
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
+import { calculateInvoiceBalance } from '../invoice-balance.helper';
 import { buildInvoicePdfData } from './build-invoice-pdf-data';
 
 // ---------------------------------------------------------------------------
@@ -130,8 +131,37 @@ describe('buildInvoicePdfData', () => {
     const { prisma, cls, invoice } = buildDeps();
     await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(prisma.payment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { invoiceId: 'inv-1', status: 'COMPLETED' } }),
+      expect.objectContaining({
+        where: {
+          invoiceId: 'inv-1',
+          status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED'] },
+        },
+      }),
     );
+  });
+
+  it('accounts refunds exactly like calculateInvoiceBalance (10000 paid, 2000 refunded)', async () => {
+    const { prisma, cls, invoice } = buildDeps({
+      payment: {
+        method: 'CASH', amount: 10000, refundedAmount: 2000,
+        effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z'),
+      },
+      invoice: {
+        id: 'inv-r', number: 5, status: 'PARTIALLY_REFUNDED', issuedAt: new Date(), paidAt: new Date(),
+        clientId: 'client-1', bookingId: null, packagePurchaseId: null,
+        subtotal: 10000, discountAmt: 0, vatAmt: 0, total: 10000, currency: 'SAR', createdAt: new Date(),
+      },
+    });
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'statement');
+    const expected = calculateInvoiceBalance({
+      invoiceTotal: 10000, grossSettled: 10000, refundedSettled: 2000,
+      reservedPending: 0, newCollectionBlocked: false,
+    });
+    expect(expected.outstanding).toBe(2000);
+    expect(data.outstanding).toBe(expected.outstanding);
+    expect(data.payments).toEqual([
+      { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 10000 },
+    ]);
   });
 
   it('falls back to a placeholder "—" client / service / payment when the join is missing', async () => {

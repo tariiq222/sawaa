@@ -5,6 +5,7 @@ import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { InvoicePdfRendererService } from '../issue-invoice-receipt/invoice-pdf-renderer.service';
 import { buildInvoicePdfData } from '../issue-invoice-receipt/build-invoice-pdf-data';
+import { resolveReceiptPdfKey } from '../issue-invoice-receipt/invoice-pdf-key.helper';
 
 const BUCKET = 'finance-invoices';
 
@@ -15,7 +16,8 @@ export interface GenerateInvoicePdfCommand {
 /**
  * On-demand invoice document for the dashboard "generate PDF" action.
  *
- * When the invoice already has an issued receipt (`receiptPdfKey`) that frozen
+ * When the invoice already has a receipt (`receiptPdfKey`, or a legacy `pdfUrl`
+ * generated at/after `paidAt`; see `resolveReceiptPdfKey`) that frozen
  * key is returned unchanged and nothing is re-rendered. Otherwise a live
  * STATEMENT is rendered and uploaded to the fixed key `statements/<invoiceId>.pdf`
  * (overwritten each time, so it always reflects current payments). This handler
@@ -41,8 +43,10 @@ export class GenerateInvoicePdfHandler {
     if (!invoice) {
       throw new NotFoundException(`Invoice ${invoiceId} not found`);
     }
-    if (invoice.receiptPdfKey) {
-      return invoice.receiptPdfKey;
+    // findUnique returns every scalar, so pdfUrl/pdfGeneratedAt/paidAt are present.
+    const receiptKey = resolveReceiptPdfKey(invoice);
+    if (receiptKey) {
+      return receiptKey;
     }
 
     const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, 'statement');
