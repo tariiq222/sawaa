@@ -31,6 +31,7 @@ describe('InvoicePdfRendererService', () => {
     total: 11500,
     currency: 'SAR',
     paymentMethod: 'CASH',
+    payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 11500 }],
     qrDataUrl: null,
   };
 
@@ -62,7 +63,7 @@ describe('InvoicePdfRendererService', () => {
       const expectedTlv = buildZatcaQrTlv({
         sellerName: baseData.sellerNameAr,
         vatNumber: '310122393500003',
-        timestamp: baseData.paidAt,
+        timestamp: baseData.paidAt as Date,
         totalWithVat: (baseData.total / 100).toFixed(2),
         vatTotal: (baseData.vatAmt / 100).toFixed(2),
       });

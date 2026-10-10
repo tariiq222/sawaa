@@ -7,20 +7,19 @@ import type { InvoicePdfData } from './invoice-pdf.template';
 
 /**
  * Assemble the data needed to render an invoice PDF. Shared by the
- * payment-completed receipt handler (which knows the exact payment) and the
- * on-demand dashboard generator (which falls back to the latest completed
- * payment). All lookups run inside a system CLS context.
+ * payment-completed receipt handler and the on-demand dashboard generator.
+ * All lookups run inside a system CLS context.
  *
- * @param paymentId when provided, resolves the payment method from that exact
- *   payment; otherwise uses the invoice's latest COMPLETED payment (or '—').
+ * `payments` lists every COMPLETED payment (oldest first) with its effective
+ * date, method and amount in halalas. `paidAt` is the invoice's real paidAt
+ * and stays null until the invoice is PAID — never a render-time clock.
  */
 export async function buildInvoicePdfData(
   prisma: PrismaService,
   cls: ClsService,
   invoice: Invoice,
-  paymentId?: string | null,
 ): Promise<InvoicePdfData> {
-  const [orgSettings, client, payment, booking] = await cls.run(async () => {
+  const [orgSettings, client, paymentRows, booking] = await cls.run(async () => {
     cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
     return Promise.all([
       prisma.organizationSettings.findFirst({
@@ -30,16 +29,16 @@ export async function buildInvoicePdfData(
         where: { id: invoice.clientId },
         select: { firstName: true, lastName: true },
       }),
-      paymentId
-        ? prisma.payment.findFirst({
-            where: { id: paymentId },
-            select: { method: true },
-          })
-        : prisma.payment.findFirst({
-            where: { invoiceId: invoice.id, status: 'COMPLETED' },
-            orderBy: { createdAt: 'desc' },
-            select: { method: true },
-          }),
+      prisma.payment.findMany({
+        where: { invoiceId: invoice.id, status: 'COMPLETED' },
+        select: {
+          method: true,
+          amount: true,
+          effectiveReceivedAt: true,
+          processedAt: true,
+          createdAt: true,
+        },
+      }),
       invoice.bookingId
         ? prisma.booking.findFirst({
             where: { id: invoice.bookingId },
@@ -49,11 +48,19 @@ export async function buildInvoicePdfData(
     ]);
   });
 
+  const payments = paymentRows
+    .map((p) => ({
+      date: p.effectiveReceivedAt ?? p.processedAt ?? p.createdAt,
+      method: p.method as string,
+      amount: Number(p.amount),
+    }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
   return {
     invoiceNumber: invoice.number,
     invoiceId: invoice.id,
     issuedAt: invoice.issuedAt ?? invoice.createdAt,
-    paidAt: invoice.paidAt ?? new Date(),
+    paidAt: invoice.paidAt ?? null,
     sellerNameAr: orgSettings?.companyNameAr ?? 'مركز سواء',
     sellerVatNumber: orgSettings?.vatRegistrationNumber ?? null,
     sellerAddress: orgSettings?.sellerAddress ?? null,
@@ -66,7 +73,8 @@ export async function buildInvoicePdfData(
     vatAmt: Number(invoice.vatAmt),
     total: Number(invoice.total),
     currency: invoice.currency,
-    paymentMethod: payment?.method ?? '—',
+    paymentMethod: payments.length > 0 ? payments[payments.length - 1].method : '—',
+    payments,
     qrDataUrl: null,
   };
 }

@@ -40,7 +40,7 @@ const buildDeps = (overrides: {
   const payment =
     overrides.payment === null
       ? null
-      : overrides.payment ?? { method: 'CASH' };
+      : overrides.payment ?? { method: 'CASH', amount: 11500, effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z') };
   const booking =
     overrides.booking === null
       ? null
@@ -65,7 +65,7 @@ const buildDeps = (overrides: {
   const prisma = {
     organizationSettings: { findFirst: jest.fn().mockResolvedValue(orgSettings) },
     client: { findUnique: jest.fn().mockResolvedValue(client) },
-    payment: { findFirst: jest.fn().mockResolvedValue(payment) },
+    payment: { findMany: jest.fn().mockResolvedValue(payment ? [payment] : []) },
     booking: { findFirst: jest.fn().mockResolvedValue(booking) },
   };
 
@@ -87,7 +87,6 @@ describe('buildInvoicePdfData', () => {
       prisma as never,
       cls as never,
       invoice as never,
-      'pay-1',
     );
 
     expect(data).toEqual({
@@ -110,6 +109,7 @@ describe('buildInvoicePdfData', () => {
       total: 11500,
       currency: 'SAR',
       paymentMethod: 'CASH',
+      payments: [{ date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 11500 }],
       qrDataUrl: null,
     });
   });
@@ -121,23 +121,12 @@ describe('buildInvoicePdfData', () => {
     expect(setKeys[SYSTEM_CONTEXT_CLS_KEY]).toBe(true);
   });
 
-  it('uses the supplied paymentId to resolve the EXACT payment (not the latest)', async () => {
-    const { prisma, cls, invoice } = buildDeps({ paymentId: 'pay-exact' });
-    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'pay-exact');
-    expect(prisma.payment.findFirst).toHaveBeenCalledWith({
-      where: { id: 'pay-exact' },
-      select: { method: true },
-    });
-  });
-
-  it('falls back to the LATEST COMPLETED payment when no paymentId is given', async () => {
-    const { prisma, cls, invoice } = buildDeps({ paymentId: null });
-    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, null);
-    expect(prisma.payment.findFirst).toHaveBeenCalledWith({
-      where: { invoiceId: 'inv-1', status: 'COMPLETED' },
-      orderBy: { createdAt: 'desc' },
-      select: { method: true },
-    });
+  it('queries every COMPLETED payment of the invoice', async () => {
+    const { prisma, cls, invoice } = buildDeps();
+    await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { invoiceId: 'inv-1', status: 'COMPLETED' } }),
+    );
   });
 
   it('falls back to a placeholder "—" client / service / payment when the join is missing', async () => {
@@ -151,6 +140,7 @@ describe('buildInvoicePdfData', () => {
     expect(data.clientName).toBe('—');
     expect(data.serviceName).toBe('—');
     expect(data.paymentMethod).toBe('—');
+    expect(data.payments).toEqual([]);
     // Org settings fallback uses the hard-coded Arabic brand.
     expect(data.sellerNameAr).toBe('مركز سواء');
     expect(data.sellerVatNumber).toBeNull();
@@ -244,7 +234,7 @@ describe('buildInvoicePdfData', () => {
     expect(data.issuedAt).toEqual(new Date('2026-05-24T10:00:00Z'));
   });
 
-  it('falls back to a fresh Date when paidAt is null (so the template never renders an Invalid Date)', async () => {
+  it('keeps paidAt null when the invoice is not paid (never a render-time clock)', async () => {
     const { prisma, cls, invoice } = buildDeps({
       invoice: {
         id: 'inv-1',
@@ -262,12 +252,8 @@ describe('buildInvoicePdfData', () => {
         createdAt: new Date('2026-05-24T10:00:00Z'),
       },
     });
-    const before = Date.now();
     const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
-    const after = Date.now();
-    expect(data.paidAt).toBeInstanceOf(Date);
-    expect(data.paidAt.getTime()).toBeGreaterThanOrEqual(before);
-    expect(data.paidAt.getTime()).toBeLessThanOrEqual(after);
+    expect(data.paidAt).toBeNull();
   });
 
   it('only fetches the booking when the invoice has a bookingId (defensive)', async () => {

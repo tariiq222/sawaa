@@ -44,7 +44,7 @@ describe('GenerateInvoicePdfHandler', () => {
       booking: {
         findFirst: jest.fn().mockResolvedValue({ serviceNameSnapshot: 'استشارة' }),
       },
-      payment: { findFirst: jest.fn().mockResolvedValue(null) },
+      payment: { findMany: jest.fn().mockResolvedValue([]) },
     };
     renderer = { render: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 fake')) };
     storage = { uploadFile: jest.fn().mockResolvedValue('http://minio/finance-invoices/inv-1.pdf') };
@@ -111,7 +111,7 @@ describe('GenerateInvoicePdfHandler', () => {
     prisma.invoice.findUnique.mockImplementation(async () => ({ ...invoice }));
     prisma.invoice.update.mockImplementation(async ({ data }: any) => Object.assign(invoice, data));
     prisma.invoice.updateMany = jest.fn().mockImplementation(async ({ where, data }: any) => {
-      if (invoice.pdfUrl !== where.pdfUrl || invoice.status !== where.status) return { count: 0 };
+      if ((invoice.receiptIssuedAt ?? null) !== where.receiptIssuedAt || invoice.status !== where.status) return { count: 0 };
       Object.assign(invoice, data);
       return { count: 1 };
     });
@@ -132,7 +132,7 @@ describe('GenerateInvoicePdfHandler', () => {
     await receipt.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as never);
 
     expect(renderer.render).toHaveBeenCalledTimes(2);
-    expect(invoice.pdfUrl).toEqual(expect.any(String));
+    expect(invoice.receiptPdfKey).toEqual(expect.any(String));
     expect(prisma.outboxEvent.create).toHaveBeenCalledTimes(1);
   });
 });

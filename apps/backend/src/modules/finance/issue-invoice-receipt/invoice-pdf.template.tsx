@@ -104,11 +104,19 @@ const styles = StyleSheet.create({
   ref: { fontSize: 7, color: '#9ca3af', marginTop: 6, textAlign: 'right' },
 });
 
+export interface InvoicePdfPayment {
+  date: Date;
+  method: string;
+  /** Integer halalas. */
+  amount: number;
+}
+
 export interface InvoicePdfData {
   invoiceNumber: number;
   invoiceId: string;
   issuedAt: Date;
-  paidAt: Date;
+  /** Null until the invoice is PAID. */
+  paidAt: Date | null;
   sellerNameAr: string;
   sellerVatNumber: string | null;
   sellerAddress: string | null;
@@ -124,6 +132,8 @@ export interface InvoicePdfData {
   total: number;
   currency: string;
   paymentMethod: string;
+  /** Every COMPLETED payment, oldest first. */
+  payments: InvoicePdfPayment[];
   /** Base64 data URL for QR PNG. When null, no QR is rendered. */
   qrDataUrl: string | null;
 }
@@ -192,7 +202,7 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoKey}>تاريخ الدفع</Text>
-              <Text style={styles.infoVal}>{formatDateTime(data.paidAt)}</Text>
+              <Text style={styles.infoVal}>{data.paidAt ? formatDateTime(data.paidAt) : '—'}</Text>
             </View>
           </View>
         </View>
@@ -210,6 +220,22 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             </Text>
           </View>
         </View>
+
+        {/* Completed payments */}
+        {data.payments.length > 0 && (
+          <View style={styles.serviceTable}>
+            {data.payments.map((p, i) => (
+              <View key={i} style={styles.serviceBody}>
+                <Text style={styles.colDesc}>
+                  {formatDateTime(p.date)} - {PAYMENT_LABELS[p.method] ?? p.method}
+                </Text>
+                <Text style={styles.colAmt}>
+                  {formatHalalas(p.amount)} {cur}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Totals */}
         <View style={styles.totalsWrap}>

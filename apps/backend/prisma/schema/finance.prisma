@@ -76,6 +76,11 @@ model Invoice {
   paidAt            DateTime?
   pdfUrl            String?
   pdfGeneratedAt    DateTime?
+  /// Frozen paid-receipt object key (bucket finance-invoices). Set once, when the invoice first becomes PAID.
+  receiptPdfKey     String?
+  receiptIssuedAt   DateTime?
+  /// Plain id of the payment that triggered the receipt (no FK).
+  receiptPaymentId  String?
   sentToClientAt    DateTime?
   notes             String?
   createdAt         DateTime      @default(now())

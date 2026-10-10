@@ -20,7 +20,7 @@ export class InvoicePdfRendererService {
       const tlv = buildZatcaQrTlv({
         sellerName: data.sellerNameAr,
         vatNumber: data.sellerVatNumber,
-        timestamp: data.paidAt,
+        timestamp: data.paidAt ?? new Date(),
         totalWithVat: (data.total / 100).toFixed(2),
         vatTotal: (data.vatAmt / 100).toFixed(2),
       });
