@@ -92,7 +92,7 @@ export class IssueInvoiceReceiptHandler {
         select: { lateEntryRecordedAt: true },
       });
     }) : null;
-    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice);
+    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, 'receipt');
     const pdfBuffer = await this.renderer.render(data);
 
     const key = `receipts/${invoice.id}/${paymentId}.pdf`;

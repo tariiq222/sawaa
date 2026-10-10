@@ -15,12 +15,14 @@ export class InvoicePdfRendererService {
     // seller, so it is produced only once the org saves its real VAT
     // registration number in settings; without one the invoice prints with
     // no QR (as the settings screen states). Never invent a number.
-    let qrDataUrl: string | null = data.qrDataUrl;
-    if (!qrDataUrl && data.sellerVatNumber) {
+    // Only a receipt carries a QR, and its timestamp is the real payment time:
+    // without `paidAt` there is nothing truthful to stamp, so no QR is made.
+    let qrDataUrl: string | null = data.kind === "receipt" ? data.qrDataUrl : null;
+    if (!qrDataUrl && data.kind === "receipt" && data.sellerVatNumber && data.paidAt) {
       const tlv = buildZatcaQrTlv({
         sellerName: data.sellerNameAr,
         vatNumber: data.sellerVatNumber,
-        timestamp: data.paidAt ?? new Date(),
+        timestamp: data.paidAt,
         totalWithVat: (data.total / 100).toFixed(2),
         vatTotal: (data.vatAmt / 100).toFixed(2),
       });

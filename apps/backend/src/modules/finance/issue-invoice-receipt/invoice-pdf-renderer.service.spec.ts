@@ -14,6 +14,9 @@ const QRCode = require('qrcode') as { toDataURL: jest.Mock };
 
 describe('InvoicePdfRendererService', () => {
   const baseData: InvoicePdfData = {
+    kind: 'receipt',
+    status: 'PAID',
+    outstanding: 0,
     invoiceNumber: 42,
     invoiceId: 'inv-abc',
     issuedAt: new Date('2026-05-24T10:00:00Z'),
@@ -96,4 +99,16 @@ describe('InvoicePdfRendererService', () => {
       expect(QRCode.toDataURL).not.toHaveBeenCalled();
     }, 30_000);
   });
+
+  it('prints no QR for a statement even when the seller has a VAT number', async () => {
+    const service = new InvoicePdfRendererService();
+    await service.render({ ...baseData, kind: 'statement', paidAt: null });
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+  }, 30_000);
+
+  it('prints no QR for a receipt without paidAt instead of using the current time', async () => {
+    const service = new InvoicePdfRendererService();
+    await service.render({ ...baseData, paidAt: null });
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+  }, 30_000);
 });
