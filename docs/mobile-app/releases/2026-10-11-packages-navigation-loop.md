@@ -8,7 +8,7 @@ Both entries now call `openOrReturnTo` (`lib/navigation.ts`): when the target is
 
 ## Git state
 
-Committed on branch `fix/mobile-packages-nav-loop` (from `develop`). Not pushed or deployed.
+Committed on branch `fix/mobile-packages-nav-loop` (from `develop`), open as PR #202. Not merged or deployed.
 
 ## Checks
 
