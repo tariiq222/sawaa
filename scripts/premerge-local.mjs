@@ -31,6 +31,8 @@ function candidate() {
   const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
     { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).split('\0').filter(Boolean).sort();
   const hash = createHash('sha256').update(sha);
+  // The staged tree is what the next commit contains, so hash index entries too.
+  hash.update(execFileSync('git', ['ls-files', '--stage', '-z'], { cwd: root, maxBuffer: 64 * 1024 * 1024 }));
   for (const file of files) {
     hash.update('\0').update(file).update('\0');
     const path = resolve(root, file);

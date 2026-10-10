@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createMcpPolicy } from './mcp-policy.mjs';
+import { createMcpPolicy, unreviewedTestCode } from './mcp-policy.mjs';
 
-const policy = createMcpPolicy('/repo', [55200, 55203, 55205]);
+const policy = createMcpPolicy('/repo', [55200, 55203, 55205], { unreviewed: () => [] });
 const call = (name, args) => ({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
 
 test('writer tools stay under e2e/playwright', () => {
@@ -36,13 +36,19 @@ test('file reads stay under e2e/playwright', () => {
   assert.match(policy(call('browser_file_upload', { paths: '.env' })), /e2e\/playwright/);
 });
 
-test('run_code is denied and session-written files never run as seeds', () => {
-  const session = createMcpPolicy('/repo', [55200, 55203, 55205]);
+test('run_code is denied and only committed test code can run', () => {
+  let pending = [];
+  const session = createMcpPolicy('/repo', [55200, 55203, 55205], { unreviewed: () => pending });
   assert.match(session(call('browser_run_code', { code: 'async page => page.screenshot({ path: "/repo/x" })' })), /disabled/);
-  assert.match(session(call('generator_write_test', { fileName: 'e2e/playwright/seed.spec.ts', code: '' })), /reserved/);
   assert.equal(session(call('generator_write_test', { fileName: 'e2e/playwright/website/new.spec.ts', code: '' })), null);
-  assert.match(session(call('generator_setup_page', { seedFile: 'e2e/playwright/website/new.spec.ts' })), /written in this session/);
-  assert.equal(session(call('generator_setup_page', { seedFile: 'e2e/playwright/website/smoke.spec.ts' })), null);
+  pending = ['e2e/playwright/website/new.spec.ts'];
+  for (const name of ['test_run', 'test_debug', 'test_list', 'planner_setup_page', 'generator_setup_page']) {
+    assert.match(session(call(name, {})), /review and commit test code/, name);
+  }
+  assert.equal(session(call('browser_snapshot', {})), null);
+  pending = [];
+  assert.equal(session(call('test_run', {})), null);
+  assert.equal(session(call('generator_setup_page', { seedFile: 'e2e/playwright/seed.spec.ts' })), null);
 });
 
 test('navigation stays on the local loopback origins', () => {
@@ -57,4 +63,9 @@ test('other messages pass through', () => {
   assert.equal(policy(call('browser_click', { ref: 'e1' })), null);
   assert.equal(policy({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), null);
   assert.equal(policy({ jsonrpc: '2.0', method: 'notifications/initialized' }), null);
+});
+
+test('the git check reports uncommitted test code only', () => {
+  const root = new URL('../..', import.meta.url).pathname;
+  assert.ok(unreviewedTestCode(root).every(path => path.startsWith('e2e/playwright/') && /\.[cm]?[jt]sx?$/.test(path)));
 });
