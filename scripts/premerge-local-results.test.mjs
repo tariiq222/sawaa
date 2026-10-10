@@ -10,7 +10,7 @@ test('a zero-exit Playwright run cannot pass with skipped, flaky, or missing tes
     suites: [{ file: 'website/smoke.spec.ts', specs: [{ file: 'website/smoke.spec.ts', tests: [website] }],
       suites: [{ specs: [{ file: 'dashboard/smoke.spec.ts', tests: [dashboard] }] }] }] };
   assert.equal(assertPlaywrightReport(report), 2);
-  // A renamed or unmatched smoke spec must not let one project, or a blank seed, satisfy the gate.
+  // A renamed or unmatched smoke spec must not let one project, or an unrelated spec, satisfy the gate.
   assert.throws(() => assertPlaywrightReport({ ...report,
     suites: [{ specs: [{ file: 'website/smoke.spec.ts', tests: [website] }],
       suites: [{ specs: [{ file: 'website/smoke.spec.ts', tests: [website] }] }] }] }), /dashboard did not run/);

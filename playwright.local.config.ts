@@ -44,8 +44,7 @@ export default defineConfig({
   projects: [
     {
       name: 'website',
-      // seed.spec.ts is the default seed the planner/generator create when none is given.
-      testMatch: ['website/**/*.spec.ts', 'seed.spec.ts'],
+      testMatch: 'website/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://127.0.0.1:55205',
@@ -58,7 +57,7 @@ export default defineConfig({
     },
     {
       name: 'dashboard',
-      testMatch: ['dashboard/**/*.spec.ts', 'seed.spec.ts'],
+      testMatch: 'dashboard/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://127.0.0.1:55203',
