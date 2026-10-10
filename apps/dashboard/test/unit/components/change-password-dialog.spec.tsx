@@ -27,6 +27,8 @@ vi.mock("@/components/locale-provider", () => ({
         "changePassword.currentRequired": "كلمة المرور الحالية مطلوبة",
         "changePassword.newTooShort": "يجب أن تكون 8 أحرف على الأقل",
         "changePassword.confirmRequired": "يرجى تأكيد كلمة المرور",
+        "auditStaff.passwordUppercase": "يجب إضافة حرف إنجليزي كبير",
+        "auditStaff.passwordDigit": "يجب إضافة رقم",
         "changePassword.mismatch": "كلمتا المرور غير متطابقتين",
       }
       return map[k] ?? k
@@ -77,13 +79,13 @@ describe("ChangePasswordDialog", () => {
     const form = document.getElementById("change-password-form") as HTMLFormElement
     const inputs = form.querySelectorAll("input")
     await userEvent.type(inputs[0], "oldpass123")
-    await userEvent.type(inputs[1], "newpass123")
-    await userEvent.type(inputs[2], "newpass123")
+    await userEvent.type(inputs[1], "Newpass123")
+    await userEvent.type(inputs[2], "Newpass123")
 
     await userEvent.click(screen.getByText("حفظ"))
 
     await waitFor(() => {
-      expect(changePasswordMock).toHaveBeenCalledWith("oldpass123", "newpass123")
+      expect(changePasswordMock).toHaveBeenCalledWith("oldpass123", "Newpass123")
     })
   })
 
@@ -93,7 +95,7 @@ describe("ChangePasswordDialog", () => {
     const form = document.getElementById("change-password-form") as HTMLFormElement
     const inputs = form.querySelectorAll("input")
     await userEvent.type(inputs[0], "oldpass123")
-    await userEvent.type(inputs[1], "newpass123")
+    await userEvent.type(inputs[1], "Newpass123")
     await userEvent.type(inputs[2], "different")
 
     await userEvent.click(screen.getByText("حفظ"))
@@ -124,8 +126,8 @@ describe("ChangePasswordDialog", () => {
 
     const form = document.getElementById("change-password-form") as HTMLFormElement
     const inputs = form.querySelectorAll("input")
-    await userEvent.type(inputs[1], "newpass123")
-    await userEvent.type(inputs[2], "newpass123")
+    await userEvent.type(inputs[1], "Newpass123")
+    await userEvent.type(inputs[2], "Newpass123")
 
     await userEvent.click(screen.getByText("حفظ"))
 
@@ -134,3 +136,17 @@ describe("ChangePasswordDialog", () => {
     })
   })
 })
+
+for (const [password, message] of [["lowercase123", "يجب إضافة حرف إنجليزي كبير"], ["UppercaseOnly", "يجب إضافة رقم"]]) {
+  it(`blocks a password missing a server-required character: ${password}`, async () => {
+    changePasswordMock.mockClear()
+    render(<ChangePasswordDialog open={true} onOpenChange={vi.fn()} />)
+    const inputs = document.getElementById("change-password-form")!.querySelectorAll("input")
+    await userEvent.type(inputs[0], "Oldpassword123")
+    await userEvent.type(inputs[1], password)
+    await userEvent.type(inputs[2], password)
+    await userEvent.click(screen.getByText("حفظ"))
+    expect(await screen.findByText(message)).toBeInTheDocument()
+    expect(changePasswordMock).not.toHaveBeenCalled()
+  })
+}

@@ -26,7 +26,7 @@ export function mapApiForm(f: IntakeFormApi): IntakeForm {
     type: f.type,
     scope: f.scope,
     scopeId,
-    scopeLabel: null,
+    scopeLabel: f.scopeLabel ?? null,
     isActive: f.isActive,
     fieldsCount: fields.length,
     submissionsCount: f.submissionsCount,

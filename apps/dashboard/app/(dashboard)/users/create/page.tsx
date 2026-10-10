@@ -3,7 +3,7 @@ import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function CreateUserPage() {
   return (
-    <PermissionGuard module="user" action="create">
+    <PermissionGuard module="user" action="manage">
       <UserFormPage mode="create" />
     </PermissionGuard>
   )

@@ -37,8 +37,8 @@ describe("package-reports api", () => {
     })
     expect(getMock).toHaveBeenCalledWith("/dashboard/ops/reports/packages", {
       report: "SALES",
-      from: "2026-01-01",
-      to: "2026-01-31",
+      from: "2025-12-31T21:00:00.000Z",
+      to: "2026-01-31T20:59:59.999Z",
     })
   })
 
@@ -49,9 +49,9 @@ describe("package-reports api", () => {
     "REFUNDED",
   ])("forwards the report discriminator verbatim — %s", async (report) => {
     getMock.mockResolvedValueOnce(null)
-    await fetchPackageReport({ report, from: "2026-02-01", to: "2026-02-28" })
+    await fetchPackageReport({ report, from: "2026-01-31T21:00:00.000Z", to: "2026-02-27T21:00:00.000Z" })
     const [, params] = getMock.mock.calls[0]
-    expect(params).toEqual({ report, from: "2026-02-01", to: "2026-02-28" })
+    expect(params).toEqual({ report, from: "2026-01-31T21:00:00.000Z", to: "2026-02-27T21:00:00.000Z" })
   })
 
   it("returns the discriminator-tagged union (SALES shape)", async () => {
@@ -72,8 +72,8 @@ describe("package-reports api", () => {
     getMock.mockResolvedValueOnce(payload)
     const result = await fetchPackageReport({
       report: "SALES",
-      from: "2026-01-01",
-      to: "2026-01-31",
+      from: "2025-12-31T21:00:00.000Z",
+      to: "2026-01-31T20:59:59.999Z",
     })
     expect(result.kind).toBe("SALES")
     if (result.kind === "SALES") {
@@ -92,8 +92,8 @@ describe("package-reports api", () => {
     })
     await fetchPackageReport({
       report: "CONSUMPTION",
-      from: "2026-01-01",
-      to: "2026-01-31",
+      from: "2025-12-31T21:00:00.000Z",
+      to: "2026-01-31T20:59:59.999Z",
     })
     const [, params] = getMock.mock.calls[0]
     expect(params.report).toBe("CONSUMPTION")

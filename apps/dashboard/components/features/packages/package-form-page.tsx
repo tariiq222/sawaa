@@ -121,7 +121,7 @@ export function PackageFormPage(props: Props) {
         nameEn: strictData.nameEn || undefined,
         descriptionAr: strictData.descriptionAr || undefined,
         descriptionEn: strictData.descriptionEn || undefined,
-        imageUrl: strictData.imageUrl?.startsWith("blob:")
+        imageUrl: (isEdit && strictData.imageUrl === state.pkg?.imageUrl) || strictData.imageUrl?.startsWith("blob:")
           ? undefined
           : (strictData.imageUrl ?? null),
         iconName: strictData.iconName ?? null,

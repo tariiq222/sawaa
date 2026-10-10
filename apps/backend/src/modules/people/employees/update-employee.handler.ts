@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -35,6 +37,7 @@ export class UpdateEmployeeHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly images: ResolveEmployeeImageHandler,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(cmd: UpdateEmployeeCommand) {
@@ -111,6 +114,7 @@ export class UpdateEmployeeHandler {
       await this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => undefined);
     }
 
+    if (cmd.isActive !== undefined && cmd.isActive !== wasActive) await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
     return updated;
   }
 

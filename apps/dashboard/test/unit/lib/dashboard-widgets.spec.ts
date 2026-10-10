@@ -57,8 +57,8 @@ describe('getVisibleWidgets', () => {
     expect(v.revenueChart).toBe(false)
     expect(v.recentPayments).toBe(false)
     expect(v.topPerformers).toBe(false)
-    expect(v.stats.bookings).toBe(true)
-    expect(v.stats.clients).toBe(true)
+    expect(v.stats.bookings).toBe(false)
+    expect(v.stats.clients).toBe(false)
     expect(v.todayTimeline).toBe(true)
     expect(v.todayPulse).toBe(true)
   })
@@ -71,3 +71,8 @@ describe('getVisibleWidgets', () => {
     expect(v.activityFeed).toBe(true)
   })
 })
+it('hides month metrics without report:read and pending stats suppressed by server role',()=>{
+ const v=getVisibleWidgets('RECEPTIONIST',allow(['booking:*','client:*','payment:read']));
+ expect(v.stats.bookings).toBe(false); expect(v.stats.clients).toBe(false); expect(v.stats.revenue).toBe(false);
+ expect(v.stats.pendingPayments).toBe(false); expect(v.todayPulse).toBe(true);
+});

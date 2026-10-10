@@ -107,3 +107,9 @@ export function familyOptionPreview(option: PackageFamilyOptionInput) {
 export function familyFormHasOptions(value: PackageFamilyInput): boolean {
   return value.options.length > 0
 }
+
+/** Optional English names must not serialize blank strings into strict DTOs. */
+export function normalizePackageFamilyInput(value: PackageFamilyInput, edit: boolean): PackageFamilyInput {
+  const optionalName = (name: string | null | undefined) => name?.trim() || (edit ? null : undefined)
+  return { ...value, nameAr: value.nameAr.trim(), nameEn: optionalName(value.nameEn), options: value.options.map(option => ({ ...option, nameAr: option.nameAr.trim(), nameEn: optionalName(option.nameEn) })) }
+}

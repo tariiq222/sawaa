@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -94,9 +94,10 @@ export async function submitProgram(args: {
 export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
   const { t } = useLocale();
   const router = useRouter();
+  const [saveError, setSaveError] = useState<string | null>(null);
   const create = useCreateProgram();
   const update = useUpdateProgram();
-  const { data: existing, isLoading: loadingExisting } = useProgram(mode === 'edit' ? programId ?? '' : '');
+  const { data: existing, isLoading: loadingExisting, isError: loadError } = useProgram(mode === 'edit' ? programId ?? '' : '');
 
   const form = useForm<CreateProgramFormValues>({
     resolver: zodResolver(createProgramSchema) as never,
@@ -110,20 +111,26 @@ export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
   async function onSubmit(values: CreateProgramFormValues) {
     // submitProgram routes the mutation based on mode — create uses
     // useCreateProgram, edit uses useUpdateProgram with the programId.
-    const result = await submitProgram({
-      mode,
-      programId,
-      create,
-      update,
-      values,
-    });
-    const id = (result as { id: string }).id;
-    router.push(`/programs/${id}`);
+    setSaveError(null);
+    try {
+      const result = await submitProgram({
+        mode,
+        programId,
+        create,
+        update,
+        values,
+      });
+      router.push(`/programs/${result.id}`);
+    } catch {
+      setSaveError(t('auditOperations.saveError'));
+    }
   }
 
   if (mode === 'edit' && loadingExisting) {
     return <p className="text-sm text-(--text-muted)">{t('common.loading')}</p>;
   }
+
+  if (mode === 'edit' && (loadError || !existing)) return <p role="alert">{t('common.errorLoading')}</p>;
 
   const pending = mode === 'edit' ? update.isPending : create.isPending;
 
@@ -135,6 +142,7 @@ export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
         </h1>
       </header>
 
+      {saveError && <p role="alert" className="text-error">{saveError}</p>}
       <Section title={t('programs.form.section.basics')}>
         <ProgramFormBasics form={form as never} />
       </Section>

@@ -9,19 +9,13 @@ import { getActivityLogColumns } from "@/components/features/shared/activity-log
 import { useActivityLogs } from "@/hooks/use-activity-log"
 import { useLocale } from "@/components/locale-provider"
 
-const MODULES = [
-  "bookings", "users", "employees", "payments",
-  "invoices", "services", "roles", "branding", "ratings",
-]
-
-const ACTIONS = [
-  "created", "updated", "deleted", "login", "logout", "approved", "rejected",
-]
+import { ACTIVITY_MODULES as MODULES, ACTIVITY_ACTIONS as ACTIONS, activityModuleLabel, activityActionLabel } from "@/lib/activity-log-label"
 
 export function ActivityLogTab() {
   const { t, locale } = useLocale()
   const {
     logs,
+    meta, page, setPage,
     isLoading,
     error,
     module,
@@ -49,7 +43,7 @@ export function ActivityLogTab() {
             placeholder: t("activityLog.module"),
             options: [
               { value: "all", label: t("activityLog.allModules") },
-              ...MODULES.map((m) => ({ value: m, label: m })),
+              ...MODULES.map((m) => ({ value: m, label: activityModuleLabel(m, t) })),
             ],
             onValueChange: (v) => setModule(v === "all" ? undefined : v),
           },
@@ -59,7 +53,7 @@ export function ActivityLogTab() {
             placeholder: t("activityLog.action"),
             options: [
               { value: "all", label: t("activityLog.allActions") },
-              ...ACTIONS.map((a) => ({ value: a, label: a })),
+              ...ACTIONS.map((a) => ({ value: a, label: activityActionLabel(a, t) })),
             ],
             onValueChange: (v) => setAction(v === "all" ? undefined : v),
           },
@@ -88,6 +82,12 @@ export function ActivityLogTab() {
         <DataTable
           columns={columns}
           data={logs}
+          serverPaginated
+          page={page}
+          totalPages={meta?.totalPages ?? 1}
+          hasPreviousPage={meta?.hasPreviousPage ?? false}
+          hasNextPage={meta?.hasNextPage ?? false}
+          onPageChange={setPage}
           emptyTitle={t("activityLog.empty.title")}
           emptyDescription={t("activityLog.empty.description")}
         />

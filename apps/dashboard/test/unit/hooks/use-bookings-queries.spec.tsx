@@ -49,6 +49,13 @@ function makeWrapper() {
 describe("useBookings", () => {
   beforeEach(() => { vi.clearAllMocks() })
 
+  it("starts the cancellation card destination with all-time filters on the first request", async () => {
+    fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { result } = renderHook(() => useBookings({ status: "cancel_requested", dateFrom: "", dateTo: "" }), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(fetchBookings.mock.calls[0][0]).toMatchObject({ status: "cancel_requested", sortOrder: "desc", dateFrom: undefined, dateTo: undefined })
+  })
+
   it("fetches bookings and returns items", async () => {
     const items = [{ id: "bk-1", status: "PENDING" }]
     fetchBookings.mockResolvedValue({ items, meta: { total: 1 } })

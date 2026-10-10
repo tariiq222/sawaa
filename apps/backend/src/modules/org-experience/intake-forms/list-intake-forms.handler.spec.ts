@@ -53,3 +53,14 @@ describe('ListIntakeFormsHandler', () => {
     }));
   });
 });
+
+describe('scope labels on intake forms', () => {
+  it('resolves employee/service/branch names without a first-page lookup', async () => {
+    const prisma: any = {
+      intakeForm: {findMany: jest.fn().mockResolvedValue([{id:'f1',scope:'SERVICE',scopeId:'s200',type:'PRE_SESSION',fields:[],_count:{responses:0}}])},
+      service: {findMany:jest.fn().mockResolvedValue([{id:'s200',nameAr:'خدمة بعيدة',nameEn:'Later service'}])},
+      employee: {findMany:jest.fn().mockResolvedValue([])}, branch: {findMany:jest.fn().mockResolvedValue([])},
+    };
+    expect(await new ListIntakeFormsHandler(prisma).execute({})).toEqual([expect.objectContaining({scopeLabel:'خدمة بعيدة'})]);
+  });
+});

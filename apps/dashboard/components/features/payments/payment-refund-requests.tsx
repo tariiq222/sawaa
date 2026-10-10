@@ -11,7 +11,7 @@ import type { Payment, PaymentRefundRequest } from "@/lib/types/payment"
 export function PaymentRefundRequests({ payment }: { payment: Payment }) {
   const { t } = useLocale()
   const { canDo } = useAuth()
-  const canReview = payment.gatewayRef ? canDo("setting", "manage") : canDo("invoice", "manage")
+  const canReview = payment.method === "ONLINE_CARD" ? canDo("setting", "manage") : canDo("payment", "update")
   return <section className="flex flex-col gap-3 sm:col-span-2" aria-label={t("refund.review.title")}>
     <h3 className="text-sm font-semibold">{t("refund.review.title")}</h3>
     <p className="text-sm text-muted-foreground">{t("refund.review.description")}</p>
@@ -29,7 +29,7 @@ function RefundRequestRow({ payment, request, canReview }: { payment: Payment; r
   const submitting = useRef(false)
   const status = request.status === "PENDING_REVIEW" ? result ?? request.status : request.status
   const pending = status === "PENDING_REVIEW" && canReview
-  const manual = !payment.gatewayRef
+  const manual = payment.method !== "ONLINE_CARD"
   const reasonId = `refund-review-reason-${request.id}`
   const knownStatus = ["PENDING_REVIEW", "PROCESSING", "COMPLETED", "FAILED", "DENIED", "MANUAL_REVIEW"].includes(status)
 

@@ -1,6 +1,7 @@
 // EXCEPTION: 315 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19; size +9 added 2026-08-26 for clinic-local tab date helpers (todayClinicYmd / clinicWeekRange / clinicMonthRange).
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { Button, Skeleton } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -22,7 +23,7 @@ import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { showApiError } from "@/lib/mutation-helpers"
 import { useBookingsExport } from "@/hooks/use-bookings-export"
 import { clinicMonthRange, clinicWeekRange, todayClinicYmd } from "@/lib/utils"
-import type { Booking, CancellationReason } from "@/lib/types/booking"
+import type { Booking, BookingStatus, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
   onRowClick: (b: Booking, tab?: "details" | "reschedule" | "invoice") => void
@@ -32,10 +33,16 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const { t, locale } = useLocale()
   const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
-  const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage, query } = useBookings()
+  const searchParams = useSearchParams()
+  const statusParam = searchParams?.get("status") ?? null
+  const statuses: BookingStatus[] = ["pending", "awaiting_payment", "pending_group_fill", "deposit_paid", "confirmed", "completed", "cancelled", "cancel_requested", "no_show", "expired"]
+  const initialStatus = statuses.includes(statusParam as BookingStatus) ? statusParam as BookingStatus : "all"
+  const initialAll = searchParams?.get("tab") === "all"
+
+  const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage, query } = useBookings({ status: initialStatus, ...(initialAll ? { dateFrom: "", dateTo: "" } : {}) })
   const { confirmMut, checkInMut, completeMut, noShowMut, adminCancelMut, deleteMut } = useBookingMutations()
   const { employees } = useEmployees()
-  const [activeTimeTab, setActiveTimeTab] = useState("today")
+  const [activeTimeTab, setActiveTimeTab] = useState(initialAll ? "all" : "today")
   const [search, setSearch] = useState("")
   const bookingsExport = useBookingsExport()
 
@@ -201,6 +208,9 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
             options: [
               { value: "all", label: t("bookings.filters.allStatuses") },
               { value: "pending", label: t("bookings.filters.pending") },
+              { value: "awaiting_payment", label: t("bookings.filters.awaitingPayment") },
+              { value: "pending_group_fill", label: t("bookings.filters.pendingGroupFill") },
+              { value: "deposit_paid", label: t("bookings.filters.depositPaid") },
               { value: "confirmed", label: t("bookings.filters.confirmed") },
               { value: "completed", label: t("bookings.filters.completed") },
               { value: "cancelled", label: t("bookings.filters.cancelled") },
@@ -236,7 +246,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
       />
 
       {error && (!bookings || bookings.length === 0) && (
-        <ErrorBanner message={error} onRetry={refresh} retryLabel={t("bookings.filters.reset")} />
+        <ErrorBanner message={error} onRetry={refresh} retryLabel={t("common.retry")} />
       )}
 
       {loading && (!bookings || bookings.length === 0) ? (

@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
@@ -49,6 +50,7 @@ describe('UpdateEmployeeHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },
         UpdateEmployeeHandler,
         { provide: PrismaService, useValue: prisma },

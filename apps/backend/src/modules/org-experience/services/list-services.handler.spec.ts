@@ -22,7 +22,7 @@ describe('ListServicesHandler', () => {
     const module = await Test.createTestingModule({
       providers: [
         ListServicesHandler,
-        { provide: PrismaService, useValue: { $transaction: jest.fn() } },
+        { provide: PrismaService, useValue: { $transaction: jest.fn(), employeeService: tx.employeeService } },
         {
           provide: RlsTransactionService,
           useValue: { withTransaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)) },
@@ -56,6 +56,15 @@ describe('ListServicesHandler', () => {
     await handler.execute({historicalContext:true,isActive:true,includeHidden:true} as any);
     expect(tx.service.findMany.mock.calls[0][0].where).not.toHaveProperty('archivedAt');
     expect(tx.service.findMany.mock.calls[0][0].where).not.toHaveProperty('isActive');
+  });
+
+  it('filters by the branch of an active assigned practitioner and sorts before pagination', async () => {
+    (tx.employeeService as any).findMany = jest.fn().mockResolvedValue([{serviceId: 'eligible-service'}]);
+    await buildModule();
+    await handler.execute({branchId:'branch', departmentId:'dept', sortBy:'price', sortOrder:'asc'} as any);
+    expect(tx.service.findMany.mock.calls[0][0]).toMatchObject({where:{id:{in:['eligible-service']},category:{departmentId:'dept'}},orderBy:[{price:'asc'},{id:'asc'}]});
+    expect(tx.service.count.mock.calls[0][0].where).toMatchObject({id:{in:['eligible-service']}});
+    expect((tx.employeeService as any).findMany).toHaveBeenCalledWith({where:{isActive:true,employee:{isActive:true,branches:{some:{branchId:'branch'}}}},select:{serviceId:true}});
   });
 
   it('should be defined', async () => {

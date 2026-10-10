@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto';
@@ -10,6 +10,18 @@ const toBoolean = ({ value }: { value: unknown }) => {
 };
 
 export class ListServicesDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Filter by a branch where an active assigned practitioner works', format: 'uuid' })
+  @IsOptional() @IsUUID() branchId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by the category department', format: 'uuid' })
+  @IsOptional() @IsUUID() departmentId?: string;
+
+  @ApiPropertyOptional({ description: 'Global ordering field', enum: ['createdAt', 'nameAr', 'nameEn', 'price', 'durationMins', 'isActive'] })
+  @IsOptional() @IsIn(['createdAt', 'nameAr', 'nameEn', 'price', 'durationMins', 'isActive']) sortBy?: 'createdAt' | 'nameAr' | 'nameEn' | 'price' | 'durationMins' | 'isActive';
+
+  @ApiPropertyOptional({ description: 'Global ordering direction', enum: ['asc', 'desc'] })
+  @IsOptional() @IsIn(['asc', 'desc']) sortOrder?: 'asc' | 'desc';
+
   @ApiPropertyOptional({ description: 'Include historical inactive/archived references for staff recording', example: true })
   @IsOptional() @Transform(({ obj }) => obj.historicalContext === 'true' ? true : obj.historicalContext === 'false' ? false : obj.historicalContext) @IsBoolean() historicalContext?: boolean;
 

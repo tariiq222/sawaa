@@ -18,14 +18,14 @@ export class UpdateDepartmentDto {
   @Matches(NOT_WHITESPACE_ONLY, { message: 'nameEn must not be whitespace only' })
   nameEn?: string;
 
-  @ApiPropertyOptional({ description: 'Department description in Arabic', example: 'قسم طب وجراحة الفم والأسنان' })
-  @IsOptional() @IsString() @MaxLength(1000) descriptionAr?: string;
+  @ApiPropertyOptional({ description: 'Department description in Arabic; null clears it', type: String, nullable: true, example: 'قسم طب وجراحة الفم والأسنان' })
+  @IsOptional() @IsString() @MaxLength(1000) descriptionAr?: string | null;
 
-  @ApiPropertyOptional({ description: 'Department description in English', example: 'Oral and dental surgery department' })
-  @IsOptional() @IsString() @MaxLength(1000) descriptionEn?: string;
+  @ApiPropertyOptional({ description: 'Department description in English; null clears it', type: String, nullable: true, example: 'Oral and dental surgery department' })
+  @IsOptional() @IsString() @MaxLength(1000) descriptionEn?: string | null;
 
-  @ApiPropertyOptional({ description: 'Icon identifier (e.g. Lucide icon name)', example: 'tooth' })
-  @IsOptional() @IsString() @MaxLength(100) icon?: string;
+  @ApiPropertyOptional({ description: 'Icon identifier; null clears it', type: String, nullable: true, example: 'tooth' })
+  @IsOptional() @IsString() @MaxLength(100) icon?: string | null;
 
   @ApiPropertyOptional({ description: 'Whether the department is visible to clients', example: true })
   @IsOptional() @IsBoolean() isVisible?: boolean;

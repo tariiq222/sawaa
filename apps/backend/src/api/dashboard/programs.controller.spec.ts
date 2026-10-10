@@ -1,3 +1,4 @@
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -79,6 +80,17 @@ describe('DashboardProgramsController (authorization)', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     await app.init();
+  });
+
+  it('documents the enriched programs response contract', () => {
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().build());
+    expect(document.paths['/dashboard/programs/{id}']?.get?.responses['200']).toMatchObject({
+      content: {'application/json': {schema: {$ref: '#/components/schemas/ProgramDetailResponseDto'}}},
+    });
+    const schema = document.components?.schemas?.['ProgramDetailResponseDto'] as {properties: Record<string,unknown>};
+    expect(Object.keys(schema.properties)).toEqual(expect.arrayContaining(['supervisors', 'enrollments']));
+    expect(document.components?.schemas?.ProgramEnrollmentResponseDto).toMatchObject({properties:{clientName:{type:'string',nullable:true},booking:{$ref:'#/components/schemas/ProgramEnrollmentBookingResponseDto'}}});
+    expect(document.components?.schemas?.ProgramSupervisorResponseDto).toMatchObject({properties:{name:{type:'string'},nameEn:{type:'string',nullable:true}}});
   });
 
   afterAll(async () => {

@@ -74,7 +74,16 @@ describe("date helpers", () => {
     })
 
     it("formats valid values for datetime-local inputs", () => {
-      expect(formatDateTimeLocalValue("2026-04-26T10:30:00.000Z")).toBe("2026-04-26T10:30")
+      expect(formatDateTimeLocalValue("2026-04-26T10:30:00.000Z")).toBe("2026-04-26T13:30")
     })
   })
+  it("formats Saudi calendar dates independently of the browser timezone", () => {
+    const previous = process.env.TZ
+    process.env.TZ = "America/New_York"
+    try {
+      expect(formatDatePattern("2026-10-10T22:00:00Z", "yyyy-MM-dd HH:mm")).toBe("2026-10-11 01:00")
+      expect(formatLocaleDate("2026-10-10T22:00:00Z", "en", {year:"numeric",month:"2-digit",day:"2-digit"})).toBe("10/11/2026")
+    } finally { process.env.TZ = previous }
+  })
+
 })

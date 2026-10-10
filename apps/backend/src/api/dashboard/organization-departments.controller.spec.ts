@@ -1,3 +1,4 @@
+import { GetDepartmentHandler } from '../../modules/org-config/departments/get-department.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -23,6 +24,7 @@ describe('DashboardOrganizationDepartmentsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [DashboardOrganizationDepartmentsController],
       providers: [
+        { provide: GetDepartmentHandler, useValue: {execute: jest.fn().mockResolvedValue({id: "requested"})} },
         { provide: CreateDepartmentHandler, useValue: mockCreate },
         { provide: UpdateDepartmentHandler, useValue: mockUpdate },
         { provide: ListDepartmentsHandler, useValue: mockList },
@@ -56,6 +58,11 @@ describe('DashboardOrganizationDepartmentsController (e2e)', () => {
 
   const validDepartment = { nameAr: 'قسم الأسنان' };
   const departmentId = '00000000-0000-4000-a000-000000000001';
+
+  it('loads one department independently of paginated lists', async () => {
+    await request(app.getHttpServer()).get('/dashboard/organization/departments/00000000-0000-4000-a000-000000000001').expect(200);
+    expect(app.get(GetDepartmentHandler).execute).toHaveBeenCalledWith({departmentId:'00000000-0000-4000-a000-000000000001'});
+  });
 
   describe('OpenAPI response contracts', () => {
     it.each([

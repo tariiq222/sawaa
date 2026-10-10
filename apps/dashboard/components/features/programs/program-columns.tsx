@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@sawaa/ui';
+import Link from 'next/link';
 import type { ProgramSummary } from '@/lib/types/program';
 import { halalasStringToSar } from '@/lib/schemas/program.schema';
 import { ProgramStatusBadge } from './program-status-badge';
@@ -10,7 +10,7 @@ interface ProgramColumnsProps {
   t: (key: string) => string;
 }
 
-export function programColumns({ onSelect, t }: ProgramColumnsProps) {
+export function programColumns({ t }: ProgramColumnsProps) {
   return [
     {
       id: 'ref',
@@ -25,13 +25,12 @@ export function programColumns({ onSelect, t }: ProgramColumnsProps) {
       header: t('programs.column.name'),
       accessorFn: (p: ProgramSummary) => p.nameAr,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
-        <Button
-          variant="link"
+        <Link
+          href={`/programs/${row.original.id}`}
           className="h-auto p-0 font-medium"
-          onClick={() => onSelect(row.original.id)}
         >
           {row.original.nameAr}
-        </Button>
+        </Link>
       ),
     },
     {

@@ -11,6 +11,7 @@ export interface Employee {
   ref: number
   userId: string
   title: string | null
+  nameEn?: string | null
   nameAr: string | null
   specialty: string
   specialtyAr: string | null
@@ -182,20 +183,20 @@ export interface CreateEmployeePayload {
 }
 
 export interface UpdateEmployeePayload {
-  title?: string
+  title?: string | null
   nameAr?: string
   nameEn?: string
   email?: string
-  phone?: string
+  phone?: string | null
   gender?: "MALE" | "FEMALE"
   employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT"
-  specialty?: string
-  specialtyAr?: string
-  bio?: string
-  bioAr?: string
+  specialty?: string | null
+  specialtyAr?: string | null
+  bio?: string | null
+  bioAr?: string | null
   experience?: number
-  education?: string
-  educationAr?: string
+  education?: string | null
+  educationAr?: string | null
   isActive?: boolean
   avatarUrl?: string | null
   slug?: string | null

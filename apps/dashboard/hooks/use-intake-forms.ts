@@ -34,7 +34,7 @@ function updateParams(
     if (val == null || val === "") params.delete(key)
     else params.set(key, val)
   }
-  router.push(`${pathname}?${params.toString()}`)
+  router.replace(`${pathname}?${params.toString()}`)
 }
 
 export function useIntakeForms(initialQuery?: IntakeFormListQuery) {
@@ -83,7 +83,7 @@ export function useIntakeForms(initialQuery?: IntakeFormListQuery) {
     ...(urlIsActive !== undefined ? { isActive: urlIsActive } : {}),
   }
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.intakeForms.list(query),
     queryFn: () => fetchIntakeForms(query),
     placeholderData: (prev) => prev,
@@ -91,9 +91,10 @@ export function useIntakeForms(initialQuery?: IntakeFormListQuery) {
   })
 
   return {
-    forms: data ?? [],
+    forms: (data ?? []).filter(f => !urlSearch.trim() || `${f.nameAr} ${f.nameEn ?? ""}`.toLocaleLowerCase().includes(urlSearch.trim().toLocaleLowerCase())),
     meta: null,
     isLoading,
+    refetch,
     error: error?.message ?? null,
     search: urlSearch,
     setSearch,

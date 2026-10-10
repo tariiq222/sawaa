@@ -36,7 +36,7 @@ export default function DashboardError({
           {t("error.somethingWrong")}
         </h2>
         <p className="max-w-md text-sm text-muted-foreground">
-          {error.message || t("error.unexpected")}
+          {t("error.unexpected")}
         </p>
       </div>
       <Button variant="outline" onClick={reset} className="gap-2">

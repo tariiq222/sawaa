@@ -9,6 +9,7 @@ import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 
@@ -33,6 +34,7 @@ function IntakeFormsPageInner() {
 
   const {
     forms: rawForms,
+    isLoading, error, refetch,
     search,
     setSearch,
     isActive,
@@ -53,7 +55,7 @@ function IntakeFormsPageInner() {
         onSuccess: () => toast.success(t("intakeForms.deleteSuccess")),
         onError: () => toast.error(t("intakeForms.deleteError")),
       }),
-    onPreview: (_form: IntakeForm) => router.push(`/intake-forms/${_form.id}/edit`),
+    onPreview: (_form: IntakeForm) => router.push(`/intake-forms/${_form.id}`),
     onToggleActive: (form: IntakeForm, value: boolean) =>
       update(
         { formId: form.id, payload: { isActive: value } },
@@ -109,12 +111,13 @@ function IntakeFormsPageInner() {
         onReset={resetFilters}
       />
 
-      <DataTable
+      {error && <ErrorBanner message={t("common.errorLoading")} onRetry={() => refetch()} />}
+      {isLoading ? <p role="status">{t("common.loading")}</p> : !error && <DataTable
         columns={columns}
         data={forms}
         emptyTitle={t("intakeForms.empty.title")}
         emptyDescription={t("intakeForms.empty.description")}
-      />
+      />}
     </ListPageShell>
   )
 }

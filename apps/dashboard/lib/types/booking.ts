@@ -164,6 +164,7 @@ export interface Booking {
 /* ─── Query / Request DTOs ─── */
 
 export interface BookingListQuery {
+  sortOrder?: "asc" | "desc"
   page?: number
   limit?: number
   status?: BookingStatus

@@ -1,11 +1,11 @@
 "use client"
 
-import { ar } from "date-fns/locale"
+import { activityActionLabel, activityModuleLabel } from "@/lib/activity-log-label"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@sawaa/ui"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { getInitials } from "@/lib/utils"
-import { formatDatePattern } from "@/lib/date"
+import { formatLocaleDate } from "@/lib/date"
 import { stateColors } from "@/lib/ds"
 import type { ActivityLog } from "@/lib/types/activity-log"
 
@@ -25,15 +25,6 @@ const actionStyles: Record<string, string> = {
   approved: `${_s.success.border} ${_s.success.bg} ${_s.success.text}`,
   rejected: `${_s.error.border} ${_s.error.bg} ${_s.error.text}`,
   SYSTEM:   _muted,
-}
-
-function humanizeModule(raw: string | null | undefined): string {
-  if (!raw || raw === "Unknown") return "—"
-  // Convert PascalCase or kebab to Title Case spaced
-  const spaced = raw
-    .replace(/[-_]+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 
 function humanizeDescription(raw: string | null | undefined): string {
@@ -89,7 +80,7 @@ export function getActivityLogColumns(
           variant="outline"
           className={actionStyles[row.original.action] ?? ""}
         >
-          {row.original.action}
+          {activityActionLabel(row.original.action, t)}
         </Badge>
       ),
     },
@@ -97,7 +88,7 @@ export function getActivityLogColumns(
       accessorKey: "module",
       header: t("activityLog.col.module"),
       cell: ({ row }) => {
-        const label = humanizeModule(row.original.module)
+        const label = activityModuleLabel(row.original.module, t)
         if (label === "—") {
           return <span className="text-sm text-muted-foreground">—</span>
         }
@@ -131,9 +122,7 @@ export function getActivityLogColumns(
       header: t("activityLog.col.time"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
-          {formatDatePattern(row.original.createdAt, "MMM d, yyyy HH:mm", {
-            locale: locale === "ar" ? ar : undefined,
-          })}
+          {formatLocaleDate(row.original.createdAt, locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh" })}
         </span>
       ),
     },

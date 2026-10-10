@@ -82,6 +82,7 @@ function makeEmployee(overrides: Partial<EmployeeResponseDto> = {}): EmployeeRes
     employmentType: 'FULL_TIME',
     onboardingStatus: 'COMPLETED',
     isActive: true,
+    isAcceptingBookings: true,
     isPublic: true,
     slug: 'khalid',
     publicBioAr: 'نبذة عامة',

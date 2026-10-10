@@ -121,6 +121,7 @@ export function ConversationsInbox() {
             onLoadMore={() => void list.fetchNextPage()}
           />
           <ConversationDetail
+            locale={locale}
             conversation={selected}
             isDetailLoading={Boolean(effectiveSelectedId) && selectedDetail.isLoading}
             detailError={selectedDetail.error}

@@ -39,7 +39,7 @@ export class UpdateAvailabilityHandler {
   ) {}
 
   async execute(cmd: UpdateAvailabilityCommand) {
-    const { employeeId, windows, exceptions = [] } = cmd;
+    const { employeeId, windows, exceptions } = cmd;
 
     validateWindows(windows);
 
@@ -64,9 +64,12 @@ export class UpdateAvailabilityHandler {
           })),
         });
 
-        await tx.employeeAvailabilityException.deleteMany({ where: { employeeId } });
+        // Omission means leave is untouched; an explicit [] clears it.
+        if (exceptions !== undefined) {
+          await tx.employeeAvailabilityException.deleteMany({ where: { employeeId } });
+        }
 
-        if (exceptions.length > 0) {
+        if (exceptions && exceptions.length > 0) {
           await tx.employeeAvailabilityException.createMany({
             data: exceptions.map((e) => ({
               employeeId,

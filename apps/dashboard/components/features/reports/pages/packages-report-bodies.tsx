@@ -60,29 +60,32 @@ function SalesReport({
       <KpiRow>
         <KpiCard
           label={t("reports.packages.sales.purchaseCount")}
-          value={
-            <span className="tabular-nums">{report.purchaseCount}</span>
-          }
+          value={<span className="tabular-nums">{report.purchaseCount}</span>}
         />
         <KpiCard
           label={t("reports.packages.sales.grossRevenue")}
-          value={<FormattedCurrency amount={report.grossRevenue} locale={locale} />}
+          value={
+            <FormattedCurrency amount={report.grossRevenue} locale={locale} />
+          }
         />
         <KpiCard
           label={t("reports.packages.sales.refundedAmount")}
-          value={<FormattedCurrency amount={report.refundedAmount} locale={locale} />}
+          value={
+            <FormattedCurrency amount={report.refundedAmount} locale={locale} />
+          }
         />
         <KpiCard
           label={t("reports.packages.sales.netRevenue")}
-          value={<FormattedCurrency amount={report.netRevenue} locale={locale} />}
+          value={
+            <FormattedCurrency amount={report.netRevenue} locale={locale} />
+          }
         />
+      </KpiRow>
+      <KpiRow className="lg:grid-cols-3">
         <KpiCard
           label={t("reports.packages.sales.byBucket.cash")}
           value={
-            <FormattedCurrency
-              amount={report.byBucket.cash}
-              locale={locale}
-            />
+            <FormattedCurrency amount={report.byBucket.cash} locale={locale} />
           }
         />
         <KpiCard
@@ -125,9 +128,7 @@ function SalesReport({
               {
                 key: "count",
                 header: t("reports.packages.sales.count"),
-                render: (m) => (
-                  <span className="tabular-nums">{m.count}</span>
-                ),
+                render: (m) => <span className="tabular-nums">{m.count}</span>,
               },
               {
                 key: "amount",
@@ -173,24 +174,16 @@ function OutstandingReport({
       <KpiCard
         label={t("reports.packages.outstanding.sessions")}
         value={
-          <span className="tabular-nums">
-            {report.outstandingSessions}
-          </span>
+          <span className="tabular-nums">{report.outstandingSessions}</span>
         }
       />
       <KpiCard
         label={t("reports.packages.outstanding.creditCount")}
-        value={
-          <span className="tabular-nums">{report.creditCount}</span>
-        }
+        value={<span className="tabular-nums">{report.creditCount}</span>}
       />
       <KpiCard
         label={t("reports.packages.outstanding.reservedSessions")}
-        value={
-          <span className="tabular-nums">
-            {report.reservedSessions}
-          </span>
-        }
+        value={<span className="tabular-nums">{report.reservedSessions}</span>}
       />
     </KpiRow>
   )
@@ -213,9 +206,7 @@ function ConsumptionReport({
       <KpiRow>
         <KpiCard
           label={t("reports.packages.consumption.totalConsumed")}
-          value={
-            <span className="tabular-nums">{report.totalConsumed}</span>
-          }
+          value={<span className="tabular-nums">{report.totalConsumed}</span>}
         />
       </KpiRow>
       <Section title={t("reports.packages.consumption.byEmployee")}>
@@ -226,9 +217,17 @@ function ConsumptionReport({
               header: t("reports.practitioners.name"),
               render: (row) => (
                 <span className="flex flex-col gap-1">
-                  <span className="font-medium">{row.employeeId === "unknown" ? t("reports.packages.consumption.unknownPractitioner") : row.name}</span>
+                  <span className="font-medium">
+                    {row.employeeId === "unknown"
+                      ? t("reports.packages.consumption.unknownPractitioner")
+                      : row.name}
+                  </span>
                   {row.attribution && row.attribution !== "BOOKING" && (
-                    <span className="text-xs text-muted-foreground">{t(`reports.packages.consumption.attribution.${row.attribution}`)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t(
+                        `reports.packages.consumption.attribution.${row.attribution}`
+                      )}
+                    </span>
                   )}
                 </span>
               ),

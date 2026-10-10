@@ -101,7 +101,7 @@ export async function buildRatingsReport(
   // Trend by day
   const trendMap = new Map<string, { sum: number; count: number }>();
   for (const r of ratings) {
-    const day = r.createdAt.toISOString().slice(0, 10);
+    const day = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(r.createdAt);
     const entry = trendMap.get(day) ?? { sum: 0, count: 0 };
     entry.sum += r.score;
     entry.count += 1;
@@ -116,7 +116,7 @@ export async function buildRatingsReport(
     }));
 
   // Recent negative — top 10
-  const negativeRatings = ratings.filter((r) => r.score <= 3).slice(0, 10);
+  const negativeRatings = ratings.filter((r) => r.score <= 2).slice(0, 10);
   const negBookingIds = negativeRatings.map((r) => r.bookingId);
   const negClientIds = [...new Set(negativeRatings.map((r) => r.clientId))];
   const negEmployeeIds = [...new Set(negativeRatings.map((r) => r.employeeId))];

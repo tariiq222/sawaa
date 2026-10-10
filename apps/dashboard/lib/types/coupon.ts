@@ -54,11 +54,11 @@ export interface UpdateCouponPayload {
   descriptionEn?: string
   discountType?: "PERCENTAGE" | "FIXED"
   discountValue?: number
-  minOrderAmt?: number
-  maxUses?: number
-  maxUsesPerUser?: number
+  minOrderAmt?: number | null
+  maxUses?: number | null
+  maxUsesPerUser?: number | null
   serviceIds?: string[]
-  expiresAt?: string
+  expiresAt?: string | null
   isActive?: boolean
 }
 

@@ -40,6 +40,12 @@ describe("clients api", () => {
     )
   })
 
+  it("forwards server sorting with pagination rather than sorting fetched rows", async () => {
+    getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
+    await fetchClients({ page: 2, sortBy: "name", sortOrder: "asc" })
+    expect(getMock).toHaveBeenCalledWith("/dashboard/people/clients?page=2&sortBy=name&sortOrder=asc")
+  })
+
   it("normalizes nullable OpenAPI client fields to the public Client signature", async () => {
     getMock.mockResolvedValueOnce({
       items: [
@@ -144,6 +150,16 @@ describe("clients api", () => {
     patchMock.mockResolvedValueOnce({ id: "client-1", isActive: true })
     await setClientActive("client-1", { isActive: true })
     expect(patchMock).toHaveBeenCalledWith("/dashboard/people/clients/client-1/active", { isActive: true })
+  })
+
+  it("does not mark staff projections lacking email proof as verified", async () => {
+    getMock.mockResolvedValueOnce({id:"client-1",firstName:"Sara",lastName:"",email:"sara@example.test"})
+    expect((await fetchClient("client-1")).emailVerified).toBe(false)
+  })
+  it("sends explicit nulls for optional fields cleared in an edit", async () => {
+    patchMock.mockResolvedValueOnce({id:"client-1"})
+    await updateClient("client-1",{middleName:"",phone:"",allergies:"",emergencyPhone:"",dateOfBirth:""})
+    expect(patchMock).toHaveBeenCalledWith("/dashboard/people/clients/client-1",expect.objectContaining({middleName:null,phone:null,allergies:null,emergencyPhone:null,dateOfBirth:null}))
   })
 
 })

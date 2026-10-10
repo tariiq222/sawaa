@@ -9,6 +9,14 @@ async function validateDto(plain: Record<string, unknown>) {
 }
 
 describe('ListServicesDto', () => {
+  it('accepts branch and department filters with a global sort', async () => {
+    expect(await validateDto({branchId:'550e8400-e29b-41d4-a716-446655440000',departmentId:'550e8400-e29b-41d4-a716-446655440001',sortBy:'price',sortOrder:'asc'})).toHaveLength(0);
+  });
+  it('rejects invalid filter identifiers and unsupported ordering', async () => {
+    const errors=await validateDto({branchId:'bad',departmentId:'bad',sortBy:'arbitrary',sortOrder:'sideways'});
+    expect(errors.map(e=>e.property)).toEqual(expect.arrayContaining(['branchId','departmentId','sortBy','sortOrder']));
+  });
+
   it('accepts an empty payload (all filters optional, pagination defaults)', async () => {
     const errors = await validateDto({});
     expect(errors).toHaveLength(0);

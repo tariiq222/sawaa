@@ -21,9 +21,9 @@ export async function buildRevenueExcel(report: RevenueReportResult): Promise<Bu
     { header: 'Value', key: 'value', width: 20 },
   ];
   summary.addRows([
-    { metric: 'Total Revenue (⃁)', value: report.totalRevenue.toFixed(2) },
+    { metric: 'Total Revenue (⃁)', value: report.totalRevenue / 100 },
     { metric: 'Total Bookings', value: report.totalBookings },
-    { metric: 'Avg Per Booking (⃁)', value: report.averagePerBooking.toFixed(2) },
+    { metric: 'Avg Per Booking (⃁)', value: report.averagePerBooking / 100 },
   ]);
   styleHeaderRow(summary);
 
@@ -34,7 +34,7 @@ export async function buildRevenueExcel(report: RevenueReportResult): Promise<Bu
     { header: 'Amount (⃁)', key: 'amount', width: 18 },
     { header: 'Payments', key: 'count', width: 12 },
   ];
-  byMethod.addRows(report.byMethod);
+  byMethod.addRows(report.byMethod.map(r => ({...r, amount: r.amount / 100})));
   styleHeaderRow(byMethod);
 
   // By Day sheet
@@ -44,7 +44,7 @@ export async function buildRevenueExcel(report: RevenueReportResult): Promise<Bu
     { header: 'Amount (⃁)', key: 'amount', width: 18 },
     { header: 'Payments', key: 'count', width: 12 },
   ];
-  byDay.addRows(report.byDay);
+  byDay.addRows(report.byDay.map(r => ({...r, ...("amount" in r ? {amount: r.amount / 100} : {})})));
   styleHeaderRow(byDay);
 
   const recent = wb.addWorksheet('Recent Payments');
@@ -56,13 +56,13 @@ export async function buildRevenueExcel(report: RevenueReportResult): Promise<Bu
     { header: 'Client', key: 'clientName', width: 24 },
     { header: 'Service', key: 'serviceName', width: 24 },
     { header: 'Method', key: 'method', width: 18 },
-    { header: 'Amount (halalas)', key: 'amount', width: 18 },
+    { header: 'Amount (SAR)', key: 'amount', width: 18 },
     { header: 'Status', key: 'status', width: 18 },
     { header: 'Receipt Recorded By', key: 'receiptRecordedBy', width: 38 },
     { header: 'Receipt Evidence', key: 'receiptEvidenceRef', width: 28 },
     { header: 'Receipt Entry Reason', key: 'receiptEntryReason', width: 35 },
   ];
-  recent.addRows(report.recentPayments);
+  recent.addRows(report.recentPayments.map(r => ({...r, amount: r.amount / 100})));
   styleHeaderRow(recent);
 
   return wb.xlsx.writeBuffer() as unknown as Promise<Buffer>;

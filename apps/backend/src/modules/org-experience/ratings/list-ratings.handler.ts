@@ -22,10 +22,11 @@ export class ListRatingsHandler {
       ...(dto.clientId && { clientId: dto.clientId }),
     };
 
-    const [items, total] = await this.rlsTransaction.withTransaction((tx) =>
+    const [items, total, aggregate] = await this.rlsTransaction.withTransaction((tx) =>
       Promise.all([
         tx.rating.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
         tx.rating.count({ where }),
+        tx.rating.aggregate({ where, _avg: { score: true } }),
       ]),
     );
 
@@ -39,11 +40,17 @@ export class ListRatingsHandler {
       : [];
     const clientById = new Map(clients.map((c) => [c.id, c]));
 
+    const employees = items.length ? await this.prisma.employee.findMany({
+      where: { id: { in: [...new Set(items.map(r => r.employeeId))] } },
+      select: { id: true, name: true, nameEn: true },
+    }) : [];
+    const employeeById = new Map(employees.map(e => [e.id, e]));
     const enriched = items.map((rating) => ({
       ...rating,
       client: clientById.get(rating.clientId) ?? null,
+      employee: employeeById.get(rating.employeeId) ?? null,
     }));
 
-    return toListResponse(enriched, total, page, limit);
+    return { ...toListResponse(enriched, total, page, limit), averageRating: aggregate._avg.score ?? null };
   }
 }

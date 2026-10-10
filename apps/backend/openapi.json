@@ -5167,6 +5167,232 @@
         ],
         "type": "object"
       },
+      "DashboardUserCustomRoleDto": {
+        "properties": {
+          "id": {
+            "description": "Assigned custom role identifier",
+            "example": "55555555-5555-4555-8555-555555555555",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name of the assigned custom role",
+            "example": "Program coordinator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "DashboardUserResponseDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "User avatar URL, or null when no avatar is stored",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "User creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "customRole": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DashboardUserCustomRoleDto"
+              }
+            ],
+            "description": "Assigned custom role identity only; permissions are not included",
+            "example": {
+              "id": "55555555-5555-4555-8555-555555555555",
+              "name": "Program coordinator"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "customRoleId": {
+            "description": "Assigned custom role identifier, or null when no custom role is assigned",
+            "example": "55555555-5555-4555-8555-555555555555",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "User email address",
+            "example": "coordinator@example.test",
+            "format": "email",
+            "type": "string"
+          },
+          "gender": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserGender"
+              }
+            ],
+            "description": "User gender, or null when unspecified",
+            "example": "FEMALE",
+            "nullable": true
+          },
+          "id": {
+            "description": "Unique user identifier",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the user account is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "name": {
+            "description": "User display name",
+            "example": "Program Coordinator",
+            "type": "string"
+          },
+          "phone": {
+            "description": "User phone number, or null when no number is stored",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Numeric user reference used in USR-prefixed dashboard links",
+            "example": 42,
+            "type": "number"
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ],
+            "description": "Assigned built-in user role",
+            "example": "EMPLOYEE"
+          },
+          "updatedAt": {
+            "description": "Most recent user update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "email",
+          "name",
+          "phone",
+          "gender",
+          "avatarUrl",
+          "isActive",
+          "role",
+          "customRoleId",
+          "customRole",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "DashboardUsersMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether another page follows the current page",
+            "example": false,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a page precedes the current page",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Maximum number of items returned per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "Current page number, starting at one",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total number of matching users",
+            "example": 1,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages for the matching result set",
+            "example": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "DashboardUsersResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Users on the requested page",
+            "example": [
+              {
+                "avatarUrl": null,
+                "createdAt": "2026-10-10T09:00:00.000Z",
+                "customRole": {
+                  "id": "55555555-5555-4555-8555-555555555555",
+                  "name": "Program coordinator"
+                },
+                "customRoleId": "55555555-5555-4555-8555-555555555555",
+                "email": "coordinator@example.test",
+                "gender": "FEMALE",
+                "id": "11111111-1111-4111-8111-111111111111",
+                "isActive": true,
+                "name": "Program Coordinator",
+                "phone": null,
+                "ref": 42,
+                "role": "EMPLOYEE",
+                "updatedAt": "2026-10-10T09:00:00.000Z"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DashboardUserResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DashboardUsersMetaDto"
+              }
+            ],
+            "description": "Pagination metadata for all matching users",
+            "example": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "limit": 20,
+              "page": 1,
+              "total": 1,
+              "totalPages": 1
+            }
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "DeleteCategoryResponseDto": {
         "properties": {
           "bookingMode": {
@@ -6386,6 +6612,11 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "isAcceptingBookings": {
+            "description": "Employee activation permits booking admission; does not guarantee a free slot",
+            "example": true,
+            "type": "boolean"
+          },
           "isActive": {
             "description": "Whether the employee is active",
             "example": true,
@@ -6486,6 +6717,7 @@
           "employmentType",
           "onboardingStatus",
           "isActive",
+          "isAcceptingBookings",
           "averageRating",
           "ratingCount",
           "bookingCount",
@@ -8980,6 +9212,205 @@
         ],
         "type": "object"
       },
+      "OrganizationRatingResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking that the client rated",
+            "example": "44444444-4444-4444-8444-444444444444",
+            "format": "uuid",
+            "type": "string"
+          },
+          "client": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RatingClientResponseDto"
+              }
+            ],
+            "description": "Current client display details, or null when unavailable",
+            "example": {
+              "id": "22222222-2222-4222-8222-222222222222",
+              "name": "عميل تجريبي"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "clientId": {
+            "description": "Identifier of the client who submitted the rating",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Client feedback text, or null when no comment was submitted",
+            "example": "Helpful session",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Rating submission time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employee": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RatingEmployeeResponseDto"
+              }
+            ],
+            "description": "Current employee display details, or null when unavailable",
+            "example": {
+              "id": "33333333-3333-4333-8333-333333333333",
+              "name": "أخصائي تجريبي",
+              "nameEn": "Example Counselor"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "employeeId": {
+            "description": "Identifier of the employee being rated",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique rating identifier",
+            "example": "55555555-5555-4555-8555-555555555555",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Whether the rating is approved for public display",
+            "example": false,
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Rating score from one to five stars",
+            "example": 5,
+            "maximum": 5,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "clientId",
+          "employeeId",
+          "score",
+          "comment",
+          "isPublic",
+          "createdAt",
+          "client",
+          "employee"
+        ],
+        "type": "object"
+      },
+      "OrganizationRatingsMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether another page follows the current page",
+            "example": false,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a page precedes the current page",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Maximum number of items returned per page",
+            "example": 20,
+            "type": "number"
+          },
+          "page": {
+            "description": "Current page number, starting at one",
+            "example": 1,
+            "type": "number"
+          },
+          "total": {
+            "description": "Total number of matching ratings",
+            "example": 1,
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages for the matching result set",
+            "example": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "OrganizationRatingsResponseDto": {
+        "properties": {
+          "averageRating": {
+            "description": "Average score across all matching ratings, independent of pagination; null when empty",
+            "example": 5,
+            "maximum": 5,
+            "minimum": 1,
+            "nullable": true,
+            "type": "number"
+          },
+          "items": {
+            "description": "Ratings on the requested page",
+            "example": [
+              {
+                "bookingId": "44444444-4444-4444-8444-444444444444",
+                "client": {
+                  "id": "22222222-2222-4222-8222-222222222222",
+                  "name": "عميل تجريبي"
+                },
+                "clientId": "22222222-2222-4222-8222-222222222222",
+                "comment": "Helpful session",
+                "createdAt": "2026-10-10T09:00:00.000Z",
+                "employee": {
+                  "id": "33333333-3333-4333-8333-333333333333",
+                  "name": "أخصائي تجريبي",
+                  "nameEn": "Example Counselor"
+                },
+                "employeeId": "33333333-3333-4333-8333-333333333333",
+                "id": "55555555-5555-4555-8555-555555555555",
+                "isPublic": false,
+                "score": 5
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/OrganizationRatingResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationRatingsMetaDto"
+              }
+            ],
+            "description": "Pagination metadata for all matching ratings",
+            "example": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "limit": 20,
+              "page": 1,
+              "total": 1,
+              "totalPages": 1
+            }
+          }
+        },
+        "required": [
+          "items",
+          "meta",
+          "averageRating"
+        ],
+        "type": "object"
+      },
       "PackageConstraintInputDto": {
         "properties": {
           "dimension": {
@@ -9781,6 +10212,367 @@
         ],
         "type": "object"
       },
+      "ProgramDetailResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the program is offered",
+            "example": "88888888-8888-4888-8888-888888888888",
+            "format": "uuid",
+            "type": "string"
+          },
+          "cancelledAt": {
+            "description": "Cancellation time as an ISO 8601 UTC timestamp, or null when not cancelled",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelReason": {
+            "description": "Recorded cancellation reason, or null for a program without a reason",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Program creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Program price currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "daysCount": {
+            "description": "Number of program days",
+            "example": 3,
+            "type": "number"
+          },
+          "departmentId": {
+            "description": "Department that owns the program",
+            "example": "77777777-7777-4777-8777-777777777777",
+            "format": "uuid",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit in halalas, serialized as a decimal string",
+            "example": "30000",
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether the program accepts a deposit",
+            "example": true,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Arabic staff-facing program description, or null when unspecified",
+            "example": "برنامج لتنمية مهارات التواصل الأسري",
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English staff-facing program description, or null when unspecified",
+            "example": "A program for family communication skills",
+            "nullable": true,
+            "type": "string"
+          },
+          "enrolledCount": {
+            "description": "Current number of program enrollments",
+            "example": 1,
+            "type": "number"
+          },
+          "enrollments": {
+            "description": "Enrollments and their associated clients and bookings",
+            "example": [
+              {
+                "booking": {
+                  "bookingNumber": 1024,
+                  "clientId": "22222222-2222-4222-8222-222222222222",
+                  "currency": "SAR",
+                  "id": "44444444-4444-4444-8444-444444444444",
+                  "price": "150000",
+                  "scheduledAt": "2026-10-10T09:00:00.000Z",
+                  "status": "CONFIRMED"
+                },
+                "clientId": "22222222-2222-4222-8222-222222222222",
+                "clientName": "عميل تجريبي",
+                "enrolledAt": "2026-10-10T09:00:00.000Z",
+                "id": "99999999-9999-4999-8999-999999999999"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramEnrollmentResponseDto"
+            },
+            "type": "array"
+          },
+          "hoursPerDay": {
+            "description": "Number of program hours per day",
+            "example": 2,
+            "type": "number"
+          },
+          "id": {
+            "description": "Unique program identifier",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isFull": {
+            "description": "Whether enrolled count has reached the maximum participant capacity",
+            "example": false,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the program is published in the public catalog",
+            "example": true,
+            "type": "boolean"
+          },
+          "maxParticipants": {
+            "description": "Maximum number of enrolled participants",
+            "example": 12,
+            "type": "number"
+          },
+          "minParticipants": {
+            "description": "Minimum participants required for the program",
+            "example": 3,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic program name",
+            "example": "برنامج التواصل الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English program name, or null when unspecified",
+            "example": "Family Communication Program",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, serialized as a decimal string",
+            "example": "150000",
+            "type": "string"
+          },
+          "publicDescriptionAr": {
+            "description": "Arabic public catalog description, or null when unspecified",
+            "example": "تعرف على مهارات التواصل الأسري",
+            "nullable": true,
+            "type": "string"
+          },
+          "publicDescriptionEn": {
+            "description": "English public catalog description, or null when unspecified",
+            "example": "Learn family communication skills",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Numeric program reference accepted by the program detail lookup",
+            "example": 24,
+            "type": "number"
+          },
+          "startDate": {
+            "description": "Program start time as an ISO 8601 UTC timestamp, or null when unscheduled",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current program lifecycle status",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "OPEN",
+            "type": "string"
+          },
+          "supervisorIds": {
+            "description": "Identifiers of employees supervising the program",
+            "example": [
+              "33333333-3333-4333-8333-333333333333"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "supervisors": {
+            "description": "Display details of the program supervisors",
+            "example": [
+              {
+                "id": "33333333-3333-4333-8333-333333333333",
+                "name": "أخصائي البرامج",
+                "nameEn": "Program Counselor"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ProgramSupervisorResponseDto"
+            },
+            "type": "array"
+          },
+          "updatedAt": {
+            "description": "Most recent program update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "branchId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "startDate",
+          "daysCount",
+          "hoursPerDay",
+          "minParticipants",
+          "maxParticipants",
+          "enrolledCount",
+          "price",
+          "currency",
+          "depositEnabled",
+          "depositAmount",
+          "status",
+          "isPublic",
+          "publicDescriptionAr",
+          "publicDescriptionEn",
+          "cancelReason",
+          "cancelledAt",
+          "createdAt",
+          "updatedAt",
+          "supervisorIds",
+          "supervisors",
+          "isFull",
+          "enrollments"
+        ],
+        "type": "object"
+      },
+      "ProgramEnrollmentBookingResponseDto": {
+        "properties": {
+          "bookingNumber": {
+            "description": "Numeric reference of the associated booking",
+            "example": 1024,
+            "type": "number"
+          },
+          "clientId": {
+            "description": "Client identifier associated with the booking",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Booking price currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "id": {
+            "description": "Booking identifier associated with this enrollment",
+            "example": "44444444-4444-4444-8444-444444444444",
+            "format": "uuid",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, serialized as a decimal string",
+            "example": "150000",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Scheduled booking time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "description": "Current booking lifecycle status",
+            "enum": [
+              "PENDING",
+              "PENDING_GROUP_FILL",
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "CANCELLED",
+              "COMPLETED",
+              "NO_SHOW",
+              "EXPIRED",
+              "CANCEL_REQUESTED",
+              "DEPOSIT_PAID"
+            ],
+            "example": "CONFIRMED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "status",
+          "price",
+          "currency",
+          "scheduledAt",
+          "bookingNumber"
+        ],
+        "type": "object"
+      },
+      "ProgramEnrollmentResponseDto": {
+        "properties": {
+          "booking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProgramEnrollmentBookingResponseDto"
+              }
+            ],
+            "description": "Booking associated with the enrollment",
+            "example": {
+              "bookingNumber": 1024,
+              "clientId": "22222222-2222-4222-8222-222222222222",
+              "currency": "SAR",
+              "id": "44444444-4444-4444-8444-444444444444",
+              "price": "150000",
+              "scheduledAt": "2026-10-10T09:00:00.000Z",
+              "status": "CONFIRMED"
+            }
+          },
+          "clientId": {
+            "description": "Enrolled client identifier",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientName": {
+            "description": "Current client display name, or null if unavailable",
+            "example": "عميل تجريبي",
+            "nullable": true,
+            "type": "string"
+          },
+          "enrolledAt": {
+            "description": "Enrollment creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Program enrollment identifier",
+            "example": "99999999-9999-4999-8999-999999999999",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "clientName",
+          "enrolledAt",
+          "booking"
+        ],
+        "type": "object"
+      },
       "ProgramParticipantRefundDto": {
         "properties": {
           "amount": {
@@ -9798,6 +10590,33 @@
         "required": [
           "bookingId",
           "amount"
+        ],
+        "type": "object"
+      },
+      "ProgramSupervisorResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Program supervisor employee identifier",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Program supervisor display name in the default language",
+            "example": "أخصائي البرامج",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English supervisor display name, or null when unavailable",
+            "example": "Program Counselor",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "nameEn"
         ],
         "type": "object"
       },
@@ -10178,6 +10997,53 @@
           "imageAltAr",
           "imageAltEn",
           "destination"
+        ],
+        "type": "object"
+      },
+      "RatingClientResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Identifier of the person associated with the rating",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name of the person associated with the rating",
+            "example": "عميل تجريبي",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "RatingEmployeeResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Identifier of the person associated with the rating",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name of the person associated with the rating",
+            "example": "عميل تجريبي",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English employee display name, or null when unavailable",
+            "example": "Example Counselor",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "nameEn"
         ],
         "type": "object"
       },
@@ -11816,8 +12682,10 @@
             "type": "number"
           },
           "expiresAt": {
-            "description": "ISO datetime when the coupon expires",
+            "description": "ISO datetime when the coupon expires; null clears expiry",
             "example": "2026-12-31T23:59:59.000Z",
+            "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "isActive": {
@@ -11826,18 +12694,21 @@
             "type": "boolean"
           },
           "maxUses": {
-            "description": "Maximum number of total redemptions allowed",
+            "description": "Maximum number of total redemptions allowed; null clears limit",
             "example": 100,
+            "nullable": true,
             "type": "number"
           },
           "maxUsesPerUser": {
-            "description": "Maximum redemptions per individual user",
+            "description": "Maximum redemptions per individual user; null clears limit",
             "example": 1,
+            "nullable": true,
             "type": "number"
           },
           "minOrderAmt": {
-            "description": "Minimum order amount required to use this coupon",
+            "description": "Minimum order amount required to use this coupon; null clears limit",
             "example": 50,
+            "nullable": true,
             "type": "number"
           },
           "serviceIds": {
@@ -11856,18 +12727,21 @@
       "UpdateDepartmentDto": {
         "properties": {
           "descriptionAr": {
-            "description": "Department description in Arabic",
+            "description": "Department description in Arabic; null clears it",
             "example": "قسم طب وجراحة الفم والأسنان",
+            "nullable": true,
             "type": "string"
           },
           "descriptionEn": {
-            "description": "Department description in English",
+            "description": "Department description in English; null clears it",
             "example": "Oral and dental surgery department",
+            "nullable": true,
             "type": "string"
           },
           "icon": {
-            "description": "Icon identifier (e.g. Lucide icon name)",
+            "description": "Icon identifier; null clears it",
             "example": "tooth",
+            "nullable": true,
             "type": "string"
           },
           "isActive": {
@@ -12026,21 +12900,25 @@
           "bio": {
             "description": "Short biography in English",
             "example": "Specialist with 10 years of experience.",
+            "nullable": true,
             "type": "string"
           },
           "bioAr": {
             "description": "Short biography in Arabic",
             "example": "متخصص بخبرة 10 سنوات.",
+            "nullable": true,
             "type": "string"
           },
           "education": {
             "description": "Education details in English",
             "example": "King Saud University — BSc Physical Therapy",
+            "nullable": true,
             "type": "string"
           },
           "educationAr": {
             "description": "Education details in Arabic",
             "example": "جامعة الملك سعود — بكالوريوس علاج طبيعي",
+            "nullable": true,
             "type": "string"
           },
           "email": {
@@ -12094,38 +12972,46 @@
           "phone": {
             "description": "Phone number (any common format; normalized to E.164)",
             "example": "+966501234567",
+            "nullable": true,
             "type": "string"
           },
           "publicBioAr": {
             "description": "Public biography (Arabic)",
-            "type": "object"
+            "nullable": true,
+            "type": "string"
           },
           "publicBioEn": {
             "description": "Public biography (English)",
-            "type": "object"
+            "nullable": true,
+            "type": "string"
           },
           "publicImageUrl": {
             "description": "Public profile image URL",
-            "type": "object"
+            "nullable": true,
+            "type": "string"
           },
           "slug": {
             "description": "Public slug (unique, URL-safe)",
             "example": "dr-khalid",
-            "type": "object"
+            "nullable": true,
+            "type": "string"
           },
           "specialty": {
             "description": "Specialty label in English",
             "example": "Physiotherapy",
+            "nullable": true,
             "type": "string"
           },
           "specialtyAr": {
             "description": "Specialty label in Arabic",
             "example": "العلاج الطبيعي",
+            "nullable": true,
             "type": "string"
           },
           "title": {
             "description": "Professional title (e.g. Dr.)",
             "example": "Dr.",
+            "nullable": true,
             "type": "string"
           }
         },
@@ -12694,8 +13580,9 @@
             "type": "string"
           },
           "phone": {
-            "description": "Updated phone number",
+            "description": "Updated phone number; null clears the stored number",
             "example": "+966501234567",
+            "nullable": true,
             "type": "string"
           }
         },
@@ -13297,7 +14184,7 @@
         "type": "object"
       },
       "UserGender": {
-        "description": "Gender",
+        "description": "User gender, or null when unspecified",
         "enum": [
           "MALE",
           "FEMALE"
@@ -13305,7 +14192,7 @@
         "type": "string"
       },
       "UserRole": {
-        "description": "System role",
+        "description": "Assigned built-in user role",
         "enum": [
           "SUPER_ADMIN",
           "ADMIN",
@@ -15533,6 +16420,20 @@
       "get": {
         "operationId": "DashboardBookingsController_listBookings_v1",
         "parameters": [
+          {
+            "description": "Appointment date ordering before pagination",
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
           {
             "description": "Filter sessions entered through late recording",
             "in": "query",
@@ -23962,56 +24863,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "email": {
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "isActive": {
-                            "type": "boolean"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "role": {
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "meta": {
-                      "properties": {
-                        "hasNextPage": {
-                          "type": "boolean"
-                        },
-                        "hasPreviousPage": {
-                          "type": "boolean"
-                        },
-                        "limit": {
-                          "type": "number"
-                        },
-                        "page": {
-                          "type": "number"
-                        },
-                        "total": {
-                          "type": "number"
-                        },
-                        "totalPages": {
-                          "type": "number"
-                        }
-                      },
-                      "type": "object"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/DashboardUsersResponseDto"
                 }
               }
             },
@@ -24266,43 +25118,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "customRoleId": {
-                      "format": "uuid",
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "email": {
-                      "format": "email",
-                      "type": "string"
-                    },
-                    "gender": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "phone": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "role": {
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/DashboardUserResponseDto"
                 }
               }
             },
@@ -27688,6 +28504,91 @@
           "Dashboard / Org Config"
         ]
       },
+      "get": {
+        "operationId": "DashboardOrganizationCategoriesController_getCategoryEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Category UUID or readable CAT reference",
+            "in": "path",
+            "name": "categoryId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            },
+            "description": "Category details"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Category not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a category",
+        "tags": [
+          "Dashboard / Org Config"
+        ]
+      },
       "patch": {
         "operationId": "DashboardOrganizationCategoriesController_updateCategoryEndpoint_v1",
         "parameters": [
@@ -28049,6 +28950,91 @@
           }
         ],
         "summary": "Delete a department",
+        "tags": [
+          "Dashboard / Org Config"
+        ]
+      },
+      "get": {
+        "operationId": "DashboardOrganizationDepartmentsController_getDepartmentEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Department UUID",
+            "in": "path",
+            "name": "departmentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                }
+              }
+            },
+            "description": "Department details"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Department not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a department",
         "tags": [
           "Dashboard / Org Config"
         ]
@@ -29962,6 +30948,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationRatingsResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of ratings"
           },
           "400": {
@@ -30169,6 +31162,56 @@
       "get": {
         "operationId": "DashboardOrganizationSettingsController_listServicesEndpoint_v1",
         "parameters": [
+          {
+            "description": "Filter by a branch where an active assigned practitioner works",
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by the category department",
+            "in": "query",
+            "name": "departmentId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Global ordering field",
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "createdAt",
+                "nameAr",
+                "nameEn",
+                "price",
+                "durationMins",
+                "isActive"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Global ordering direction",
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
           {
             "description": "Include historical inactive/archived references for staff recording",
             "in": "query",
@@ -31172,6 +32215,31 @@
       "get": {
         "operationId": "DashboardPeopleController_listClientsEndpoint_v1",
         "parameters": [
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "name",
+                "createdAt",
+                "isActive"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
           {
             "description": "Search by name or phone",
             "in": "query",
@@ -33972,6 +35040,13 @@
                         }
                       },
                       "type": "object"
+                    },
+                    "starCounts": {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "description": "Score counts across every rating for this employee",
+                      "type": "object"
                     }
                   },
                   "type": "object"
@@ -36101,6 +37176,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramDetailResponseDto"
+                }
+              }
+            },
             "description": "Program detail with enrollments and supervisors"
           },
           "400": {
@@ -41595,6 +42677,20 @@
       "get": {
         "operationId": "MobileEmployeeBookingsController_listMyBookings_v1",
         "parameters": [
+          {
+            "description": "Appointment date ordering before pagination",
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
           {
             "description": "Filter sessions entered through late recording",
             "in": "query",

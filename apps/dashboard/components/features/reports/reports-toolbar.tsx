@@ -47,9 +47,7 @@ export function ReportsToolbar({
   onCustomFromChange,
   onCustomToChange,
   branchId,
-  onBranchIdChange,
   exportType,
-  filenameDateTo,
 }: ReportsToolbarProps) {
   const { t } = useLocale()
   const [exporting, setExporting] = useState(false)
@@ -61,7 +59,7 @@ export function ReportsToolbar({
       await exportReportExcel({
         type: exportType,
         dateFrom,
-        dateTo: filenameDateTo || dateTo,
+        dateTo,
         branchId,
       })
     } catch {

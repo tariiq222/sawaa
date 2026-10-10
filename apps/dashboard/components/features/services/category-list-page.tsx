@@ -52,10 +52,10 @@ export function CategoryListPage() {
         title={t("services.categories.title")}
         description={t("services.categories.description")}
       >
-        <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/categories/create")}>
+        {canDo("category", "create") && <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/categories/create")}>
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {t("services.categories.addCategory")}
-        </Button>
+        </Button>}
       </PageHeader>
 
       <FilterBar
@@ -88,20 +88,16 @@ export function CategoryListPage() {
         <DataTable
           columns={columns}
           data={categories}
+          serverPaginated
+          page={page}
+          totalPages={meta?.totalPages}
+          hasPreviousPage={meta?.hasPreviousPage}
+          hasNextPage={meta?.hasNextPage}
+          onPageChange={setPage}
           emptyTitle={hasFilters ? t("services.categories.empty.searchTitle") : t("services.categories.empty.title")}
           emptyDescription={hasFilters ? t("services.categories.empty.searchDescription") : t("services.categories.empty.description")}
-          emptyAction={hasFilters ? undefined : { label: t("services.categories.addCategory"), onClick: () => router.push("/categories/create") }}
+          emptyAction={hasFilters || !canDo("category", "create") ? undefined : { label: t("services.categories.addCategory"), onClick: () => router.push("/categories/create") }}
         />
-      )}
-
-      {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground tabular-nums">{page} / {meta.totalPages}</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("table.previous")}</Button>
-            <Button variant="outline" size="sm" disabled={page >= meta.totalPages} onClick={() => setPage(page + 1)}>{t("table.next")}</Button>
-          </div>
-        </div>
       )}
 
       <DeleteCategoryDialog category={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />

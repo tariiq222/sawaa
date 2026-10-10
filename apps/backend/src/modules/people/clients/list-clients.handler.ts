@@ -71,7 +71,7 @@ export class ListClientsHandler {
         ...(employeeId ? { select: employeeDashboardClientSelect } : {}),
         skip: (query.page - 1) * query.limit,
         take: query.limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: query.sortBy ? [{[query.sortBy]:query.sortOrder ?? 'asc'}, {id:'asc'}] : {createdAt:'desc'},
       }),
       this.prisma.client.count({ where }),
     ]);

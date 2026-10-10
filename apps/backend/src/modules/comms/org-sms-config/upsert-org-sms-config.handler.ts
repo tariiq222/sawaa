@@ -22,43 +22,30 @@ export class UpsertOrgSmsConfigHandler {
   async execute(cmd: UpsertOrgSmsConfigCommand): Promise<OrgSmsConfigView> {
     const existing = await this.prisma.organizationSmsConfig.findFirst();
 
-    let credentialsCiphertext: string | null | undefined;
+    const providerChanged = !existing || existing.provider !== cmd.provider;
+    let credentialsCiphertext: string | null = providerChanged ? null : existing?.credentialsCiphertext ?? null;
+    const invalidCredentials = (name: string) => new BadRequestException({
+      message: `${name} credentials are required`,
+      code: 'SMS_CREDENTIALS_REQUIRED',
+      localized: { ar: `بيانات اعتماد ${name} كاملة وغير فارغة مطلوبة`, en: `${name} credentials are required` },
+    });
     if (cmd.provider === 'NONE') {
       credentialsCiphertext = null;
     } else if (cmd.provider === 'UNIFONIC') {
-      if (!cmd.unifonic) {
-        throw new BadRequestException({
-          message: 'Unifonic credentials are required',
-          code: 'SMS_CREDENTIALS_REQUIRED',
-          localized: {
-            ar: 'بيانات اعتماد Unifonic مطلوبة',
-            en: 'Unifonic credentials are required',
-          },
-        });
-      }
-      credentialsCiphertext = this.credentials.encrypt(
-        { appSid: cmd.unifonic.appSid, apiKey: cmd.unifonic.apiKey },
-        DEFAULT_ORG_ID,
-      );
+      if (cmd.unifonic) {
+        if (!cmd.unifonic.appSid?.trim() || !cmd.unifonic.apiKey?.trim()) throw invalidCredentials('Unifonic');
+        credentialsCiphertext = this.credentials.encrypt(
+          { appSid: cmd.unifonic.appSid.trim(), apiKey: cmd.unifonic.apiKey.trim() }, DEFAULT_ORG_ID,
+        );
+      } else if (!credentialsCiphertext) throw invalidCredentials('Unifonic');
     } else if (cmd.provider === 'TAQNYAT') {
-      if (!cmd.taqnyat) {
-        throw new BadRequestException({
-          message: 'Taqnyat credentials are required',
-          code: 'SMS_CREDENTIALS_REQUIRED',
-          localized: {
-            ar: 'بيانات اعتماد Taqnyat مطلوبة',
-            en: 'Taqnyat credentials are required',
-          },
-        });
-      }
-      credentialsCiphertext = this.credentials.encrypt(
-        { apiToken: cmd.taqnyat.apiToken },
-        DEFAULT_ORG_ID,
-      );
+      if (cmd.taqnyat) {
+        if (!cmd.taqnyat.apiToken?.trim()) throw invalidCredentials('Taqnyat');
+        credentialsCiphertext = this.credentials.encrypt({ apiToken: cmd.taqnyat.apiToken.trim() }, DEFAULT_ORG_ID);
+      } else if (!credentialsCiphertext) throw invalidCredentials('Taqnyat');
     }
 
     // Rotate webhookSecret whenever provider changes.
-    const providerChanged = !existing || existing.provider !== cmd.provider;
     const webhookSecret = providerChanged
       ? cmd.provider === 'NONE'
         ? null
@@ -71,7 +58,7 @@ export class UpsertOrgSmsConfigHandler {
         where: { id: existing.id },
         data: {
           provider: cmd.provider,
-          senderId: cmd.senderId ?? null,
+          senderId: cmd.senderId === undefined ? existing?.senderId ?? null : cmd.senderId,
           credentialsCiphertext: credentialsCiphertext ?? null,
           webhookSecret,
         },

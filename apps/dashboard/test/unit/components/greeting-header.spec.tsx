@@ -1,5 +1,8 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+const auth = vi.hoisted(() => ({ canDo: vi.fn(() => true) }))
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => auth }))
 
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({
@@ -40,6 +43,15 @@ vi.mock("@sawaa/ui", () => ({
 import { GreetingHeader } from "@/components/features/dashboard/greeting-header"
 
 describe("GreetingHeader", () => {
+  beforeEach(() => auth.canDo.mockReturnValue(true))
+
+  it("hides new booking without the create permission", () => {
+    auth.canDo.mockReturnValue(false)
+    render(<GreetingHeader userName="أحمد" dateLabel="الأحد" bookingsCount={0} />)
+    expect(auth.canDo).toHaveBeenCalledWith("booking", "create")
+    expect(screen.queryByRole("link", { name: "حجز جديد" })).not.toBeInTheDocument()
+  })
+
   it("renders userName in heading", () => {
     render(<GreetingHeader userName="أحمد" dateLabel="الأحد" bookingsCount={5} />)
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("أحمد")

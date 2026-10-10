@@ -35,6 +35,7 @@ const PAYMENT_STATUS_KEYS: Record<string, string> = {
   PENDING_VERIFICATION: "payments.status.waiting",
   COMPLETED: "payments.status.paid",
   REFUNDED: "payments.status.refunded",
+  PARTIALLY_REFUNDED: "payments.status.partiallyRefunded",
   FAILED: "payments.status.failed",
 }
 
@@ -42,6 +43,9 @@ const methodKey: Record<string, string> = {
   BANK_TRANSFER: "detail.bankTransfer",
   ONLINE_CARD: "detail.moyasar",
   CASH: "detail.paymentMethod.cash",
+  MADA: "payments.method.mada",
+  TABBY: "payments.method.tabby",
+  COUPON: "payments.method.coupon",
 }
 
 const VERIFICATION_STATUS_KEYS: Record<string, string> = {
@@ -188,12 +192,16 @@ function PaymentDetailBody({
 
           <PaymentReceiptAudit payment={payment} />
 
+          <DetailSection title={t("payments.col.client")}><DetailRow label={t("payments.col.client")} value={[payment.invoice?.client?.firstName,payment.invoice?.client?.lastName].filter(Boolean).join(" ") || payment.invoice?.client?.name || "—"} /></DetailSection>
+
           {/* Invoice */}
           <DetailSection title={t("detail.invoice.title")}>
-            <DetailRow label={t("detail.invoiceId")} value={payment.invoiceId?.slice(0, 12) ?? "—"} numeric />
+            <DetailRow label={t("detail.invoiceId")} value={payment.invoice?.number ? `INV-${String(payment.invoice.number).padStart(4,"0")}` : "—"} numeric />
           </DetailSection>
 
           {!!payment.refundRequests?.length && <PaymentRefundRequests payment={payment} />}
+
+          {payment.receiptUrl && <DetailSection title={t("detail.receipts")}><a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline">{t("payments.receipt.open")}</a></DetailSection>}
 
           {/* Bank Transfer Receipts */}
           {payment.receipts && payment.receipts.length > 0 && (

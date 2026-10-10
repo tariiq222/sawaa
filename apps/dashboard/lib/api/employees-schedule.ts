@@ -211,11 +211,13 @@ export async function setEmployeeServiceOptions(
 
 /* ─── Ratings ─── */
 
+export type EmployeeRatingsPage = PaginatedResponse<Rating> & { starCounts?: Record<number, number> }
+
 export async function fetchEmployeeRatings(
   id: string,
   query: { page?: number; limit?: number } = {},
-): Promise<PaginatedResponse<Rating>> {
-  const res = await api.get<PaginatedResponse<RawRating> | RawRating[]>(
+): Promise<EmployeeRatingsPage> {
+  const res = await api.get<(PaginatedResponse<RawRating> & {starCounts?: Record<number,number>}) | RawRating[]>(
     `/dashboard/people/employees/${id}/ratings`,
     { page: query.page, limit: query.limit },
   )
@@ -239,6 +241,7 @@ export async function fetchEmployeeRatings(
   return {
     items: res.items.map(mapRating),
     meta: res.meta,
+    starCounts: res.starCounts,
   }
 }
 

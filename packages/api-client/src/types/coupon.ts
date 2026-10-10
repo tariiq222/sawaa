@@ -40,7 +40,16 @@ export interface CreateCouponPayload {
   isActive?: boolean
 }
 
-export type UpdateCouponPayload = Partial<CreateCouponPayload>
+/** Legacy exported DTO (no current coupon endpoint consumer); preserve its names. */
+export type UpdateCouponPayload = Omit<
+  Partial<CreateCouponPayload>,
+  'minAmount' | 'maxUses' | 'maxUsesPerUser' | 'expiresAt'
+> & {
+  minAmount?: number | null
+  maxUses?: number | null
+  maxUsesPerUser?: number | null
+  expiresAt?: string | null
+}
 
 export type CouponListResponse = PaginatedResponse<CouponListItem>
 

@@ -261,3 +261,11 @@ describe('GenerateReportHandler', () => {
     );
   });
 });
+
+it('normalizes non-revenue date-only ranges to complete Riyadh days',async()=>{
+ const prisma=buildPrisma();
+ const builder=jest.requireMock('./overview-report.builder').buildOverviewReport;
+ builder.mockClear();
+ await new GenerateReportHandler(prisma as never).execute({type:ReportType.OVERVIEW,from:'2026-10-10',to:'2026-10-10'});
+ expect(builder).toHaveBeenCalledWith(prisma,expect.objectContaining({from:new Date('2026-10-09T21:00:00Z'),to:new Date('2026-10-10T20:59:59.999Z')}));
+});

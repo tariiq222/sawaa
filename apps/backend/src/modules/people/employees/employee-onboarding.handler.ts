@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OnboardingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -27,6 +29,7 @@ export class EmployeeOnboardingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(cmd: EmployeeOnboardingCommand) {
@@ -38,7 +41,7 @@ export class EmployeeOnboardingHandler {
       throw new NotFoundException(`Employee ${cmd.employeeId} not found`);
     }
 
-    return this.rlsTransaction.withTransaction(async (tx) => {
+    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       switch (cmd.step) {
         case 'profile': {
           await tx.employee.update({
@@ -109,5 +112,7 @@ export class EmployeeOnboardingHandler {
         include: { branches: true, services: true },
       });
     });
+    if (cmd.step === 'branches' || cmd.step === 'services') await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
+    return updated;
   }
 }

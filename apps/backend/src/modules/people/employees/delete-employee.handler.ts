@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import {
 	ConflictException,
 	Injectable,
@@ -27,7 +29,7 @@ const DELETE_EMPLOYEE_MESSAGES = {
 
 @Injectable()
 export class DeleteEmployeeHandler {
-	constructor(private readonly rlsTransaction: RlsTransactionService) {}
+	constructor(private readonly rlsTransaction: RlsTransactionService, private readonly cache: CacheService) {}
 
 	async execute(cmd: DeleteEmployeeCommand): Promise<void> {
 		await this.rlsTransaction.withTransaction(
@@ -120,5 +122,6 @@ export class DeleteEmployeeHandler {
 				isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
 			},
 		);
+		await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
 	}
 }

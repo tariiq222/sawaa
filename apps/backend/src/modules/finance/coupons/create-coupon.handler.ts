@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateCouponDto } from './create-coupon.dto';
 import type { DiscountType } from '@prisma/client';
@@ -14,6 +14,7 @@ export class CreateCouponHandler {
 
   async execute(cmd: CreateCouponCommand) {
     const _organizationId = DEFAULT_ORG_ID;
+    if (cmd.discountType === "PERCENTAGE" && cmd.discountValue > 100) throw new BadRequestException("Percentage discount cannot exceed 100");
     const exists = await this.prisma.coupon.findFirst({
       where: { code: cmd.code },
     });

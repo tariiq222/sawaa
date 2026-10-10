@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DashboardIdentityController } from './identity.controller';
 import { ListUsersHandler } from '../../modules/identity/users/list-users.handler';
 import { GetUserHandler } from '../../modules/identity/users/get-user.handler';
@@ -83,6 +84,27 @@ describe('DashboardIdentityController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('accepts null phone without changing the profile PATCH security boundary', async () => {
+    const userId = '00000000-0000-0000-0000-000000000002';
+    mockUpdateUser.execute.mockResolvedValue({ id: userId, phone: null });
+    await request(app.getHttpServer()).patch(`/dashboard/identity/users/${userId}`)
+      .set('x-test-actor-id', 'actor').send({ phone: null }).expect(200);
+    expect(mockUpdateUser.execute).toHaveBeenCalledWith({ actorUserId: 'actor', userId, phone: null });
+  });
+
+  it('documents the custom role identity and nullable profile phone accurately', () => {
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().build());
+    const response = document.paths['/dashboard/identity/users/{id}'].get!.responses['200'] as any;
+    expect(response.content['application/json'].schema.$ref).toBe('#/components/schemas/DashboardUserResponseDto');
+    const schemas = document.components!.schemas as any;
+    expect(Object.keys(schemas.DashboardUserCustomRoleDto.properties).sort()).toEqual(['id', 'name']);
+    expect(schemas.DashboardUserResponseDto.properties.customRole.nullable).toBe(true);
+    expect(schemas.DashboardUserResponseDto.properties.phone.nullable).toBe(true);
+    expect(schemas.UpdateUserDto.properties.phone.nullable).toBe(true);
+    expect(schemas.UpdateUserDto.properties).not.toHaveProperty('role');
+    expect(schemas.UpdateUserDto.properties).not.toHaveProperty('customRoleId');
   });
 
   describe('GET /dashboard/identity/users', () => {

@@ -14,6 +14,7 @@
  */
 
 import { api } from "@/lib/api"
+import { riyadhDayStart, riyadhDayEnd } from "@/lib/audit-date"
 import type {
   PackageReport,
   PackageReportQuery,
@@ -25,11 +26,11 @@ import type {
  * always accepted — the server normalises a reversed range.
  */
 export async function fetchPackageReport(
-  query: PackageReportQuery,
+  query: PackageReportQuery
 ): Promise<PackageReport> {
   return api.get<PackageReport>("/dashboard/ops/reports/packages", {
     report: query.report,
-    from: query.from,
-    to: query.to,
+    from: query.from.includes("T") ? query.from : riyadhDayStart(query.from),
+    to: query.to.includes("T") ? query.to : riyadhDayEnd(query.to),
   })
 }

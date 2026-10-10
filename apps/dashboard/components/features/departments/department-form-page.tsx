@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { useQuery } from "@tanstack/react-query"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
@@ -16,10 +15,9 @@ import { Label } from "@sawaa/ui"
 import { Separator } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
-import { useDepartmentMutations } from "@/hooks/use-departments"
+import { useDepartment, useDepartmentMutations } from "@/hooks/use-departments"
 import { useLocale } from "@/components/locale-provider"
-import { fetchDepartments } from "@/lib/api/departments"
-import { queryKeys } from "@/lib/query-keys"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { ApiError } from "@/lib/api"
 import { departmentSchema, type DepartmentFormData } from "@/lib/schemas/department.schema"
 
@@ -46,13 +44,7 @@ export function DepartmentFormPage(props: Props) {
   const isEdit = props.mode === "edit"
   const departmentId = isEdit ? props.departmentId : undefined
 
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.departments.list({ all: true }),
-    queryFn: () => fetchDepartments({ limit: 200 }),
-    enabled: isEdit,
-  })
-
-  const department = data?.items.find((d) => d.id === departmentId)
+  const { data: department, isLoading, isError, refetch } = useDepartment(departmentId)
 
   const isPending = isEdit ? updateMut.isPending : createMut.isPending
 
@@ -83,9 +75,9 @@ export function DepartmentFormPage(props: Props) {
           id: department!.id,
           nameAr: data.nameAr,
           nameEn: data.nameEn,
-          descriptionAr: data.descriptionAr || undefined,
-          descriptionEn: data.descriptionEn || undefined,
-          icon: data.icon || undefined,
+          descriptionAr: data.descriptionAr || null,
+          descriptionEn: data.descriptionEn || null,
+          icon: data.icon || null,
           sortOrder: data.sortOrder,
           isActive: data.isActive,
           isVisible: data.isVisible,
@@ -139,6 +131,8 @@ export function DepartmentFormPage(props: Props) {
       </ListPageShell>
     )
   }
+
+  if (isEdit && isError) return <ErrorBanner message={t("common.errorLoading")} onRetry={() => refetch()} />
 
   if (isEdit && !isLoading && !department) {
     return (

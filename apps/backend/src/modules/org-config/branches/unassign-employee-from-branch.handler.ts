@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/database";
 
@@ -14,7 +16,7 @@ const UNASSIGN_EMPLOYEE_MESSAGES = {
 
 @Injectable()
 export class UnassignEmployeeFromBranchHandler {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(private readonly prisma: PrismaService, private readonly cache: CacheService) {}
 
 	async execute(dto: UnassignEmployeeFromBranchCommand) {
 		const branch = await this.prisma.branch.findFirst({
@@ -37,6 +39,7 @@ export class UnassignEmployeeFromBranchHandler {
 			);
 
 		await this.prisma.employeeBranch.delete({ where: { id: link.id } });
+		await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
 		return { id: link.id };
 	}
 }

@@ -28,6 +28,7 @@ export interface EmployeeListItem {
   employmentType: Employee['employmentType'];
   onboardingStatus: Employee['onboardingStatus'];
   isActive: boolean;
+  isAcceptingBookings: boolean;
   isPublic: boolean;
   slug: string | null;
   publicBioAr: string | null;
@@ -77,6 +78,9 @@ export function mapEmployeeRow(
     employmentType: e.employmentType,
     onboardingStatus: e.onboardingStatus,
     isActive: e.isActive,
+    // Employee activation is the existing booking admission gate. This flag
+    // indicates admission is enabled, not that any particular slot is free.
+    isAcceptingBookings: e.isActive,
     isPublic: e.isPublic,
     slug: e.slug,
     publicBioAr: e.publicBioAr,

@@ -53,7 +53,7 @@ function ResetPasswordFormInner() {
 
     const parsed = strongPasswordSchema.safeParse(newPassword)
     if (!parsed.success) {
-      setError(t("resetPassword.weakPassword"))
+      setError(t("auditStaff.passwordRequirements"))
       return
     }
     if (newPassword !== confirm) {
@@ -64,7 +64,7 @@ function ResetPasswordFormInner() {
     try {
       await performStaffPasswordReset(token, newPassword)
       setSuccess(true)
-      setTimeout(() => router.push("/"), 2000)
+      setTimeout(() => router.push("/login"), 2000)
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("resetPassword.invalidToken")
@@ -81,7 +81,7 @@ function ResetPasswordFormInner() {
           {t("resetPassword.invalidToken")}
         </p>
         <Link
-          href="/"
+          href="/login"
           className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {t("resetPassword.backToLogin")}
@@ -121,7 +121,7 @@ function ResetPasswordFormInner() {
           {t("resetPassword.title")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {t("resetPassword.subtitle")}
+          {t("auditStaff.passwordRequirements")}
         </p>
       </div>
 
@@ -182,7 +182,7 @@ function ResetPasswordFormInner() {
       {/* Back link */}
       <div className="mt-6 text-center">
         <Link
-          href="/"
+          href="/login"
           className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {t("resetPassword.backToLogin")}

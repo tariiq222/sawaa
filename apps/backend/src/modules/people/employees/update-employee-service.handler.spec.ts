@@ -13,7 +13,7 @@ describe('UpdateEmployeeServiceHandler', () => {
   it('throws when the employee service assignment does not exist', async () => {
     const prisma = buildPrisma();
     prisma.employeeService.findUnique.mockResolvedValue(null);
-    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+    const handler = new UpdateEmployeeServiceHandler(prisma as never, { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } as never);
 
     await expect(
       handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', isActive: false }),
@@ -25,7 +25,7 @@ describe('UpdateEmployeeServiceHandler', () => {
     prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1', isActive: true });
     prisma.employeeService.update.mockResolvedValue({ id: 'link-1', isActive: false });
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: true });
-    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+    const handler = new UpdateEmployeeServiceHandler(prisma as never, { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } as never);
 
     const result = await handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', isActive: false });
 
@@ -40,7 +40,7 @@ describe('UpdateEmployeeServiceHandler', () => {
     const prisma = buildPrisma();
     prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1', isActive: true, bufferMinutes: 0 });
     prisma.employeeService.update.mockResolvedValue({ id: 'link-1', isActive: true, bufferMinutes: 20 });
-    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+    const handler = new UpdateEmployeeServiceHandler(prisma as never, { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } as never);
 
     const result = await handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', bufferMinutes: 20 });
 
@@ -54,7 +54,7 @@ describe('UpdateEmployeeServiceHandler', () => {
   it('rejects a negative or non-integer bufferMinutes', async () => {
     const prisma = buildPrisma();
     prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1', isActive: true, bufferMinutes: 0 });
-    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+    const handler = new UpdateEmployeeServiceHandler(prisma as never, { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } as never);
 
     await expect(
       handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', bufferMinutes: -5 }),
@@ -76,7 +76,7 @@ describe('UpdateEmployeeServiceHandler', () => {
     const prisma = buildPrisma();
     prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1', isActive: false });
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: false });
-    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+    const handler = new UpdateEmployeeServiceHandler(prisma as never, { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } as never);
 
     await expect(
       handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', isActive: true }),

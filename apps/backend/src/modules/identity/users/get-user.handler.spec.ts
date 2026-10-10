@@ -33,6 +33,7 @@ describe('GetUserHandler', () => {
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { id: '00000000-0000-0000-0000-000000000001' },
       omit: { passwordHash: true },
+      include: { customRole: { select: { id: true, name: true } } },
     });
   });
 
@@ -42,6 +43,7 @@ describe('GetUserHandler', () => {
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { ref: 42 },
       omit: { passwordHash: true },
+      include: { customRole: { select: { id: true, name: true } } },
     });
   });
 

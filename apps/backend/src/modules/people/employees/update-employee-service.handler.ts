@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 
@@ -10,7 +12,7 @@ export interface UpdateEmployeeServiceCommand {
 
 @Injectable()
 export class UpdateEmployeeServiceHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cache: CacheService) {}
 
   async execute(cmd: UpdateEmployeeServiceCommand) {
     const record = await this.prisma.employeeService.findUnique({
@@ -40,12 +42,14 @@ export class UpdateEmployeeServiceHandler {
       throw new BadRequestException('bufferMinutes must be a non-negative integer');
     }
 
-    return this.prisma.employeeService.update({
+    const result = await this.prisma.employeeService.update({
       where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
       data: {
         ...(cmd.isActive !== undefined ? { isActive: cmd.isActive } : {}),
         ...(cmd.bufferMinutes !== undefined ? { bufferMinutes: cmd.bufferMinutes } : {}),
       },
     });
+    await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
+    return result;
   }
 }

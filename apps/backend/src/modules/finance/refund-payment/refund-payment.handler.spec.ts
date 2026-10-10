@@ -25,7 +25,7 @@ describe('RefundPaymentHandler', () => {
     ...overrides,
   });
   const payment = (refundedAmount = 40, overrides: Record<string, unknown> = {}) => ({
-    id: 'payment-1', gatewayRef: 'gateway-payment-1', amount: new Prisma.Decimal(100),
+    id: 'payment-1', method: 'ONLINE_CARD', gatewayRef: 'gateway-payment-1', amount: new Prisma.Decimal(100),
     refundedAmount: new Prisma.Decimal(refundedAmount), currency: 'SAR',
     ...overrides,
   });
@@ -94,6 +94,14 @@ describe('RefundPaymentHandler', () => {
       ],
     }).compile();
     handler = module.get(RefundPaymentHandler);
+  });
+
+  it('never sends an administrative bank reference to Moyasar when recovering an in-flight request', async () => {
+    prisma.refundRequest.findUniqueOrThrow.mockResolvedValue(processing());
+    prisma.payment.findUniqueOrThrow.mockResolvedValue(payment(0, {method:'BANK_TRANSFER',gatewayRef:'BANK-ADMIN-REF'}));
+    await handler.finalizeRefundFromCancellation({refundRequestId:'refund-1',idempotencyKey:'refund:refund-1'}).catch(error => expect(error).toBeInstanceOf(ConflictException));
+    expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+    expect(moyasar.createRefund).not.toHaveBeenCalled();
   });
 
   it('returns a public numeric refund amount and null for a missing request', async () => {
@@ -223,7 +231,7 @@ describe('RefundPaymentHandler', () => {
 
   describe('createRefundRequestInTx', () => {
     const rawPayment = (overrides: Record<string, unknown> = {}) => ({
-      id: 'payment-1', status: PaymentStatus.COMPLETED, gatewayRef: 'gateway-payment-1',
+      id: 'payment-1', method: 'ONLINE_CARD', status: PaymentStatus.COMPLETED, gatewayRef: 'gateway-payment-1',
       amount: new Prisma.Decimal(100), refundedAmount: new Prisma.Decimal(0),
       invoiceId: 'invoice-1', ...overrides,
     });
@@ -251,7 +259,7 @@ describe('RefundPaymentHandler', () => {
 
       prisma.$queryRaw
         .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([rawPayment({ refundedAmount: new Prisma.Decimal(80) })]);
+        .mockResolvedValueOnce([rawPayment({ method: 'BANK_TRANSFER', refundedAmount: new Prisma.Decimal(80) })]);
       prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
       prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(invoice());
       await expect(handler.createRefundRequestInTx(prisma, {
@@ -260,7 +268,7 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('settles off-gateway refunds entirely inside the caller transaction', async () => {
-      prisma.$queryRaw.mockResolvedValue([rawPayment({ gatewayRef: null })]);
+      prisma.$queryRaw.mockResolvedValue([rawPayment({ method: 'CASH', gatewayRef: null })]);
       prisma.invoice.findUniqueOrThrow.mockResolvedValue(invoice({ refundedAmount: 0 }));
 
       const result = await handler.createRefundRequestInTx(prisma, {
@@ -785,7 +793,7 @@ describe('RefundPaymentHandler', () => {
 
     it('persists the request under the payment lock then delegates to the same leased engine', async () => {
       prisma.$queryRaw.mockResolvedValue([{
-        id: 'payment-1', status: PaymentStatus.COMPLETED, gatewayRef: 'gateway-payment-1',
+        id: 'payment-1', method: 'ONLINE_CARD', status: PaymentStatus.COMPLETED, gatewayRef: 'gateway-payment-1',
         amount: new Prisma.Decimal(100), refundedAmount: new Prisma.Decimal(0), invoiceId: 'invoice-1',
       }]);
       prisma.invoice.findUniqueOrThrow.mockResolvedValue(invoice());

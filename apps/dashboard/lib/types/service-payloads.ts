@@ -17,7 +17,7 @@ export interface CreateCategoryPayload {
 }
 
 export interface UpdateCategoryPayload {
-  nameEn?: string
+  nameEn?: string | null
   nameAr?: string
   sortOrder?: number
   isActive?: boolean

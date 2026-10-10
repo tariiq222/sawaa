@@ -65,6 +65,7 @@ export function PublicProfileTab({ employee }: Props) {
         ...(image.clear ? { publicImageUrl: null } : {}),
       }
       await updateMutation.mutateAsync({ id: employee.id, ...payload })
+      toast.success(t("employees.public.saved"))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("employees.public.saveError"))
     } finally {

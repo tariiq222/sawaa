@@ -57,6 +57,18 @@ export async function fetchCategories(
   return { ...response, items: response.items.map(toCategory) }
 }
 
+/** Picker callers need every page; list pages keep fetchCategories pagination. */
+export async function fetchAllCategories(): Promise<PaginatedResponse<ServiceCategory>> {
+  const first = await fetchCategories({ page: 1, limit: 100 })
+  const items = [...first.items]
+  for (let page = 2; page <= first.meta.totalPages; page++) items.push(...(await fetchCategories({ page, limit: 100 })).items)
+  return { ...first, items }
+}
+
+export async function fetchCategory(id: string): Promise<ServiceCategory> {
+  return api.get<ServiceCategory>(`/dashboard/organization/categories/${id}`)
+}
+
 export async function createCategory(
   payload: CreateCategoryPayload,
 ): Promise<ServiceCategory> {
@@ -113,6 +125,8 @@ export const DEFAULT_SERVICES_LIST_QUERY: ServiceListQuery = {
   page: 1,
   limit: 20,
   includeHidden: true,
+  sortBy: "createdAt",
+  sortOrder: "desc",
 }
 
 export async function fetchServices(
@@ -123,6 +137,10 @@ export async function fetchServices(
     limit: query.limit,
     isActive: query.isActive,
     categoryId: query.categoryId,
+    branchId: query.branchId,
+    departmentId: query.departmentId,
+    sortBy: query.sortBy,
+    sortOrder: query.sortOrder,
     search: query.search,
     includeHidden: query.includeHidden,
     historicalContext: query.historicalContext,

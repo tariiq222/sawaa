@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -158,7 +159,10 @@ export function EmployeesListContent({
         employeeName={statusTarget ? `${statusTarget.user.firstName} ${statusTarget.user.lastName}` : ""}
         onConfirm={() => {
           if (!statusTarget) return
-          updateMutation.mutate({ id: statusTarget.id, isActive: !statusTarget.isActive })
+          updateMutation.mutate({ id: statusTarget.id, isActive: !statusTarget.isActive }, {
+            onSuccess: () => toast.success(t("employees.status.saved")),
+            onError: () => toast.error(t("employees.edit.error")),
+          })
           setStatusTarget(null)
         }}
         onCancel={() => setStatusTarget(null)}

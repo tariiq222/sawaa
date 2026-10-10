@@ -75,3 +75,12 @@ it('exports collection and immutable recording dates separately', async () => {
  expect(sheet).toBeDefined();
  expect(sheet!.getRow(2).values).toEqual(expect.arrayContaining(['2026-09-01T21:00:00.000Z', '2026-10-05T10:00:00.000Z', 'R-123', 'late recording']));
 });
+
+it('exports every revenue amount as numeric SAR including fractional halalas', async () => {
+ const buffer = await buildRevenueExcel({...mockRevenueReport,totalRevenue:4950,averagePerBooking:1650,byMethod:[{method:'CASH',amount:4950,count:3}],byDay:[{date:'2026-10-10',amount:4950,count:3}]});
+ const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buffer as never);
+ expect(wb.getWorksheet('Summary')!.getCell('B2').value).toBe(49.5);
+ expect(wb.getWorksheet('Summary')!.getCell('B4').value).toBe(16.5);
+ expect(wb.getWorksheet('By Method')!.getCell('B2').value).toBe(49.5);
+ expect(wb.getWorksheet('By Day')!.getCell('B2').value).toBe(49.5);
+});

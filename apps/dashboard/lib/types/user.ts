@@ -33,6 +33,7 @@ export interface User {
   isActive: boolean
   role: UserRole
   customRoleId: string | null
+  customRole?: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
 }
@@ -74,10 +75,8 @@ export interface CreateUserPayload {
 export interface UpdateUserPayload {
   email?: string
   name?: string
-  phone?: string
+  phone?: string | null
   gender?: UserGender
-  role?: TenantUserRole
-  customRoleId?: string | null
 }
 
 export interface UpdateUserRolePayload {

@@ -8,7 +8,7 @@ export interface UpdateUserCommand {
   userId: string;
   email?: string;
   name?: string;
-  phone?: string;
+  phone?: string | null;
   gender?: UserGender;
   avatarUrl?: string;
   isActive?: boolean;

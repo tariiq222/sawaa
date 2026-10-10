@@ -19,19 +19,37 @@ interface PaymentActionsProps {
 
 /* ─── Component ─── */
 
-export function PaymentActions({ payment, onAction, onRefund }: PaymentActionsProps) {
+export function PaymentActions({
+  payment,
+  onAction,
+  onRefund,
+}: PaymentActionsProps) {
   const { t } = useLocale()
   const [verifyOpen, setVerifyOpen] = useState(false)
 
-  const canRefund = payment.status === "COMPLETED"
+  const gateway = payment.method === "ONLINE_CARD"
+  const gatewayRefundBlocked =
+    gateway &&
+    (payment.status === "PARTIALLY_REFUNDED" ||
+      Number(payment.refundedAmount ?? 0) > 0)
+  const canRefund =
+    !gatewayRefundBlocked &&
+    Number(payment.amount) > Number(payment.refundedAmount ?? 0) &&
+    (payment.status === "COMPLETED" ||
+      (payment.status === "PARTIALLY_REFUNDED" && !gateway))
   const canVerify =
     payment.method === "BANK_TRANSFER" &&
-    payment.receipts &&
-    payment.receipts.length > 0
+    payment.status === "PENDING_VERIFICATION" &&
+    (!!payment.receiptUrl || !!payment.receipts?.length)
 
   return (
     <>
       <div className="flex flex-wrap gap-2 pb-4">
+        {gatewayRefundBlocked && (
+          <p className="text-sm text-muted-foreground">
+            {t("payments.refund.gatewayRemaining")}
+          </p>
+        )}
         {canRefund && (
           <Button size="sm" onClick={onRefund}>
             {t("detail.refund")}

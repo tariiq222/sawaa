@@ -19,6 +19,8 @@ import {
 } from "@sawaa/ui"
 
 import { useRoles, usePermissions, useRoleMutations } from "@/hooks/use-users"
+import { useAuth } from "@/components/providers/auth-provider"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { useLocale } from "@/components/locale-provider"
 import { PermissionMatrix, PermissionMatrixSkeleton } from "./permission-matrix"
 
@@ -28,8 +30,11 @@ export interface RolesTabHandle {
 
 export const RolesTab = forwardRef<RolesTabHandle>(function RolesTab(_props, ref) {
   const { t } = useLocale()
-  const { data: roles, isLoading: rolesLoading } = useRoles()
-  const { data: permissions, isLoading: permsLoading } = usePermissions()
+  const { canDo } = useAuth()
+  const canManage = canDo("role", "manage")
+  const canRead = canDo("role", "read")
+  const { data: roles, isLoading: rolesLoading, error: rolesError, refetch: refetchRoles } = useRoles({ enabled: canRead })
+  const { data: permissions, isLoading: permsLoading, error: permsError, refetch: refetchPermissions } = usePermissions({ enabled: canRead })
   const { deleteMut } = useRoleMutations()
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -45,7 +50,7 @@ export const RolesTab = forwardRef<RolesTabHandle>(function RolesTab(_props, ref
   }), [])
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || !canManage) return
     try {
       await deleteMut.mutateAsync(deleteTarget.id)
       toast.success(t("users.roles.deleted"))
@@ -54,6 +59,9 @@ export const RolesTab = forwardRef<RolesTabHandle>(function RolesTab(_props, ref
       showApiError(err, { fallback: t("users.roles.deleteError"), t })
     }
   }
+
+  if (!canRead) return null
+  if (rolesError || permsError) return <ErrorBanner message={t("error.server")} onRetry={() => { void refetchRoles(); void refetchPermissions() }} />
 
   if (rolesLoading || permsLoading) {
     return (
@@ -83,7 +91,7 @@ export const RolesTab = forwardRef<RolesTabHandle>(function RolesTab(_props, ref
           )}
         >
           <PermissionMatrix role={role} allPermissions={permissions ?? []} />
-          {!role.isSystem && (
+          {!role.isSystem && canManage && (
             <Button
               variant="ghost"
               size="icon-sm"

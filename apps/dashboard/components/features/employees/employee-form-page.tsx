@@ -59,7 +59,7 @@ export function EmployeeFormPage(props: Props) {
   const employeeId = isEdit ? props.employeeId : undefined
 
   const router = useRouter()
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
   const initialTab =
@@ -70,13 +70,13 @@ export function EmployeeFormPage(props: Props) {
 
   // useEmployee resolves the route param (which may be a readable ref like
   // EMP-12) to the full record; all other endpoints need the canonical UUID.
-  const { data: employee, isLoading } = useEmployee(employeeId ?? null)
+  const { data: employee, isLoading, error } = useEmployee(employeeId ?? null)
   const resolvedEmployeeId = employee?.id ?? null
   const { data: availability } = useEmployeeAvailability(resolvedEmployeeId)
   const { data: existingBreaks } = useEmployeeBreaks(resolvedEmployeeId)
   const { data: existingServices } = useEmployeeServices(resolvedEmployeeId)
 
-  const [schedule, setSchedule] = useState<AvailabilitySlot[]>(defaultSchedule)
+  const [schedule, setSchedule] = useState<AvailabilitySlot[]>(isEdit ? defaultSchedule.map(s => ({...s, isActive:false})) : defaultSchedule)
   const [breaks, setBreaksState] = useState<LocalBreak[]>([])
   const [draftServices, setDraftServices] = useState<DraftService[]>([])
   const [vacation, setVacation] = useState<LocalVacation>({
@@ -144,14 +144,15 @@ export function EmployeeFormPage(props: Props) {
     )
   }
 
+  if (isEdit && (error || !employee)) return <ListPageShell><p role="alert">{t(error ? "error.server" : "employees.detail.notFound")}</p></ListPageShell>
+
   /* ─── Render ─── */
 
   const title = isEdit
     ? t("employees.edit.pageTitle")
     : t("employees.create.pageTitle")
   const employeeDisplayName = employee
-    ? (employee.nameAr ??
-      `${employee.user.firstName} ${employee.user.lastName}`)
+    ? (locale === "ar" ? employee.nameAr ?? employee.nameEn ?? `${employee.user.firstName} ${employee.user.lastName}` : employee.nameEn ?? `${employee.user.firstName} ${employee.user.lastName}`)
     : ""
   const description = isEdit
     ? employeeDisplayName
@@ -236,7 +237,7 @@ export function EmployeeFormPage(props: Props) {
             type="submit"
             size="lg"
             className="rounded-lg"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (isEdit && (!employee || availability === undefined || existingBreaks === undefined || existingServices === undefined))}
           >
             {isSubmitting
               ? t(

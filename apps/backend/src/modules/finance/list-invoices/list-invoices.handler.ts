@@ -31,6 +31,7 @@ export class ListInvoicesHandler {
     // matching client IDs first (by name), then constrain invoices to them and
     // OR with the numeric invoice number — same pattern as list-bookings.
     const searchTerm = query.search?.trim();
+    const invoiceNumber = searchTerm?.match(/^(?:INV-)?(\d+)$/i)?.[1];
     let searchClientIds: string[] = [];
     if (searchTerm) {
       const tokens = searchTerm.split(/\s+/).filter(Boolean);
@@ -70,8 +71,8 @@ export class ListInvoicesHandler {
               ...(searchClientIds.length
                 ? [{ clientId: { in: searchClientIds } }]
                 : []),
-              ...(/^\d+$/.test(searchTerm)
-                ? [{ number: Number(searchTerm) }]
+              ...(invoiceNumber
+                ? [{ number: Number(invoiceNumber) }]
                 : []),
             ],
           }

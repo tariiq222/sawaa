@@ -7,6 +7,7 @@ const dec = (n: number) => new Prisma.Decimal(n);
 const basePaymentRow = {
   id: 'pay-1',
   status: PaymentStatus.COMPLETED as string,
+  method: 'CASH',
   gatewayRef: null as string | null,
   amount: dec(20000),
   refundedAmount: dec(0),
@@ -112,7 +113,7 @@ describe('ManualRefundPaymentHandler', () => {
   });
 
   it('rejects a gateway (card) payment — that needs the Moyasar path', async () => {
-    const { handler } = build({ gatewayRef: 'moy_123' });
+    const { handler } = build({ method: 'ONLINE_CARD', gatewayRef: 'moy_123' });
     await expect(handler.execute({ paymentId: 'pay-1', reason: 'r' })).rejects.toThrow(/gateway/i);
   });
 
@@ -189,4 +190,10 @@ describe('ManualRefundPaymentHandler', () => {
     tx.refundRequest.findFirst.mockResolvedValueOnce({ id: 'rr-existing' });
     await expect(handler.execute({ paymentId: 'pay-1', reason: 'r' })).rejects.toThrow(/already processing/i);
   });
+});
+
+it('refunds a bank transfer with an administrative reference without gateway calls', async () => {
+ const {handler,tx}=build({method:'BANK_TRANSFER',gatewayRef:'bank-confirmation',status:PaymentStatus.PARTIALLY_REFUNDED,refundedAmount:dec(5000)} as any);
+ await expect(handler.execute({paymentId:'pay-1',reason:'Return remaining'})).resolves.toMatchObject({status:PaymentStatus.REFUNDED});
+ expect(tx.payment.update).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({refundedAmount:{increment:15000}})}));
 });

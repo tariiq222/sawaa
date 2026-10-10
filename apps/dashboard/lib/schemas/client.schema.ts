@@ -58,7 +58,7 @@ const optionalNameField = z.string().max(255).optional()
 export function splitFullName(fullName: string): { firstName: string; middleName?: string; lastName: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return { firstName: "", lastName: "" }
-  if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] }
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" }
   if (parts.length === 2) return { firstName: parts[0], lastName: parts[1] }
   return {
     firstName: parts[0],

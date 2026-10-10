@@ -1,5 +1,6 @@
 "use client"
 
+import { riyadhDate, riyadhDayStart, riyadhDayEnd } from "@/lib/audit-date"
 import { Input } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Search01Icon } from "@hugeicons/core-free-icons"
@@ -16,9 +17,9 @@ interface ConversationFilterControlsProps {
   onChange: (filters: ConversationFilters) => void
 }
 
-const dateValue = (value?: string) => value?.slice(0, 10) ?? ""
+const dateValue = (value?: string) => !value ? '' : value.length === 10 ? value : riyadhDate(value)
 const dateBoundary = (value: string, endOfDay: boolean) => value
-  ? `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`
+  ? endOfDay ? riyadhDayEnd(value) : riyadhDayStart(value)
   : undefined
 
 export function ConversationFilterControls(props: ConversationFilterControlsProps) {

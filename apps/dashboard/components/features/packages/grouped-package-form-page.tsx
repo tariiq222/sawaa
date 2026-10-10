@@ -68,6 +68,7 @@ export function GroupedPackageFormPage({ mode, packageId, initialPackage }: Prop
   const onSubmit = state.form.handleSubmit(async (data) => {
     try {
       const payload = buildGroupedPackagePayload(data)
+      if (isEdit && data.imageUrl === state.pkg?.imageUrl) delete payload.imageUrl
       let id: string
       if (isEdit) {
         if (!state.pkg) throw new Error("Package is unavailable")

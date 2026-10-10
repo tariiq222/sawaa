@@ -24,7 +24,7 @@ export class ListUsersHandler {
     };
 
     const [items, total] = await Promise.all([
-      this.prisma.user.findMany({ where, skip: (query.page - 1) * query.limit, take: query.limit, orderBy: { createdAt: 'desc' }, omit: { passwordHash: true } }),
+      this.prisma.user.findMany({ where, skip: (query.page - 1) * query.limit, take: query.limit, orderBy: { createdAt: 'desc' }, omit: { passwordHash: true }, include: { customRole: { select: { id: true, name: true } } } }),
       this.prisma.user.count({ where }),
     ]);
 

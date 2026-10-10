@@ -42,6 +42,7 @@ export interface ProgramSummary {
 }
 
 export interface ProgramEnrollmentSummary {
+  clientName?: string | null;
   id: string;
   clientId: string;
   enrolledAt: string;
@@ -57,6 +58,7 @@ export interface ProgramEnrollmentSummary {
 }
 
 export interface ProgramDetail extends ProgramSummary {
+  supervisors?: { id: string; name: string; nameEn?: string | null }[];
   descriptionAr: string | null;
   descriptionEn: string | null;
   publicDescriptionAr: string | null;

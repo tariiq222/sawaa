@@ -119,3 +119,9 @@ describe("users api", () => {
     expect(getMock).toHaveBeenCalledWith("/dashboard/identity/permissions")
   })
 })
+
+it("passes an explicit null phone through the profile API", async () => {
+  patchMock.mockResolvedValueOnce({ id: "u1", phone: null })
+  await updateUser("u1", { phone: null })
+  expect(patchMock).toHaveBeenCalledWith("/dashboard/identity/users/u1", { phone: null })
+})

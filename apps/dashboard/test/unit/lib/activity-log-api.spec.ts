@@ -33,8 +33,8 @@ describe("activity-log api", () => {
       entity: "Booking",
       action: "UPDATE",
       userId: undefined,
-      from: "2026-04-01",
-      to: "2026-04-30",
+      from: "2026-03-31T21:00:00.000Z",
+      to: "2026-04-30T20:59:59.999Z",
     })
   })
 
