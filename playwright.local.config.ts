@@ -44,7 +44,8 @@ export default defineConfig({
   projects: [
     {
       name: 'website',
-      testMatch: 'website/**/*.spec.ts',
+      // seed.spec.ts is the reviewed default seed for the Playwright Test Agents.
+      testMatch: ['website/**/*.spec.ts', 'seed.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://127.0.0.1:55205',
@@ -57,7 +58,7 @@ export default defineConfig({
     },
     {
       name: 'dashboard',
-      testMatch: 'dashboard/**/*.spec.ts',
+      testMatch: ['dashboard/**/*.spec.ts', 'seed.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         baseURL: 'http://127.0.0.1:55203',
