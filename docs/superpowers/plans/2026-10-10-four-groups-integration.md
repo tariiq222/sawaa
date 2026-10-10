@@ -32,24 +32,24 @@
 **Files:** Existing branch changes in backend identity/bookings/finance, mobile screens/components/hooks/translations, generated OpenAPI/dashboard types, docs/audits/2026-10-08-dashboard-pages-audit.md and mobile release records.
 **Interfaces:** Consume the four existing branch heads; produce a combined candidate preserving their Git ancestry and behavior.
 
-- [ ] Install isolated dependencies and run focused existing baseline tests on origin/develop.
-- [ ] Merge codex/auth-login-enumeration, codex/booking-flow-fixes-20261009, codex/mobile-design-fixes-20261009, docs/store-prep18-dashboard-audit in that order using git merge --no-ff; inspect each conflict before resolving.
-- [ ] Retain the most recent known App Store monitor timestamp; do not restore an older observation.
-- [ ] Correct the audit's isPublic claim, public-profile fields claim and UI halala exception against GetEmployeeHandler, mapEmployee, financial-report-page and TrendChart.
-- [ ] Run git diff --check and assert every requested branch is an ancestor of HEAD.
+- [x] Install isolated dependencies and run focused existing baseline tests on origin/develop.
+- [x] Merge codex/auth-login-enumeration, codex/booking-flow-fixes-20261009, codex/mobile-design-fixes-20261009, docs/store-prep18-dashboard-audit in that order using git merge --no-ff; inspect each conflict before resolving.
+- [x] Retain the most recent known App Store monitor timestamp; do not restore an older observation.
+- [x] Correct the audit's isPublic claim, public-profile fields claim and UI halala exception against GetEmployeeHandler, mapEmployee, financial-report-page and TrendChart.
+- [x] Run git diff --check and assert every requested branch is an ancestor of HEAD.
 
 ### Task 2: Verify the integrated candidate
 
 **Files:** Existing regression specs; private logs and synthetic fixture scripts outside versioned product source; regenerated API artifacts and dated integration release record.
 **Interfaces:** Consume Task 1 source; produce reproducible command results tied to candidate tree and synthetic live flow evidence.
 
-- [ ] Run changed backend specs plus related login/payment/booking consumers; backend build, typecheck and changed-file lint.
-- [ ] Run mobile Jest with coverage, typecheck and lint.
-- [ ] Run pnpm openapi:sync and inspect the generated diff; verify handwritten api-client drift and dashboard typecheck.
-- [ ] Start isolated PostgreSQL/Redis/MinIO and candidate backend/dashboard; seed only synthetic records.
-- [ ] Run official dashboard smoke with all fixtures required for every test and verify real login/logout behavior.
-- [ ] Repeat the booking API/database/Moyasar test-key Sandbox acceptance against the integrated backend; no live keys.
-- [ ] Record commands/results and remaining physical-device limitations; dispatch a read-only independent whole-branch review and resolve material findings with regression coverage.
+- [x] Run changed backend specs plus related login/payment/booking consumers; backend build, typecheck and changed-file lint.
+- [x] Run mobile Jest with coverage, typecheck and lint.
+- [x] Run pnpm openapi:sync and inspect the generated diff; verify handwritten api-client drift and dashboard typecheck.
+- [x] Start isolated PostgreSQL/Redis/MinIO and candidate backend/dashboard; seed only synthetic records.
+- [x] Run official dashboard smoke with all fixtures required for every test and verify real login/logout behavior.
+- [x] Repeat the booking API/database/Moyasar test-key Sandbox acceptance against the integrated backend; no live keys.
+- [x] Record commands/results and remaining physical-device limitations; dispatch a read-only independent whole-branch review and resolve material findings with regression coverage.
 
 ### Task 3: Publish and merge develop
 
