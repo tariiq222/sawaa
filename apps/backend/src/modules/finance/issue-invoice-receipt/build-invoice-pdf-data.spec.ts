@@ -1,4 +1,5 @@
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
+import { calculateInvoiceBalance } from '../invoice-balance.helper';
 import { buildInvoicePdfData } from './build-invoice-pdf-data';
 
 // ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ const buildDeps = (overrides: {
   const payment =
     overrides.payment === null
       ? null
-      : overrides.payment ?? { method: 'CASH' };
+      : overrides.payment ?? { method: 'CASH', amount: 11500, effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z') };
   const booking =
     overrides.booking === null
       ? null
@@ -49,6 +50,7 @@ const buildDeps = (overrides: {
   const invoice = overrides.invoice ?? {
     id: 'inv-1',
     number: 42,
+    status: 'PAID',
     issuedAt: new Date('2026-05-24T10:00:00Z'),
     paidAt: new Date('2026-05-24T10:05:00Z'),
     clientId: 'client-1',
@@ -65,7 +67,7 @@ const buildDeps = (overrides: {
   const prisma = {
     organizationSettings: { findFirst: jest.fn().mockResolvedValue(orgSettings) },
     client: { findUnique: jest.fn().mockResolvedValue(client) },
-    payment: { findFirst: jest.fn().mockResolvedValue(payment) },
+    payment: { findMany: jest.fn().mockResolvedValue(payment ? [payment] : []) },
     booking: { findFirst: jest.fn().mockResolvedValue(booking) },
   };
 
@@ -87,10 +89,13 @@ describe('buildInvoicePdfData', () => {
       prisma as never,
       cls as never,
       invoice as never,
-      'pay-1',
+      'receipt',
     );
 
     expect(data).toEqual({
+      kind: 'receipt',
+      status: 'PAID',
+      outstanding: 0,
       invoiceNumber: 42,
       invoiceId: 'inv-1',
       issuedAt: new Date('2026-05-24T10:00:00Z'),
@@ -110,34 +115,53 @@ describe('buildInvoicePdfData', () => {
       total: 11500,
       currency: 'SAR',
       paymentMethod: 'CASH',
+      payments: [{ date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 11500, refundedAmount: 0 }],
       qrDataUrl: null,
     });
   });
 
   it('sets the systemContext CLS key before running the joined lookups (cross-tenant safe)', async () => {
     const { prisma, cls, setKeys, invoice } = buildDeps();
-    await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(cls.set).toHaveBeenCalledWith(SYSTEM_CONTEXT_CLS_KEY, true);
     expect(setKeys[SYSTEM_CONTEXT_CLS_KEY]).toBe(true);
   });
 
-  it('uses the supplied paymentId to resolve the EXACT payment (not the latest)', async () => {
-    const { prisma, cls, invoice } = buildDeps({ paymentId: 'pay-exact' });
-    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'pay-exact');
-    expect(prisma.payment.findFirst).toHaveBeenCalledWith({
-      where: { id: 'pay-exact' },
-      select: { method: true },
-    });
+  it('queries every COMPLETED payment of the invoice', async () => {
+    const { prisma, cls, invoice } = buildDeps();
+    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          invoiceId: 'inv-1',
+          status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED'] },
+        },
+      }),
+    );
   });
 
-  it('falls back to the LATEST COMPLETED payment when no paymentId is given', async () => {
-    const { prisma, cls, invoice } = buildDeps({ paymentId: null });
-    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, null);
-    expect(prisma.payment.findFirst).toHaveBeenCalledWith({
-      where: { invoiceId: 'inv-1', status: 'COMPLETED' },
-      orderBy: { createdAt: 'desc' },
-      select: { method: true },
+  it('accounts refunds exactly like calculateInvoiceBalance (10000 paid, 2000 refunded)', async () => {
+    const { prisma, cls, invoice } = buildDeps({
+      payment: {
+        method: 'CASH', amount: 10000, refundedAmount: 2000,
+        effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z'),
+      },
+      invoice: {
+        id: 'inv-r', number: 5, status: 'PARTIALLY_REFUNDED', issuedAt: new Date(), paidAt: new Date(),
+        clientId: 'client-1', bookingId: null, packagePurchaseId: null,
+        subtotal: 10000, discountAmt: 0, vatAmt: 0, total: 10000, currency: 'SAR', createdAt: new Date(),
+      },
     });
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'statement');
+    const expected = calculateInvoiceBalance({
+      invoiceTotal: 10000, grossSettled: 10000, refundedSettled: 2000,
+      reservedPending: 0, newCollectionBlocked: false,
+    });
+    expect(expected.outstanding).toBe(2000);
+    expect(data.outstanding).toBe(expected.outstanding);
+    expect(data.payments).toEqual([
+      { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 10000, refundedAmount: 2000 },
+    ]);
   });
 
   it('falls back to a placeholder "—" client / service / payment when the join is missing', async () => {
@@ -147,10 +171,11 @@ describe('buildInvoicePdfData', () => {
       payment: null,
       booking: null,
     });
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(data.clientName).toBe('—');
     expect(data.serviceName).toBe('—');
     expect(data.paymentMethod).toBe('—');
+    expect(data.payments).toEqual([]);
     // Org settings fallback uses the hard-coded Arabic brand.
     expect(data.sellerNameAr).toBe('مركز سواء');
     expect(data.sellerVatNumber).toBeNull();
@@ -161,7 +186,7 @@ describe('buildInvoicePdfData', () => {
     const { prisma, cls, invoice } = buildDeps({
       client: { firstName: '  فاطمة  ', lastName: '  الزيد  ' },
     });
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(data.clientName).toBe('فاطمة     الزيد');
   });
 
@@ -169,7 +194,7 @@ describe('buildInvoicePdfData', () => {
     const { prisma, cls, invoice } = buildDeps({
       client: { firstName: 'فاطمة', lastName: null },
     });
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(data.clientName).toBe('فاطمة');
   });
 
@@ -192,7 +217,7 @@ describe('buildInvoicePdfData', () => {
         createdAt: new Date(),
       },
     });
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(data.serviceName).toBe('باقة جلسات');
   });
 
@@ -207,19 +232,19 @@ describe('buildInvoicePdfData', () => {
         clientId: 'client-1',
         bookingId: 'book-1',
         packagePurchaseId: null,
-        subtotal: new Prisma.Decimal('9999.50'),
-        discountAmt: new Prisma.Decimal('100.00'),
-        vatAmt: new Prisma.Decimal('1484.93'),
-        total: new Prisma.Decimal('11384.43'),
+        subtotal: new Prisma.Decimal('999950'),
+        discountAmt: new Prisma.Decimal('10000'),
+        vatAmt: new Prisma.Decimal('148493'),
+        total: new Prisma.Decimal('1138443'),
         currency: 'SAR',
         createdAt: new Date(),
       },
     });
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
-    expect(data.subtotal).toBe(9999.5);
-    expect(data.discountAmt).toBe(100);
-    expect(data.vatAmt).toBe(1484.93);
-    expect(data.total).toBe(11384.43);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
+    expect(data.subtotal).toBe(999950);
+    expect(data.discountAmt).toBe(10000);
+    expect(data.vatAmt).toBe(148493);
+    expect(data.total).toBe(1138443);
   });
 
   it('falls back to invoice.createdAt when issuedAt is null', async () => {
@@ -240,15 +265,16 @@ describe('buildInvoicePdfData', () => {
         createdAt: new Date('2026-05-24T10:00:00Z'),
       },
     });
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(data.issuedAt).toEqual(new Date('2026-05-24T10:00:00Z'));
   });
 
-  it('falls back to a fresh Date when paidAt is null (so the template never renders an Invalid Date)', async () => {
+  it('keeps paidAt null when the invoice is not paid (never a render-time clock)', async () => {
     const { prisma, cls, invoice } = buildDeps({
       invoice: {
         id: 'inv-1',
         number: 42,
+        status: 'ISSUED',
         issuedAt: new Date('2026-05-24T10:00:00Z'),
         paidAt: null,
         clientId: 'client-1',
@@ -262,12 +288,8 @@ describe('buildInvoicePdfData', () => {
         createdAt: new Date('2026-05-24T10:00:00Z'),
       },
     });
-    const before = Date.now();
-    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
-    const after = Date.now();
-    expect(data.paidAt).toBeInstanceOf(Date);
-    expect(data.paidAt.getTime()).toBeGreaterThanOrEqual(before);
-    expect(data.paidAt.getTime()).toBeLessThanOrEqual(after);
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
+    expect(data.paidAt).toBeNull();
   });
 
   it('only fetches the booking when the invoice has a bookingId (defensive)', async () => {
@@ -289,7 +311,59 @@ describe('buildInvoicePdfData', () => {
         createdAt: new Date(),
       },
     });
-    await buildInvoicePdfData(prisma as never, cls as never, invoice as never);
+    await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'receipt');
     expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('computes the statement outstanding from total minus completed payments', async () => {
+    const { prisma, cls, invoice } = buildDeps({
+      payment: { method: 'CASH', amount: 4000, effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z') },
+      invoice: {
+        id: 'inv-1',
+        number: 42,
+        status: 'PARTIALLY_PAID',
+        issuedAt: new Date('2026-05-24T10:00:00Z'),
+        paidAt: null,
+        clientId: 'client-1',
+        bookingId: 'book-1',
+        packagePurchaseId: null,
+        subtotal: 10000,
+        discountAmt: 0,
+        vatAmt: 1500,
+        total: 11500,
+        currency: 'SAR',
+        createdAt: new Date('2026-05-24T10:00:00Z'),
+      },
+    });
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'statement');
+    expect(data.kind).toBe('statement');
+    expect(data.status).toBe('PARTIALLY_PAID');
+    expect(data.outstanding).toBe(7500);
+  });
+  it('rounds fractional Decimal remnants to whole halalas before computing the balance', async () => {
+    const { Prisma } = await import('@prisma/client');
+    const { prisma, cls, invoice } = buildDeps({
+      payment: {
+        method: 'CASH',
+        amount: new Prisma.Decimal('4000.40'),
+        refundedAmount: new Prisma.Decimal('500.60'),
+        effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z'),
+      },
+      invoice: {
+        id: 'inv-frac', number: 7, status: 'PARTIALLY_PAID', issuedAt: new Date(), paidAt: null,
+        clientId: 'client-1', bookingId: null, packagePurchaseId: null,
+        subtotal: new Prisma.Decimal('10000.40'), discountAmt: new Prisma.Decimal('0.00'),
+        vatAmt: new Prisma.Decimal('0.00'), total: new Prisma.Decimal('10000.40'),
+        currency: 'SAR', createdAt: new Date(),
+      },
+    });
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'statement');
+    expect(data.total).toBe(10000);
+    expect(data.subtotal).toBe(10000);
+    expect(data.payments[0].amount).toBe(4000);
+    expect(data.payments[0].refundedAmount).toBe(501);
+    // 10000 - (4000 - 501) = 6501, all integers.
+    expect(data.outstanding).toBe(6501);
+    expect(Number.isInteger(data.outstanding)).toBe(true);
   });
 });

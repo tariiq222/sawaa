@@ -1,3 +1,6 @@
+import type { Prisma } from '@prisma/client';
+import { decimalToHalalas } from '../money.helper';
+
 /**
  * Invoice PDF objects live in the `finance-invoices` MinIO bucket under the
  * key `invoices/<invoiceId>/<timestamp>.pdf`. As of S2.3a the invoice row
@@ -36,4 +39,33 @@ export function extractInvoicePdfKey(stored: string): string {
   }
   // Already a bare key.
   return stored;
+}
+
+/** Invoice fields needed to locate its downloadable paid receipt. */
+export interface ReceiptKeySource {
+  receiptPdfKey: string | null;
+  pdfUrl: string | null;
+  pdfGeneratedAt: Date | null;
+  paidAt: Date | null;
+  total: Prisma.Decimal | string | number;
+}
+
+/**
+ * Returns the object key of the invoice's paid receipt, or null.
+ *
+ * `receiptPdfKey` is authoritative. Invoices receipted before that column
+ * existed kept the receipt in the legacy `pdfUrl`; it counts as the receipt
+ * only when it was generated at or after payment (a pre-payment PDF is a
+ * statement, not a receipt) and the invoice has a positive total (free
+ * grouped-package invoices are created PAID with total 0 and no payment, so
+ * an on-demand PDF there is never a receipt).
+ */
+export function resolveReceiptPdfKey(invoice: ReceiptKeySource): string | null {
+  if (invoice.receiptPdfKey) return invoice.receiptPdfKey;
+  const { pdfUrl, pdfGeneratedAt, paidAt, total } = invoice;
+  if (decimalToHalalas(total) <= 0) return null;
+  if (pdfUrl && pdfGeneratedAt && paidAt && pdfGeneratedAt >= paidAt) {
+    return extractInvoicePdfKey(pdfUrl);
+  }
+  return null;
 }

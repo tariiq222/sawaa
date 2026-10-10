@@ -83,37 +83,38 @@ describe('DashboardFinanceController', () => {
     expect(handlers.getInvoice).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
   });
 
-  it('getInvoicePdf returns a short-lived presigned URL from the stored object key', async () => {
+  it('getInvoicePdf presigns the issued receipt key from the raw invoice row', async () => {
     handlers.getInvoice.mockResolvedValue({
       id: 'inv-1',
-      pdfUrl: 'invoices/inv-1/1700000000000.pdf',
+      pdfUrl: null,
+      receiptPdfKey: 'receipts/inv-1/pay-1.pdf',
     });
     const res = await controller.getInvoicePdf('inv-1');
     expect(storage.getSignedUrl).toHaveBeenCalledWith(
       'finance-invoices',
-      'invoices/inv-1/1700000000000.pdf',
+      'receipts/inv-1/pay-1.pdf',
       300,
     );
     expect(res).toEqual({ url: 'https://minio.test/presigned' });
   });
 
-  it('getInvoicePdf normalises a legacy full URL back to the key', async () => {
+  it('getInvoicePdf ignores a legacy pre-payment pdfUrl and throws 404 without a receipt', async () => {
     handlers.getInvoice.mockResolvedValue({
       id: 'inv-1',
-      pdfUrl: 'http://localhost:9000/finance-invoices/invoices/inv-1/42.pdf',
+      pdfUrl: 'invoices/inv-1/1700000000000.pdf',
+      receiptPdfKey: null,
+      total: 100,
     });
-    await controller.getInvoicePdf('inv-1');
-    expect(storage.getSignedUrl).toHaveBeenCalledWith(
-      'finance-invoices',
-      'invoices/inv-1/42.pdf',
-      300,
-    );
-  });
-
-  it('getInvoicePdf throws 404 when no PDF generated yet', async () => {
-    handlers.getInvoice.mockResolvedValue({ id: 'inv-1', pdfUrl: null });
     await expect(controller.getInvoicePdf('inv-1')).rejects.toThrow(NotFoundException);
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('generateInvoicePdfEndpoint presigns the key returned by the generator (receipt or statement)', async () => {
+    handlers.generateInvoicePdf.mockResolvedValue('statements/inv-1.pdf');
+    const res = await controller.generateInvoicePdfEndpoint('inv-1');
+    expect(handlers.generateInvoicePdf).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('finance-invoices', 'statements/inv-1.pdf', 300);
+    expect(res).toEqual({ url: 'https://minio.test/presigned' });
   });
 
   it('listInvoicesEndpoint should call listInvoices.execute with inclusive Asia/Riyadh date bounds', async () => {

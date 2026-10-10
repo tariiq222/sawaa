@@ -1359,10 +1359,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a URL to download the invoice PDF */
+        /**
+         * Get a URL to download the paid receipt PDF
+         * @description Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.
+         */
         get: operations["DashboardFinanceController_getInvoicePdf_v1"];
         put?: never;
-        /** Generate (or reuse) the invoice PDF and return a download URL */
+        /**
+         * Get the invoice PDF download URL, rendering a statement if no receipt exists
+         * @description Returns the paid receipt when one has been issued; otherwise renders a fresh statement of the invoice. A statement is never stored on the invoice.
+         */
         post: operations["DashboardFinanceController_generateInvoicePdfEndpoint_v1"];
         delete?: never;
         options?: never;
@@ -4981,7 +4987,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a URL to download the invoice PDF (client-owned only) */
+        /**
+         * Get a URL to download the paid receipt PDF (client-owned only)
+         * @description Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.
+         */
         get: operations["PublicInvoicesController_getPdf_v1"];
         put?: never;
         post?: never;
@@ -20954,7 +20963,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Invoice PDF URL */
+            /** @description Short-lived URL of the paid receipt PDF */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -20988,7 +20997,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description No PDF generated for this invoice yet */
+            /** @description Invoice not found, or no receipt has been issued for it */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -21020,7 +21029,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Invoice PDF URL */
+            /** @description Short-lived URL of the paid receipt if issued, otherwise of a freshly rendered statement */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -38229,6 +38238,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Short-lived URL of the paid receipt PDF */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -38243,6 +38253,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description No receipt has been issued for this invoice */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

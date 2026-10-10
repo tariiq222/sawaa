@@ -1,5 +1,5 @@
 import { Controller, Get, Param, UseGuards, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { Public } from '../../common/guards/jwt.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -39,18 +39,22 @@ export class PublicInvoicesController {
 
   @UseGuards(ClientSessionGuard)
   @Get(':id/pdf')
-  @ApiOperation({ summary: 'Get a URL to download the invoice PDF (client-owned only)' })
+  @ApiOperation({
+    summary: 'Get a URL to download the paid receipt PDF (client-owned only)',
+    description: 'Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.',
+  })
+  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF' })
+  @ApiResponse({ status: 404, description: 'No receipt has been issued for this invoice' })
   async getPdf(
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() client: { id: string },
   ) {
     const invoice = await this.getPublicInvoice.execute(id, client.id);
     if (!invoice.pdfUrl) {
-      throw new NotFoundException('No PDF has been generated for this invoice yet');
+      throw new NotFoundException('No paid receipt has been issued for this invoice');
     }
-    // `pdfUrl` stores the MinIO object key (S2.3a). Mint a short-lived presigned
-    // URL instead of returning the raw stored value. Legacy rows that hold a
-    // full URL are normalised back to the key first.
+    // `pdfUrl` here is the frozen receipt object key (Invoice.receiptPdfKey).
+    // Only a short-lived presigned URL is returned, never the bare key.
     const key = extractInvoicePdfKey(invoice.pdfUrl);
     const url = await this.storage.getSignedUrl(
       FINANCE_INVOICES_BUCKET_NAME,

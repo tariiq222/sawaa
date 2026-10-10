@@ -5,6 +5,7 @@ import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { InvoicePdfRendererService } from '../issue-invoice-receipt/invoice-pdf-renderer.service';
 import { buildInvoicePdfData } from '../issue-invoice-receipt/build-invoice-pdf-data';
+import { resolveReceiptPdfKey } from '../issue-invoice-receipt/invoice-pdf-key.helper';
 
 const BUCKET = 'finance-invoices';
 
@@ -13,19 +14,16 @@ export interface GenerateInvoicePdfCommand {
 }
 
 /**
- * On-demand invoice PDF generation for the dashboard "generate PDF" action.
+ * On-demand invoice document for the dashboard "generate PDF" action.
  *
- * Unlike {@link IssueInvoiceReceiptHandler} — which only fires for PAID
- * invoices via the `finance.payment.completed` event — this renders a PDF for
- * an invoice in ANY status (draft, unpaid, partially paid, paid). It does not
- * publish a receipt event; it just materialises the file so the caller can
- * download it.
- *
- * Idempotent: when the invoice already has a `pdfUrl` the stored object key is
- * returned unchanged (a paid receipt's ZATCA stamp must stay frozen). Otherwise
- * it renders, uploads to MinIO and returns the key; the key is persisted only
- * for PAID invoices (non-PAID PDFs are not receipts and must not suppress
- * receipt issuance). The caller (controller) mints the short-lived presigned URL from the returned key.
+ * When the invoice already has a receipt (`receiptPdfKey`, or a legacy `pdfUrl`
+ * generated at/after `paidAt`; see `resolveReceiptPdfKey`) that frozen
+ * key is returned unchanged and nothing is re-rendered. Otherwise a live
+ * STATEMENT is rendered and uploaded to the fixed key `statements/<invoiceId>.pdf`
+ * (overwritten each time, so it always reflects current payments). This handler
+ * never writes the Invoice row: a statement is not a receipt and must not
+ * suppress receipt issuance. The caller (controller) mints the short-lived
+ * presigned URL from the returned key.
  */
 @Injectable()
 export class GenerateInvoicePdfHandler {
@@ -45,31 +43,17 @@ export class GenerateInvoicePdfHandler {
     if (!invoice) {
       throw new NotFoundException(`Invoice ${invoiceId} not found`);
     }
-    if (invoice.pdfUrl) {
-      return invoice.pdfUrl;
+    // findUnique returns every scalar, so pdfUrl/pdfGeneratedAt/paidAt are present.
+    const receiptKey = resolveReceiptPdfKey(invoice);
+    if (receiptKey) {
+      return receiptKey;
     }
 
-    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice);
+    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, 'statement');
     const pdfBuffer = await this.renderer.render(data);
 
-    const key = `invoices/${invoice.id}/${Date.now()}.pdf`;
+    const key = `statements/${invoice.id}.pdf`;
     await this.storage.uploadFile(BUCKET, key, pdfBuffer, 'application/pdf');
-
-    // Only a PAID invoice's PDF is a receipt. A pre-payment PDF is returned but
-    // not persisted: a stored `pdfUrl` makes IssueInvoiceReceiptHandler skip,
-    // so the paid receipt would never be generated or sent.
-    if (invoice.status !== 'PAID') {
-      return key;
-    }
-
-    await this.cls.run(async () => {
-      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      await this.prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { pdfUrl: key, pdfGeneratedAt: new Date() },
-      });
-    });
-
     return key;
   }
 }

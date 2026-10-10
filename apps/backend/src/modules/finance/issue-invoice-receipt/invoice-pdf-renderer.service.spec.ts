@@ -14,6 +14,9 @@ const QRCode = require('qrcode') as { toDataURL: jest.Mock };
 
 describe('InvoicePdfRendererService', () => {
   const baseData: InvoicePdfData = {
+    kind: 'receipt',
+    status: 'PAID',
+    outstanding: 0,
     invoiceNumber: 42,
     invoiceId: 'inv-abc',
     issuedAt: new Date('2026-05-24T10:00:00Z'),
@@ -31,6 +34,7 @@ describe('InvoicePdfRendererService', () => {
     total: 11500,
     currency: 'SAR',
     paymentMethod: 'CASH',
+    payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 11500, refundedAmount: 0 }],
     qrDataUrl: null,
   };
 
@@ -62,7 +66,7 @@ describe('InvoicePdfRendererService', () => {
       const expectedTlv = buildZatcaQrTlv({
         sellerName: baseData.sellerNameAr,
         vatNumber: '310122393500003',
-        timestamp: baseData.paidAt,
+        timestamp: baseData.paidAt as Date,
         totalWithVat: (baseData.total / 100).toFixed(2),
         vatTotal: (baseData.vatAmt / 100).toFixed(2),
       });
@@ -95,4 +99,16 @@ describe('InvoicePdfRendererService', () => {
       expect(QRCode.toDataURL).not.toHaveBeenCalled();
     }, 30_000);
   });
+
+  it('prints no QR for a statement even when the seller has a VAT number', async () => {
+    const service = new InvoicePdfRendererService();
+    await service.render({ ...baseData, kind: 'statement', paidAt: null });
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+  }, 30_000);
+
+  it('prints no QR for a receipt without paidAt instead of using the current time', async () => {
+    const service = new InvoicePdfRendererService();
+    await service.render({ ...baseData, paidAt: null });
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+  }, 30_000);
 });
