@@ -80,9 +80,10 @@ export async function waitForDeployment(target, sha, token, {
       let noChanges;
       if (deployment?.commitSha !== sha && deployment?.status === 'ready') {
         const history = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/deployments?perPage=20`, token, request);
-        const matching = history.rows?.find(d => d.commitSha === sha && d.projectId === target.projectId && d.branch === target.branch);
+        if (!Array.isArray(history.data)) throw new Error('OpenShip deployment history response is malformed');
+        const matching = history.data.find(d => d.commitSha === sha && d.projectId === target.projectId && d.branch === target.branch);
         if (matching && ['failed', 'cancelled', 'partial_failure', 'action_required'].includes(matching.status)) throw new Error(`Matching deployment failed: ${matching.status}`);
-        noChanges = history.rows?.find(d => d.commitSha === sha && d.status === 'no_changes' && d.projectId === target.projectId && d.branch === target.branch);
+        noChanges = history.data.find(d => d.commitSha === sha && d.status === 'no_changes' && d.projectId === target.projectId && d.branch === target.branch);
         if (noChanges) await assertSameServerInputs(deployment.commitSha, sha, githubToken, request);
       }
       if (deployment?.status === 'ready' && (deployment.commitSha === sha || noChanges)) {

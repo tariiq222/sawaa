@@ -55,7 +55,7 @@ test('old healthy source expires after a bounded wait', async () => {
   const { waitForDeployment } = await import('./deployment.mjs');
   let clock = 0;
   const f = fixture(); f.deployment.commitSha = 'b'.repeat(40);
-  const request = async url => ({ ok: true, status: 200, json: async () => url.includes('api.github.com') ? { object: { sha } } : url.includes('/deployments?') ? { rows: [] } : url.includes('/api/projects/') ? { data: f.project } : { data: f.deployment } });
+  const request = async url => ({ ok: true, status: 200, json: async () => url.includes('api.github.com') ? { object: { sha } } : url.includes('/deployments?') ? { data: [] } : url.includes('/api/projects/') ? { data: f.project } : { data: f.deployment } });
   await assert.rejects(waitForDeployment(target, sha, 'read', { githubToken: 'read', timeoutMs: 20, intervalMs: 10, now: () => clock, sleep: async ms => { clock += ms; }, request }), /timed out/);
   assert.equal(clock, 20);
 });
@@ -79,6 +79,6 @@ test('no-change deployment only permits identical server inputs, with separate S
 
 test('matching no_changes plus identical server tree unlocks live checks, recording both sources', async()=>{
  const {waitForDeployment}=await import('./deployment.mjs');const f=fixture();f.deployment.commitSha='b'.repeat(40);const checks=[];
- const request=async url=>{let data;if(url.includes('/git/ref/'))data={object:{sha}};else if(url.includes('/git/trees/'))data={truncated:false,tree:[{path:'apps/backend/a.ts',type:'blob',mode:'100644',sha:'same'}]};else if(url.includes('/services/containers'))data={success:true,containers:f.containers};else if(url.includes('/deployments?'))data={rows:[{...f.deployment,id:'nochanges',commitSha:sha,status:'no_changes'}]};else if(url.includes('/api/projects/'))data={data:f.project};else if(url.includes('/api/deployments/'))data={data:f.deployment};else {checks.push(url);data={};}return {ok:true,status:200,json:async()=>data};};
- const result=await waitForDeployment({...target,profile:'staging',readinessUrl:'https://staging.test/ready',websiteUrl:'https://staging.test/'},sha,'read',{githubToken:'read',request});assert.equal(result.sourceSha,sha);assert.equal(result.deployedSha,'b'.repeat(40));assert.equal(result.noChangesDeploymentId,'nochanges');assert.equal(checks.length,2);
+ const request=async url=>{let data;if(url.includes('/git/ref/'))data={object:{sha}};else if(url.includes('/git/trees/'))data={truncated:false,tree:[{path:'apps/backend/a.ts',type:'blob',mode:'100644',sha:'same'}]};else if(url.includes('/services/containers'))data={success:true,containers:f.containers};else if(url.includes('/deployments?'))data={data:[{...f.deployment,id:'nochanges',commitSha:sha,status:'no_changes'}]};else if(url.includes('/api/projects/'))data={data:f.project};else if(url.includes('/api/deployments/'))data={data:f.deployment};else {checks.push(url);data={};}return {ok:true,status:200,json:async()=>data};};
+ let clock=0;const result=await waitForDeployment({...target,profile:'staging',readinessUrl:'https://staging.test/ready',websiteUrl:'https://staging.test/'},sha,'read',{githubToken:'read',request,timeoutMs:20,intervalMs:10,now:()=>clock,sleep:async ms=>{clock+=ms}});assert.equal(result.sourceSha,sha);assert.equal(result.deployedSha,'b'.repeat(40));assert.equal(result.noChangesDeploymentId,'nochanges');assert.equal(checks.length,2);
 });
