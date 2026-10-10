@@ -1,0 +1,139 @@
+# Builds the deployable Docker images on GitHub and publishes them to GHCR.
+# OpenShip then only pulls and runs them; it never builds on the server.
+# A pushed image is not a deployment. Verify the running revision separately.
+name: build-images
+
+on:
+  push:
+    branches: [develop, main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "apps/mobile/**"
+  # Dry run: proves the images build on GitHub without publishing anything.
+  pull_request:
+    branches: [develop]
+    paths:
+      - ".github/workflows/build-images.yml"
+      - "docker/openship/**"
+      - "apps/backend/Dockerfile"
+      - "apps/dashboard/Dockerfile"
+      - "apps/website/Dockerfile"
+  workflow_dispatch:
+
+# Never cancel a running build: a half-pushed tag set must not be possible.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/tariiq222/sawaa
+  # develop -> staging images, main -> production images.
+  TARGET_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+
+jobs:
+  build:
+    name: image-${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: postgres
+            dockerfile: docker/openship/Postgres.Dockerfile
+          - image: backend
+            dockerfile: apps/backend/Dockerfile
+          - image: dashboard
+            dockerfile: apps/dashboard/Dockerfile
+          - image: website
+            dockerfile: apps/website/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Resolve build arguments
+        id: args
+        env:
+          # Production browser-facing API URL is not stored in the repository.
+          # Set it as a repository variable before the first main build.
+          PRODUCTION_WEBSITE_API_URL: ${{ vars.PRODUCTION_WEBSITE_API_URL }}
+          PRODUCTION_WEBSITE_API_PROXY_URL: ${{ vars.PRODUCTION_WEBSITE_API_PROXY_URL }}
+          PRODUCTION_DEFAULT_ORG_ID: ${{ vars.PRODUCTION_DEFAULT_ORG_ID }}
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          {
+            echo 'build_args<<EOF'
+            case "$IMAGE" in
+              backend)
+                echo "APP_VERSION=${GITHUB_SHA::12}"
+                echo "GIT_SHA=${GITHUB_SHA}"
+                ;;
+              dashboard)
+                # next.config.mjs uses this only as the server-side /api/proxy
+                # rewrite target; the same private URL applies to both environments.
+                echo "NEXT_PUBLIC_API_URL=http://backend:5100/api/v1"
+                echo "SENTRY_RELEASE=${GITHUB_SHA}"
+                ;;
+              website)
+                if [ "$TARGET_ENV" = production ]; then
+                  : "${PRODUCTION_WEBSITE_API_URL:?Set repository variable PRODUCTION_WEBSITE_API_URL}"
+                  : "${PRODUCTION_DEFAULT_ORG_ID:?Set repository variable PRODUCTION_DEFAULT_ORG_ID}"
+                  echo "NEXT_PUBLIC_API_URL=${PRODUCTION_WEBSITE_API_URL}"
+                  echo "NEXT_PUBLIC_DEFAULT_ORG_ID=${PRODUCTION_DEFAULT_ORG_ID}"
+                  echo "WEBSITE_API_PROXY_URL=${PRODUCTION_WEBSITE_API_PROXY_URL:-}"
+                else
+                  echo "NEXT_PUBLIC_API_URL=https://staging.sawaa.sa/api/v1"
+                  echo "NEXT_PUBLIC_DEFAULT_ORG_ID=00000000-0000-0000-0000-000000000001"
+                  echo "WEBSITE_API_PROXY_URL=http://backend:5100/api/v1"
+                fi
+                echo "NEXT_PUBLIC_WEB_CHAT_ENABLED=false"
+                ;;
+            esac
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          # Pull requests only prove the build; they never publish an image.
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: ${{ steps.args.outputs.build_args }}
+          # Environment-specific tag, immutable by commit. Frontend images bake
+          # public URLs at build time, so staging and production tags differ.
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:${{ env.TARGET_ENV }}-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
+          provenance: false
+
+      - name: Summarize
+        env:
+          IMAGE: ${{ matrix.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            printf 'Dry run: `%s` built, nothing published.\n' "$IMAGE" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '`%s-%s:%s-%s` digest `%s`\n' "$IMAGE_PREFIX" "$IMAGE" "$TARGET_ENV" "$GITHUB_SHA" "$DIGEST" >> "$GITHUB_STEP_SUMMARY"
+          fi
