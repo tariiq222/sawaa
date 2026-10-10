@@ -66,6 +66,7 @@ import { MinioService } from '../../infrastructure/storage/minio.service';
 import {
   FINANCE_INVOICES_BUCKET_NAME,
   extractInvoicePdfKey,
+  resolveReceiptPdfKey,
 } from '../../modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
 
 // Short-lived presigned download window for dashboard PDF links (5 minutes).
@@ -156,12 +157,12 @@ export class DashboardFinanceController {
   @ApiResponse({ status: 404, description: 'No PDF generated for this invoice yet', type: ApiErrorDto })
   async getInvoicePdf(@Param('id', ParseUUIDPipe) id: string) {
     const invoice = await this.getInvoice.execute({ invoiceId: id });
-    if (!invoice.pdfUrl) {
+    // Only an issued receipt is downloadable here; the legacy `pdfUrl` column is
+    // no longer written. Mint a short-lived presigned URL, never the raw key.
+    const key = resolveReceiptPdfKey(invoice);
+    if (!key) {
       throw new NotFoundException('No paid receipt has been issued for this invoice');
     }
-    // `pdfUrl` here is the frozen receipt object key (Invoice.receiptPdfKey).
-    // Mint a short-lived presigned URL instead of returning the raw key.
-    const key = extractInvoicePdfKey(invoice.pdfUrl);
     const url = await this.storage.getSignedUrl(
       FINANCE_INVOICES_BUCKET_NAME,
       key,

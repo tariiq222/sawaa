@@ -37,3 +37,28 @@ export function extractInvoicePdfKey(stored: string): string {
   // Already a bare key.
   return stored;
 }
+
+/** Invoice fields needed to locate its downloadable paid receipt. */
+export interface ReceiptKeySource {
+  receiptPdfKey: string | null;
+  pdfUrl: string | null;
+  pdfGeneratedAt: Date | null;
+  paidAt: Date | null;
+}
+
+/**
+ * Returns the object key of the invoice's paid receipt, or null.
+ *
+ * `receiptPdfKey` is authoritative. Invoices receipted before that column
+ * existed kept the receipt in the legacy `pdfUrl`; it counts as the receipt
+ * only when it was generated at or after payment (a pre-payment PDF is a
+ * statement, not a receipt).
+ */
+export function resolveReceiptPdfKey(invoice: ReceiptKeySource): string | null {
+  if (invoice.receiptPdfKey) return invoice.receiptPdfKey;
+  const { pdfUrl, pdfGeneratedAt, paidAt } = invoice;
+  if (pdfUrl && pdfGeneratedAt && paidAt && pdfGeneratedAt >= paidAt) {
+    return extractInvoicePdfKey(pdfUrl);
+  }
+  return null;
+}

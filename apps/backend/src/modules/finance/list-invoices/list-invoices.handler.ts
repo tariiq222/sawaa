@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListInvoicesDto } from './list-invoices.dto';
+import { resolveReceiptPdfKey } from '../issue-invoice-receipt/invoice-pdf-key.helper';
 
 export type ListInvoicesQuery = Omit<ListInvoicesDto, 'fromDate' | 'toDate'> & {
   fromDate?: Date;
@@ -100,6 +101,8 @@ export class ListInvoicesHandler {
           paidAt: true,
           sentToClientAt: true,
           receiptPdfKey: true,
+          pdfUrl: true,
+          pdfGeneratedAt: true,
           createdAt: true,
         },
       }),
@@ -134,7 +137,7 @@ export class ListInvoicesHandler {
         issuedAt: inv.issuedAt,
         paidAt: inv.paidAt,
         sentToClientAt: inv.sentToClientAt,
-        hasPdf: !!inv.receiptPdfKey,
+        hasPdf: resolveReceiptPdfKey(inv) !== null,
         createdAt: inv.createdAt,
       };
     });
