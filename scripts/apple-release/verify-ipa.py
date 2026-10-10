@@ -68,6 +68,8 @@ def verify(ipa, environment, version, build, sha, profile_path, sourcemap):
         subprocess.run(['codesign', '-d', '--extract-certificates=' + str(cert_prefix), str(app)], check=True, capture_output=True)
         leaf = Path(str(cert_prefix) + '0').read_bytes()
         require(leaf in supplied['DeveloperCertificates'], 'Signature certificate is not authorized by profile')
+        expected_api = 'https://' + ('staging' if environment == 'staging' else 'api') + '.sawaa.sa/api/v1'
+        require(info.get('SawaaApiUrl') == expected_api, 'Expo release API origin mismatch')
         require(info.get('SawaaSourceSha') == sha and info.get('SawaaReleaseEnvironment') == environment, 'Release provenance mismatch')
         bundles = list(app.glob('*.jsbundle'))
         require(len(bundles) == 1, 'Native JS bundle missing')
