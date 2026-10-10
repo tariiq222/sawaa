@@ -23,9 +23,12 @@ if (process.env.NODE_ENV !== 'development' || process.env.E2E_TEST !== 'true'
   throw new Error('Local Playwright requires the isolated Sawaa E2E environment and fixed localhost origins.');
 }
 
-// Keep browsers inside the isolated stack: external hosts fail to resolve, so
-// following a social or third-party link cannot leave the local environment.
-const loopbackOnly = { args: ['--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE 127.0.0.1 , EXCLUDE localhost'] };
+// Keep browsers inside the isolated stack: every request goes to a closed proxy
+// port except the three app origins. `<-loopback>` stops Chromium's implicit
+// localhost bypass, so other local services and literal IPs are blocked too,
+// whether reached by navigation, page scripts or clicked links.
+const appOrigins = ['127.0.0.1:55200', '127.0.0.1:55203', '127.0.0.1:55205'];
+const loopbackOnly = { proxy: { server: 'http://127.0.0.1:9', bypass: ['<-loopback>', ...appOrigins].join(',') } };
 
 export default defineConfig({
   testDir: './e2e/playwright',
@@ -49,7 +52,7 @@ export default defineConfig({
         timezoneId: 'Asia/Riyadh',
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
-        launchOptions: loopbackOnly,
+        ...loopbackOnly,
       },
     },
     {
@@ -62,7 +65,7 @@ export default defineConfig({
         timezoneId: 'Asia/Riyadh',
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
-        launchOptions: loopbackOnly,
+        ...loopbackOnly,
       },
     },
   ],

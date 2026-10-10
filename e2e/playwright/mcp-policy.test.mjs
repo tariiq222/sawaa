@@ -15,6 +15,14 @@ test('writer tools stay under e2e/playwright', () => {
   }
 });
 
+test('optional file outputs of other tools stay under e2e/playwright', () => {
+  assert.equal(policy(call('browser_take_screenshot', {})), null);
+  assert.equal(policy(call('browser_take_screenshot', { filename: 'e2e/playwright/shots/home.png' })), null);
+  assert.match(policy(call('browser_take_screenshot', { filename: 'apps/backend/src/main.ts' })), /e2e\/playwright/);
+  assert.match(policy(call('browser_evaluate', { function: '() => 1', filename: '../x.json' })), /e2e\/playwright/);
+  assert.match(policy(call('generator_write_test', {})), /e2e\/playwright/);
+});
+
 test('navigation stays on the local loopback origins', () => {
   assert.equal(policy(call('browser_navigate', { url: 'http://127.0.0.1:55205/booking' })), null);
   assert.equal(policy(call('browser_navigate', { url: 'http://127.0.0.1:55203/' })), null);

@@ -16,4 +16,4 @@ All test data must remain synthetic and local. Do not use staging, production, e
 
 The `premerge` port set uses dedicated infrastructure ports 55771/55772/55773 and prepares the first Next dev page compilations before browser tests. Default local-stack ports remain available.
 
-The MCP launcher (`e2e/playwright/run-mcp.mjs`) rejects `planner_save_plan` and `generator_write_test` paths outside `e2e/playwright/` and `browser_navigate` targets outside the three loopback origins. `playwright.local.config.ts` also makes Chromium fail to resolve any host other than `127.0.0.1` and `localhost`, so links to external sites cannot leave the isolated stack.
+The MCP launcher (`e2e/playwright/run-mcp.mjs`) rejects any tool file path (plans, tests, screenshots, evaluate output) outside `e2e/playwright/` and `browser_navigate` targets outside the three loopback origins. `playwright.local.config.ts` also routes every browser request except the three app origins to a closed proxy port, so page scripts, clicked links, other local services and literal IPs are blocked too.

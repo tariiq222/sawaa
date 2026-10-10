@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { lstatSync, readFileSync, readlinkSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { once } from 'node:events';
 import { assertPlaywrightReport, assertE2eReport } from './premerge-local-results.mjs';
@@ -33,8 +33,15 @@ function candidate() {
   const hash = createHash('sha256').update(sha);
   for (const file of files) {
     hash.update('\0').update(file).update('\0');
-    try { hash.update(readFileSync(resolve(root, file))); }
-    catch (error) { if (error.code === 'ENOENT') hash.update('<deleted>'); else if (error.code === 'EISDIR') hash.update('<directory>'); else throw error; }
+    const path = resolve(root, file);
+    let stat;
+    try { stat = lstatSync(path); }
+    catch (error) { if (error.code === 'ENOENT') { hash.update('<deleted>'); continue; } throw error; }
+    // Include the mode so an executable-bit-only change is a new candidate.
+    hash.update(stat.mode.toString(8)).update('\0');
+    if (stat.isSymbolicLink()) hash.update(readlinkSync(path));
+    else if (stat.isDirectory()) hash.update('<directory>');
+    else hash.update(readFileSync(path));
   }
   return { sha, digest: hash.digest('hex') };
 }

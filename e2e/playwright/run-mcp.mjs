@@ -88,7 +88,9 @@ const policyViolation = createMcpPolicy(root, Object.values(ports));
 const child = spawn(process.execPath, args, { cwd: root, stdio: ['pipe', 'pipe', 'inherit'], detached: true });
 // MCP stdio is newline-delimited JSON; relay whole lines so replies never interleave.
 createInterface({ input: child.stdout }).on('line', line => process.stdout.write(`${line}\n`));
-createInterface({ input: process.stdin }).on('line', line => {
+child.stdin.on('error', () => {}); // The child may exit while a request is in flight.
+const requests = createInterface({ input: process.stdin });
+requests.on('line', line => {
   let message;
   try { message = JSON.parse(line); } catch { child.stdin.write(`${line}\n`); return; }
   const violation = Array.isArray(message) ? 'Batched MCP requests are not supported' : policyViolation(message);
@@ -97,7 +99,12 @@ createInterface({ input: process.stdin }).on('line', line => {
   process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: violation }], isError: true } })}\n`);
 }).on('close', () => child.stdin.end());
 child.on('error', error => { console.error(error.message); process.exitCode = 1; });
-child.on('exit', (code, signal) => { process.exitCode = code ?? (signal ? 1 : 0); });
+// Exit with the server so the MCP client sees the transport close instead of a hung connection.
+child.on('close', (code, signal) => {
+  requests.close();
+  process.stdin.destroy();
+  process.stdout.write('', () => process.exit(code ?? (signal ? 1 : 0)));
+});
 function stopGroup(signal) {
   if (!child.pid) return;
   try { process.kill(-child.pid, signal); } catch (error) { if (error.code !== 'ESRCH') throw error; }
