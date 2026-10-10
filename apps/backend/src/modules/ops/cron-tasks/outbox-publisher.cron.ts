@@ -50,29 +50,37 @@ export class OutboxPublisherCron {
       const now = new Date();
       const lockUntil = new Date(now.getTime() + 30_000);
 
-      // Exclude terminal rows (failedAt IS NOT NULL) from the poll.
-      const rows = await this.prisma.$queryRaw<{ id: string; eventType: string; payload: unknown; attemptCount: number }[]>`
-        SELECT id, "eventType", "payload", "attemptCount" FROM "OutboxEvent"
-        -- PENDING_V2 is intentionally invisible to 1ebce257, whose publisher
-        -- only selects PENDING and whose legacy worker ACKs unknown handlers.
-        -- This binary owns both lanes and only stamps PUBLISHED after durable
-        -- consumer-specific BullMQ jobs have been added.
-        WHERE status IN ('PENDING', 'PENDING_V2')
-        AND ("lockedUntil" IS NULL OR "lockedUntil" < ${now})
-        AND "failedAt" IS NULL
-        ORDER BY "createdAt" ASC
-        LIMIT ${BATCH_SIZE_NUM}
-        FOR UPDATE SKIP LOCKED
-      `;
-
-      if (rows.length === 0) return;
-
-      const rowIds = rows.map((r) => r.id);
-      await this.prisma.$executeRaw`
+      // Claim and lease in ONE statement. A standalone SELECT ... FOR UPDATE
+      // SKIP LOCKED outside a transaction releases its row locks as soon as it
+      // returns, so a separate lease UPDATE would leave a gap in which another
+      // publisher could claim the same rows (duplicate delivery). Here the
+      // UPDATE holds the row locks and sets lockedUntil atomically.
+      // Terminal rows (failedAt IS NOT NULL) are excluded from the poll.
+      const claimed = await this.prisma.$queryRaw<{ id: string; eventType: string; payload: unknown; attemptCount: number; createdAt: Date }[]>`
         UPDATE "OutboxEvent"
         SET "lockedUntil" = ${lockUntil}
-        WHERE id = ANY(${rowIds}::uuid[])
+        WHERE id IN (
+          SELECT id FROM "OutboxEvent"
+          -- PENDING_V2 is intentionally invisible to 1ebce257, whose publisher
+          -- only selects PENDING and whose legacy worker ACKs unknown handlers.
+          -- This binary owns both lanes and only stamps PUBLISHED after durable
+          -- consumer-specific BullMQ jobs have been added.
+          WHERE status IN ('PENDING', 'PENDING_V2')
+          AND ("lockedUntil" IS NULL OR "lockedUntil" < ${now})
+          AND "failedAt" IS NULL
+          ORDER BY "createdAt" ASC
+          LIMIT ${BATCH_SIZE_NUM}
+          FOR UPDATE SKIP LOCKED
+        )
+        RETURNING id, "eventType", "payload", "attemptCount", "createdAt"
       `;
+
+      if (claimed.length === 0) return;
+
+      // RETURNING order is unspecified; restore oldest-first publish order.
+      const rows = [...claimed].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
 
       const publishedIds: string[] = [];
 

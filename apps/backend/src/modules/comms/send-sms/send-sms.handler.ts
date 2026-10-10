@@ -34,19 +34,9 @@ export class SendSmsHandler {
       return { sent: false, reason: 'NO_PROVIDER' };
     }
 
+    let result: Awaited<ReturnType<typeof adapter.send>>;
     try {
-      const result = await adapter.send(cmd.phone, cmd.body, null);
-      await this.prisma.smsDelivery.create({
-        data: {
-          provider: adapter.name,
-          toPhone: cmd.phone,
-          body: cmd.body,
-          bodyHash,
-          status: result.status === 'SENT' ? 'SENT' : 'QUEUED',
-          providerMessageId: result.providerMessageId,
-          sentAt: new Date(),
-        },
-      });
+      result = await adapter.send(cmd.phone, cmd.body, null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Unknown SMS error';
@@ -65,6 +55,29 @@ export class SendSmsHandler {
         return { sent: false, reason: 'NO_PROVIDER' };
       }
       throw err;
+    }
+
+    // The provider already accepted the SMS. An audit-write failure must not
+    // propagate: the dispatcher would retry and the client would get a duplicate.
+    const status = result.status === 'SENT' ? 'SENT' : 'QUEUED';
+    try {
+      await this.prisma.smsDelivery.create({
+        data: {
+          provider: adapter.name,
+          toPhone: cmd.phone,
+          body: cmd.body,
+          bodyHash,
+          status,
+          providerMessageId: result.providerMessageId,
+          sentAt: new Date(),
+        },
+      });
+    } catch (auditErr) {
+      this.logger.error(
+        `SMS accepted by ${adapter.name} but audit insert failed (bodyHash=${bodyHash}, providerMessageId=${result.providerMessageId ?? 'n/a'}): ${
+          auditErr instanceof Error ? auditErr.message : 'Unknown error'
+        }`,
+      );
     }
     return { sent: true };
   }
