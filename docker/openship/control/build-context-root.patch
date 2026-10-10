@@ -1,0 +1,49 @@
+diff --git a/packages/adapters/src/runtime/docker.ts b/packages/adapters/src/runtime/docker.ts
+index ab75a76c..23fa42be 100644
+--- a/packages/adapters/src/runtime/docker.ts
++++ b/packages/adapters/src/runtime/docker.ts
+@@ -650,8 +650,7 @@ export function parsePortBindings(portSpecs: string[]): {
+  * build request so it can't hang on a truncated body, and fail only the deploy.
+  *
+  * Passing the resulting STREAM (not `{ context }`) to buildImage routes through
+- * dockerode's pass-through branch, so the bytes on the wire are identical to
+- * what it would have produced.
++ * dockerode's pass-through branch, with an extra leading context-directory header for Bun/BuildKit transport.
+  */
+ export function packBuildContext(
+   contextDir: string,
+@@ -673,10 +672,17 @@ export function packBuildContext(
+   // context-relative ones. Only set when the tree was NOT pruned destructively
+   // (per-service build contexts) — see ResolvedDockerfile.ignoreContextPath.
+   const ignore = ignoreContextPath
+-    ? (absolutePath: string) =>
+-        ignoreContextPath(relative(contextDir, absolutePath).split(sep).join("/"))
++    ? (absolutePath: string) => ignoreContextPath(relative(contextDir, absolutePath).split(sep).join("/"))
+     : undefined;
+-  const pack = tarFs.pack(contextDir, { entries, ignore });
++  // Start with the context directory header for Bun/BuildKit transport. Walk
++  // the caller's explicit entries afterwards, preserving their lstat failures
++  // and .dockerignore behavior instead of enumerating the root a second time.
++  const pack = tarFs.pack(contextDir, {
++    entries: ["."],
++    ignore: () => true,
++    finalize: false,
++    finish: (rootPack) => { tarFs.pack(contextDir, { entries, ignore, pack: rootPack }); },
++  });
+   const body = pack.pipe(createGzip());
+   let contextError: Error | null = null;
+   const capture = (err: unknown) => {
+diff --git a/packages/adapters/src/runtime/tar-fs.d.ts b/packages/adapters/src/runtime/tar-fs.d.ts
+index 481f5af7..343d8f64 100644
+--- a/packages/adapters/src/runtime/tar-fs.d.ts
++++ b/packages/adapters/src/runtime/tar-fs.d.ts
+@@ -14,6 +14,9 @@ declare module "tar-fs" {
+     /** Return true to skip a path during the walk. */
+     ignore?: (name: string) => boolean;
+     dereference?: boolean;
++    finalize?: boolean;
++    pack?: Readable;
++    finish?: (pack: Readable) => void;
+   }
+ 
+   /** Pack a directory into a tar stream (a tar-stream `Pack`, i.e. a Readable). */

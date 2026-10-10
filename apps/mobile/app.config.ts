@@ -3,7 +3,7 @@ import { resolveApiUrl, resolveIosBuildNumber } from './constants/api-url-valida
 
 // Resolve this during Expo config evaluation so production builds fail before
 // a native bundle is created when the API target is missing or unsafe.
-resolveApiUrl({
+const apiUrl = resolveApiUrl({
   configuredApiUrl: process.env.EXPO_PUBLIC_API_URL,
   easBuildProfile: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT || process.env.EAS_BUILD_PROFILE,
   nodeEnv: process.env.NODE_ENV,
@@ -39,6 +39,10 @@ const config: ExpoConfig = {
     ...(iosBuildNumber ? { buildNumber: iosBuildNumber } : {}),
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      ...(process.env.GITHUB_SHA ? { SawaaSourceSha: process.env.GITHUB_SHA } : {}),
+      ...(process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT
+        ? { SawaaReleaseEnvironment: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT, SawaaApiUrl: apiUrl }
+        : {}),
     },
     appleTeamId: '569M49FYA6',
     ...(applePayMerchantId ? { entitlements: { 'com.apple.developer.in-app-payments': [applePayMerchantId] } } : {}),
