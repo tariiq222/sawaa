@@ -34,7 +34,7 @@ describe('InvoicePdfRendererService', () => {
     total: 11500,
     currency: 'SAR',
     paymentMethod: 'CASH',
-    payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 11500 }],
+    payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 11500, refundedAmount: 0 }],
     qrDataUrl: null,
   };
 

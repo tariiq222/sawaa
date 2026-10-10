@@ -23073,6 +23073,7 @@
     },
     "/api/v1/dashboard/finance/invoices/{id}/pdf": {
       "get": {
+        "description": "Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.",
         "operationId": "DashboardFinanceController_getInvoicePdf_v1",
         "parameters": [
           {
@@ -23088,7 +23089,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Invoice PDF URL"
+            "description": "Short-lived URL of the paid receipt PDF"
           },
           "400": {
             "content": {
@@ -23128,7 +23129,7 @@
                 }
               }
             },
-            "description": "No PDF generated for this invoice yet"
+            "description": "Invoice not found, or no receipt has been issued for it"
           },
           "500": {
             "content": {
@@ -23146,12 +23147,13 @@
             "bearer": []
           }
         ],
-        "summary": "Get a URL to download the invoice PDF",
+        "summary": "Get a URL to download the paid receipt PDF",
         "tags": [
           "Dashboard / Finance"
         ]
       },
       "post": {
+        "description": "Returns the paid receipt when one has been issued; otherwise renders a fresh statement of the invoice. A statement is never stored on the invoice.",
         "operationId": "DashboardFinanceController_generateInvoicePdfEndpoint_v1",
         "parameters": [
           {
@@ -23167,7 +23169,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Invoice PDF URL"
+            "description": "Short-lived URL of the paid receipt if issued, otherwise of a freshly rendered statement"
           },
           "400": {
             "content": {
@@ -23225,7 +23227,7 @@
             "bearer": []
           }
         ],
-        "summary": "Generate (or reuse) the invoice PDF and return a download URL",
+        "summary": "Get the invoice PDF download URL, rendering a statement if no receipt exists",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -46494,6 +46496,7 @@
     },
     "/api/v1/public/invoices/{id}/pdf": {
       "get": {
+        "description": "Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.",
         "operationId": "PublicInvoicesController_getPdf_v1",
         "parameters": [
           {
@@ -46507,7 +46510,7 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Short-lived URL of the paid receipt PDF"
           },
           "400": {
             "content": {
@@ -46518,6 +46521,9 @@
               }
             },
             "description": "Validation failed"
+          },
+          "404": {
+            "description": "No receipt has been issued for this invoice"
           },
           "500": {
             "content": {
@@ -46535,7 +46541,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get a URL to download the invoice PDF (client-owned only)",
+        "summary": "Get a URL to download the paid receipt PDF (client-owned only)",
         "tags": [
           "Public / Invoices"
         ]

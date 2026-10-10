@@ -5,6 +5,7 @@ import {
   type CandidateInvoice,
   type InvoiceFacts,
   classifyInvoice,
+  ensureReceiptBucket,
   parseCliArgs,
   resolveDatabaseUrl,
   resolveStorageTarget,
@@ -172,5 +173,33 @@ describe('resolveStorageTarget', () => {
     for (const host of ['files.sawaa.sa', 'minio.sawaa.sa', 'sawaa-minio', 'sawa.internal']) {
       expect(() => resolveStorageTarget(apply(`${host}:9000/finance-invoices`), env(host))).toThrow('Refusing');
     }
+  });
+});
+
+describe('ensureReceiptBucket', () => {
+  it('runs onModuleInit first, then verifies the bucket', async () => {
+    const calls: string[] = [];
+    const storage = {
+      onModuleInit: jest.fn(async () => { calls.push('init'); }),
+      bucketExists: jest.fn(async () => { calls.push('exists'); return true; }),
+    };
+    await expect(ensureReceiptBucket(storage, 'finance-invoices')).resolves.toBeUndefined();
+    expect(calls).toEqual(['init', 'exists']);
+    expect(storage.bucketExists).toHaveBeenCalledWith('finance-invoices');
+  });
+
+  it('fails clearly when the bucket is still missing after init (init swallows errors)', async () => {
+    const storage = { onModuleInit: jest.fn(async () => undefined), bucketExists: jest.fn(async () => false) };
+    await expect(ensureReceiptBucket(storage, 'finance-invoices')).rejects.toThrow(
+      'storage preflight failed: bucket "finance-invoices" is unavailable',
+    );
+  });
+
+  it('fails clearly when storage is unreachable', async () => {
+    const storage = {
+      onModuleInit: jest.fn(async () => undefined),
+      bucketExists: jest.fn(async () => { throw new Error('ECONNREFUSED'); }),
+    };
+    await expect(ensureReceiptBucket(storage, 'finance-invoices')).rejects.toThrow(/cannot verify bucket.*ECONNREFUSED/);
   });
 });

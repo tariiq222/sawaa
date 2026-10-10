@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import * as React from 'react';
+import { formatInTimeZone } from 'date-fns-tz';
+import { BUSINESS_TZ } from '../../../common/timezone';
 
 const DEFAULT_BRAND = '#55CCB0';
 const INK = '#1a1a1a';
@@ -109,6 +111,8 @@ export interface InvoicePdfPayment {
   method: string;
   /** Integer halalas. */
   amount: number;
+  /** Integer halalas already refunded from this payment. */
+  refundedAmount: number;
 }
 
 /** `receipt` is the frozen proof of payment; `statement` is the live invoice document. */
@@ -166,8 +170,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const formatHalalas = (h: number) => (h / 100).toFixed(2);
-const formatDate = (d: Date) => d.toISOString().slice(0, 10);
-const formatDateTime = (d: Date) => d.toISOString().slice(0, 16).replace('T', ' ');
+// Business-timezone (Asia/Riyadh) wall-clock, never the UTC instant.
+export const formatDate = (d: Date) => formatInTimeZone(d, BUSINESS_TZ, 'yyyy-MM-dd');
+export const formatDateTime = (d: Date) => formatInTimeZone(d, BUSINESS_TZ, 'yyyy-MM-dd HH:mm');
 
 export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
   const cur = data.currency;
@@ -261,14 +266,24 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
         {showPaymentDetails && data.payments.length > 0 && (
           <View style={styles.serviceTable}>
             {data.payments.map((p, i) => (
-              <View key={i} style={styles.serviceBody}>
-                <Text style={styles.colDesc}>
-                  {formatDateTime(p.date)} - {PAYMENT_LABELS[p.method] ?? p.method}
-                </Text>
-                <Text style={styles.colAmt}>
-                  {formatHalalas(p.amount)} {cur}
-                </Text>
-              </View>
+              <React.Fragment key={i}>
+                <View style={styles.serviceBody}>
+                  <Text style={styles.colDesc}>
+                    {formatDateTime(p.date)} - {PAYMENT_LABELS[p.method] ?? p.method}
+                  </Text>
+                  <Text style={styles.colAmt}>
+                    {formatHalalas(p.amount)} {cur}
+                  </Text>
+                </View>
+                {p.refundedAmount > 0 && (
+                  <View style={styles.serviceBody}>
+                    <Text style={styles.colDesc}>مبلغ مسترد</Text>
+                    <Text style={styles.discountVal}>
+                      -{formatHalalas(p.refundedAmount)} {cur}
+                    </Text>
+                  </View>
+                )}
+              </React.Fragment>
             ))}
           </View>
         )}

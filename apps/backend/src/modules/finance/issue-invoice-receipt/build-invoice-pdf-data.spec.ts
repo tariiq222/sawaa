@@ -115,7 +115,7 @@ describe('buildInvoicePdfData', () => {
       total: 11500,
       currency: 'SAR',
       paymentMethod: 'CASH',
-      payments: [{ date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 11500 }],
+      payments: [{ date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 11500, refundedAmount: 0 }],
       qrDataUrl: null,
     });
   });
@@ -160,7 +160,7 @@ describe('buildInvoicePdfData', () => {
     expect(expected.outstanding).toBe(2000);
     expect(data.outstanding).toBe(expected.outstanding);
     expect(data.payments).toEqual([
-      { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 10000 },
+      { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 10000, refundedAmount: 2000 },
     ]);
   });
 
@@ -339,5 +339,31 @@ describe('buildInvoicePdfData', () => {
     expect(data.kind).toBe('statement');
     expect(data.status).toBe('PARTIALLY_PAID');
     expect(data.outstanding).toBe(7500);
+  });
+  it('rounds fractional Decimal remnants to whole halalas before computing the balance', async () => {
+    const { Prisma } = await import('@prisma/client');
+    const { prisma, cls, invoice } = buildDeps({
+      payment: {
+        method: 'CASH',
+        amount: new Prisma.Decimal('4000.40'),
+        refundedAmount: new Prisma.Decimal('500.60'),
+        effectiveReceivedAt: null, processedAt: null, createdAt: new Date('2026-05-24T10:03:00Z'),
+      },
+      invoice: {
+        id: 'inv-frac', number: 7, status: 'PARTIALLY_PAID', issuedAt: new Date(), paidAt: null,
+        clientId: 'client-1', bookingId: null, packagePurchaseId: null,
+        subtotal: new Prisma.Decimal('10000.40'), discountAmt: new Prisma.Decimal('0.00'),
+        vatAmt: new Prisma.Decimal('0.00'), total: new Prisma.Decimal('10000.40'),
+        currency: 'SAR', createdAt: new Date(),
+      },
+    });
+    const data = await buildInvoicePdfData(prisma as never, cls as never, invoice as never, 'statement');
+    expect(data.total).toBe(10000);
+    expect(data.subtotal).toBe(10000);
+    expect(data.payments[0].amount).toBe(4000);
+    expect(data.payments[0].refundedAmount).toBe(501);
+    // 10000 - (4000 - 501) = 6501, all integers.
+    expect(data.outstanding).toBe(6501);
+    expect(Number.isInteger(data.outstanding)).toBe(true);
   });
 });

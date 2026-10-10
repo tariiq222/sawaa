@@ -13,7 +13,7 @@ import type { InvoicePdfData, InvoicePdfKind } from './invoice-pdf.template';
  * All lookups run inside a system CLS context.
  *
  * `payments` lists every settled payment (COMPLETED, PARTIALLY_REFUNDED, REFUNDED) (oldest first) with its effective
- * date, method and amount in halalas. `paidAt` is the invoice's real paidAt
+ * date, method, amount and refunded amount in halalas. `paidAt` is the invoice's real paidAt
  * and stays null until the invoice is PAID — never a render-time clock.
  * `outstanding` comes from calculateInvoiceBalance: total minus settled payments
  * net of their refunds (never below zero).
@@ -58,15 +58,16 @@ export async function buildInvoicePdfData(
     .map((p) => ({
       date: p.effectiveReceivedAt ?? p.processedAt ?? p.createdAt,
       method: p.method as string,
-      amount: Number(p.amount),
+      amount: decimalToHalalas(p.amount),
+      refundedAmount: decimalToHalalas(p.refundedAmount ?? 0),
     }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const total = Number(invoice.total);
+  const total = decimalToHalalas(invoice.total);
   const { outstanding } = calculateInvoiceBalance({
     invoiceTotal: total,
     grossSettled: payments.reduce((sum, p) => sum + p.amount, 0),
-    refundedSettled: paymentRows.reduce((sum, p) => sum + decimalToHalalas(p.refundedAmount ?? 0), 0),
+    refundedSettled: payments.reduce((sum, p) => sum + p.refundedAmount, 0),
     reservedPending: 0,
     newCollectionBlocked: false,
   });
@@ -86,9 +87,9 @@ export async function buildInvoicePdfData(
     brandColor: PLATFORM_BRAND.colors.primary,
     clientName: client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '—',
     serviceName: booking?.serviceNameSnapshot ?? (invoice.packagePurchaseId ? 'باقة جلسات' : '—'),
-    subtotal: Number(invoice.subtotal),
-    discountAmt: Number(invoice.discountAmt),
-    vatAmt: Number(invoice.vatAmt),
+    subtotal: decimalToHalalas(invoice.subtotal),
+    discountAmt: decimalToHalalas(invoice.discountAmt),
+    vatAmt: decimalToHalalas(invoice.vatAmt),
     total,
     currency: invoice.currency,
     paymentMethod: payments.length > 0 ? payments[payments.length - 1].method : '—',

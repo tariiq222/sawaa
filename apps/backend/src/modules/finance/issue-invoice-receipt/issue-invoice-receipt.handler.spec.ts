@@ -134,8 +134,8 @@ describe('IssueInvoiceReceiptHandler', () => {
     const data = renderer.render.mock.calls[0][0];
     expect(data.paidAt).toEqual(paidAt);
     expect(data.payments).toEqual([
-      { date: new Date('2026-05-20T10:00:00Z'), method: 'CASH', amount: 6000 },
-      { date: new Date('2026-05-24T10:00:00Z'), method: 'CARD', amount: 4000 },
+      { date: new Date('2026-05-20T10:00:00Z'), method: 'CASH', amount: 6000, refundedAmount: 0 },
+      { date: new Date('2026-05-24T10:00:00Z'), method: 'CARD', amount: 4000, refundedAmount: 0 },
     ]);
   });
 
@@ -199,8 +199,13 @@ describe('IssueInvoiceReceiptHandler', () => {
         receiptPdfKey: 'receipts/inv-1/p1.pdf',
         receiptIssuedAt: expect.any(Date),
         receiptPaymentId: 'p1',
+        // Legacy columns dual-written for rollback / mixed-version readers.
+        pdfUrl: 'receipts/inv-1/p1.pdf',
+        pdfGeneratedAt: expect.any(Date),
       },
     });
+    const written = prisma.invoice.updateMany.mock.calls[0][0].data;
+    expect(written.pdfGeneratedAt).toBe(written.receiptIssuedAt);
     // The raw uploadFile URL must never be stored.
     const storedPdfUrl = prisma.invoice.updateMany.mock.calls[0][0].data.receiptPdfKey;
     expect(storedPdfUrl).not.toContain('http');

@@ -25,7 +25,8 @@ export interface IssueReceiptOptions {
  * reached PAID status and no receipt has been issued yet, renders the receipt
  * PDF (listing every COMPLETED payment), uploads it to MinIO under
  * `receipts/<invoiceId>/<paymentId>.pdf`, and atomically records the key
- * (`receiptPdfKey`, `receiptIssuedAt`, `receiptPaymentId`) together with an
+ * (`receiptPdfKey`, `receiptIssuedAt`, `receiptPaymentId`, plus the legacy
+ * `pdfUrl`/`pdfGeneratedAt` for mixed-version safety) together with an
  * outbox event for `finance.invoice.receipt.issued`.
  *
  * Idempotency: one receipt per invoice, guarded by `receiptIssuedAt: null` in
@@ -137,12 +138,19 @@ export class IssueInvoiceReceiptHandler {
       return this.rlsTransaction.withTransaction(async (tx) => {
         // Commit the receipt and its delivery intent together. The guarded
         // write also prevents concurrent payment events from issuing two.
+        const issuedAt = new Date();
         const { count } = await tx.invoice.updateMany({
           where: { id: invoice.id, status: 'PAID', receiptIssuedAt: null },
           data: {
             receiptPdfKey: key,
-            receiptIssuedAt: new Date(),
+            receiptIssuedAt: issuedAt,
             receiptPaymentId: paymentId,
+            // Dual-write the legacy columns (pdfUrl = bare key, pdfGeneratedAt =
+            // same instant, which is >= paidAt) so older app versions (rollback
+            // or a rolling deploy) still find the receipt. resolveReceiptPdfKey
+            // prefers receiptPdfKey, so new readers are unaffected.
+            pdfUrl: key,
+            pdfGeneratedAt: issuedAt,
           },
         });
         if (count === 0) return false;

@@ -1,5 +1,5 @@
 import { Controller, Get, Param, UseGuards, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { Public } from '../../common/guards/jwt.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -39,7 +39,12 @@ export class PublicInvoicesController {
 
   @UseGuards(ClientSessionGuard)
   @Get(':id/pdf')
-  @ApiOperation({ summary: 'Get a URL to download the invoice PDF (client-owned only)' })
+  @ApiOperation({
+    summary: 'Get a URL to download the paid receipt PDF (client-owned only)',
+    description: 'Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.',
+  })
+  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF' })
+  @ApiResponse({ status: 404, description: 'No receipt has been issued for this invoice' })
   async getPdf(
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() client: { id: string },

@@ -66,14 +66,14 @@ describe('InvoicePdf template', () => {
       paidAt: new Date('2026-05-24T10:05:00Z'),
       paymentMethod: 'ONLINE_CARD',
       payments: [
-        { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 5000 },
-        { date: new Date('2026-05-24T10:05:00Z'), method: 'ONLINE_CARD', amount: 6500 },
+        { date: new Date('2026-05-24T10:03:00Z'), method: 'CASH', amount: 5000, refundedAmount: 0 },
+        { date: new Date('2026-05-24T10:05:00Z'), method: 'ONLINE_CARD', amount: 6500, refundedAmount: 0 },
       ],
     });
     expect(text).toContain('إيصال دفع');
     expect(text).toContain('تاريخ الدفع');
-    expect(text).toContain('2026-05-24 10:03');
-    expect(text).toContain('2026-05-24 10:05');
+    expect(text).toContain('2026-05-24 13:03');
+    expect(text).toContain('2026-05-24 13:05');
     expect(text).toContain('50.00');
     expect(text).toContain('65.00');
   });
@@ -85,7 +85,7 @@ describe('InvoicePdf template', () => {
       outstanding: 0,
       paidAt: new Date('2026-05-24T10:05:00Z'),
       paymentMethod: 'CASH',
-      payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 11500 }],
+      payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 11500, refundedAmount: 0 }],
     });
     expect(text).toContain('فاتورة');
     expect(text).toContain('تاريخ الدفع');
@@ -93,15 +93,15 @@ describe('InvoicePdf template', () => {
   });
 
   it('shows settled payments on refunded and partially paid statements, date only when paidAt exists', () => {
-    const pay = [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 5000 }];
+    const pay = [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 5000, refundedAmount: 0 }];
     for (const status of ['PARTIALLY_REFUNDED', 'REFUNDED']) {
       const text = render({ ...base, status, paidAt: new Date('2026-05-24T10:05:00Z'), paymentMethod: 'CASH', payments: pay });
       expect(text).toContain('طريقة الدفع');
       expect(text).toContain('تاريخ الدفع');
-      expect(text).toContain('2026-05-24 10:05');
+      expect(text).toContain('2026-05-24 13:05');
     }
     const partial = render({ ...base, status: 'PARTIALLY_PAID', paidAt: null, paymentMethod: 'CASH', payments: pay });
-    expect(partial).toContain('2026-05-24 10:05');
+    expect(partial).toContain('2026-05-24 13:05');
     expect(partial).not.toContain('تاريخ الدفع');
     expect(render(base)).not.toContain('طريقة الدفع');
   });
@@ -115,7 +115,7 @@ describe('InvoicePdf template', () => {
       const text = render({
         ...base, kind: 'receipt', status: 'PAID', paidAt: new Date('2026-05-24T10:05:00Z'),
         paymentMethod: method,
-        payments: [{ date: new Date('2026-05-24T10:05:00Z'), method, amount: 100 }],
+        payments: [{ date: new Date('2026-05-24T10:05:00Z'), method, amount: 100, refundedAmount: 0 }],
       });
       expect(text).toContain(label);
       expect(text).not.toContain(method);
@@ -133,5 +133,44 @@ describe('InvoicePdf template', () => {
     const receipt = render({ ...base, kind: 'receipt', status: 'PAID' });
     expect(receipt).toContain('PAYMENT RECEIPT');
     expect(receipt).not.toContain('SIMPLIFIED TAX INVOICE');
+  });
+  it('renders a refunded amount as a separate negative line under its payment', () => {
+    const text = render({
+      ...base,
+      status: 'PARTIALLY_REFUNDED',
+      outstanding: 2000,
+      total: 10000,
+      paidAt: new Date('2026-05-24T10:05:00Z'),
+      paymentMethod: 'CASH',
+      payments: [
+        { date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 10000, refundedAmount: 2000 },
+      ],
+    });
+    expect(text).toContain('100.00');
+    expect(text).toContain('مبلغ مسترد');
+    expect(text).toContain('مبلغ مسترد|-|20.00');
+    const none = render({
+      ...base,
+      paymentMethod: 'CASH',
+      payments: [{ date: new Date('2026-05-24T10:05:00Z'), method: 'CASH', amount: 5000, refundedAmount: 0 }],
+    });
+    expect(none).not.toContain('مبلغ مسترد');
+  });
+
+  it('formats dates in the business timezone (Asia/Riyadh), not UTC', () => {
+    // 22:30Z on the 24th is 01:30 on the 25th in Riyadh (+03:00).
+    const instant = new Date('2026-05-24T22:30:00Z');
+    const text = render({
+      ...base,
+      status: 'PAID',
+      outstanding: 0,
+      issuedAt: instant,
+      paidAt: instant,
+      paymentMethod: 'CASH',
+      payments: [{ date: instant, method: 'CASH', amount: 11500, refundedAmount: 0 }],
+    });
+    expect(text).toContain('2026-05-25');
+    expect(text).toContain('2026-05-25 01:30');
+    expect(text).not.toContain('2026-05-24');
   });
 });

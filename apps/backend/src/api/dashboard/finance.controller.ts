@@ -151,14 +151,18 @@ export class DashboardFinanceController {
 
   @Get('invoices/:id/pdf')
   @CheckPermissions({ action: 'read', subject: 'Invoice' })
-  @ApiOperation({ summary: 'Get a URL to download the invoice PDF' })
+  @ApiOperation({
+    summary: 'Get a URL to download the paid receipt PDF',
+    description: 'Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.',
+  })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Invoice PDF URL' })
-  @ApiResponse({ status: 404, description: 'No PDF generated for this invoice yet', type: ApiErrorDto })
+  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF' })
+  @ApiResponse({ status: 404, description: 'Invoice not found, or no receipt has been issued for it', type: ApiErrorDto })
   async getInvoicePdf(@Param('id', ParseUUIDPipe) id: string) {
     const invoice = await this.getInvoice.execute({ invoiceId: id });
-    // Only an issued receipt is downloadable here; the legacy `pdfUrl` column is
-    // no longer written. Mint a short-lived presigned URL, never the raw key.
+    // Only an issued receipt is downloadable here (`receiptPdfKey`, or a legacy
+    // `pdfUrl` that qualifies as a receipt). Mint a short-lived presigned URL,
+    // never the raw key.
     const key = resolveReceiptPdfKey(invoice);
     if (!key) {
       throw new NotFoundException('No paid receipt has been issued for this invoice');
@@ -173,9 +177,12 @@ export class DashboardFinanceController {
 
   @Post('invoices/:id/pdf')
   @CheckPermissions({ action: 'manage', subject: 'Invoice' })
-  @ApiOperation({ summary: 'Generate (or reuse) the invoice PDF and return a download URL' })
+  @ApiOperation({
+    summary: 'Get the invoice PDF download URL, rendering a statement if no receipt exists',
+    description: 'Returns the paid receipt when one has been issued; otherwise renders a fresh statement of the invoice. A statement is never stored on the invoice.',
+  })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Invoice PDF URL' })
+  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt if issued, otherwise of a freshly rendered statement' })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
   @HttpCode(HttpStatus.OK)
   async generateInvoicePdfEndpoint(@Param('id', ParseUUIDPipe) id: string) {

@@ -355,6 +355,32 @@ function buildPrismaDeps(
   };
 }
 
+/**
+ * A hand-built MinioService never runs Nest's onModuleInit, so the finance
+ * buckets are not provisioned. Run it explicitly (it only logs on failure),
+ * then verify the bucket really exists so apply mode fails before any write.
+ */
+export async function ensureReceiptBucket(
+  storage: {
+    onModuleInit(): Promise<void>;
+    bucketExists(bucket: string): Promise<boolean>;
+  },
+  bucket: string,
+): Promise<void> {
+  await storage.onModuleInit();
+  let exists = false;
+  try {
+    exists = await storage.bucketExists(bucket);
+  } catch (error) {
+    throw new Error(
+      `storage preflight failed: cannot verify bucket "${bucket}" (${error instanceof Error ? error.message : 'unknown error'})`,
+    );
+  }
+  if (!exists) {
+    throw new Error(`storage preflight failed: bucket "${bucket}" is unavailable`);
+  }
+}
+
 /** Minimal wiring for IssueInvoiceReceiptHandler.issue(): no AppModule, queues or schedulers. */
 export async function createReceiptIssuer(
   databaseUrl: string,
@@ -365,7 +391,7 @@ export async function createReceiptIssuer(
     import('nestjs-cls'),
     import('@nestjs/config'),
   ]);
-  const [{ PrismaService }, { RlsTransactionService }, { MinioService }, { InvoicePdfRendererService }, { IssueInvoiceReceiptHandler }] =
+  const [{ PrismaService }, { RlsTransactionService }, { MinioService, FINANCE_INVOICES_BUCKET }, { InvoicePdfRendererService }, { IssueInvoiceReceiptHandler }] =
     await Promise.all([
       import('../../src/infrastructure/database/prisma.service'),
       import('../../src/common/database/rls-transaction'),
@@ -378,10 +404,17 @@ export async function createReceiptIssuer(
   const cls = new ClsService(new AsyncLocalStorage());
   const prisma = new PrismaService(undefined, cls);
   await prisma.$connect();
+  const storage = new MinioService(new ConfigService(env));
+  try {
+    await ensureReceiptBucket(storage, FINANCE_INVOICES_BUCKET);
+  } catch (error) {
+    await prisma.$disconnect().catch(() => undefined);
+    throw error;
+  }
   const handler = new IssueInvoiceReceiptHandler(
     prisma,
     new InvoicePdfRendererService(),
-    new MinioService(new ConfigService(env)),
+    storage,
     // issue() never publishes; subscribe/publish are not reachable here.
     {} as never,
     cls,
@@ -402,6 +435,8 @@ async function main(): Promise<void> {
     let issuer: Awaited<ReturnType<typeof createReceiptIssuer>> | undefined;
     try {
       await prisma.$connect();
+      // Apply mode: verify storage up front so a missing bucket fails before any write.
+      if (options.apply) issuer = await createReceiptIssuer(databaseUrl, process.env);
       const issueSilently: BackfillDeps['issueSilently'] = async (invoiceId, paymentId) => {
         // Built lazily, only when a class B write is needed.
         issuer ??= await createReceiptIssuer(databaseUrl, process.env);
