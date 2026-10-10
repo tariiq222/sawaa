@@ -61,6 +61,26 @@ export class EmployeeOnboardingHandler {
           const config = RELATION_CONFIG[cmd.step];
           const ids = (cmd[config.idsKey] as string[] | undefined) ?? [];
 
+          if (cmd.step === 'services') {
+            // EmployeeServiceOption / ServiceDurationOption reference
+            // EmployeeService.id via a plain cross-BC string (no FK), so they
+            // orphan when the rows below are deleted and recreated with new ids.
+            // Same cleanup as remove-employee-service / delete-employee.
+            const existing = await tx.employeeService.findMany({
+              where: { employeeId: cmd.employeeId },
+              select: { id: true },
+            });
+            const esIds = existing.map((es) => es.id);
+            if (esIds.length > 0) {
+              await tx.employeeServiceOption.deleteMany({
+                where: { employeeServiceId: { in: esIds } },
+              });
+              await tx.serviceDurationOption.deleteMany({
+                where: { employeeServiceId: { in: esIds } },
+              });
+            }
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (tx[config.table] as any).deleteMany({ where: { employeeId: cmd.employeeId } });
           if (ids.length) {
