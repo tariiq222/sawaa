@@ -2,7 +2,16 @@
 
 ## Mandatory deployment policy for all AI tools
 
-Read and follow [the approved deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. «انشر» / «ننشر» means **develop + staging only**, followed by the owner's manual test. Only an explicit «انشر للإنتاج» / «انشر للبرودكشن» authorizes **develop → main → production**, after verifying the manually accepted release content and required checks. This policy supersedes older deployment guidance.
+Read and follow [the approved deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. «انشر» / «ننشر» means **develop + staging only**, followed by the owner's manual test. Only an explicit «انشر للإنتاج» / «انشر للبرودكشن» authorizes **frozen `release/<date>` → main → production**, after verifying the manually accepted release content and required checks. This policy supersedes older deployment guidance.
+
+### Local `develop` and release rules (owner-approved 2026-10-10)
+
+These are project law for every AI tool; details in [the deployment policy](docs/operations/deployment-policy.md).
+
+- The owner works directly on local `develop`. Never reset, rebase, force-update or discard it or its uncommitted changes, and never push `develop` directly (lefthook blocks it).
+- Publish local commits on «انشر» via `git push origin develop:refs/heads/publish/<topic>` and a PR into `develop`. Merge PRs with a **merge commit** only; squash and rebase merges are disabled on GitHub.
+- Local `develop` is auto-synced every 5 minutes by `scripts/sync-develop.sh` (launchd `sa.sawaa.develop-sync`, installed with `scripts/install-develop-sync.sh`). After any merge you perform, run `scripts/sync-develop.sh` and confirm local `develop` matches `origin/develop`; report divergence instead of resolving it silently.
+- Production promotes a frozen `release/<YYYY-MM-DD>` branch cut from the exact SHA the owner accepted on staging (observed `ready` on OpenShip). Never open the production PR from `develop`. A `cancelled` check counts as failed.
 
 
 Single-tenant family counseling platform for one counseling center (مركز سواء).

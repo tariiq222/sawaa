@@ -4,7 +4,9 @@
 #
 # Branch policy (enforced locally + on GitHub side):
 #   main    ← production. Pushes blocked locally; only merge via PR from develop.
-#   develop ← default integration branch. All work lands here.
+#   develop ← default integration branch. All work lands here through PRs
+#             (merge commits only); local develop is auto-synced by
+#             scripts/sync-develop.sh.
 
 pre-commit:
   parallel: true
@@ -43,6 +45,12 @@ pre-push:
             echo "❌ Direct push to main is blocked."
             echo "   main is the production branch — only mergeable via PR from develop."
             echo "   Use: git push origin <feature-branch>  (then open PR to develop)"
+            exit 1
+          fi
+          if [ "$remote_ref" = "refs/heads/develop" ]; then
+            echo "❌ Direct push to develop is blocked."
+            echo "   Publish local develop commits through a PR (merge commit):"
+            echo "   git push origin develop:refs/heads/publish/<topic>"
             exit 1
           fi
         done
