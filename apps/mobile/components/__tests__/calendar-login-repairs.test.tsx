@@ -44,7 +44,7 @@ jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ImpactFeedbackStyle: 
 import { shiftDateKey } from '../../lib/employee-schedule';
 import CalendarScreen from '../../app/(employee)/(tabs)/calendar';
 jest.mock('../../app/(auth)/email-entry', () => ({ __esModule: true, default: () => null }));
-import LoginScreen from '../../app/(auth)/login';
+import StaffLoginScreen from '../../app/(auth)/staff-login';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -118,11 +118,11 @@ describe('calendar query states', () => {
   });
 });
 
-describe('login navigation copy and touch targets', () => {
+describe('staff login navigation copy and touch targets', () => {
   it.each(['en', 'ar'] as const)('localizes forgot password and preserves navigation (%s)', (locale) => {
     mockLocale = locale;
     const copy = locale === 'ar' ? ar : en;
-    const screen = render(<LoginScreen />);
+    const screen = render(<StaffLoginScreen />);
     fireEvent.press(screen.getByText(copy.auth.forgotPassword.linkLabel));
     expect(mockPush).toHaveBeenCalledWith('/(auth)/forgot-password');
   });
@@ -130,7 +130,7 @@ describe('login navigation copy and touch targets', () => {
   it('carries booking and redirect context through forgot-password and registration', () => {
     mockLoginBooking = '{"serviceId":"service-1"}';
     mockLoginRedirect = '/(client)/booking/confirm?serviceId=service-1';
-    const screen = render(<LoginScreen />);
+    const screen = render(<StaffLoginScreen />);
 
     fireEvent.press(screen.getByText(en.auth.forgotPassword.linkLabel));
     expect(mockPush).toHaveBeenLastCalledWith({
@@ -147,7 +147,7 @@ describe('login navigation copy and touch targets', () => {
   });
 
   it('provides at least 44-point targets for both navigation links', () => {
-    const screen = render(<LoginScreen />);
+    const screen = render(<StaffLoginScreen />);
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(2);
     for (const link of links) {

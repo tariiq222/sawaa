@@ -1,3 +1,4 @@
+import { GetCategoryHandler } from '../../modules/org-config/categories/get-category.handler';
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe,
@@ -32,6 +33,7 @@ import {
 @Controller('dashboard/organization')
 export class DashboardOrganizationCategoriesController {
   constructor(
+    private readonly getCategory: GetCategoryHandler,
     private readonly createCategory: CreateCategoryHandler,
     private readonly updateCategory: UpdateCategoryHandler,
     private readonly listCategories: ListCategoriesHandler,
@@ -57,6 +59,16 @@ export class DashboardOrganizationCategoriesController {
   @ApiOkResponse({ description: 'Paginated list of categories', type: PaginatedCategoriesResponseDto })
   listCategoriesEndpoint(@Query() query: ListCategoriesDto) {
     return this.listCategories.execute(query);
+  }
+
+  @Get('categories/:categoryId')
+  @CheckPermissions({ action: 'read', subject: 'Category' })
+  @ApiOperation({ summary: 'Get a category' })
+  @ApiParam({ name: 'categoryId', description: 'Category UUID or readable CAT reference' })
+  @ApiOkResponse({ description: 'Category details', type: CategoryResponseDto })
+  @ApiResponse({ status: 404, description: 'Category not found', type: ApiErrorDto })
+  getCategoryEndpoint(@Param('categoryId') categoryId: string) {
+    return this.getCategory.execute({ categoryId });
   }
 
   @Patch('categories/:categoryId')

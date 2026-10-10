@@ -31,7 +31,7 @@ export class NativeRefreshHandler {
           data: { revokedAt: new Date() },
         });
         if (consumed.count !== 1) throw new UnauthorizedException('Invalid or expired refresh token');
-        const next = await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, tokenVersion: client.tokenVersion }, tx);
+        const next = await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified, tokenVersion: client.tokenVersion }, tx);
         return { accessToken: next.accessToken, refreshToken: next.rawRefresh };
       }
 

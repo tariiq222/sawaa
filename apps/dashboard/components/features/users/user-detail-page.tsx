@@ -112,7 +112,7 @@ export function UserDetailPage({ userId }: Props) {
             {t("users.col.edit")}
           </Button>
         )}
-        {canDo("user", "delete") && (
+        {canDo("user", "manage") && (
           <Button
             variant="outline"
             className="gap-2 rounded-lg px-5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -142,7 +142,7 @@ export function UserDetailPage({ userId }: Props) {
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-[10px]">
-                {formatUserRole(u.role, t, locale)}
+                {formatUserRole(u.role, t, locale, u.customRole)}
               </Badge>
               <ActiveBadge
                 active={u.isActive}
@@ -174,11 +174,11 @@ export function UserDetailPage({ userId }: Props) {
         <DetailSection title={t("users.detail.accountInfo")}>
           <DetailRow
             label={t("users.detail.role")}
-            value={formatUserRole(u.role, t, locale)}
+            value={formatUserRole(u.role, t, locale, u.customRole)}
           />
           <DetailRow
             label={t("users.detail.customRole")}
-            value={u.customRoleId ?? "—"}
+            value={u.customRole?.name ?? "—"}
           />
           <DetailRow
             label={t("users.detail.status")}

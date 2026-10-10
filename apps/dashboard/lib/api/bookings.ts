@@ -51,6 +51,7 @@ export async function fetchBookings(
 ): Promise<PaginatedResponse<Booking>> {
   return api.get<PaginatedResponse<Booking>>("/dashboard/bookings", {
     page: query.page,
+    sortOrder: query.sortOrder,
     limit: query.limit,
     status: query.status,
     bookingType: query.type,

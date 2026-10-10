@@ -149,4 +149,24 @@ describe('UpsertOrgSmsConfigHandler', () => {
       credentialsConfigured: true,
     });
   });
+  it.each(['UNIFONIC', 'TAQNYAT'] as const)('preserves %s secrets on a sender-only edit', async (provider) => {
+    prisma.organizationSmsConfig.findFirst.mockResolvedValue({ id: 'cfg-1', provider, credentialsCiphertext: 'stored-cipher', webhookSecret: 'keep' });
+    const result = await handler.execute({ provider, senderId: 'NewSender' });
+    expect(result.credentialsConfigured).toBe(true);
+    expect(prisma.organizationSmsConfig.update).toHaveBeenCalledWith(expect.objectContaining({data: expect.objectContaining({credentialsCiphertext: 'stored-cipher', senderId: 'NewSender', webhookSecret: 'keep'})}));
+    expect(credentials.encrypt).not.toHaveBeenCalled();
+  });
+
+  it('rejects a blank replacement instead of overwriting working secrets', async () => {
+    prisma.organizationSmsConfig.findFirst.mockResolvedValue({ id: 'cfg-1', provider: 'UNIFONIC', credentialsCiphertext: 'stored-cipher' });
+    await expect(handler.execute({provider: 'UNIFONIC', unifonic: { appSid: '', apiKey: '' }})).rejects.toThrow();
+    expect(prisma.organizationSmsConfig.update).not.toHaveBeenCalled();
+  });
+
+  it('requires new credentials when switching providers', async () => {
+    prisma.organizationSmsConfig.findFirst.mockResolvedValue({ id: 'cfg-1', provider: 'UNIFONIC', credentialsCiphertext: 'stored-cipher' });
+    await expect(handler.execute({provider: 'TAQNYAT'})).rejects.toThrow();
+    expect(prisma.organizationSmsConfig.update).not.toHaveBeenCalled();
+  });
+
 });

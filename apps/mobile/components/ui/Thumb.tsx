@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DimensionValue, Image, StyleSheet, View } from 'react-native';
 import { User, type LucideIcon } from 'lucide-react-native';
 
@@ -15,20 +15,28 @@ interface ThumbProps {
   icon?: LucideIcon;
   /** Describes the image for screen readers; omit for purely decorative thumbs. */
   accessibilityLabel?: string;
-  /** Called when the remote image fails to load, so the caller can fall back to the placeholder. */
+  /** Called after the remote image fails; the thumbnail handles its own placeholder. */
   onError?: () => void;
 }
 
 /** Image slot for therapists and clinics: photo when there is one, tinted glyph when not. */
-export function Thumb({ uri, width, height, radius = sawaaRadius.md, icon: Icon = User, accessibilityLabel, onError }: ThumbProps) {
+export function Thumb(props: ThumbProps) {
+  // Each URI owns its load state; late errors from an unmounted photo cannot
+  // alter a newer photo, including when the same URI is visited again.
+  return <ThumbContent key={props.uri} {...props} />;
+}
+
+function ThumbContent({ uri, width, height, radius = sawaaRadius.md, icon: Icon = User, accessibilityLabel, onError }: ThumbProps) {
   const colors = useSawaaColors();
+  const [failed, setFailed] = useState(false);
   const box = { width, height, borderRadius: radius };
-  if (uri) {
+  if (uri && !failed) {
     return (
       <Image
+        key={uri}
         source={{ uri }}
         resizeMode="cover"
-        onError={onError}
+        onError={() => { setFailed(true); onError?.(); }}
         accessibilityLabel={accessibilityLabel}
         accessible={Boolean(accessibilityLabel)}
         style={[styles.image, box, { backgroundColor: colors.teal[100] }]}

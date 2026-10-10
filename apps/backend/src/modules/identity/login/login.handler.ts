@@ -3,6 +3,7 @@ import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
+import { DUMMY_PASSWORD_HASH } from '../shared/password-login-security';
 import { TokenService, TokenPair } from '../shared/token.service';
 import type { User } from '@prisma/client';
 import type { LoginCommand } from './login.command';
@@ -49,7 +50,7 @@ export class LoginHandler {
         redisClient.expire(emailKey, RATE_LIMIT_WINDOW_SECONDS),
         redisClient.expire(ipKey, RATE_LIMIT_WINDOW_SECONDS),
       ]);
-      throw new UnauthorizedException('Too many attempts, try again later');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     try {
@@ -73,13 +74,10 @@ export class LoginHandler {
       include: { customRole: { include: { permissions: true } } },
     });
 
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-    if (!user.isActive) throw new UnauthorizedException('Account is inactive');
-
-    if (!user.passwordHash) throw new UnauthorizedException('Invalid credentials');
-
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new UnauthorizedException('Account locked. Try again later.');
+    if (!user || !user.isActive || !user.passwordHash ||
+        (user.lockedUntil && user.lockedUntil > new Date())) {
+      await this.password.verify(cmd.password, DUMMY_PASSWORD_HASH);
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const valid = await this.password.verify(cmd.password, user.passwordHash);

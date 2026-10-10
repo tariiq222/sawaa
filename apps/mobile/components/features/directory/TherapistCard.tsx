@@ -12,7 +12,12 @@ import { DirectoryCard } from './DirectoryCard';
 export function therapistDisplay(item: PublicEmployeeItem, isRTL: boolean, unknownName: string) {
   const name = (isRTL ? item.nameAr : item.nameEn) ?? item.nameEn ?? item.nameAr ?? unknownName;
   const specialty = (isRTL ? item.specialtyAr : item.specialty) ?? item.specialty ?? item.specialtyAr ?? null;
-  const subtitle = [specialty, item.title].filter(Boolean).join(' · ') || null;
+  const descriptions = [specialty, item.title]
+    .map((value) => value?.trim().replace(/\s+/g, ' ') ?? '')
+    .filter(Boolean);
+  const subtitle = descriptions
+    .filter((value, index) => descriptions.findIndex((other) => other.toLowerCase() === value.toLowerCase()) === index)
+    .join(' · ') || null;
   return { name, specialty, subtitle };
 }
 

@@ -51,6 +51,7 @@ describe('ListUsersHandler', () => {
       take: 10,
       orderBy: { createdAt: 'desc' },
       omit: { passwordHash: true },
+      include: { customRole: { select: { id: true, name: true } } },
     });
     expect(prisma.user.count).toHaveBeenCalledWith({ where: { isActive: false } });
   });
@@ -76,6 +77,7 @@ describe('ListUsersHandler', () => {
       expect.objectContaining({
         orderBy: { createdAt: 'desc' },
         omit: { passwordHash: true },
+      include: { customRole: { select: { id: true, name: true } } },
       }),
     );
   });

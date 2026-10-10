@@ -24,6 +24,9 @@ const backgroundExceptions = new Set([
   '(guest)/_layout.tsx',
   '_layout.tsx',
   '(client)/chat.tsx',
+  '(client)/profile.tsx', // Redirects to the account tab.
+  '(client)/settings.tsx', // Redirects to the account tab.
+  '(client)/records.tsx', // Redirects to the appointments tab.
   '(guest)/home.tsx',
   '(client)/(tabs)/account.tsx',
   'public-booking/[serviceId].tsx',
@@ -36,6 +39,7 @@ const backgroundExceptions = new Set([
 function paintsSharedBackground(source: string): boolean {
   return source.includes('<AquaBackground') ||
     source.includes('<SettingsScaffold') ||
+    source.includes('<AccountScaffold') ||
     source.includes('<AuthFormScaffold') ||
     source.includes('<VideoCallScreen');
 }

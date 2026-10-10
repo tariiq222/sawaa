@@ -22,6 +22,7 @@ function CreateClientRoute() {
     <ListPageShell>
       <Breadcrumbs
         items={[
+          { label: t("nav.dashboard"), href: "/" },
           { label: t("clients.title"), href: "/clients" },
           { label: t("clients.create.title") },
         ]}

@@ -78,3 +78,14 @@ it('hydrates a collection-sorted page in SQL order and preserves ordinary CREATE
     ['ordinary', '2026-10-01T00:00:00.000Z'], ['historical', '2026-09-01T00:00:00.000Z'],
   ]);
 });
+
+it('matches bank references while retaining date filters in both page and count queries',async()=>{
+ const prisma={...buildPrisma(),client:{findMany:jest.fn().mockResolvedValue([])},invoice:{findMany:jest.fn().mockResolvedValue([])}};
+ const fromDate=new Date('2026-10-01'); const toDate=new Date('2026-10-31');
+ await new ListPaymentsHandler(prisma as never).execute({search:'BANK_12%',fromDate,toDate,page:1,limit:20});
+ expect(prisma.payment.count).toHaveBeenCalledWith({where:expect.objectContaining({
+   OR:[{effectiveReceivedAt:{gte:fromDate,lte:toDate}},{effectiveReceivedAt:null,createdAt:{gte:fromDate,lte:toDate}}],
+   AND:[{OR:[{invoiceId:{in:[]}},{gatewayRef:{contains:'BANK_12%',mode:'insensitive'}}]}]
+ })});
+ expect(prisma.$queryRaw.mock.calls[0][0].values).toContain('%BANK\\_12\\%%');
+});

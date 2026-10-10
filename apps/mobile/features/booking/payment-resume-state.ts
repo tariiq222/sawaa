@@ -33,6 +33,7 @@ interface StoredPendingBookingCheckout extends PendingBookingCheckout {
 }
 
 type BookingResumeIdentity = Pick<PendingBookingCheckout, 'bookingId' | 'invoiceId'>;
+export type BookingCheckoutUnavailableReason = 'BOOKING_EXPIRED' | 'BOOKING_CLOSED';
 
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}${encodeURIComponent(userId)}`;
@@ -128,7 +129,23 @@ export function bookingPaymentDraft(input: {
   });
 }
 
-export async function savePendingBookingCheckout(
+// Serialize this user's index and records so late cancellation cleanup cannot
+// delete a newer reservation saved for the same draft in this app process.
+const storageMutations = new Map<string, Promise<void>>();
+function mutateStoredCheckout(userId: string, mutation: () => Promise<void>): Promise<void> {
+  const previous = storageMutations.get(userId) ?? Promise.resolve();
+  const next = previous.then(mutation, mutation);
+  const settled = next.then(() => undefined, () => undefined);
+  storageMutations.set(userId, settled);
+  void settled.then(() => { if (storageMutations.get(userId) === settled) storageMutations.delete(userId); });
+  return next;
+}
+
+export function savePendingBookingCheckout(userId: string, draft: BookingPaymentDraft, identity: BookingResumeIdentity): Promise<void> {
+  return mutateStoredCheckout(userId, () => savePendingBookingCheckoutRecord(userId, draft, identity));
+}
+
+async function savePendingBookingCheckoutRecord(
   userId: string,
   draft: BookingPaymentDraft,
   identity: BookingResumeIdentity,
@@ -190,7 +207,11 @@ export async function getPendingBookingCheckout(
   return { kind: 'missing' };
 }
 
-export async function clearPendingBookingCheckout(userId: string, draft?: BookingPaymentDraft): Promise<void> {
+export function clearPendingBookingCheckout(userId: string, draft?: BookingPaymentDraft): Promise<void> {
+  return mutateStoredCheckout(userId, () => clearPendingBookingCheckoutRecord(userId, draft));
+}
+
+async function clearPendingBookingCheckoutRecord(userId: string, draft?: BookingPaymentDraft): Promise<void> {
   if (!isNonEmptyString(userId)) return;
   if (!draft) {
     await AsyncStorage.removeItem(indexKey(userId));
@@ -203,6 +224,27 @@ export async function clearPendingBookingCheckout(userId: string, draft?: Bookin
   const index = JSON.parse(indexRaw) as unknown;
   if (Array.isArray(index)) {
     await AsyncStorage.setItem(indexKey(userId), JSON.stringify(index.filter((item) => item !== key)));
+  }
+}
+
+/** Remove discovery only for a booking the server has authoritatively closed. */
+export function clearClosedBookingCheckout(userId: string, bookingId: string): Promise<void> {
+  return mutateStoredCheckout(userId, () => clearClosedBookingCheckoutRecords(userId, bookingId));
+}
+
+async function clearClosedBookingCheckoutRecords(userId: string, bookingId: string): Promise<void> {
+  if (!isNonEmptyString(userId) || !isNonEmptyString(bookingId)) return;
+  const indexRaw = await AsyncStorage.getItem(indexKey(userId));
+  const index: unknown = indexRaw ? JSON.parse(indexRaw) : [];
+  if (!Array.isArray(index) || index.some((key) => !isNonEmptyString(key))) {
+    throw new Error('Invalid booking payment resume index');
+  }
+  for (const key of index) {
+    const raw = await AsyncStorage.getItem(key);
+    const checkout = raw ? parseStored(raw, userId) : null;
+    if (checkout && checkout !== 'invalid' && checkout.bookingId === bookingId && checkout.draft) {
+      await clearPendingBookingCheckoutRecord(userId, checkout.draft);
+    }
   }
 }
 
@@ -246,8 +288,13 @@ export async function resolvePendingBookingResume(
   userId: string,
   draft: BookingPaymentDraft | null,
   routeIdentity?: Partial<BookingResumeIdentity>,
-): Promise<{ kind: 'missing' | 'invalid' } | { kind: 'ready' | 'complete'; checkout: PendingBookingCheckout; booking: ClientBookingRow }> {
-  const stored = await getPendingBookingCheckout(userId, draft, routeIdentity);
+): Promise<{ kind: 'missing' } | { kind: 'invalid'; unavailableReason?: BookingCheckoutUnavailableReason } | { kind: 'ready' | 'complete'; checkout: PendingBookingCheckout; booking: ClientBookingRow }> {
+  if (!isNonEmptyString(userId)) return { kind: 'invalid' };
+  // An explicitly bound checkout is verified with authenticated GET. Local storage is only
+  // discovery for a draft without an identity; losing it must not create a second booking.
+  const stored: PendingBookingCheckoutRead = routeIdentity?.bookingId
+    ? { kind: 'missing' }
+    : await getPendingBookingCheckout(userId, draft);
   if (stored.kind === 'invalid') return stored;
   if (stored.kind === 'missing' && !routeIdentity?.bookingId) return stored;
   const booking = await clientBookingsService.getById(stored.kind === 'found' ? stored.checkout.bookingId : routeIdentity!.bookingId!);
@@ -258,6 +305,20 @@ export async function resolvePendingBookingResume(
   const checkout: PendingBookingCheckout = stored.kind === 'found'
     ? stored.checkout
     : { bookingId: booking.id, invoiceId: booking.invoiceId, draft };
+  // A new wizard may reuse an exact slot after its old reservation closes. Bound
+  // routes remain closed; uncertain, active and paid identities are never retired.
+  if (stored.kind === 'found' && draft && booking.invoiceId === checkout.invoiceId
+    && ['cancelled', 'expired'].includes(booking.status)) {
+    await mutateStoredCheckout(userId, async () => {
+      const current = await getPendingBookingCheckout(userId, draft);
+      if (current.kind === 'found' && current.checkout.bookingId === checkout.bookingId
+        && current.checkout.invoiceId === checkout.invoiceId) {
+        await clearPendingBookingCheckoutRecord(userId, draft);
+      }
+    });
+    // If another flow saved a newer reservation during GET, verify that identity.
+    return resolvePendingBookingResume(userId, draft);
+  }
   if (isInvoiceLessBookingComplete(booking, checkout)
     || (booking.id === checkout.bookingId && booking.invoiceId === checkout.invoiceId
       && ['confirmed', 'completed'].includes(booking.status))) {
@@ -265,5 +326,6 @@ export async function resolvePendingBookingResume(
   }
   return isPendingBookingResumable(booking, checkout, checkout.draft ?? undefined)
     ? { kind: 'ready', checkout, booking }
-    : { kind: 'invalid' };
+    : { kind: 'invalid', ...(booking.status === 'expired' ? { unavailableReason: 'BOOKING_EXPIRED' as const }
+      : booking.status === 'cancelled' || booking.status === 'no_show' ? { unavailableReason: 'BOOKING_CLOSED' as const } : {}) };
 }

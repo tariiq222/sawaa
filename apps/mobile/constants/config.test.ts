@@ -1,6 +1,11 @@
 import { resolveApiUrl } from './config';
 
 describe('resolveApiUrl', () => {
+  it('rejects swapping the release API targets between staging and production', () => {
+    expect(() => resolveApiUrl({ easBuildProfile: 'staging', configuredApiUrl: 'https://api.sawaa.sa/api/v1' })).toThrow('match staging');
+    expect(() => resolveApiUrl({ easBuildProfile: 'production', configuredApiUrl: 'https://staging.sawaa.sa/api/v1' })).toThrow('match production');
+    expect(() => resolveApiUrl({ easBuildProfile: 'staging' })).toThrow('required');
+  });
   it('uses the documented local backend default during development', () => {
     expect(resolveApiUrl({ nodeEnv: 'development' })).toBe('http://localhost:5200/api/v1');
   });
@@ -45,5 +50,20 @@ describe('resolveApiUrl', () => {
     expect(() => resolveApiUrl({ nodeEnv: 'production', configuredApiUrl: 'https://[fd00::1]/api/v1' })).toThrow(
       'must not target a local or private host',
     );
+  });
+});
+
+
+describe('Runtime release environment validation', () => {
+  it('rejects an environment that conflicts with the build profile', () => {
+    jest.isolateModules(() => {
+      const before = { ...process.env };
+      try {
+        process.env.EAS_BUILD_PROFILE = 'production';
+        process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT = 'staging';
+        process.env.EXPO_PUBLIC_API_URL = 'https://staging.sawaa.sa/api/v1';
+        expect(() => require('./config')).toThrow(/release environment|build profile/i);
+      } finally { process.env = before; }
+    });
   });
 });

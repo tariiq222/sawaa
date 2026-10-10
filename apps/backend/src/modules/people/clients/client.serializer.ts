@@ -12,11 +12,14 @@ type ClientBookingSummary = {
 
 // Sensitive auth columns on the Client row that must never be serialized out
 // to the dashboard/mobile API surface (passwordHash + lockout/session state).
+// Email-proof state is exposed only through the client's own email status API.
 type SensitiveClientAuthField =
   | 'passwordHash'
   | 'tokenVersion'
   | 'loginAttempts'
-  | 'lockoutUntil';
+  | 'lockoutUntil'
+  | 'pendingEmail'
+  | 'emailPromptResolvedAt';
 
 export type SerializedClient = Omit<
   Client,
@@ -40,6 +43,8 @@ export function serializeClient(client: Client, options: SerializeOptions = {}):
     tokenVersion: _tokenVersion,
     loginAttempts: _loginAttempts,
     lockoutUntil: _lockoutUntil,
+    pendingEmail: _pendingEmail,
+    emailPromptResolvedAt: _emailPromptResolvedAt,
     ...safe
   } = client;
 
@@ -52,6 +57,16 @@ export function serializeClient(client: Client, options: SerializeOptions = {}):
   };
 }
 
+
+/**
+ * Client-facing view of the client's own record: a legacy email that was never
+ * proven may be fake or belong to someone else, so it is not echoed back.
+ * Staff surfaces keep the stored value (with its verification state).
+ */
+export function withProvenEmailOnly<T extends { email: string | null; emailVerified?: Date | null }>(client: T): T {
+  // A projection without the verification state is treated as unproven.
+  return 'emailVerified' in client && client.emailVerified ? client : { ...client, email: null };
+}
 
 // Match the existing employee-client projection; keep dashboard reference and
 // account-type display fields without exposing medical, national-ID or auth data.

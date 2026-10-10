@@ -115,7 +115,7 @@ export function getClientColumns({
       id: "lastBooking",
       accessorFn: (row) => row.lastBooking?.date ?? "",
       header: t("clients.col.lastBooking"),
-      enableSorting: true,
+      enableSorting: false,
       sortingFn: (a, b) => {
         const dateA = a.original.lastBooking?.date ? new Date(a.original.lastBooking.date).getTime() : 0
         const dateB = b.original.lastBooking?.date ? new Date(b.original.lastBooking.date).getTime() : 0
@@ -135,7 +135,7 @@ export function getClientColumns({
       id: "nextBooking",
       accessorFn: (row) => row.nextBooking?.date ?? "",
       header: t("clients.col.nextBooking"),
-      enableSorting: true,
+      enableSorting: false,
       sortingFn: (a, b) => {
         const dateA = a.original.nextBooking?.date ? new Date(a.original.nextBooking.date).getTime() : 0
         const dateB = b.original.nextBooking?.date ? new Date(b.original.nextBooking.date).getTime() : 0

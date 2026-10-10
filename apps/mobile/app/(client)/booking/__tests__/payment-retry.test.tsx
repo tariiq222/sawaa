@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 // "Try again" on the success screen re-enters this screen with the existing
 // bookingId + invoiceId. Paying again must reuse that booking's invoice: a new
@@ -14,7 +15,8 @@ const mockGetBooking = jest.fn();
 const mockInitPayment = jest.fn();
 const mockOpenAuthSession = jest.fn();
 // Stable identities: the screen's resume effect depends on router and params.
-const mockRouter = { replace: mockReplace, back: jest.fn() };
+const mockPush = jest.fn();
+const mockRouter = { replace: mockReplace, push: mockPush, back: jest.fn() };
 const mockParams: Record<string, string> = { bookingId: 'booking-1', invoiceId: 'invoice-1', amount: '45000', currency: 'SAR' };
 
 jest.mock('expo-router', () => ({
@@ -124,6 +126,7 @@ describe('booking payment retry for an existing booking', () => {
   it('pays the existing invoice without creating a new booking', async () => {
     const screen = render(<BookingPaymentScreen />);
     await waitFor(() => expect(mockGetBooking).toHaveBeenCalledWith('booking-1'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pay 450.00 SAR' })).toBeEnabled());
 
     await act(async () => {
       fireEvent.press(screen.getByRole('button', { name: 'Pay 450.00 SAR' }));
@@ -154,6 +157,24 @@ it('offers an in-place capability retry for an online-only invoice', async () =>
   screen.rerender(<BookingPaymentScreen />);
   await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
   expect(screen.queryByText('Could not load payment methods')).toBeNull();
+});
+
+it('explains an overlap on the payment screen and lets the client view existing appointments', async () => {
+  for (const key of Object.keys(mockParams)) delete mockParams[key];
+  Object.assign(mockParams, { branchId: 'branch-1', employeeId: 'employee-1', serviceId: 'service-1', scheduledAt: '2026-10-01T10:00:00.000Z', amount: '45000' });
+  mockBookingCreate.mockRejectedValueOnce({ response: { status: 409, data: { message: 'Client already has an overlapping appointment' } } });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  try {
+    const screen = render(<BookingPaymentScreen />);
+    await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+    await act(async () => { fireEvent.press(screen.getByTestId('booking-payment-submit')); });
+    const [, message, buttons] = alert.mock.calls.at(-1)!;
+    expect(message).toContain('My appointments');
+    expect(message).not.toContain('Client already has');
+    buttons!.find((button) => /appointments/i.test(button.text ?? ''))!.onPress!();
+    expect(mockPush).toHaveBeenCalledWith('/(client)/(tabs)/appointments');
+    expect(mockReplace).not.toHaveBeenCalled();
+  } finally { alert.mockRestore(); }
 });
 
 it('explains invalid checkout and safely retries the same booking read without a purchase', async () => {

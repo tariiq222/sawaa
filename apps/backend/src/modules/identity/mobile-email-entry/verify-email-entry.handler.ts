@@ -29,7 +29,10 @@ export class VerifyEmailEntryHandler {
       if (!await this.store.consume(tx, flow)) return null;
       if (candidate.kind === 'unavailable') return { next: 'unavailable' };
       if (candidate.kind === 'staff') return { next: 'authenticated', sessionKind: 'staff', tokens: await this.tokens.issueTokenPair(candidate.user, { isSuperAdmin: candidate.user.isSuperAdmin }, tx, RefreshTokenSource.MOBILE) };
-      const pair = await this.clientTokens.issueTokenPair(candidate.client, tx);
+      const client = candidate.kind === 'clientOnly'
+        ? await tx.client.update({ where: { id: candidate.client.id }, data: { lastLoginAt: new Date() } })
+        : candidate.client;
+      const pair = await this.clientTokens.issueTokenPair(client, tx);
       return { next: 'authenticated', sessionKind: 'client', tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };
     }).catch(translateConflict);
     if (!result) throw invalidCode();

@@ -1,3 +1,4 @@
+import { GetCategoryHandler } from '../../modules/org-config/categories/get-category.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
@@ -28,6 +29,7 @@ describe('DashboardOrganizationCategoriesController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [DashboardOrganizationCategoriesController],
       providers: [
+        { provide: GetCategoryHandler, useValue: {execute: jest.fn().mockResolvedValue({id: "requested"})} },
         { provide: CreateCategoryHandler, useValue: mockCreate },
         { provide: UpdateCategoryHandler, useValue: mockUpdate },
         { provide: ListCategoriesHandler, useValue: mockList },
@@ -81,6 +83,11 @@ describe('DashboardOrganizationCategoriesController (e2e)', () => {
     createdAt: categoryResponse.createdAt.toISOString(),
     updatedAt: categoryResponse.updatedAt.toISOString(),
   };
+
+  it('loads one category independently of paginated lists', async () => {
+    await request(app.getHttpServer()).get('/dashboard/organization/categories/CAT-120').expect(200);
+    expect(app.get(GetCategoryHandler).execute).toHaveBeenCalledWith({categoryId:'CAT-120'});
+  });
 
   describe('OpenAPI response contracts', () => {
     it.each([

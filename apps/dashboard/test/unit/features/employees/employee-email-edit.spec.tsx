@@ -33,6 +33,7 @@ vi.mock("@/hooks/use-employee-mutations", () => ({
   useEmployeeMutations: () => ({
     onboardMutation: { mutateAsync: vi.fn() },
     updateMutation: { mutateAsync: mocks.updateEmployee },
+    invalidateCatalog: vi.fn(),
   }),
   useSetAvailability: () => ({ mutateAsync: mocks.setAvailability }),
   useSetBreaks: () => ({ mutateAsync: mocks.setBreaks }),
@@ -162,6 +163,17 @@ describe("employee edit email", () => {
       expect.objectContaining({ id: "emp-1", email: undefined })
     )
     expect(mocks.updateEmployee.mock.calls[0]?.[0].email).not.toBe("")
+  })
+
+  it.each(["blob:local-preview", "https://files.sawaa.sa/image.png?expired=true"])("does not persist the edit preview or signed read URL %s", async (avatarUrl) => {
+    const file = avatarUrl.startsWith("blob:") ? new File(["image"], "photo.png", { type: "image/png" }) : undefined
+    const form = makeForm({ avatarUrl, avatarFile: file, isActive: true })
+    const { result } = renderHook(() => useEmployeeForm({ ...baseOptions,
+      employee: { user: { firstName: "خالد", lastName: "المحمد" }, isActive: true }, form: form as never,
+    }))
+    await act(async () => { await result.current.onSubmit() })
+    expect(mocks.updateEmployee.mock.calls[0][0].avatarUrl).toBeUndefined()
+    if (file) expect(mocks.uploadEmployeeAvatar).toHaveBeenCalledWith("emp-1", file)
   })
 
   it("rejects a non-empty invalid email while allowing an empty edit value", () => {

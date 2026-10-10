@@ -20,6 +20,7 @@ import { formatLocaleDate } from "@/lib/date"
 import type { SmsDeliveryStatus } from "@/lib/types/sms"
 
 function StatusBadge({ status }: { status: SmsDeliveryStatus }) {
+  const { t } = useLocale()
   const cls = (() => {
     switch (status) {
       case "DELIVERED":
@@ -37,14 +38,14 @@ function StatusBadge({ status }: { status: SmsDeliveryStatus }) {
     <span
       className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs ${cls}`}
     >
-      {status}
+      {t(`sms.status.${status}`)}
     </span>
   )
 }
 
 export function SmsDeliveryLogTable() {
   const { locale, t } = useLocale()
-  const { deliveries, loading } = useSmsDeliveries()
+  const { deliveries, loading, error } = useSmsDeliveries()
 
   const format = (iso: string | null) =>
     formatLocaleDate(iso, locale, {
@@ -61,7 +62,7 @@ export function SmsDeliveryLogTable() {
         <CardTitle>{t("sms.log.title")}</CardTitle>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        {error ? <p role="alert" className="text-destructive">{t("error.server")}</p> : loading ? (
           <p className="text-muted-foreground">{t("sms.log.loading")}</p>
         ) : deliveries.length === 0 ? (
           <p className="text-muted-foreground">{t("sms.log.empty")}</p>

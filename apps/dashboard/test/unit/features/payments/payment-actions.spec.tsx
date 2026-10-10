@@ -9,13 +9,17 @@ const { useLocale } = vi.hoisted(() => {
     "detail.verifyTransfer": "Verify transfer",
   }
   return {
-    useLocale: vi.fn(() => ({ t: (k: string) => labels[k] ?? k, locale: "ar" })),
+    useLocale: vi.fn(() => ({
+      t: (k: string) => labels[k] ?? k,
+      locale: "ar",
+    })),
   }
 })
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
 
 vi.mock("@/components/features/payments/verify-dialog", () => ({
-  VerifyDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="verify-dialog" /> : null),
+  VerifyDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="verify-dialog" /> : null,
 }))
 
 import { PaymentActions } from "@/components/features/payments/payment-actions"
@@ -41,23 +45,47 @@ function makePayment(overrides: Partial<Payment> = {}): Payment {
 describe("PaymentActions", () => {
   it("renders the Refund button only when status is COMPLETED", () => {
     const { rerender } = render(
-      <PaymentActions payment={makePayment({ status: "COMPLETED" as Payment["status"] })} onAction={() => {}} onRefund={() => {}} />,
+      <PaymentActions
+        payment={makePayment({ status: "COMPLETED" as Payment["status"] })}
+        onAction={() => {}}
+        onRefund={() => {}}
+      />
     )
     expect(screen.getByRole("button", { name: /refund/i })).toBeTruthy()
-    rerender(<PaymentActions payment={makePayment({ status: "PENDING" as Payment["status"] })} onAction={() => {}} onRefund={() => {}} />)
+    rerender(
+      <PaymentActions
+        payment={makePayment({ status: "PENDING" as Payment["status"] })}
+        onAction={() => {}}
+        onRefund={() => {}}
+      />
+    )
     expect(screen.queryByRole("button", { name: /refund/i })).toBeNull()
   })
 
   it("calls onRefund (inline step) when Refund is clicked — no stacked dialog", () => {
     const onRefund = vi.fn()
-    render(<PaymentActions payment={makePayment()} onAction={() => {}} onRefund={onRefund} />)
+    render(
+      <PaymentActions
+        payment={makePayment()}
+        onAction={() => {}}
+        onRefund={onRefund}
+      />
+    )
     fireEvent.click(screen.getByRole("button", { name: /refund/i }))
     expect(onRefund).toHaveBeenCalledTimes(1)
   })
 
   it("hides Verify when method is not BANK_TRANSFER", () => {
-    render(<PaymentActions payment={makePayment({ method: "ONLINE_CARD" as Payment["method"] })} onAction={() => {}} onRefund={() => {}} />)
-    expect(screen.queryByRole("button", { name: /verify transfer/i })).toBeNull()
+    render(
+      <PaymentActions
+        payment={makePayment({ method: "ONLINE_CARD" as Payment["method"] })}
+        onAction={() => {}}
+        onRefund={() => {}}
+      />
+    )
+    expect(
+      screen.queryByRole("button", { name: /verify transfer/i })
+    ).toBeNull()
   })
 
   it("shows Verify when method is BANK_TRANSFER and has receipts", () => {
@@ -70,9 +98,11 @@ describe("PaymentActions", () => {
         })}
         onAction={() => {}}
         onRefund={() => {}}
-      />,
+      />
     )
-    expect(screen.getByRole("button", { name: /verify transfer/i })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: /verify transfer/i })
+    ).toBeTruthy()
   })
 
   it("opens the verify dialog when Verify Transfer is clicked", () => {
@@ -85,10 +115,65 @@ describe("PaymentActions", () => {
         })}
         onAction={() => {}}
         onRefund={() => {}}
-      />,
+      />
     )
     expect(screen.queryByTestId("verify-dialog")).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: /verify transfer/i }))
     expect(screen.getByTestId("verify-dialog")).toBeTruthy()
   })
+})
+
+it("verifies the backend singular receiptUrl without a legacy receipts array", () => {
+  render(
+    <PaymentActions
+      payment={makePayment({
+        method: "BANK_TRANSFER",
+        status: "PENDING_VERIFICATION",
+        receiptUrl: "finance-receipts/invoices/receipt.png",
+      })}
+      onAction={() => {}}
+      onRefund={() => {}}
+    />
+  )
+  expect(screen.getByRole("button", { name: /verify transfer/i })).toBeTruthy()
+})
+it("allows refunding the remaining off-gateway balance", () => {
+  render(
+    <PaymentActions
+      payment={makePayment({
+        method: "BANK_TRANSFER",
+        status: "PARTIALLY_REFUNDED",
+        refundedAmount: 40,
+        gatewayRef: "bank-ref",
+      })}
+      onAction={() => {}}
+      onRefund={() => {}}
+    />
+  )
+  expect(screen.getByRole("button", { name: /refund/i })).toBeTruthy()
+})
+it("does not offer a second unsupported Moyasar refund", () => {
+  render(
+    <PaymentActions
+      payment={makePayment({
+        status: "PARTIALLY_REFUNDED",
+        refundedAmount: 40,
+      })}
+      onAction={() => {}}
+      onRefund={() => {}}
+    />
+  )
+  expect(screen.queryByRole("button", { name: /refund/i })).toBeNull()
+})
+
+it("explains the gateway restriction even if a refunded card row still has COMPLETED status", () => {
+  render(
+    <PaymentActions
+      payment={makePayment({ status: "COMPLETED", refundedAmount: 40 })}
+      onAction={() => {}}
+      onRefund={() => {}}
+    />
+  )
+  expect(screen.queryByRole("button", { name: /refund/i })).toBeNull()
+  expect(screen.getByText("payments.refund.gatewayRemaining")).toBeTruthy()
 })

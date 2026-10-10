@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
@@ -16,6 +17,7 @@ describe('GetEmployeeHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn().mockResolvedValue('https://files.test/fresh-avatar') } },
         GetEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
       ],
@@ -59,6 +61,6 @@ describe('GetEmployeeHandler', () => {
     expect(prisma.booking.count).toHaveBeenCalledWith(
       expect.objectContaining({ where: { employeeId: 'emp-1' } }),
     );
-    expect(result).toMatchObject({ exceptions: [] });
+    expect(result).toMatchObject({ exceptions: [], avatarUrl: 'https://files.test/fresh-avatar' });
   });
 });

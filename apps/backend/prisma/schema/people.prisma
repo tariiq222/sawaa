@@ -50,6 +50,11 @@ model Client {
   phone             String?
   email             String?
   emailVerified     DateTime?
+  // Client-entered email awaiting proof. Deliberately NOT unique and never used
+  // for login, recovery or delivery; promoted to `email` only after a code.
+  pendingEmail      String?
+  // Set once the client verified an email or declined to keep an unverified one.
+  emailPromptResolvedAt DateTime?
   phoneVerified     DateTime?
   gender            ClientGender?
   dateOfBirth       DateTime?

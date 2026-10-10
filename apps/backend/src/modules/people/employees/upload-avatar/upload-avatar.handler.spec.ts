@@ -1,6 +1,8 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UploadAvatarHandler } from './upload-avatar.handler';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
+import { ResolveEmployeeImageHandler } from '../../../media/files/resolve-employee-image.handler';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { PrismaService } from '../../../../infrastructure/database';
 
 const EMPLOYEE_ID = '00000000-0000-0000-0000-000000000002';
@@ -16,15 +18,16 @@ const MOCK_FILE_ROW = {
   url: 'https://cdn/new.png',
 } as const;
 
-const EXPECTED_URL = MOCK_FILE_ROW.url;
+const EXPECTED_URL = 'https://files.test/signed-avatar';
 
 function makeHandler(overrides: {
   employeeExists?: boolean;
   uploadResult?: typeof MOCK_FILE_ROW;
   throwOnUpload?: Error;
+  employee?: { avatarUrl: string | null; publicImageUrl: string | null };
 } = {}) {
   const employeeFindUnique = jest.fn().mockResolvedValue(
-    overrides.employeeExists === false ? null : { id: EMPLOYEE_ID },
+    overrides.employeeExists === false ? null : { id: EMPLOYEE_ID, ...overrides.employee },
   );
   const employeeUpdate = jest.fn().mockResolvedValue({ id: EMPLOYEE_ID });
   const prisma = {
@@ -39,7 +42,7 @@ function makeHandler(overrides: {
     : jest.fn().mockResolvedValue(overrides.uploadResult ?? MOCK_FILE_ROW);
   const uploadFile = { execute: uploadFileExecute } as unknown as UploadFileHandler;
 
-  const handler = new UploadAvatarHandler(prisma, uploadFile);
+  const handler = new UploadAvatarHandler(prisma, uploadFile, { getSignedUrl: jest.fn().mockResolvedValue(EXPECTED_URL) } as unknown as MinioService, { execute: async (q: { reference?: string | null }) => q.reference ?? null } as unknown as ResolveEmployeeImageHandler);
   return { handler, employeeFindUnique, employeeUpdate, uploadFileExecute };
 }
 
@@ -73,6 +76,18 @@ describe('UploadAvatarHandler', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('keeps a separately selected public portrait when the staff avatar changes', async () => {
+    const { handler, employeeUpdate } = makeHandler({ employee: { avatarUrl: 'org/old.jpg', publicImageUrl: 'https://cdn.test/explicit.jpg' } });
+    await handler.execute(validCmd, Buffer.alloc(1024));
+    expect(employeeUpdate.mock.calls[0][0].data).toEqual({ avatarUrl: 'org/new.png' });
+  });
+
+  it('updates a legacy public filename matching the uploaded avatar', async () => {
+    const { handler, employeeUpdate } = makeHandler({ employee: { avatarUrl: 'http://minio:9000/sawaa/old.jpg', publicImageUrl: 'a.png' } });
+    await handler.execute(validCmd, Buffer.alloc(1024));
+    expect(employeeUpdate.mock.calls[0][0].data.publicImageUrl).toBe('org/new.png');
+  });
+
   it('on happy path: calls uploadFile then updates employee.avatarUrl', async () => {
     const { handler, uploadFileExecute, employeeUpdate } = makeHandler();
 
@@ -87,8 +102,13 @@ describe('UploadAvatarHandler', () => {
     );
     expect(employeeUpdate).toHaveBeenCalledWith({
       where: { id: EMPLOYEE_ID },
-      data: { avatarUrl: EXPECTED_URL },
+      data: { avatarUrl: MOCK_FILE_ROW.storageKey, publicImageUrl: MOCK_FILE_ROW.storageKey },
     });
     expect(res).toEqual({ fileId: MOCK_FILE_ROW.id, url: EXPECTED_URL });
+  });
+  it('uploads the explicitly selected public image without replacing the internal avatar', async () => {
+    const { handler, employeeUpdate } = makeHandler();
+    await handler.execute({ ...validCmd, target: 'public' } as never, Buffer.alloc(1024));
+    expect(employeeUpdate).toHaveBeenCalledWith({ where: { id: EMPLOYEE_ID }, data: { publicImageUrl: 'org/new.png' } });
   });
 });

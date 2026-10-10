@@ -3,6 +3,7 @@ import {
   BookingStatus,
   InvoiceStatus,
   PaymentStatus,
+  PaymentMethod,
   RefundStatus,
 } from "@prisma/client";
 import { RefundPaymentHandler } from "./refund-payment/refund-payment.handler";
@@ -191,6 +192,9 @@ describe("RefundPaymentHandler", () => {
   it("refunds a completed payment, finalizes its RefundRequest, and stages RefundCompletedEvent in the outbox", async () => {
     const prisma = buildPrisma();
     const moyasar = buildMoyasar();
+    prisma.$queryRaw.mockResolvedValue([
+      { ...buildPaymentRow(), method: PaymentMethod.ONLINE_CARD },
+    ]);
     const refunded = {
       id: PAY_ID,
       status: PaymentStatus.REFUNDED,
@@ -222,6 +226,7 @@ describe("RefundPaymentHandler", () => {
     prisma.payment.findUniqueOrThrow
       .mockResolvedValueOnce({
         id: PAY_ID,
+        method: PaymentMethod.ONLINE_CARD,
         gatewayRef: "pay_test_gw_123",
         amount: 100,
         refundedAmount: 0,

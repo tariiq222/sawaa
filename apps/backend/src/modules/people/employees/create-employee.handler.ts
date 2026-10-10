@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
@@ -15,6 +17,7 @@ export class CreateEmployeeHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: CreateEmployeeCommand) {
@@ -53,6 +56,7 @@ export class CreateEmployeeHandler {
     const event = new EmployeeCreatedEvent({ employeeId: employee.id, organizationId: DEFAULT_ORG_ID });
     this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});
 
+    await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
     return employee;
   }
 }

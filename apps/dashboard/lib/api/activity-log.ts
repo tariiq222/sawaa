@@ -2,6 +2,7 @@
  * Activity Log API — Sawaa Dashboard
  */
 
+import { riyadhDayStart, riyadhDayEnd } from "@/lib/audit-date"
 import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type { ActivityLog, ActivityLogQuery } from "@/lib/types/activity-log"
@@ -44,6 +45,9 @@ const ACTION_FILTER_TO_BACKEND: Record<string, string> = {
   deleted: "DELETE",
   login: "LOGIN",
   logout: "LOGOUT",
+  export: "EXPORT",
+  import: "IMPORT",
+  system: "SYSTEM",
 }
 
 const ACTION_TO_DASHBOARD: Record<string, string> = {
@@ -114,8 +118,8 @@ export async function fetchActivityLogs(
     entity: normalizeEntityFilter(query.module),
     action: normalizeActionFilter(query.action),
     userId: query.userId,
-    from: query.dateFrom,
-    to: query.dateTo,
+    from: query.dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(query.dateFrom) ? riyadhDayStart(query.dateFrom) : query.dateFrom,
+    to: query.dateTo && /^\d{4}-\d{2}-\d{2}$/.test(query.dateTo) ? riyadhDayEnd(query.dateTo) : query.dateTo,
   })
 
   return {

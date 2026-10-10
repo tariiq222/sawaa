@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsOptional, IsString, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsOptional, IsString, MaxLength, Matches, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IntakeFormScope, IntakeFormType } from '@prisma/client';
@@ -6,7 +6,7 @@ import { IntakeFieldInputDto } from './create-intake-form.dto';
 
 export class UpdateIntakeFormDto {
   @ApiPropertyOptional({ description: 'Form name in Arabic', example: 'استبيان ما قبل الجلسة' })
-  @ValidateIf((object) => object.nameAr !== undefined) @IsString() @MaxLength(200) nameAr?: string;
+  @ValidateIf((object) => object.nameAr !== undefined) @IsString() @Matches(/\S/) @MaxLength(200) nameAr?: string;
 
   @ApiPropertyOptional({ nullable: true, type: String, description: 'Form name in English', example: 'Pre-session Questionnaire' })
   @IsOptional() @IsString() @MaxLength(200) nameEn?: string | null;

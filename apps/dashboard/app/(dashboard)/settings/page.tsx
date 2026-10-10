@@ -60,7 +60,8 @@ function SettingsTabs() {
 
   return (
     <Tabs value={activeTab} onValueChange={onTabChange}>
-      <div className="overflow-x-auto">
+      <p className="text-xs text-muted-foreground">{t("settings.tabs.scrollHint")}</p>
+      <div className="overflow-x-auto pb-2">
         <TabsList className="w-max">
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
           <TabsTrigger value="booking">{t("settings.tabs.booking")}</TabsTrigger>

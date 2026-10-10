@@ -41,11 +41,11 @@ export const operationsNav: NavItem[] = [
   { titleKey: "nav.programs", href: "/programs", icon: MentoringIcon, permission: "booking:read" },
   { titleKey: "nav.clients", href: "/clients", icon: UserMultiple02Icon, permission: "client:read" },
   { titleKey: "nav.payments", href: "/payments", icon: MoneyBag02Icon, permission: "payment:read" },
-  { titleKey: "nav.invoices", href: "/invoices", icon: DocumentAttachmentIcon, permission: "payment:read" },
+  { titleKey: "nav.invoices", href: "/invoices", icon: DocumentAttachmentIcon, permission: "invoice:read" },
 ]
 
 export const practiceNav: NavItem[] = [
-  { titleKey: "nav.intakeForms", href: "/intake-forms", icon: DocumentValidationIcon, permission: "service:read" },
+  { titleKey: "nav.intakeForms", href: "/intake-forms", icon: DocumentValidationIcon, permission: "setting:read" },
   { titleKey: "nav.ratings", href: "/ratings", icon: StarIcon, permission: "booking:read" },
 ]
 
@@ -60,7 +60,7 @@ export const managementNav: NavItem[] = [
   { titleKey: "nav.reports", href: "/reports", icon: AnalyticsUpIcon, permission: "report:read" },
   { titleKey: "nav.coupons", href: "/coupons", icon: Coupon01Icon, permission: "coupon:read" },
   { titleKey: "nav.users", href: "/users", icon: ShieldKeyIcon, permission: "user:read" },
-  { titleKey: "nav.activityLog", href: "/activity-log", icon: Activity01Icon, permission: "setting:read" },
+  { titleKey: "nav.activityLog", href: "/activity-log", icon: Activity01Icon, permission: "report:read" },
 ]
 
 export const communicationNav: NavItem[] = [
@@ -70,6 +70,7 @@ export const communicationNav: NavItem[] = [
 ]
 
 export const systemNav: NavItem[] = [
+  { titleKey: "nav.sms", href: "/settings/sms", icon: AiChat02Icon, permission: "setting:read" },
   { titleKey: "nav.settings", href: "/settings", icon: Settings02Icon, permission: "setting:read" },
 ]
 

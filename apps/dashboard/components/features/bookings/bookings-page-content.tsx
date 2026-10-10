@@ -25,6 +25,7 @@ export function BookingsPageContent() {
   const newParam = searchParams.get("new")
   const { t } = useLocale()
   const { canDo } = useAuth()
+  const canCreate = canDo("booking", "create")
   const [lateEntry, setLateEntry] = useState(false)
   const titleLabel = t("nav.bookings")
   const queryClient = useQueryClient()
@@ -32,11 +33,11 @@ export function BookingsPageContent() {
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" })
 
-  const [creating, setCreating] = useState(newParam === "1")
+  const [creating, setCreating] = useState(newParam === "1" && canCreate)
   const [prevNewParam, setPrevNewParam] = useState(newParam)
   if (newParam !== prevNewParam) {
     setPrevNewParam(newParam)
-    if (newParam === "1") setCreating(true)
+    if (newParam === "1" && canCreate) setCreating(true)
   }
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -60,7 +61,7 @@ export function BookingsPageContent() {
             description={creating ? t("bookings.create.pageTitle") : t("bookings.description")}
           >
             {!creating && !lateEntry && canDo("Booking", "create") && <Button variant="outline" onClick={() => setLateEntry(true)}>{t("bookings.late.title")}</Button>}
-            {!creating && !lateEntry && (
+            {!creating && !lateEntry && canCreate && (
               <Button
                 variant="accent"
                 size="lg"
@@ -74,7 +75,7 @@ export function BookingsPageContent() {
           </PageHeader>
         </div>
 
-        {lateEntry ? <LateSessionForm onCancel={() => setLateEntry(false)} onOpenExisting={booking => { setLateEntry(false); handleRowClick(booking) }} onSaved={booking => { setLateEntry(false); handleRowClick(booking); refresh() }} /> : creating ? (
+        {lateEntry && canCreate ? <LateSessionForm onCancel={() => setLateEntry(false)} onOpenExisting={booking => { setLateEntry(false); handleRowClick(booking) }} onSaved={booking => { setLateEntry(false); handleRowClick(booking); refresh() }} /> : creating && canCreate ? (
           <BookingCreateView
             onSuccess={() => { setCreating(false); refresh() }}
             onCancel={() => setCreating(false)}

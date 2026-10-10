@@ -47,18 +47,18 @@ export interface CreateClientResponse {
 
 export interface UpdateClientPayload {
   firstName?: string
-  middleName?: string
+  middleName?: string | null
   lastName?: string
-  phone?: string
-  gender?: "male" | "female"
-  dateOfBirth?: string
-  nationality?: string
-  nationalId?: string
-  emergencyName?: string
-  emergencyPhone?: string
-  bloodType?: string
-  allergies?: string
-  chronicConditions?: string
+  phone?: string | null
+  gender?: "male" | "female" | null
+  dateOfBirth?: string | null
+  nationality?: string | null
+  nationalId?: string | null
+  emergencyName?: string | null
+  emergencyPhone?: string | null
+  bloodType?: string | null
+  allergies?: string | null
+  chronicConditions?: string | null
   isActive?: boolean
   [key: string]: unknown
 }
@@ -68,7 +68,7 @@ function toClient(client: ClientWire): Client {
     ...client,
     firstName: client.firstName ?? "",
     lastName: client.lastName ?? "",
-    emailVerified: client.emailVerified !== null,
+    emailVerified: !!client.emailVerified,
   }
 }
 
@@ -108,6 +108,8 @@ export async function fetchClients(
       page: query.page,
       limit: query.limit,
       search: query.search,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
       ...(query.isActive !== undefined && { isActive: query.isActive }),
     },
   })
@@ -155,18 +157,18 @@ export async function updateClient(
   const body = {
     ...payload,
     firstName: optionalText(payload.firstName),
-    middleName: optionalText(payload.middleName),
-    lastName: optionalText(payload.lastName),
-    phone: optionalText(payload.phone),
+    middleName: payload.middleName === "" ? null : payload.middleName,
+    lastName: payload.lastName,
+    phone: payload.phone === "" ? null : payload.phone,
     gender: payload.gender,
-    dateOfBirth: optionalText(payload.dateOfBirth),
-    nationality: optionalText(payload.nationality),
-    nationalId: optionalText(payload.nationalId),
-    emergencyName: optionalText(payload.emergencyName),
-    emergencyPhone: optionalText(payload.emergencyPhone),
-    bloodType: toClientBloodType(payload.bloodType),
-    allergies: optionalText(payload.allergies),
-    chronicConditions: optionalText(payload.chronicConditions),
+    dateOfBirth: payload.dateOfBirth === "" ? null : payload.dateOfBirth,
+    nationality: payload.nationality === "" ? null : payload.nationality,
+    nationalId: payload.nationalId === "" ? null : payload.nationalId,
+    emergencyName: payload.emergencyName === "" ? null : payload.emergencyName,
+    emergencyPhone: payload.emergencyPhone === "" ? null : payload.emergencyPhone,
+    bloodType: payload.bloodType === null || payload.bloodType === "" ? null : toClientBloodType(payload.bloodType),
+    allergies: payload.allergies === "" ? null : payload.allergies,
+    chronicConditions: payload.chronicConditions === "" ? null : payload.chronicConditions,
   } satisfies UpdateClientBody
   const client = await openApi.patch("/api/v1/dashboard/people/clients/{id}", {
     path: { id }, body,

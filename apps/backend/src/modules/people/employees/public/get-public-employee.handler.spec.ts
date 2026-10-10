@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../../infrastructure/database';
 import { GetPublicEmployeeHandler } from './get-public-employee.handler';
@@ -19,6 +20,7 @@ describe('GetPublicEmployeeHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: ConfigService, useValue: new ConfigService({ API_PUBLIC_URL: 'https://api.sawaa.test' }) },
         GetPublicEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
       ],

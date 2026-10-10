@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { Button, Input, Label, Switch, Textarea } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { PackageFamilyImageField } from "./package-family-image-field"
 import { GroupedPackageGroups } from "./grouped-package-groups"
 import { GroupedPackagePricing } from "./grouped-package-pricing"
 import {
@@ -32,11 +33,16 @@ interface Props {
 export function PackageFamilyEditor({ initialValue, onSubmit, onCancel, onChange }: Props) {
   const { t } = useLocale()
   const [value, setValue] = useState(initialValue)
+  // Upload completion must merge with edits made since the request began.
+  const currentDraft = useRef(initialValue)
   const [optionError, setOptionError] = useState<"required" | "invalid" | null>(null)
   const [familyError, setFamilyError] = useState<"nameRequired" | null>(null)
+  const submitting = useRef(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const update = (next: PackageFamilyEditorValue) => {
+    currentDraft.current = next
     setValue(next)
     onChange?.(next)
   }
@@ -50,7 +56,7 @@ export function PackageFamilyEditor({ initialValue, onSubmit, onCancel, onChange
   const removeOption = (index: number) => update({ ...value, options: value.options.filter((_, optionIndex) => optionIndex !== index) })
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (isSubmitting) return
+    if (submitting.current || isUploading) return
     if (!value.nameAr.trim()) {
       setFamilyError("nameRequired")
       return
@@ -65,16 +71,19 @@ export function PackageFamilyEditor({ initialValue, onSubmit, onCancel, onChange
       return
     }
     setOptionError(null)
+    submitting.current = true
     setIsSubmitting(true)
     try {
       await onSubmit(value)
     } finally {
+      submitting.current = false
       setIsSubmitting(false)
     }
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6 pb-24">
+      <fieldset disabled={isSubmitting} className="contents">
       <section className="rounded-2xl border border-border bg-surface-solid p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -92,7 +101,7 @@ export function PackageFamilyEditor({ initialValue, onSubmit, onCancel, onChange
           <Field label={t("packages.create.descriptionAr")} htmlFor="family-descriptionAr"><Textarea id="family-descriptionAr" value={value.descriptionAr ?? ""} onChange={(event) => update({ ...value, descriptionAr: event.target.value })} dir="rtl" rows={3} /></Field>
           <Field label={t("packages.create.descriptionEn")} htmlFor="family-descriptionEn"><Textarea id="family-descriptionEn" value={value.descriptionEn ?? ""} onChange={(event) => update({ ...value, descriptionEn: event.target.value })} dir="ltr" rows={3} /></Field>
           <Field label={t("packages.create.sortOrder")} htmlFor="family-sortOrder"><Input id="family-sortOrder" type="number" min={0} value={value.sortOrder ?? 0} onChange={(event) => update({ ...value, sortOrder: Number(event.target.value) || 0 })} /></Field>
-          <Field label={t("packages.family.imageUrl")} htmlFor="family-imageUrl"><Input id="family-imageUrl" type="url" value={value.imageUrl ?? ""} onChange={(event) => update({ ...value, imageUrl: event.target.value || null })} placeholder="https://" dir="ltr" /></Field>
+          <PackageFamilyImageField value={value.imageUrl} busy={isUploading} onBusyChange={setIsUploading} onChange={(imageUrl) => update({ ...currentDraft.current, imageUrl })} />
         </div>
         {familyError && <p role="alert" className="mt-3 text-sm text-destructive">{t("packages.family.errors.nameRequired")}</p>}
       </section>
@@ -107,9 +116,10 @@ export function PackageFamilyEditor({ initialValue, onSubmit, onCancel, onChange
         {value.options.length === 0 && <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">{t("packages.family.options.empty")}</p>}
       </section>
 
+      </fieldset>
       <div className="flex items-center justify-between gap-3 border-t border-border pt-5">
         <Button type="button" variant="outline" onClick={onCancel}>{t("packages.steps.cancel")}</Button>
-        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? t("packages.family.saving") : t("packages.family.save")}</Button>
+        <Button type="submit" disabled={isSubmitting || isUploading}>{isSubmitting ? t("packages.family.saving") : t("packages.family.save")}</Button>
       </div>
     </form>
   )

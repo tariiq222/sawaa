@@ -5,15 +5,20 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { authService } from '@/services/auth';
 import { DeleteAccountButton } from './DeleteAccountButton';
 
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace }) }));
 jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => false }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/services/auth', () => ({ authService: { requestAccountDeletion: jest.fn() } }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(null, mockScheme), scheme: mockScheme, isRTL: true, language: 'ar' }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
-jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', writingDirection: 'rtl' }) }));
+jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right', writingDirection: 'rtl' }) }));
+jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
 
 let mockScheme: 'light' | 'dark' = 'light';
 const requestClosure = authService.requestAccountDeletion as jest.Mock;
+// The mocked `t` returns keys, so the confirmation word is the key itself.
+const PHRASE = 'profile.deleteAccountPhrase';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -26,42 +31,86 @@ function openSheet() {
   return screen;
 }
 
+function typePhrase(screen: ReturnType<typeof render>, value = PHRASE) {
+  fireEvent.changeText(screen.getByLabelText('profile.deleteAccountPhraseLabel'), value);
+}
+
+const confirmButton = (screen: ReturnType<typeof render>) => screen.getByRole('button', { name: 'profile.deleteAccountAction' });
+
 describe('DeleteAccountButton', () => {
-  it('shows a confirmation sheet first and cancels without calling the closure API', () => {
+  it('opens a sheet that lists every consequence before anything is sent', () => {
     const screen = openSheet();
     expect(screen.getByText('profile.deleteAccountSheetTitle')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('profile.deleteAccountCancel'));
+    expect(screen.getByText('profile.deleteAccountBody')).toBeTruthy();
+    for (const point of ['profile.deleteAccountPointSignIn', 'profile.deleteAccountPointContact', 'profile.deleteAccountPointRecords']) {
+      expect(screen.getByText(point)).toBeTruthy();
+    }
     expect(requestClosure).not.toHaveBeenCalled();
-    expect(screen.queryByText('profile.deleteAccountSheetTitle')).toBeNull();
   });
 
-  it('shows an error and keeps the button available when closure fails', async () => {
+  it('keeps delete disabled until the confirmation word is typed exactly', async () => {
+    const screen = openSheet();
+    expect(confirmButton(screen).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(confirmButton(screen));
+    expect(requestClosure).not.toHaveBeenCalled();
+
+    typePhrase(screen, 'wrong');
+    expect(confirmButton(screen).props.accessibilityState.disabled).toBe(true);
+
+    typePhrase(screen);
+    expect(confirmButton(screen).props.accessibilityState.disabled).toBe(false);
+    requestClosure.mockResolvedValueOnce(undefined);
+    await act(async () => { fireEvent.press(confirmButton(screen)); });
+    expect(requestClosure).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
+  });
+
+  it('cancels without calling the closure API and clears the typed word', () => {
+    const screen = openSheet();
+    typePhrase(screen);
+    fireEvent.press(screen.getByRole('button', { name: 'profile.deleteAccountCancel' }));
+    expect(requestClosure).not.toHaveBeenCalled();
+    expect(screen.queryByText('profile.deleteAccountSheetTitle')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('profile.deleteAccount'));
+    expect(confirmButton(screen).props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('shows an error and keeps the account when closure fails', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     requestClosure.mockRejectedValueOnce(new Error('network failure'));
     const screen = openSheet();
+    typePhrase(screen);
 
-    await act(async () => { fireEvent.press(screen.getByLabelText('profile.deleteAccountAction')); });
+    await act(async () => { fireEvent.press(confirmButton(screen)); });
 
     expect(requestClosure).toHaveBeenCalledTimes(1);
     expect(alertSpy).toHaveBeenLastCalledWith('profile.deleteAccountTitle', 'profile.deleteAccountError');
-    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState.disabled).toBe(false);
+    expect(mockReplace).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 
   it('submits once when the confirm control fires twice', async () => {
     let resolveClosure: (() => void) | undefined;
     requestClosure.mockReturnValueOnce(new Promise<void>((resolve) => { resolveClosure = resolve; }));
     const screen = openSheet();
+    typePhrase(screen);
 
-    const confirm = screen.getByLabelText('profile.deleteAccountAction');
+    const confirm = confirmButton(screen);
     act(() => {
       fireEvent.press(confirm);
       fireEvent.press(confirm);
     });
     expect(requestClosure).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState).toMatchObject({ disabled: true, busy: true });
 
     await act(async () => { resolveClosure?.(); });
-    expect(screen.getByLabelText('profile.deleteAccount').props.accessibilityState.disabled).toBe(false);
+  });
+
+  it('closes on backdrop without requesting deletion', () => {
+    const view = openSheet();
+    fireEvent.press(view.getByTestId('confirm-sheet-backdrop', { includeHiddenElements: true }));
+    expect(view.queryByText('profile.deleteAccountSheetTitle')).toBeNull();
+    expect(requestClosure).not.toHaveBeenCalled();
   });
 });
 
@@ -81,16 +130,9 @@ it.each(['light', 'dark'] as const)('keeps destructive labels readable in %s app
   mockScheme = scheme;
   const screen = openSheet();
   const labelColor = StyleSheet.flatten(screen.getByText('profile.deleteAccountAction').props.style).color;
-  const fill = screen.getByLabelText('profile.deleteAccountAction').findAllByType(View)
+  const fill = confirmButton(screen).findAllByType(View)
     .map((node: { props: { style?: StyleProp<ViewStyle> } }) => StyleSheet.flatten(node.props.style)?.backgroundColor)
     .find((color: unknown): color is string => typeof color === 'string');
   expect(fill).toBeDefined();
   expect(contrast(labelColor, fill as string)).toBeGreaterThanOrEqual(4.5);
-});
-
-it('closes on backdrop without requesting deletion', () => {
- const view = openSheet();
- fireEvent.press(view.getByTestId('delete-account-backdrop', { includeHiddenElements: true }));
- expect(view.queryByText('profile.deleteAccountSheetTitle')).toBeNull();
- expect(requestClosure).not.toHaveBeenCalled();
 });

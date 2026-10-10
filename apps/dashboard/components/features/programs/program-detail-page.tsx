@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@sawaa/ui';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useLocale } from '@/components/locale-provider';
 import { useProgram, usePublishProgram, useScheduleProgram, useCancelProgram } from '@/hooks/use-programs';
 import { ProgramStatusBadge } from './program-status-badge';
@@ -13,6 +15,8 @@ import { halalasStringToSar } from '@/lib/schemas/program.schema';
 
 export function ProgramDetailPage({ id }: { id: string }) {
   const { t } = useLocale();
+  const { canDo } = useAuth();
+  const canManage = canDo('booking', 'manage');
   const { data: program, isLoading, isError } = useProgram(id);
   const publish = usePublishProgram();
   const schedule = useScheduleProgram();
@@ -30,10 +34,10 @@ export function ProgramDetailPage({ id }: { id: string }) {
   if (isLoading) return <p className="text-sm text-(--text-muted)">{t('common.loading')}</p>;
   if (isError || !program) return <p className="text-sm text-(--text-error)">{t('common.errorLoading')}</p>;
 
-  const canPublish = program.status === 'DRAFT';
-  const canSchedule = program.status === 'OPEN' || program.status === 'MIN_REACHED';
-  const canCancel = program.status !== 'COMPLETED' && program.status !== 'CANCELLED';
-  const canEnroll = (program.status === 'OPEN' || program.status === 'MIN_REACHED') && !program.isFull;
+  const canPublish = canManage && program.status === 'DRAFT';
+  const canSchedule = canManage && (program.status === 'OPEN' || program.status === 'MIN_REACHED');
+  const canCancel = canManage && program.status !== 'COMPLETED' && program.status !== 'CANCELLED';
+  const canEnroll = canManage && (program.status === 'OPEN' || program.status === 'MIN_REACHED') && !program.isFull;
 
   return (
     <div className="space-y-6">
@@ -51,6 +55,9 @@ export function ProgramDetailPage({ id }: { id: string }) {
         />
       </header>
 
+      {canManage && <Link className="text-sm text-primary underline" href={`/programs/${program.id}/edit`}>{t('common.edit')}</Link>}
+      <p className="whitespace-pre-wrap text-sm">{program.descriptionAr || program.descriptionEn}</p>
+      <section><h2 className="text-sm font-medium">{t('programs.form.section.supervisors')}</h2><ul>{program.supervisors?.map(s => <li key={s.id}>{s.name}</li>)}</ul></section>
       <div className="flex flex-wrap gap-2">
         {canPublish && (
           <Button variant="default" disabled={publish.isPending} onClick={async () => {

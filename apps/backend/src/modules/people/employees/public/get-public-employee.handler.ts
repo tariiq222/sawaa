@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import type { PublicEmployeeItem } from './list-public-employees.handler';
@@ -5,7 +6,7 @@ import { normalizePublicImageUrl } from './public-image-url';
 
 @Injectable()
 export class GetPublicEmployeeHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   async execute(key: string, options: { includeDirectClinics?: boolean } = {}): Promise<PublicEmployeeItem> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
@@ -96,7 +97,7 @@ export class GetPublicEmployeeHandler {
     const firstName = tokens.length > 0 ? tokens[0] : '';
     const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
 
-    const publicImageUrl = normalizePublicImageUrl(row.publicImageUrl);
+    const publicImageUrl = normalizePublicImageUrl(row.publicImageUrl, row.id, this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get<number>('PORT') || 5200}`);
     return {
       ...row,
       publicImageUrl,

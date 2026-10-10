@@ -67,3 +67,10 @@ describe('buildRatingsReport', () => {
     expect(result.recentNegative[0].employeeName).toBe('أم');
   });
 });
+
+it('keeps score 3 neutral in the count and recent negative comments', async () => {
+ const prisma=makePrisma(); prisma.rating.findMany.mockResolvedValue([{id:'neutral',bookingId:'b',score:3,comment:'Neutral',createdAt:new Date('2026-10-09T22:00:00Z'),clientId:'c',employeeId:'e'}]);
+ const result=await buildRatingsReport(prisma,{from:new Date('2026-10-09'),to:new Date('2026-10-11')});
+ expect(result.negativeCount).toBe(0); expect(result.recentNegative).toEqual([]);
+ expect(result.trend[0].date).toBe('2026-10-10');
+});

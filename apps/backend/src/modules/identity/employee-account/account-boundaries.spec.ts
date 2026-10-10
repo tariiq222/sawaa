@@ -4,6 +4,7 @@ import { UpdateEmployeeAccountHandler } from './update-employee-account.handler'
 import { CreateEmployeeHandler } from '../../people/employees/create-employee.handler';
 import { UpdateEmployeeHandler } from '../../people/employees/update-employee.handler';
 
+const catalogCache = { invalidatePrefix: jest.fn().mockResolvedValue(undefined) };
 const actor = { id: 'actor', role: 'ADMIN', isSuperAdmin: false };
 const targets = [
   { id: 'actor', role: 'ADMIN', isSuperAdmin: false },
@@ -46,13 +47,13 @@ describe('employee account authorization boundaries', () => {
   });
   it.each(targets)('blocks explicit employee link to $role / $id / $isSuperAdmin', async (target) => {
     const { db, rls, events } = fixture(target);
-    const handler = new CreateEmployeeHandler(db as never, rls as never, events as never);
+    const handler = new CreateEmployeeHandler(db as never, rls as never, events as never, catalogCache as never);
     await expect(handler.execute({ name: 'New', userId: target.id, actorUserId: 'actor' } as never)).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.employee.create).not.toHaveBeenCalled();
   });
   it.each(targets)('blocks authentication email overwrite of $role / $id / $isSuperAdmin', async (target) => {
     const { db, rls, events } = fixture(target);
-    const handler = new UpdateEmployeeHandler(db as never, rls as never, events as never);
+    const handler = new UpdateEmployeeHandler(db as never, rls as never, events as never, { execute: async (q: { reference: string }) => q.reference } as never, catalogCache as never);
     await expect(handler.execute({ employeeId: 'emp', email: 'attacker@test.com', actorUserId: 'actor' } as never)).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.employee.update).not.toHaveBeenCalled();
     expect(db.user.update).not.toHaveBeenCalled();
@@ -60,8 +61,8 @@ describe('employee account authorization boundaries', () => {
   it('allows lower-rank activation, linkage and email synchronization without persisting actor metadata', async () => {
     const { db, rls, events } = fixture();
     await new UpdateEmployeeAccountHandler(db as never).execute({ employeeId: 'emp', actorUserId: 'actor', isActive: true });
-    await new CreateEmployeeHandler(db as never, rls as never, events as never).execute({ name: 'New', userId: 'target', actorUserId: 'actor' } as never);
-    await new UpdateEmployeeHandler(db as never, rls as never, events as never).execute({ employeeId: 'emp', email: 'new@test.com', actorUserId: 'actor' } as never);
+    await new CreateEmployeeHandler(db as never, rls as never, events as never, catalogCache as never).execute({ name: 'New', userId: 'target', actorUserId: 'actor' } as never);
+    await new UpdateEmployeeHandler(db as never, rls as never, events as never, { execute: async (q: { reference: string }) => q.reference } as never, catalogCache as never).execute({ employeeId: 'emp', email: 'new@test.com', actorUserId: 'actor' } as never);
     expect(db.user.update).toHaveBeenCalledWith(expect.objectContaining({ data: { email: 'new@test.com' } }));
     for (const write of [db.employee.create, db.employee.update, db.user.update]) {
       for (const [arg] of write.mock.calls as any[]) expect(arg.data).not.toHaveProperty('actorUserId');
@@ -71,18 +72,18 @@ describe('employee account authorization boundaries', () => {
     const { db, rls, events } = fixture();
     await expect(new UpdateEmployeeAccountHandler(db as never).execute({ employeeId: 'emp', isActive: false } as never)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(new CreateEmployeeAccountHandler(db as never, rls as never, {} as never).execute({ employeeId: 'emp', role: 'EMPLOYEE' } as never)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(new CreateEmployeeHandler(db as never, rls as never, events as never).execute({ name: 'New', userId: 'target' } as never)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(new UpdateEmployeeHandler(db as never, rls as never, events as never).execute({ employeeId: 'emp', email: 'new@test.com' })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(new CreateEmployeeHandler(db as never, rls as never, events as never, catalogCache as never).execute({ name: 'New', userId: 'target' } as never)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(new UpdateEmployeeHandler(db as never, rls as never, events as never, { execute: async (q: { reference: string }) => q.reference } as never, catalogCache as never).execute({ employeeId: 'emp', email: 'new@test.com' })).rejects.toBeInstanceOf(ForbiddenException);
   });
   it('allows harmless profile edits that resubmit the unchanged privileged login email', async () => {
     const { db, rls, events } = fixture({ ...targets[2], email: 'same@test.com' });
-    await new UpdateEmployeeHandler(db as never, rls as never, events as never).execute({ employeeId: 'emp', bio: 'Updated', email: 'same@test.com', actorUserId: 'actor' } as never);
+    await new UpdateEmployeeHandler(db as never, rls as never, events as never, { execute: async (q: { reference: string }) => q.reference } as never, catalogCache as never).execute({ employeeId: 'emp', bio: 'Updated', email: 'same@test.com', actorUserId: 'actor' } as never);
     expect(db.employee.update).toHaveBeenCalled();
     expect(db.user.update).not.toHaveBeenCalled();
   });
   it('preserves ordinary profile edits on a higher-rank linked employee', async () => {
     const { db, rls, events } = fixture(targets[2]);
-    await new UpdateEmployeeHandler(db as never, rls as never, events as never).execute({ employeeId: 'emp', bio: 'Updated', actorUserId: 'actor' } as never);
+    await new UpdateEmployeeHandler(db as never, rls as never, events as never, { execute: async (q: { reference: string }) => q.reference } as never, catalogCache as never).execute({ employeeId: 'emp', bio: 'Updated', actorUserId: 'actor' } as never);
     expect(db.employee.update).toHaveBeenCalled();
     expect(db.user.update).not.toHaveBeenCalled();
   });

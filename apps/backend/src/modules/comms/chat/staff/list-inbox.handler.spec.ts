@@ -84,7 +84,6 @@ describe('ListInboxHandler', () => {
     expect(prisma.chatConversation.findFirst).toHaveBeenCalledWith({
       where: {
         AND: [{ OR: [{ assignedStaffUserId: null }, { assignedStaffUserId: 'staff-a' }] }],
-        assignedStaffUserId: 'staff-a',
         id: 'cursor-1',
       },
       select: { id: true },

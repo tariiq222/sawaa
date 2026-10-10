@@ -1,3 +1,4 @@
+import { ProgramDetailResponseDto } from './dto/program-detail-response.dto';
 import { ProgramCancellationPreviewDto, ProgramCancellationResultDto } from '../../modules/bookings/cancel-program/program-cancellation.dto';
 import { UserId } from '../../common/auth/user-id.decorator';
 import {
@@ -73,7 +74,7 @@ export class DashboardProgramsController {
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Get a single program by UUID or numeric ref' })
   @ApiParam({ name: 'id', description: 'UUID or numeric ref' })
-  @ApiOkResponse({ description: 'Program detail with enrollments and supervisors' })
+  @ApiOkResponse({ description: 'Program detail with enrollments and supervisors', type: ProgramDetailResponseDto })
   async getOne(@Param('id') id: string) {
     return this.getProgram.execute(id);
   }

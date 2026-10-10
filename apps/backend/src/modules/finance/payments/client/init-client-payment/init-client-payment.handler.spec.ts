@@ -215,6 +215,16 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 
+  it('reads the newest organization settings row for the Moyasar toggle', async () => {
+    const { handler, prisma } = buildHandler();
+    prisma.organizationSettings.findFirst.mockResolvedValue({ paymentMoyasarEnabled: false });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow();
+    expect(prisma.organizationSettings.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
+    );
+  });
+
   it('rejects checkout when Moyasar payments are disabled', async () => {
     const { handler, prisma } = buildHandler();
     prisma.organizationSettings.findFirst.mockResolvedValue({ paymentMoyasarEnabled: false });

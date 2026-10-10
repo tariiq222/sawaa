@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ListPublicBranchEmployeesHandler } from './list-public-branch-employees.handler';
@@ -14,7 +15,8 @@ describe('ListPublicBranchEmployeesHandler', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ListPublicBranchEmployeesHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        { provide: ConfigService, useValue: new ConfigService({ API_PUBLIC_URL: 'https://api.sawaa.test' }) },ListPublicBranchEmployeesHandler, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     handler = module.get<ListPublicBranchEmployeesHandler>(ListPublicBranchEmployeesHandler);

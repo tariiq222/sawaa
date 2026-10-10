@@ -91,7 +91,7 @@ export function CreateRoleDialog({ open, onOpenChange, onCreated }: CreateRoleDi
               />
               {nameError && (
                 <p id="role-name-error" className="text-xs text-destructive">
-                  {nameError.message}
+                  {nameError.message === "auditStaff.roleNameRequired" ? t("auditStaff.roleNameRequired") : nameError.message}
                 </p>
               )}
             </div>

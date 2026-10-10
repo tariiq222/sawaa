@@ -1,3 +1,5 @@
+import { NotFoundException } from '@nestjs/common';
+import { GetPublicEmployeeImageHandler } from '../../modules/people/employees/public/get-public-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -9,12 +11,14 @@ describe('PublicEmployeesController (e2e)', () => {
   let app: INestApplication;
 
   const mockList = { execute: jest.fn() };
+  const mockImage = { execute: jest.fn() };
   const mockGet = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicEmployeesController],
       providers: [
+        { provide: GetPublicEmployeeImageHandler, useValue: mockImage },
         { provide: ListPublicEmployeesHandler, useValue: mockList },
         { provide: GetPublicEmployeeHandler, useValue: mockGet },
       ],
@@ -30,6 +34,19 @@ describe('PublicEmployeesController (e2e)', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('GET /public/employees/:key/image', () => {
+    it('redirects to a renewed image signature without caching it', async () => {
+      mockImage.execute.mockResolvedValue('https://files.test/fresh-signature');
+      const res = await request(app.getHttpServer()).get('/public/employees/khalid/image?v=old').expect(302);
+      expect(res.headers.location).toBe('https://files.test/fresh-signature');
+      expect(res.headers['cache-control']).toBe('no-store, max-age=0');
+    });
+    it('returns 404 instead of redirecting for a non-public or missing portrait', async () => {
+      mockImage.execute.mockRejectedValue(new NotFoundException());
+      await request(app.getHttpServer()).get('/public/employees/hidden/image').expect(404);
+    });
   });
 
   describe('GET /public/employees', () => {

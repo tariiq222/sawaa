@@ -28,3 +28,15 @@ describe('MarkReadHandler', () => {
     });
   });
 });
+
+describe('MarkReadHandler outsider records', () => {
+  it('cannot mark a different recipient notification read', async () => {
+    const records = [{id:'outside', recipientId:'other', isRead:false}];
+    const prisma: any = {notification:{updateMany: jest.fn(async ({where, data}) => {
+      records.filter(r => r.id === where.id && r.recipientId === where.recipientId).forEach(r => Object.assign(r,data));
+      return {count:0};
+    })}};
+    await new MarkReadHandler(prisma).execute({recipientId:'self', notificationId:'outside'});
+    expect(records[0].isRead).toBe(false);
+  });
+});

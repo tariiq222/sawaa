@@ -53,6 +53,18 @@ describe('UpdateUserHandler', () => {
     );
   }
 
+  it('clears an optional phone while preserving profile-only updates', async () => {
+    mockHigherRankActor();
+    prisma.user.update.mockResolvedValue({ id: TARGET_ID, phone: null });
+    await handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, phone: null });
+    expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ phone: null }),
+      omit: { passwordHash: true },
+    }));
+    expect(prisma.user.update.mock.calls[0][0].data).not.toHaveProperty('role');
+    expect(prisma.user.update.mock.calls[0][0].data).not.toHaveProperty('customRoleId');
+  });
+
   it('throws NotFoundException when the target does not exist', async () => {
     mockActorThenTarget(
       { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: false },

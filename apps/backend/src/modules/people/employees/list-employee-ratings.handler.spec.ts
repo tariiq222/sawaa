@@ -16,6 +16,7 @@ describe('ListEmployeeRatingsHandler', () => {
           rating: {
             findMany: jest.fn().mockResolvedValue([{ id: 'r1', score: 5 }]),
             count: jest.fn().mockResolvedValue(1),
+            groupBy: jest.fn().mockResolvedValue([{score:5,_count:{_all:12}},{score:1,_count:{_all:3}}]),
           },
         }),
       ),
@@ -61,6 +62,7 @@ describe('ListEmployeeRatingsHandler', () => {
             return [{ id: 'r1', score: 5 }];
           }),
           count: jest.fn().mockResolvedValue(1),
+          groupBy: jest.fn().mockResolvedValue([{score:5,_count:{_all:12}},{score:1,_count:{_all:3}}]),
         },
       };
       return cb(tx);
@@ -84,4 +86,10 @@ describe('ListEmployeeRatingsHandler', () => {
     expect(result.items).toEqual([{ id: 'r1', score: 5 }]);
     expect(result.meta).toMatchObject({ page: 1, limit: 20, total: 1, totalPages: 1 });
   });
+  it('returns star counts over the entire employee rating set rather than the current page', async () => {
+    prisma.employee.findFirst.mockResolvedValue({id:'emp-1'});
+    const result = await handler.execute({employeeId:'emp-1',page:2,limit:5});
+    expect(result).toMatchObject({starCounts:{1:3,2:0,3:0,4:0,5:12}});
+  });
+
 });

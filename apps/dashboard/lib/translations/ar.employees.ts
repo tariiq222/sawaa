@@ -356,6 +356,8 @@ export const arEmployees: Record<string, string> = {
   "employees.public.showDirectoryDesc": "اجعل هذا المعالج مرئياً في صفحات الموقع",
   "employees.public.slug": "الرابط الفريد",
   "employees.public.imageUrl": "صورة الملف العام",
+  "employees.public.removeImage": "إزالة صورة الملف العام",
+  "employees.public.saveError": "تعذّر حفظ الملف العام",
   "employees.public.bioAr": "نبذة عامة (عربي)",
   "employees.public.bioEn": "نبذة عامة (إنجليزي)",
   "employees.public.saving": "جاري الحفظ...",

@@ -91,10 +91,11 @@ test.describe("Dashboard Pages Navigation", () => {
     await expectNoAppCrash(page)
 
     const bookingsNavItem = page
-      .getByRole("button", { name: /الحجوزات|Bookings/i })
+      .getByRole("link", { name: /الحجوزات|Bookings/i })
       .first()
     await expect(bookingsNavItem).toBeVisible()
     await expect(bookingsNavItem).toHaveClass(/sidebar-active/)
+    await expect(bookingsNavItem).toHaveAttribute("href", "/bookings")
   })
 
   test("should navigate via sidebar links", async ({ page }) => {
@@ -103,7 +104,7 @@ test.describe("Dashboard Pages Navigation", () => {
     await expectNoAppCrash(page)
 
     const bookingsNavItem = page
-      .getByRole("button", { name: /الحجوزات|Bookings/i })
+      .getByRole("link", { name: /الحجوزات|Bookings/i })
       .first()
     await expect(bookingsNavItem).toBeVisible()
     await bookingsNavItem.click()

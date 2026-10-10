@@ -6,6 +6,7 @@ import {
   createEmployee,
   onboardEmployee,
   updateEmployee,
+  uploadEmployeePublicImage,
   setAvailability,
   setBreaks,
   createVacation,
@@ -29,6 +30,8 @@ export function useEmployeeMutations() {
       refetchType: "all",
     })
 
+  const invalidateCatalog = () => queryClient.invalidateQueries({ queryKey: queryKeys.services.all })
+
   const createMutation = useMutation({
     mutationFn: createEmployee,
     onSuccess: invalidate,
@@ -47,6 +50,7 @@ export function useEmployeeMutations() {
       updateEmployee(id, payload),
     onSuccess: (_, vars) => {
       invalidate()
+      invalidateCatalog()
       queryClient.invalidateQueries({
         queryKey: queryKeys.employees.list(),
         refetchType: "all",
@@ -62,7 +66,12 @@ export function useEmployeeMutations() {
     },
   })
 
-  return { createMutation, onboardMutation, updateMutation }
+  const uploadPublicImageMutation = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => uploadEmployeePublicImage(id, file),
+    onSuccess: invalidate,
+  })
+
+  return { createMutation, onboardMutation, updateMutation, uploadPublicImageMutation, invalidateCatalog }
 }
 
 /* ─── Availability Mutation ─── */

@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@sawaa/ui"
 import type { Conversation, ConversationMessage } from "@/lib/types/conversations"
 import { ConversationComposer } from "./conversation-composer"
@@ -21,6 +22,7 @@ interface ConversationDetailProps {
   staffUsers: StaffUser[]
   pendingAction: "claim" | "reply" | "assign" | "release" | "close" | null
   actionError: string | null
+  locale?: "ar" | "en"
   t: (key: string) => string
   onClaim: () => void
   onReply: (body: string) => Promise<boolean>
@@ -31,6 +33,12 @@ interface ConversationDetailProps {
 
 export function ConversationDetail(props: ConversationDetailProps) {
   const { conversation, t } = props
+  const transcript = useRef<HTMLDivElement>(null)
+  const latestMessageId = props.messages[0]?.id
+  useEffect(() => {
+    const element = transcript.current
+    if (element) element.scrollTop = element.scrollHeight
+  }, [conversation?.id, latestMessageId])
   if (props.isDetailLoading) {
     return <section aria-label={t("conversations.detail.loading")} className="space-y-4 p-5 lg:col-span-2"><Skeleton className="h-16 rounded-xl" /><Skeleton className="h-[480px] rounded-xl" /></section>
   }
@@ -79,7 +87,7 @@ export function ConversationDetail(props: ConversationDetailProps) {
 
       {conversation.handoffSummary && <HandoffSummaryCard summary={conversation.handoffSummary} t={t} />}
 
-      <div className="my-4 min-h-80 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/70 bg-surface-muted/20 p-4">
+      <div ref={transcript} role="log" aria-label={t("auditOperations.transcript")} className="my-4 h-[420px] shrink-0 space-y-3 overflow-y-auto rounded-xl border border-border/70 bg-surface-muted/20 p-4">
         {props.hasOlderMessages && (
           <Button variant="outline" size="sm" className="mx-auto flex" disabled={props.isLoadingOlderMessages} onClick={props.onLoadOlderMessages}>
             {t("conversations.detail.loadOlder")}
@@ -88,7 +96,7 @@ export function ConversationDetail(props: ConversationDetailProps) {
         {props.isMessagesLoading && Array.from({ length: 4 }, (_, index) => <Skeleton key={index} aria-label={index === 0 ? t("conversations.detail.messagesLoading") : undefined} className={`h-14 w-3/4 rounded-xl ${index % 2 ? "ms-auto" : ""}`} />)}
         {!props.isMessagesLoading && props.messagesError && <p role="alert" className="text-sm text-error">{t("conversations.detail.messagesError")}</p>}
         {!props.isMessagesLoading && !props.messagesError && props.messages.length === 0 && <p className="py-12 text-center text-sm text-muted-foreground">{t("conversations.detail.noMessages")}</p>}
-        {!props.isMessagesLoading && !props.messagesError && [...props.messages].reverse().map((message) => <MessageBubble key={message.id} message={message} t={t} />)}
+        {!props.isMessagesLoading && !props.messagesError && [...props.messages].reverse().map((message) => <MessageBubble key={message.id} message={message} locale={props.locale ?? "ar"} t={t} />)}
       </div>
 
       {canReply && <ConversationComposer key={conversation.id} isPending={props.pendingAction === "reply"} t={t} onSend={props.onReply} />}
@@ -108,12 +116,14 @@ function HandoffSummaryCard({ summary, t }: { summary: NonNullable<Conversation[
   </section>
 }
 
-function MessageBubble({ message, t }: { message: ConversationMessage; t: (key: string) => string }) {
+function MessageBubble({ message, t, locale }: { message: ConversationMessage; locale: "ar" | "en"; t: (key: string) => string }) {
+  const system = message.senderType === "SYSTEM" || message.kind === "SYSTEM_EVENT"
   const outgoing = ["STAFF", "EMPLOYEE", "AI"].includes(message.senderType)
   return (
-    <article className={`max-w-[85%] rounded-xl px-3 py-2 ${outgoing ? "ms-auto bg-primary text-primary-foreground" : "me-auto border border-border bg-surface-solid text-foreground"}`}>
+    <article role={system ? "status" : undefined} className={`max-w-[85%] rounded-xl px-3 py-2 ${system ? "mx-auto bg-surface-muted text-muted-foreground text-center" : outgoing ? "ms-auto bg-primary text-primary-foreground" : "me-auto border border-border bg-surface-solid text-foreground"}`}>
       <p className="text-[11px] font-medium opacity-75">{t(`conversations.sender.${message.senderType}`)}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{message.body}</p>
+      <time dateTime={message.createdAt} className="mt-1 block text-[11px] opacity-75">{new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(message.createdAt))}</time>
     </article>
   )
 }

@@ -5,11 +5,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import {
   fetchDepartments,
+  fetchDepartment,
   createDepartment,
   updateDepartment,
   deleteDepartment,
 } from "@/lib/api/departments"
 import type { DepartmentListQuery } from "@/lib/types/department"
+
+export function useDepartment(id: string | undefined) {
+  return useQuery({ queryKey: ["departments", "detail", id], queryFn: () => fetchDepartment(id!), enabled: Boolean(id), staleTime: 5 * 60 * 1000 })
+}
 
 export function useDepartments() {
   const [page, setPage] = useState(1)

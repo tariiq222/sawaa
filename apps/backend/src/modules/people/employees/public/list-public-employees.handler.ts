@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { normalizePublicImageUrl } from './public-image-url';
@@ -45,7 +46,7 @@ export interface PublicEmployeeItem {
 
 @Injectable()
 export class ListPublicEmployeesHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   async execute(options: { includeDirectClinics?: boolean } = {}): Promise<PublicEmployeeItem[]> {
     const rows = await this.prisma.employee.findMany({
@@ -162,7 +163,7 @@ export class ListPublicEmployeesHandler {
       branchesByEmployee.get(link.employeeId)!.push(link.branchId);
     }
 
-    return rows.map((r) => {
+    return Promise.all(rows.map(async (r) => {
       const stat = byEmployee.get(r.id);
       const prices = pricesByEmployee.get(r.id) ?? [];
       const serviceIds = servicesByEmployee.get(r.id) ?? [];
@@ -175,7 +176,7 @@ export class ListPublicEmployeesHandler {
       const tokens = display.trim().split(/\s+/).filter(Boolean);
       const firstName = tokens.length > 0 ? tokens[0] : '';
       const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
-      const publicImageUrl = normalizePublicImageUrl(r.publicImageUrl);
+      const publicImageUrl = normalizePublicImageUrl(r.publicImageUrl, r.id, this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get<number>('PORT') || 5200}`);
       return {
         ...r,
         publicImageUrl,
@@ -200,6 +201,6 @@ export class ListPublicEmployeesHandler {
           avatarUrl: publicImageUrl,
         },
       };
-    });
+    }));
   }
 }

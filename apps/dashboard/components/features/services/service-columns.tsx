@@ -125,7 +125,7 @@ export function getServiceColumns(
       id: "name",
       accessorFn: (row) => row.nameAr || row.nameEn,
       header: label("services.col.service", "Service"),
-      enableSorting: true,
+      enableSorting: false,
       sortingFn: (a, b) => {
         const nameA = (locale === "ar" ? a.original.nameAr : a.original.nameEn) ?? ""
         const nameB = (locale === "ar" ? b.original.nameAr : b.original.nameEn) ?? ""
@@ -169,7 +169,7 @@ export function getServiceColumns(
         return `${dept} ${cat}`.trim()
       },
       header: label("services.col.category", "Category"),
-      enableSorting: true,
+      enableSorting: false,
       sortingFn: (a, b) => {
         const nameA = locale === "ar" ? (a.original.category?.nameAr ?? "") : (a.original.category?.nameEn ?? "")
         const nameB = locale === "ar" ? (b.original.category?.nameAr ?? "") : (b.original.category?.nameEn ?? "")
@@ -208,7 +208,7 @@ export function getServiceColumns(
     {
       accessorKey: "price",
       header: label("services.col.price", "Price (SAR)"),
-      enableSorting: true,
+      enableSorting: false,
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
           {formatPrice(Number(row.original.price))}
@@ -218,7 +218,7 @@ export function getServiceColumns(
     {
       accessorKey: "durationMins",
       header: label("services.col.duration", "Duration"),
-      enableSorting: true,
+      enableSorting: false,
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
           {row.original.durationMins} {label("services.detail.min", "min")}
@@ -228,7 +228,7 @@ export function getServiceColumns(
     {
       id: "status",
       header: label("services.col.status", "Status"),
-      enableSorting: true,
+      enableSorting: false,
       sortingFn: (a, b) => Number(b.original.isActive) - Number(a.original.isActive),
       cell: ({ row }) => (
         <Badge

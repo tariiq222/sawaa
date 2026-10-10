@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ListServiceEmployeesHandler } from './list-service-employees.handler';
@@ -19,7 +20,8 @@ describe('ListServiceEmployeesHandler', () => {
   beforeEach(async () => {
     prisma = buildPrisma();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ListServiceEmployeesHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },ListServiceEmployeesHandler, { provide: PrismaService, useValue: prisma }],
     }).compile();
     handler = module.get<ListServiceEmployeesHandler>(ListServiceEmployeesHandler);
   });

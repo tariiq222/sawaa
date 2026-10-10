@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
@@ -28,6 +29,7 @@ describe('Public employees handlers', () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
+        { provide: ConfigService, useValue: new ConfigService({ API_PUBLIC_URL: 'https://api.sawaa.test' }) },
         ListPublicEmployeesHandler,
         GetPublicEmployeeHandler,
         {

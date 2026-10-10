@@ -6,6 +6,8 @@ jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn() }));
 import * as WebBrowser from 'expo-web-browser';
 import { getPendingPackagePurchase } from '@/services/client/packages';
 jest.mock('@/services/client/packages', () => ({ getPendingPackagePurchase: jest.fn() }));
+jest.mock('@/services/api', () => ({ __esModule: true, default: {} }));
+jest.mock('@/hooks/queries', () => ({ useBooking: () => ({ refetch: jest.fn() }), usePublicCatalog: () => ({ refetch: jest.fn() }) }));
 import React from 'react';
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import NativeCheckout from '../native-checkout';
@@ -45,9 +47,9 @@ it('offers only verification when the provider-created challenge cannot be recov
   fireEvent.press(view.getByText('nativePayment.checkAgain'));
   expect(mockReconcile).toHaveBeenCalled(); expect(mockRetry).not.toHaveBeenCalled();
 });
-it('keeps pending results on screen and allows explicit reconciliation', () => {
+it('keeps unsubmitted reserved attempts on screen and allows explicit reconciliation', () => {
   const view = render(<NativeCheckout />);
-  expect(view.getByText('nativePayment.pending')).toBeTruthy();
+  expect(view.getByText('nativePayment.prepared')).toBeTruthy();
   fireEvent.press(view.getByText('nativePayment.checkAgain'));
   expect(mockReconcile).toHaveBeenCalled(); expect(mockReplace).not.toHaveBeenCalled();
 });
@@ -84,7 +86,7 @@ it('does not initialize cards while Apple capability loads or is unavailable', (
 });
 it('offers explicit retry after authoritative failure', () => {
   mockPhase = 'failed'; const view = render(<NativeCheckout />);
-  fireEvent.press(view.getByText('nativePayment.retry'));
+  fireEvent.press(view.getByText('nativePayment.useAnotherCard'));
   expect(mockRetry).toHaveBeenCalledTimes(1);
 });
 

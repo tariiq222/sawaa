@@ -11,7 +11,7 @@ interface ProgramStatusBadgeProps {
 }
 
 export function ProgramStatusBadge({ status, enrolledCount, maxParticipants, t }: ProgramStatusBadgeProps) {
-  const full = isFullBadge(enrolledCount, maxParticipants);
+  const full = ['OPEN', 'MIN_REACHED'].includes(status) && isFullBadge(enrolledCount, maxParticipants);
   if (full) return <Badge variant="warning">{t('programs.fullBadge')}</Badge>;
   return <Badge variant={statusVariant(status)}>{t(`programs.status.${status}`)}</Badge>;
 }

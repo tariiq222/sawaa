@@ -36,6 +36,8 @@ import {
   useServiceBookingTypes,
 } from "@/hooks/use-services"
 import { useServiceCreateCategoryContext } from "@/components/features/services/use-service-create-category-context"
+import { createResumableSave } from "@/lib/catalog-creation"
+import type { Service } from "@/lib/types/service"
 import { fetchService } from "@/lib/api/services"
 import { formatRef } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
@@ -47,7 +49,7 @@ import {
   saveBookingTypesMutation,
 } from "@/components/features/services/service-form-helpers"
 import { uploadServiceImage } from "@/lib/api/services"
-import { assignService, updateEmployeeService } from "@/lib/api/employees-schedule"
+import { saveCreatedServiceEmployees } from "@/lib/service-creation"
 import { sarToHalalas, halalasToSar } from "@/lib/money"
 import { isDirectClinicBookingService } from "@/lib/service-catalog"
 import { canSubmitCreateCategoryContext, categoryServicesReturnPath } from "@/components/features/services/service-form-context"
@@ -68,7 +70,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isEdit = mode === "edit"
-  const initialTab = searchParams.get("tab") ?? "basic"
+  const tab = searchParams.get("tab")
+  const initialTab = tab && ["basic", "pricing", "booking", "employees"].includes(tab) ? tab : "basic"
   const [activeTab, setActiveTab] = useState(initialTab)
 
   /* ── Data fetching (edit only) ── */
@@ -95,6 +98,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const [bookingTypesDirty, setBookingTypesDirty] = useState(false)
   const [pendingEmployeeIds, setPendingEmployeeIds] = useState<string[]>([])
   const [pendingActive, setPendingActive] = useState<Record<string, boolean>>({})
+  const submitting = useRef(false)
+  const creation = useRef(createResumableSave<Service>())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const pendingAvatarFile = useRef<File | null>(null)
 
@@ -148,6 +153,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   /* ── Submit ── */
   const handleSubmit = async (data: CreateServiceFormData) => {
     if (!isEdit && !canSubmitCreateCategoryContext(hasCategoryContext, categoryContext?.status)) return
+    if (submitting.current) return
+    submitting.current = true
     setIsSubmitting(true)
     try {
       if (isEdit && service) {
@@ -155,6 +162,9 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         await updateMut.mutateAsync({
           id: service.id,
           ...buildServiceEditPayload(data, isInternalService, service.nameEn),
+          imageUrl: pendingAvatarFile.current || data.imageUrl?.startsWith("blob:") || data.imageUrl === service.imageUrl
+            ? undefined
+            : data.imageUrl,
           price: firstEnabled ? sarToHalalas(firstEnabled.price) : undefined,
           durationMins: firstEnabled ? firstEnabled.durationMins : undefined,
         })
@@ -169,32 +179,25 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         }
 
         toast.success(t("services.edit.success"))
-        return
       } else {
         const firstEnabled = bookingTypes.find((bt) => bt.enabled)
-        const created = await createMut.mutateAsync({
-          ...buildPayload(data),
-          categoryId: data.categoryId ?? "",
+        const payload = {
+          ...buildPayload(data), categoryId: data.categoryId ?? "",
           price: firstEnabled ? sarToHalalas(firstEnabled.price) : 0,
           durationMins: firstEnabled ? firstEnabled.durationMins : 30,
+        }
+        await creation.current.run({
+          create: () => createMut.mutateAsync(payload),
+          resume: (record) => updateMut.mutateAsync({id: record.id, ...payload}),
+          complete: async (record) => {
+            if (pendingAvatarFile.current) {
+              await uploadServiceImage(record.id, pendingAvatarFile.current)
+              pendingAvatarFile.current = null
+            }
+            await saveBookingTypesApi(record.id, bookingTypes)
+            await saveCreatedServiceEmployees(record.id, pendingEmployeeIds, pendingActive)
+          },
         })
-
-        if (pendingAvatarFile.current) {
-          await uploadServiceImage(created.id, pendingAvatarFile.current)
-          pendingAvatarFile.current = null
-        }
-
-        await saveBookingTypesApi(created.id, bookingTypes)
-        if (pendingEmployeeIds.length > 0) {
-          await Promise.all(
-            pendingEmployeeIds.map(async (employeeId) => {
-              await assignService(employeeId, { serviceId: created.id })
-              if (pendingActive[employeeId] === false) {
-                await updateEmployeeService(employeeId, created.id, { isActive: false })
-              }
-            })
-          )
-        }
         toast.success(t("services.create.success"))
       }
 
@@ -203,6 +206,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       const key = isEdit ? "services.edit.error" : "services.create.error"
       showApiError(err, { fallback: t(key), t })
     } finally {
+      submitting.current = false
       setIsSubmitting(false)
     }
   }
@@ -268,6 +272,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       {hasCategoryContext && categoryContext && <ServiceCategoryContextNotice context={categoryContext} />}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
+        <fieldset disabled={isSubmitting} className="contents">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto pb-1 -mb-1">
             <TabsList className="min-w-max">
@@ -317,6 +322,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
           </TabsContent>
 
         </Tabs>
+        </fieldset>
 
         <ServiceFormActions
           cancelLabel={t(isEdit ? "services.edit.cancel" : "services.create.cancel")}

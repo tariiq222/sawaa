@@ -73,9 +73,9 @@ function defaultFiltersForToday(): BookingFilters {
 
 /* ─── List Hook ─── */
 
-export function useBookings() {
+export function useBookings(initialFilters: Partial<BookingFilters> = {}) {
   const [page, setPage] = useState(1)
-  const [filters, setFiltersState] = useState<BookingFilters>(defaultFiltersForToday)
+  const [filters, setFiltersState] = useState<BookingFilters>(() => ({ ...defaultFiltersForToday(), ...initialFilters }))
 
   // Recompute "today" each render so a session that survives midnight doesn't
   // pin yesterday as the baseline; date dimension dirty-check is relative to
@@ -95,6 +95,7 @@ export function useBookings() {
 
   const query: BookingListQuery = {
     page,
+    sortOrder: !filters.dateFrom && !filters.dateTo ? "desc" : "asc",
     isLateEntry: filters.isLateEntry !== "all" ? filters.isLateEntry : undefined,
     limit: 20,
     status: filters.status !== "all" ? filters.status : undefined,

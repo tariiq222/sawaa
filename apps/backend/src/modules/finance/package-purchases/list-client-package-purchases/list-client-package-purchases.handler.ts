@@ -3,6 +3,7 @@ import { PackagePurchaseStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/database';
 import { validateBookingTargetEligibility } from '../../../bookings/booking-target-eligibility.helper';
 import { getPackageCreditAvailability } from '../../../bookings/package-credit-availability.helper';
+import { packageCreditGroupCreditSelect } from '../../../bookings/package-credit-group-select';
 import { parsePackageOfferSnapshot } from '../package-offer-snapshot';
 
 export interface ListClientPackagePurchasesQuery {
@@ -143,28 +144,10 @@ export class ListClientPackagePurchasesHandler {
                 label: true,
                 sequenceMode: true,
                 dependsOnGroupId: true,
-                credits: {
-                  select: {
-                    id: true,
-                    sessionPosition: true,
-                    totalQuantity: true,
-                    usedQuantity: true,
-                    reservedQuantity: true,
-                    usages: { select: { status: true, deliveredAt: true } },
-                  },
-                },
+                credits: { select: packageCreditGroupCreditSelect },
                 dependsOnGroup: {
                   select: {
-                    credits: {
-                      select: {
-                        id: true,
-                        sessionPosition: true,
-                        totalQuantity: true,
-                        usedQuantity: true,
-                        reservedQuantity: true,
-                        usages: { select: { status: true, deliveredAt: true } },
-                      },
-                    },
+                    credits: { select: packageCreditGroupCreditSelect },
                   },
                 },
               },

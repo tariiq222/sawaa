@@ -9,18 +9,36 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { getInvoiceColumns } from "@/components/features/invoices/invoice-columns"
 import { Skeleton } from "@sawaa/ui"
 import { useInvoices } from "@/hooks/use-invoices"
+import { useAuth } from "@/components/providers/auth-provider"
+import type { InvoiceStatus } from "@/lib/types/invoice"
 import { useLocale } from "@/components/locale-provider"
 
 export function InvoiceListPage() {
   const { t } = useLocale()
-  const { invoices, meta, isLoading, error, refetch, search, setSearch, page, setPage } = useInvoices()
+  const { canDo } = useAuth()
+  const {
+    invoices,
+    meta,
+    isLoading,
+    error,
+    refetch,
+    search,
+    setSearch,
+    page,
+    setPage,
+    status,
+    setStatus,
+  } = useInvoices()
 
-  const hasFilters = search !== ""
+  const hasFilters = search !== "" || !!status
   const resetFilters = () => {
     setSearch("")
+    setStatus(undefined)
   }
 
-  const columns = getInvoiceColumns(t)
+  const columns = getInvoiceColumns(t, {
+    canGeneratePdf: canDo("invoice", "manage"),
+  })
 
   return (
     <ListPageShell>
@@ -37,6 +55,30 @@ export function InvoiceListPage() {
           onChange: setSearch,
           placeholder: t("invoices.searchPlaceholder"),
         }}
+        selects={[
+          {
+            key: "status",
+            value: status ?? "all",
+            placeholder: t("invoices.col.status"),
+            options: [
+              { value: "all", label: t("invoices.allStatuses") },
+              ...[
+                "DRAFT",
+                "ISSUED",
+                "PAID",
+                "PARTIALLY_PAID",
+                "PARTIALLY_REFUNDED",
+                "VOID",
+                "REFUNDED",
+              ].map((value) => ({
+                value,
+                label: t(`invoices.status.${value}`),
+              })),
+            ],
+            onValueChange: (value) =>
+              setStatus(value === "all" ? undefined : (value as InvoiceStatus)),
+          },
+        ]}
         hasFilters={hasFilters}
         onReset={resetFilters}
       />
@@ -49,7 +91,9 @@ export function InvoiceListPage() {
         />
       ) : isLoading ? (
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />)}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />
+          ))}
         </div>
       ) : (
         <DataTable

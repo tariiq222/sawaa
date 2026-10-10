@@ -1,6 +1,6 @@
 "use client"
 
-import { Input, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Separator } from "@sawaa/ui"
+import { Button, Input, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Separator } from "@sawaa/ui"
 import { FormSection, FormField } from "@/components/features/shared/form-section"
 import { useLocale } from "@/components/locale-provider"
 import type { IntakeFormDraft, FormType, FormScope } from "@/lib/types/intake-form"
@@ -16,6 +16,12 @@ interface FormInfoPanelProps {
   availableScopes?: FormScope[]
   onUpdate: (patch: Partial<IntakeFormDraft>) => void
   onScopeChange: (scope: FormScope) => void
+  isLoadingOptions?: boolean
+  optionsError?: boolean
+  hasMoreOptions?: boolean
+  isLoadingMore?: boolean
+  onLoadMore?: () => void
+  onRetry?: () => void
   isAr: boolean
 }
 
@@ -25,7 +31,7 @@ export function FormInfoPanel({
   availableScopes,
   onUpdate,
   onScopeChange,
-  isAr,
+  isAr, isLoadingOptions, optionsError, hasMoreOptions, isLoadingMore, onLoadMore, onRetry,
 }: FormInfoPanelProps) {
   const { t } = useLocale()
   const formScopes = availableScopes ?? ALL_FORM_SCOPES
@@ -42,7 +48,7 @@ export function FormInfoPanel({
           />
         </FormField>
 
-        <FormField label={t("intakeForms.info.nameEnShort")} required>
+        <FormField label={t("intakeForms.info.nameEnShort")}>
           <Input
             value={draft.nameEn}
             onChange={(e) => onUpdate({ nameEn: e.target.value })}
@@ -114,6 +120,11 @@ export function FormInfoPanel({
           </FormField>
         )}
 
+        {draft.scope !== 'global' && <div className="space-y-2">
+          {isLoadingOptions && <p role="status">{t('common.loading')}</p>}
+          {optionsError && <p role="alert">{t('common.errorLoading')} <Button type="button" variant="outline" onClick={onRetry}>{t('common.retry')}</Button></p>}
+          {hasMoreOptions && <Button type="button" variant="outline" onClick={onLoadMore} disabled={isLoadingMore}>{t('auditOperations.loadMoreOptions')}</Button>}
+        </div>}
         <Separator />
 
         <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">

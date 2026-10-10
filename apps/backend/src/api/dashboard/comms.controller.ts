@@ -227,7 +227,7 @@ export class DashboardCommsController {
 
   @ApiOperation({ summary: 'Mark notifications as read (all or a single one)' })
   @ApiNoContentResponse({ description: 'Notifications marked as read' })
-  @CheckPermissions({ action: 'update', subject: 'Booking' })
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
   @Patch('notifications/mark-read')
   @HttpCode(HttpStatus.NO_CONTENT)
   markReadEndpoint(

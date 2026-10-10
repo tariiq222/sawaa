@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { EmploymentType, OnboardingStatus } from '@prisma/client';
@@ -36,6 +37,7 @@ describe('List/Get Employees handlers', () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },
         ListEmployeesHandler,
         GetEmployeeHandler,
         {

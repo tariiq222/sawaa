@@ -1,3 +1,4 @@
+import { CacheService } from '../../../infrastructure/cache';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
 import { UnassignEmployeeFromBranchHandler } from './unassign-employee-from-branch.handler';
@@ -9,6 +10,7 @@ describe('UnassignEmployeeFromBranchHandler', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         UnassignEmployeeFromBranchHandler,
         { provide: PrismaService, useValue: {
           branch: { findFirst: jest.fn() },

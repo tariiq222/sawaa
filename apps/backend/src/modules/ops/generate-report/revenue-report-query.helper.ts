@@ -29,7 +29,11 @@ export function revenueReportDateRange(fromInput: string, toInput: string) {
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
   const toExclusive = dateOnly.test(toValue)
     ? new Date(startOfDayInTz(toValue)!.getTime() + 24 * 60 * 60 * 1_000)
-    : new Date(toValue);
+    : new Date(new Date(toValue).getTime() + (
+      // Dashboard day-end is inclusive; retain the historical half-open
+      // contract for arbitrary explicit instants.
+      new Date(toValue).toISOString().endsWith('T20:59:59.999Z') ? 1 : 0
+    ));
   return {
     from: dateOnly.test(fromValue) ? startOfDayInTz(fromValue)! : new Date(fromValue),
     toExclusive,
@@ -111,7 +115,8 @@ export function buildRevenueReportQuery(params: RevenueReportParams) {
     SELECT COUNT(*)::int AS "total",
       COALESCE(ROUND(AVG(b."durationMins")), 0)::int AS "avgDurationMins"
     FROM "Booking" b
-    WHERE b."scheduledAt" >= ${from} AND b."scheduledAt" < ${toExclusive}
+    WHERE b."status" <> 'CANCELLED'
+      AND b."scheduledAt" >= ${from} AND b."scheduledAt" < ${toExclusive}
       ${branchId ? Prisma.sql`AND b."branchId" = ${branchId}` : Prisma.empty}
       ${employeeId ? Prisma.sql`AND b."employeeId" = ${employeeId}` : Prisma.empty}
   `;
@@ -188,7 +193,7 @@ export function buildBookingsReportQueries(params: {
     `,
     byDay: Prisma.sql`
       SELECT TO_CHAR(
-        (b."scheduledAt" AT TIME ZONE 'UTC' AT TIME ZONE 'UTC')::date,
+        (b."scheduledAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')::date,
         'YYYY-MM-DD'
       ) AS "date",
         COUNT(*)::int AS "count"
@@ -198,10 +203,10 @@ export function buildBookingsReportQueries(params: {
     `,
     byHourDow: Prisma.sql`
       SELECT EXTRACT(
-          DOW FROM (b."scheduledAt" AT TIME ZONE 'UTC' AT TIME ZONE 'UTC')
+          DOW FROM (b."scheduledAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')
         )::int AS "dow",
         EXTRACT(
-          HOUR FROM (b."scheduledAt" AT TIME ZONE 'UTC' AT TIME ZONE 'UTC')
+          HOUR FROM (b."scheduledAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Riyadh')
         )::int AS "hour",
         COUNT(*)::int AS "count"
       ${scope}

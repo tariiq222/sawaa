@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Search01Icon, Add01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
-import { Input } from "@sawaa/ui"
+import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
 
 interface GreetingHeaderProps {
@@ -15,7 +15,7 @@ interface GreetingHeaderProps {
 }
 
 function getGreeting(t: (key: string) => string): string {
-  const hour = new Date().getHours()
+  const hour = Number(new Intl.DateTimeFormat("en-US", {timeZone:"Asia/Riyadh",hour:"numeric",hourCycle:"h23"}).format(new Date()))
   if (hour < 12) return t("dashboard.goodMorning")
   if (hour < 18) return t("dashboard.goodAfternoon")
   return t("dashboard.goodEvening")
@@ -23,6 +23,7 @@ function getGreeting(t: (key: string) => string): string {
 
 export function GreetingHeader({ userName, dateLabel, bookingsCount }: GreetingHeaderProps) {
   const { t } = useLocale()
+  const { canDo } = useAuth()
   const greeting = getGreeting(t)
 
   const safeCount = Number.isFinite(bookingsCount) && bookingsCount >= 0 ? bookingsCount : 0
@@ -52,19 +53,17 @@ export function GreetingHeader({ userName, dateLabel, bookingsCount }: GreetingH
             size={16}
             className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <Input
-            placeholder={t("header.search")}
-            aria-label={t("header.search")}
-            className="h-10 w-full max-w-[260px] rounded-lg border-border bg-surface ps-10 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-solid"
-          />
+          <button type="button" aria-label={t("header.search")} onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", {key:"k",metaKey:true,bubbles:true}))} className="h-10 w-full max-w-[260px] rounded-lg border border-border bg-surface ps-10 pe-4 text-sm text-muted-foreground">
+            {t("header.search")}
+          </button>
         </div>
 
-        <Button asChild size="default" className="h-10 gap-2 rounded-lg px-5">
-          <Link href="/bookings">
+        {canDo("booking", "create") && <Button asChild size="default" className="h-10 gap-2 rounded-lg px-5">
+          <Link href="/bookings?new=1">
             <HugeiconsIcon icon={Add01Icon} size={16} />
             <span>{t("actions.newBooking")}</span>
           </Link>
-        </Button>
+        </Button>}
       </div>
     </div>
   )

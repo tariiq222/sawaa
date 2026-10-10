@@ -7,6 +7,7 @@ import type { InvoiceListRow } from "@/lib/types/invoice"
 
 const { fetchInvoices } = vi.hoisted(() => ({ fetchInvoices: vi.fn() }))
 vi.mock("@/lib/api/invoices", () => ({ fetchInvoices }))
+vi.mock("next/navigation",()=>({useSearchParams:()=>new URLSearchParams(window.location.search)}))
 
 import { useInvoices, toInvoiceListItem } from "@/hooks/use-invoices"
 import { invalidateMutationImpact } from "@/lib/query-invalidation"
@@ -97,3 +98,14 @@ describe("useInvoices cache refresh", () => {
     }))
   })
 })
+
+it('initializes invoice search from the client invoice link',async()=>{
+ window.history.replaceState({},'', '/invoices?search=INV-0012');
+ fetchInvoices.mockResolvedValue({items:[],meta:{total:0}});
+ const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
+ const wrapper = ({children}:{children:ReactNode})=>React.createElement(QueryClientProvider,{client},children);
+ const query=renderHook(()=>useInvoices(),{wrapper});
+ await waitFor(()=>expect(query.result.current.search).toBe('INV-0012'));
+ expect(fetchInvoices).toHaveBeenCalledWith(expect.objectContaining({search:'INV-0012'}));
+ window.history.replaceState({},'', '/');
+});

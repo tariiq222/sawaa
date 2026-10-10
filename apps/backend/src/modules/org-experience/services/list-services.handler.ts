@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
@@ -40,10 +41,20 @@ export class ListServicesHandler {
       historicalContext: dto.historicalContext ?? false,
       categoryId: dto.categoryId ?? null,
       search: dto.search ?? null,
+      branchId: dto.branchId ?? null,
+      departmentId: dto.departmentId ?? null,
+      sortBy: dto.sortBy ?? "createdAt",
+      sortOrder: dto.sortOrder ?? "desc",
     });
 
     const response = await this.cache.getOrSet(`${SERVICES_CACHE_PREFIX}${keyParams}`, async () => {
-      const where = {
+      const branchAssignments = dto.branchId ? await this.prisma.employeeService.findMany({
+        where: { isActive: true, employee: { isActive: true, branches: { some: { branchId: dto.branchId } } } },
+        select: { serviceId: true },
+      }) : null;
+      const where: Prisma.ServiceWhereInput = {
+        ...(branchAssignments && { id: { in: [...new Set(branchAssignments.map(link => link.serviceId))] } }),
+        ...(dto.departmentId && { category: { departmentId: dto.departmentId } }),
         ...(dto.historicalContext !== true && dto.includeArchived !== true && { archivedAt: null }),
         ...(dto.historicalContext !== true && dto.isActive !== undefined && { isActive: dto.isActive }),
         // إخفاء الخدمات المخفية افتراضياً ما لم يُطلب تضمينها صراحةً
@@ -64,7 +75,7 @@ export class ListServicesHandler {
               where,
               skip,
               take: limit,
-              orderBy: { createdAt: 'desc' },
+              orderBy: [{ [dto.sortBy ?? 'createdAt']: dto.sortOrder ?? 'desc' }, { id: 'asc' }],
               include: {
                 category: { include: { department: true } },
                 durationOptions: { orderBy: { sortOrder: 'asc' } },

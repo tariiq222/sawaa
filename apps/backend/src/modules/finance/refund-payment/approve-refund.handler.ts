@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RefundStatus } from '@prisma/client';
+import { PaymentMethod, RefundStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { decimalToHalalas } from '../money.helper';
 import { RefundPaymentHandler } from './refund-payment.handler';
@@ -43,8 +43,13 @@ export class ApproveRefundHandler {
 
     const payment = await this.prisma.payment.findUniqueOrThrow({
       where: { id: refundRequest.paymentId },
-      select: { gatewayRef: true, amount: true, refundedAmount: true },
+      select: { method: true, gatewayRef: true, amount: true, refundedAmount: true },
     });
+    // Bank transfer references are administrative, not Moyasar payment IDs.
+    // Reject before claiming the request so it remains available for manual settlement.
+    if (payment.method !== PaymentMethod.ONLINE_CARD) {
+      throw new BadRequestException('Off-gateway payments require manual refund settlement');
+    }
     if (!payment.gatewayRef) {
       throw new NotFoundException('Payment has no gateway reference — cannot refund via Moyasar');
     }

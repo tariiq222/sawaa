@@ -1,3 +1,5 @@
+import { GetDepartmentHandler } from './departments/get-department.handler';
+import { GetCategoryHandler } from './categories/get-category.handler';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
@@ -18,6 +20,7 @@ import { AssignEmployeeToBranchHandler } from './branches/assign-employee-to-bra
 import { UnassignEmployeeFromBranchHandler } from './branches/unassign-employee-from-branch.handler';
 import { GetPublicBranchesHandler } from './branches/public/get-public-branches.handler';
 import { GetPublicBranchHandler } from './branches/public/get-public-branch.handler';
+import { MediaModule } from '../media/media.module';
 import { ListPublicBranchEmployeesHandler } from './branches/public/list-public-branch-employees.handler';
 import { CreateDepartmentHandler } from './departments/create-department.handler';
 import { UpdateDepartmentHandler } from './departments/update-department.handler';
@@ -42,12 +45,12 @@ const branchHandlers = [
 ];
 
 const departmentHandlers = [
-  CreateDepartmentHandler, UpdateDepartmentHandler, ListDepartmentsHandler,
+  GetDepartmentHandler, CreateDepartmentHandler, UpdateDepartmentHandler, ListDepartmentsHandler,
   DeleteDepartmentHandler,
 ];
 
 const categoryHandlers = [
-  CreateCategoryHandler, UpdateCategoryHandler, ListCategoriesHandler,
+  GetCategoryHandler, CreateCategoryHandler, UpdateCategoryHandler, ListCategoriesHandler,
   DeleteCategoryHandler,
 ];
 
@@ -57,7 +60,7 @@ const hoursHandlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule],
+  imports: [DatabaseModule, MessagingModule, MediaModule],
   controllers: [
     DashboardOrganizationBranchesController,
     DashboardOrganizationDepartmentsController,

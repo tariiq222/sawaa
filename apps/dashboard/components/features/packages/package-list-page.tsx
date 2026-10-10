@@ -22,7 +22,7 @@ import { usePackageFamilies } from "@/hooks/use-package-families"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import type { SessionPackage } from "@/lib/types/package"
-import type { PackageFamily } from "@sawaa/shared/types"
+import { PackageFamilyCard } from "./package-family-card"
 
 export function PackageListPage() {
   const { t, locale } = useLocale()
@@ -69,10 +69,11 @@ export function PackageListPage() {
         )}
       </PageHeader>
 
+      {familyQuery.isLoading && <section aria-label={t("packages.family.list.title")} className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2"><Skeleton className="h-32 rounded-xl" /><Skeleton className="h-32 rounded-xl" /></section>}
       {families.length > 0 && <section className="mb-6 flex flex-col gap-3" aria-label={t("packages.family.list.title")}>
         <h2 className="text-lg font-semibold">{t("packages.family.list.title")}</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {families.map((family) => <FamilyCard key={family.id} family={family} locale={locale} onEdit={canDo("service", "update") ? () => router.push(`/packages/families/${family.id}/edit`) : undefined} t={t} />)}
+          {families.map((family) => <PackageFamilyCard canArchive={canDo("service", "delete")} key={family.id} family={family} locale={locale} onEdit={canDo("service", "update") ? () => router.push(`/packages/families/${family.id}/edit`) : undefined} t={t} />)}
         </div>
       </section>}
 
@@ -126,9 +127,4 @@ export function PackageListPage() {
       <DeletePackageDialog pkg={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />
     </ListPageShell>
   )
-}
-
-function FamilyCard({ family, locale, onEdit, t }: { family: PackageFamily; locale: string; onEdit?: () => void; t: (key: string) => string }) {
-  const label = locale === "ar" ? family.nameAr : (family.nameEn ?? family.nameAr)
-  return <article className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-solid p-4 shadow-sm"><div><h3 className="font-semibold">{label}</h3><p className="text-sm text-muted-foreground">{family.options.length} · {family.options.map((option) => option.sessionCount ?? option.groups?.reduce((sum, group) => sum + group.sessions.length, 0) ?? 0).join(" / ")} {t("packages.summary.sessions")}</p></div>{onEdit && <Button variant="outline" size="sm" onClick={onEdit}>{t("packages.family.list.edit")}</Button>}</article>
 }

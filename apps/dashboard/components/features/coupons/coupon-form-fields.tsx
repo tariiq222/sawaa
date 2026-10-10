@@ -14,7 +14,10 @@ import {
   SelectValue,
 } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
-import { FormSection, FormField } from "@/components/features/shared/form-section"
+import {
+  FormSection,
+  FormField,
+} from "@/components/features/shared/form-section"
 import { useLocale } from "@/components/locale-provider"
 
 interface CouponFormFieldsProps {
@@ -23,7 +26,11 @@ interface CouponFormFieldsProps {
   mode: "create" | "edit"
 }
 
-export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) {
+export function CouponFormFields({
+  form,
+  isEdit,
+  mode,
+}: CouponFormFieldsProps) {
   const { t } = useLocale()
   const discountType = form.watch("discountType")
 
@@ -42,20 +49,35 @@ export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) 
               placeholder={isEdit ? undefined : "SUMMER20"}
               className="uppercase"
               disabled={isEdit}
-              onChange={(e) => form.setValue("code", e.target.value.toUpperCase())}
+              onChange={(e) =>
+                form.setValue("code", e.target.value.toUpperCase())
+              }
             />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
-            <FormField label={t("coupons.create.discountType")} required={!isEdit}>
+            <FormField
+              label={t("coupons.create.discountType")}
+              required={!isEdit}
+            >
               <Controller
                 control={form.control}
                 name="discountType"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isEdit}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PERCENTAGE">{t("coupons.type.percentage")}</SelectItem>
-                      <SelectItem value="FIXED">{t("coupons.type.fixed")}</SelectItem>
+                      <SelectItem value="PERCENTAGE">
+                        {t("coupons.type.percentage")}
+                      </SelectItem>
+                      <SelectItem value="FIXED">
+                        {t("coupons.type.fixed")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -64,11 +86,17 @@ export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) 
             <FormField
               label={t("coupons.create.discountValue")}
               required={!isEdit}
-              error={form.formState.errors.discountValue?.message as string | undefined}
+              error={
+                form.formState.errors.discountValue?.message
+                  ? t(form.formState.errors.discountValue.message)
+                  : undefined
+              }
             >
               <Input
                 type="number"
-                min={1}
+                min={0.01}
+                step={0.01}
+                max={discountType === "PERCENTAGE" ? 100 : undefined}
                 {...form.register("discountValue")}
                 placeholder={discountType === "PERCENTAGE" ? "10" : "50"}
               />
@@ -82,14 +110,30 @@ export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <FormField label={t("coupons.create.minAmount")}>
-              <Input type="number" min={0} step="0.01" {...form.register("minOrderAmt")} placeholder={isEdit ? undefined : "0"} />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                {...form.register("minOrderAmt")}
+                placeholder={isEdit ? undefined : "0"}
+              />
             </FormField>
             <FormField label={t("coupons.create.maxUses")}>
-              <Input type="number" min={1} {...form.register("maxUses")} placeholder={t("coupons.noExpiry")} />
+              <Input
+                type="number"
+                min={1}
+                {...form.register("maxUses")}
+                placeholder={t("coupons.noExpiry")}
+              />
             </FormField>
           </div>
           <FormField label={t("coupons.create.maxUsesPerUser")}>
-            <Input type="number" min={1} {...form.register("maxUsesPerUser")} placeholder={t("coupons.noExpiry")} />
+            <Input
+              type="number"
+              min={1}
+              {...form.register("maxUsesPerUser")}
+              placeholder={t("coupons.noExpiry")}
+            />
           </FormField>
           <FormField label={t("coupons.create.expiresAt")}>
             <Controller
@@ -105,7 +149,10 @@ export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) 
             />
           </FormField>
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <Label htmlFor={`${mode}-coupon-active`} className="cursor-pointer text-sm">
+            <Label
+              htmlFor={`${mode}-coupon-active`}
+              className="cursor-pointer text-sm"
+            >
               {t("coupons.create.isActive")}
             </Label>
             <Switch
@@ -118,7 +165,10 @@ export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) 
       </FormSection>
 
       {/* ── Descriptions (full width) ── */}
-      <FormSection title={t("coupons.section.description")} className="lg:col-span-2">
+      <FormSection
+        title={t("coupons.section.description")}
+        className="lg:col-span-2"
+      >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label={t("coupons.create.descEn")}>
             <Input {...form.register("descriptionEn")} />

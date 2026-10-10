@@ -11,6 +11,7 @@ import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../common/swagger';
 import { ListUsersHandler } from '../../modules/identity/users/list-users.handler';
+import { DashboardUserResponseDto, DashboardUsersResponseDto } from '../../modules/identity/users/dashboard-user-response.dto';
 import { GetUserHandler } from '../../modules/identity/users/get-user.handler';
 import { CreateUserHandler } from '../../modules/identity/users/create-user.handler';
 import { UpdateUserHandler } from '../../modules/identity/users/update-user.handler';
@@ -57,8 +58,8 @@ class UpdateUserDto {
   @ApiPropertyOptional({ description: 'Updated display name', example: 'Sara Al-Harbi' })
   @IsOptional() @IsString() name?: string;
 
-  @ApiPropertyOptional({ description: 'Updated phone number', example: '+966501234567' })
-  @IsOptional() @IsString() phone?: string;
+  @ApiPropertyOptional({ description: 'Updated phone number; null clears the stored number', type: String, nullable: true, example: '+966501234567' })
+  @IsOptional() @IsString() phone?: string | null;
 
   @ApiPropertyOptional({ description: 'Updated gender', enum: UserGender, enumName: 'UserGender', example: UserGender.FEMALE })
   @IsOptional() @IsEnum(UserGender) gender?: UserGender;
@@ -113,26 +114,7 @@ export class DashboardIdentityController {
   @ApiQuery({ name: 'isActive', required: false, description: 'Filter by active status', example: true })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
-  @ApiOkResponse({
-    description: 'Paginated list of users',
-    schema: {
-      type: 'object',
-      properties: {
-        items: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' }, email: { type: 'string' }, role: { type: 'string' }, isActive: { type: 'boolean' } } } },
-        meta: {
-          type: 'object',
-          properties: {
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
-            totalPages: { type: 'number' },
-            hasNextPage: { type: 'boolean' },
-            hasPreviousPage: { type: 'boolean' },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Paginated list of users', type: DashboardUsersResponseDto })
   async listUsers(@Query() query: ListUsersQueryDto) {
     return this.listUsersHandler.execute({
       page: query.page ?? 1,
@@ -146,23 +128,7 @@ export class DashboardIdentityController {
   @CheckPermissions({ action: 'read', subject: 'User' })
   @ApiOperation({ summary: 'Get a user' })
   @ApiParam({ name: 'id', description: 'User UUID or reference (e.g. USR-1024)', example: 'USR-1024' })
-  @ApiOkResponse({
-    description: 'User details',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        name: { type: 'string' },
-        email: { type: 'string', format: 'email' },
-        phone: { type: 'string', nullable: true },
-        gender: { type: 'string', nullable: true },
-        role: { type: 'string' },
-        isActive: { type: 'boolean' },
-        customRoleId: { type: 'string', format: 'uuid', nullable: true },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'User details', type: DashboardUserResponseDto })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
   async getUserEndpoint(@Param('id') userId: string) {
     return this.getUserHandler.execute({ userId });

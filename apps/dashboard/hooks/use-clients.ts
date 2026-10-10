@@ -10,6 +10,8 @@ import type { ClientListQuery } from "@/lib/types/client"
 
 export function useClients() {
   const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState<ClientListQuery["sortBy"]>()
+  const [sortOrder, setSortOrder] = useState<ClientListQuery["sortOrder"]>()
   const [search, setSearch] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [isActive, setIsActive] = useState<boolean | undefined>()
@@ -21,6 +23,7 @@ export function useClients() {
 
   const query: ClientListQuery = {
     page,
+    sortBy, sortOrder,
     limit: 20,
     search: debouncedSearch || undefined,
     isActive,
@@ -44,6 +47,8 @@ export function useClients() {
 
   return {
     clients: items,
+    sortBy, sortOrder,
+    setSort: (field: ClientListQuery["sortBy"], direction: ClientListQuery["sortOrder"]) => {setSortBy(field); setSortOrder(direction); setPage(1)},
     meta: data?.meta ?? null,
     isLoading,
     isFetching,

@@ -58,6 +58,8 @@ export interface ClientStats {
 /* ─── Query ─── */
 
 export interface ClientListQuery extends PaginatedQuery {
+  sortBy?: "name" | "createdAt" | "isActive"
+  sortOrder?: "asc" | "desc"
   search?: string
   isActive?: boolean
 }

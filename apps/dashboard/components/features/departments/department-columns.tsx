@@ -85,6 +85,12 @@ export function getDepartmentColumns(
       },
     },
     {
+      id: "visibility",
+      header: t("departments.isVisible"),
+      enableSorting: false,
+      cell: ({row}) => <span>{t(row.original.isVisible ? "catalog.visible" : "catalog.hidden")}</span>,
+    },
+    {
       id: "actions",
       header: label("common.actions", "Actions"),
       enableSorting: false,

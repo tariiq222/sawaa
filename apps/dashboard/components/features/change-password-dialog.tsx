@@ -30,7 +30,9 @@ function buildSchema(t: (k: string) => string) {
   return z
     .object({
       currentPassword: z.string().min(1, t("changePassword.currentRequired")),
-      newPassword: z.string().min(8, t("changePassword.newTooShort")),
+      newPassword: z.string().min(8, t("changePassword.newTooShort"))
+        .regex(/[A-Z]/, t("auditStaff.passwordUppercase"))
+        .regex(/[0-9]/, t("auditStaff.passwordDigit")),
       confirmPassword: z.string().min(1, t("changePassword.confirmRequired")),
     })
     .refine((d) => d.newPassword === d.confirmPassword, {
@@ -98,6 +100,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
             </div>
 
             <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-muted-foreground">{t("auditStaff.passwordRequirements")}</p>
               <Label htmlFor="cp-new">{t("changePassword.new")} *</Label>
               <Input
                 id="cp-new"

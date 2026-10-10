@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   clearPendingBookingCheckout,
+  clearClosedBookingCheckout,
   getPendingBookingCheckout,
   isPendingBookingResumable,
   resolvePendingBookingResume,
@@ -128,6 +129,16 @@ describe('payment resume state', () => {
     expect(clientBookingsService.getById).toHaveBeenCalledWith('booking-1');
   });
 
+  it('validates an explicitly bound invoice with the server even when the local record is corrupt', async () => {
+    storage.getItem.mockResolvedValue('{not-json');
+    clientBookingsService.getById.mockResolvedValue(booking);
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' }))
+      .resolves.toMatchObject({ kind: 'ready', checkout: { bookingId: 'booking-1', invoiceId: 'invoice-1' } });
+    clientBookingsService.getById.mockResolvedValue({ ...booking, invoiceId: 'different-invoice' });
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' }))
+      .resolves.toEqual({ kind: 'invalid' });
+  });
+
   it('resumes the same deposit booking invoice for balance collection instead of marking payment complete', async () => {
     storage.getItem.mockResolvedValue(null);
     clientBookingsService.getById.mockResolvedValue({ ...booking, status: 'deposit_paid' });
@@ -140,6 +151,93 @@ describe('payment resume state', () => {
     clientBookingsService.getById.mockResolvedValue({ ...booking, status: 'deposit_paid', invoiceId: null });
     await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: null }))
       .resolves.toMatchObject({ kind: 'complete', checkout: { bookingId: 'booking-1', invoiceId: null } });
+  });
+
+  it.each(['cancelled', 'expired'] as const)('retires a server-verified %s draft so the exact slot can start again', async (status) => {
+    const values = new Map<string, string>();
+    storage.getItem.mockImplementation(async (key: string) => values.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+    storage.removeItem.mockImplementation(async (key: string) => { values.delete(key); });
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' });
+    clientBookingsService.getById.mockResolvedValue({ ...booking, status });
+    await expect(resolvePendingBookingResume('client-1', draft)).resolves.toEqual({ kind: 'missing' });
+    await expect(getPendingBookingCheckout('client-1', draft)).resolves.toEqual({ kind: 'missing' });
+    await expect(resolvePendingBookingResume('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' }))
+      .resolves.toEqual({ kind: 'invalid', unavailableReason: status === 'expired' ? 'BOOKING_EXPIRED' : 'BOOKING_CLOSED' });
+  });
+
+  it('retains an uncertain stored identity when authoritative verification fails', async () => {
+    const values = new Map<string, string>();
+    storage.getItem.mockImplementation(async (key: string) => values.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' });
+    clientBookingsService.getById.mockRejectedValueOnce(new Error('offline'));
+    await expect(resolvePendingBookingResume('client-1', draft)).rejects.toThrow('offline');
+    await expect(getPendingBookingCheckout('client-1', draft)).resolves.toMatchObject({ kind: 'found', checkout: { bookingId: 'booking-1' } });
+  });
+
+  it.each(['no_show', 'unknown'] as const)('retains a %s draft instead of treating it as a fresh reservation', async (status) => {
+    const values = new Map<string, string>();
+    storage.getItem.mockImplementation(async (key: string) => values.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' });
+    clientBookingsService.getById.mockResolvedValue({ ...booking, status });
+    await expect(resolvePendingBookingResume('client-1', draft)).resolves.toMatchObject({ kind: 'invalid' });
+    await expect(getPendingBookingCheckout('client-1', draft)).resolves.toMatchObject({ kind: 'found', checkout: { bookingId: 'booking-1' } });
+  });
+
+  it('retains a cancelled record whose invoice no longer matches the authoritative identity', async () => {
+    const values = new Map<string, string>();
+    storage.getItem.mockImplementation(async (key: string) => values.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' });
+    clientBookingsService.getById.mockResolvedValue({ ...booking, status: 'cancelled', invoiceId: 'different-invoice' });
+    await expect(resolvePendingBookingResume('client-1', draft)).resolves.toMatchObject({ kind: 'invalid' });
+    await expect(getPendingBookingCheckout('client-1', draft)).resolves.toMatchObject({ kind: 'found', checkout: { invoiceId: 'invoice-1' } });
+  });
+
+  it('verifies a newer identity saved while the cancelled booking GET was in flight', async () => {
+    const values = new Map<string, string>();
+    storage.getItem.mockImplementation(async (key: string) => values.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+    storage.removeItem.mockImplementation(async (key: string) => { values.delete(key); });
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' });
+    let respond!: (value: unknown) => void;
+    let startRead!: () => void;
+    const reading = new Promise<void>((resolve) => { startRead = resolve; });
+    clientBookingsService.getById.mockImplementationOnce(() => { startRead(); return new Promise((resolve) => { respond = resolve; }); });
+    clientBookingsService.getById.mockResolvedValueOnce({ ...booking, id: 'booking-2', invoiceId: 'invoice-2' });
+    const resume = resolvePendingBookingResume('client-1', draft);
+    await reading;
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-2', invoiceId: 'invoice-2' });
+    respond({ ...booking, status: 'cancelled' });
+    await expect(resume).resolves.toMatchObject({ kind: 'ready', checkout: { bookingId: 'booking-2', invoiceId: 'invoice-2' } });
+  });
+
+  it('preserves a newer same-slot checkout when cancellation cleanup overlaps its save', async () => {
+    const values = new Map<string, string>();
+    storage.getItem.mockImplementation(async (key: string) => values.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key: string, value: string) => { values.set(key, value); });
+    await savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-1', invoiceId: 'invoice-1' });
+    let beginRemoval!: () => void;
+    const removalStarted = new Promise<void>((resolve) => { beginRemoval = resolve; });
+    let finishRemoval!: () => void;
+    const removalGate = new Promise<void>((resolve) => { finishRemoval = resolve; });
+    storage.removeItem.mockImplementation(async (key: string) => {
+      beginRemoval();
+      await removalGate;
+      values.delete(key);
+    });
+    const cleanup = clearClosedBookingCheckout('client-1', 'booking-1');
+    await removalStarted;
+    const save = savePendingBookingCheckout('client-1', draft, { bookingId: 'booking-2', invoiceId: 'invoice-2' });
+    // Let the racing write reach storage if mutations are not ordered.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    finishRemoval();
+    await Promise.all([cleanup, save]);
+    await expect(getPendingBookingCheckout('client-1', draft)).resolves.toMatchObject({
+      kind: 'found', checkout: { bookingId: 'booking-2', invoiceId: 'invoice-2' },
+    });
   });
 
   it('clears a completed checkout record for the authenticated user', async () => {

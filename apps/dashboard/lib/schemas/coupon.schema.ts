@@ -17,6 +17,6 @@ export const couponSchema = z.object({
   serviceIds: z.array(z.string()).optional(),
   expiresAt: z.string().optional(),
   isActive: z.boolean(),
-})
+}).refine(data => data.discountType !== "PERCENTAGE" || data.discountValue <= 100, {path:["discountValue"],message:"coupons.validation.percentageMax"})
 
 export type CouponFormData = z.infer<typeof couponSchema>

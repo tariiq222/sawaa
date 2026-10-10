@@ -1,3 +1,4 @@
+import { GetDepartmentHandler } from '../../modules/org-config/departments/get-department.handler';
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe,
@@ -29,6 +30,7 @@ import {
 @Controller('dashboard/organization')
 export class DashboardOrganizationDepartmentsController {
   constructor(
+    private readonly getDepartment: GetDepartmentHandler,
     private readonly createDepartment: CreateDepartmentHandler,
     private readonly updateDepartment: UpdateDepartmentHandler,
     private readonly listDepartments: ListDepartmentsHandler,
@@ -53,6 +55,16 @@ export class DashboardOrganizationDepartmentsController {
   @ApiOkResponse({ description: 'Paginated list of departments', type: PaginatedDepartmentsResponseDto })
   listDepartmentsEndpoint(@Query() query: ListDepartmentsDto) {
     return this.listDepartments.execute(query);
+  }
+
+  @Get('departments/:departmentId')
+  @CheckPermissions({ action: 'read', subject: 'Department' })
+  @ApiOperation({ summary: 'Get a department' })
+  @ApiParam({ name: 'departmentId', description: 'Department UUID' })
+  @ApiOkResponse({ description: 'Department details', type: DepartmentResponseDto })
+  @ApiResponse({ status: 404, description: 'Department not found', type: ApiErrorDto })
+  getDepartmentEndpoint(@Param('departmentId', ParseUUIDPipe) departmentId: string) {
+    return this.getDepartment.execute({ departmentId });
   }
 
   @Patch('departments/:departmentId')

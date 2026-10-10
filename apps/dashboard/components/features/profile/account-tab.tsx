@@ -31,7 +31,7 @@ export function AccountTab() {
     { label: t("profile.field.name"), value: user?.name || empty },
     { label: t("profile.field.email"), value: user?.email || empty },
     { label: t("profile.field.phone"), value: user?.phone || empty },
-    { label: t("profile.field.gender"), value: user?.gender || empty },
+    { label: t("profile.field.gender"), value: user?.gender === "MALE" ? t("users.create.male") : user?.gender === "FEMALE" ? t("users.create.female") : empty },
   ]
 
   return (

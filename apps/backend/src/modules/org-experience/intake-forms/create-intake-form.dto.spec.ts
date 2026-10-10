@@ -176,3 +176,12 @@ describe('IntakeFieldInputDto', () => {
     expect(errors.some((e) => e.property === 'position')).toBe(true);
   });
 });
+
+describe('intake required content', () => {
+  it('rejects whitespace-only Arabic names and selectable empty options', async () => {
+    const dto = Object.assign(new CreateIntakeFormDto(), {nameAr:'   ',type:'PRE_SESSION',scope:'GLOBAL',fields:[Object.assign(new IntakeFieldInputDto(),{labelAr:'سؤال',fieldType:'SELECT',options:[' ']})]});
+    const errors = await validate(dto);
+    expect(errors.some(e => e.property === 'nameAr')).toBe(true);
+    expect(errors.some(e => e.property === 'fields')).toBe(true);
+  });
+});

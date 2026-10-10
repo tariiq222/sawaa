@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -48,6 +50,8 @@ describe('UpdateEmployeeHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },
         UpdateEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: RlsTransactionService, useValue: rlsTransaction },
@@ -84,6 +88,13 @@ describe('UpdateEmployeeHandler', () => {
     const result = await handler.execute({ employeeId: 'e1', name: 'Jane' } as any);
     expect(result.id).toBe('e1');
     expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not replace the persistent avatar with a local preview during a file replacement', async () => {
+    prisma.employee.findFirst.mockResolvedValue(createEmployee({ avatarUrl: 'org/old.png' }));
+    prisma.employee.update.mockResolvedValue({ id: 'e1' });
+    await handler.execute({ employeeId: 'e1', avatarUrl: 'blob:http://localhost/preview', bio: 'Changed' } as any);
+    expect(prisma.employee.update.mock.calls[0][0].data).not.toHaveProperty('avatarUrl');
   });
 
   it('should set avatarUrl when provided', async () => {

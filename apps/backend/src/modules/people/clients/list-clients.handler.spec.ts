@@ -48,6 +48,12 @@ describe('ListClientsHandler', () => {
     prisma = module.get<PrismaService>(PrismaService);
   });
 
+  it('sorts the full result set before pagination using the selected name direction', async () => {
+    (prisma.client.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.client.count as jest.Mock).mockResolvedValue(0);
+    await handler.execute({page:2,limit:20,sortBy:'name',sortOrder:'asc'} as never);
+    expect(prisma.client.findMany).toHaveBeenCalledWith(expect.objectContaining({skip:20,orderBy:[{name:'asc'},{id:'asc'}]}));
+  });
   it('should be defined', () => {
     expect(handler).toBeDefined();
   });
@@ -258,4 +264,6 @@ describe('ListClientsHandler employee privacy', () => {
     await expect(handler.execute({ page: 1, limit: 10, requesterRole: 'EMPLOYEE', requesterUserId: userId } as any)).rejects.toThrow();
     expect(prisma.client.findMany).not.toHaveBeenCalled();
   });
+
+
 });

@@ -88,6 +88,29 @@ describe('ClientLoginHandler', () => {
   });
 
   describe('execute', () => {
+    it.each([null, { passwordHash: null }, { passwordHash: 'hash', isActive: false },
+      { passwordHash: 'hash', deletedAt: new Date() },
+      { passwordHash: 'hash', lockoutUntil: new Date(Date.now() + 600_000) }])(
+      'counts and performs a cost-12 dummy comparison for rejected account %j', async (state) => {
+        mockPrisma.client.findFirst.mockResolvedValue(state);
+        mockPasswords.verify.mockResolvedValue(true); // Even a dummy match cannot authenticate.
+        await expect(handler.execute({ email: 'unknown@example.com', password: 'WrongPass1' }, '1.2.3.4'))
+          .rejects.toThrow('Invalid credentials');
+        expect(multiExec).toHaveBeenCalledTimes(2);
+        expect(multiExec.mock.invocationCallOrder[0]).toBeLessThan(mockPrisma.client.findFirst.mock.invocationCallOrder[0]);
+        expect(mockPasswords.verify).toHaveBeenCalledWith('WrongPass1', expect.stringMatching(/^\$2[aby]\$12\$/));
+        expect(mockPrisma.client.update).not.toHaveBeenCalled();
+        expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
+      });
+
+    it.each([[6, 1], [1, 21]])('rejects limits %j before lookup or bcrypt with a generic response', async (identifier, ip) => {
+      queueAttempts(identifier, ip);
+      await expect(handler.execute({ email: 'unknown@example.com', password: 'WrongPass1' }, '1.2.3.4'))
+        .rejects.toThrow('Invalid credentials');
+      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
+      expect(mockPasswords.verify).not.toHaveBeenCalled();
+      expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
+    });
     it('pins a mobile login lookup to the prevalidated client identity', async () => {
       mockPrisma.client.findFirst.mockResolvedValue(null);
       await expect(handler.execute({ phone: '+966501234567', password: 'SecurePass123' }, '1.2.3.4', 'expected-client')).rejects.toThrow(UnauthorizedException);

@@ -2089,7 +2089,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a category */
+        get: operations["DashboardOrganizationCategoriesController_getCategoryEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete a category */
@@ -2125,7 +2126,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a department */
+        get: operations["DashboardOrganizationDepartmentsController_getDepartmentEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete a department */
@@ -2594,6 +2596,23 @@ export interface paths {
         put?: never;
         /** Upload an avatar image for an employee */
         post: operations["DashboardPeopleController_uploadAvatarEndpoint_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/people/employees/{employeeId}/public-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a public profile image for an employee */
+        post: operations["DashboardPeopleController_uploadPublicImageEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3413,6 +3432,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mobile/auth/phone-entry/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete a phone-proven client account and issue a session */
+        post: operations["MobilePhoneEntryController_completeAccount_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/phone-entry/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a mobile phone ownership code */
+        post: operations["MobilePhoneEntryController_requestPhone_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/phone-entry/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace a mobile phone ownership challenge */
+        post: operations["MobilePhoneEntryController_resendPhone_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/auth/phone-entry/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify phone ownership and determine the next step */
+        post: operations["MobilePhoneEntryController_verifyPhone_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile/auth/refresh": {
         parameters: {
             query?: never;
@@ -3996,6 +4083,108 @@ export interface paths {
         head?: never;
         /** Update the authenticated client's profile */
         patch: operations["MobileClientProfileController_updateProfile_v1"];
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authenticated client's email verification state */
+        get: operations["MobileClientEmailController_status_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Drop the unverified client email and resolve the prompt */
+        post: operations["MobileClientEmailController_decline_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a code to prove ownership of a new client email */
+        post: operations["MobileClientEmailController_request_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify the code and adopt the new client email */
+        post: operations["MobileClientEmailController_verify_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/phone/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a code to prove ownership of a new client phone */
+        post: operations["MobileClientPhoneController_request_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mobile/client/profile/phone/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify the code, adopt the new client phone and rotate session tokens */
+        post: operations["MobileClientPhoneController_verify_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mobile/client/programs/{id}/enroll": {
@@ -4709,6 +4898,23 @@ export interface paths {
         };
         /** Get single public employee by slug or id */
         get: operations["PublicEmployeesController_getOne_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/employees/{key}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the selected portrait of an active public employee */
+        get: operations["PublicEmployeesController_image_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6790,6 +6996,41 @@ export interface components {
             /** @enum {string} */
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
+        ClientEmailChallengeDto: {
+            /**
+             * Format: uuid
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /** @example 300 */
+            expiresIn: number;
+            /** @example p***@example.test */
+            maskedEmail: string;
+            /** @example 60 */
+            retryAfterSeconds: number;
+        };
+        ClientEmailStatusDto: {
+            /**
+             * @description Returned only when the email is verified; a legacy unverified value is never exposed
+             * @example person@example.test
+             */
+            email: Record<string, never> | null;
+            /**
+             * @description Client-entered email awaiting proof of ownership
+             * @example new@example.test
+             */
+            pendingEmail: Record<string, never> | null;
+            /**
+             * @description Whether the one-time "add your email" prompt should be shown
+             * @example false
+             */
+            prompt: boolean;
+            /**
+             * @description Precedence: verified > pending > unverified > none
+             * @enum {string}
+             */
+            status: "none" | "unverified" | "pending" | "verified";
+        };
         /**
          * @description Client gender (case-insensitive)
          * @enum {string}
@@ -6850,6 +7091,40 @@ export interface components {
              * @description Service target for legacy flexible credits
              */
             serviceId?: string;
+        };
+        ClientPhoneChallengeDto: {
+            /**
+             * Format: uuid
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /** @example 300 */
+            expiresIn: number;
+            /** @example +966***78 */
+            maskedPhone: string;
+            /** @example 60 */
+            retryAfterSeconds: number;
+        };
+        ClientPhoneTokensDto: {
+            /** @description Fresh client access token for this device */
+            accessToken: string;
+            /** @description Fresh client refresh token for this device; every other session is revoked */
+            refreshToken: string;
+        };
+        ClientPhoneVerifiedDto: {
+            /**
+             * @description The newly verified phone
+             * @example +966512345678
+             */
+            phone: string;
+            /**
+             * @description Fresh session for this device; every previous token of the client is revoked
+             * @example {
+             *       "accessToken": "eyJhbGciOi...",
+             *       "refreshToken": "rt_..."
+             *     }
+             */
+            tokens: components["schemas"]["ClientPhoneTokensDto"];
         };
         ClientRequestHandoffDto: Record<string, never>;
         ClientRescheduleBookingDto: {
@@ -7088,6 +7363,34 @@ export interface components {
              * @example Session completed successfully
              */
             completionNotes?: string;
+        };
+        CompletePhoneEntryDto: {
+            /**
+             * @description Opaque phone ownership continuation; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Optional pending email; not trusted until ownership is verified
+             * @example person@example.test
+             */
+            email?: string;
+            /**
+             * @description First name for the new client account
+             * @example Ali
+             */
+            firstName: string;
+            /**
+             * @description Last name for the new client account
+             * @example Saleh
+             */
+            lastName: string;
+            /**
+             * @description Explicit acceptance of the current privacy policy
+             * @example true
+             * @enum {boolean}
+             */
+            privacyAccepted: true;
         };
         ContactMessageListMetaDto: {
             /**
@@ -8598,6 +8901,164 @@ export interface components {
              */
             price: number;
         };
+        DashboardUserCustomRoleDto: {
+            /**
+             * Format: uuid
+             * @description Assigned custom role identifier
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            id: string;
+            /**
+             * @description Display name of the assigned custom role
+             * @example Program coordinator
+             */
+            name: string;
+        };
+        DashboardUserResponseDto: {
+            /**
+             * @description User avatar URL, or null when no avatar is stored
+             * @example null
+             */
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description User creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Assigned custom role identity only; permissions are not included
+             * @example {
+             *       "id": "55555555-5555-4555-8555-555555555555",
+             *       "name": "Program coordinator"
+             *     }
+             */
+            customRole: components["schemas"]["DashboardUserCustomRoleDto"] | null;
+            /**
+             * Format: uuid
+             * @description Assigned custom role identifier, or null when no custom role is assigned
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            customRoleId: string | null;
+            /**
+             * Format: email
+             * @description User email address
+             * @example coordinator@example.test
+             */
+            email: string;
+            /**
+             * @description User gender, or null when unspecified
+             * @example FEMALE
+             */
+            gender: components["schemas"]["UserGender"] | null;
+            /**
+             * Format: uuid
+             * @description Unique user identifier
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            id: string;
+            /**
+             * @description Whether the user account is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description User display name
+             * @example Program Coordinator
+             */
+            name: string;
+            /**
+             * @description User phone number, or null when no number is stored
+             * @example null
+             */
+            phone: string | null;
+            /**
+             * @description Numeric user reference used in USR-prefixed dashboard links
+             * @example 42
+             */
+            ref: number;
+            /**
+             * @description Assigned built-in user role
+             * @example EMPLOYEE
+             */
+            role: components["schemas"]["UserRole"];
+            /**
+             * Format: date-time
+             * @description Most recent user update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        DashboardUsersMetaDto: {
+            /**
+             * @description Whether another page follows the current page
+             * @example false
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a page precedes the current page
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Maximum number of items returned per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description Current page number, starting at one
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total number of matching users
+             * @example 1
+             */
+            total: number;
+            /**
+             * @description Total number of pages for the matching result set
+             * @example 1
+             */
+            totalPages: number;
+        };
+        DashboardUsersResponseDto: {
+            /**
+             * @description Users on the requested page
+             * @example [
+             *       {
+             *         "avatarUrl": null,
+             *         "createdAt": "2026-10-10T09:00:00.000Z",
+             *         "customRole": {
+             *           "id": "55555555-5555-4555-8555-555555555555",
+             *           "name": "Program coordinator"
+             *         },
+             *         "customRoleId": "55555555-5555-4555-8555-555555555555",
+             *         "email": "coordinator@example.test",
+             *         "gender": "FEMALE",
+             *         "id": "11111111-1111-4111-8111-111111111111",
+             *         "isActive": true,
+             *         "name": "Program Coordinator",
+             *         "phone": null,
+             *         "ref": 42,
+             *         "role": "EMPLOYEE",
+             *         "updatedAt": "2026-10-10T09:00:00.000Z"
+             *       }
+             *     ]
+             */
+            items: components["schemas"]["DashboardUserResponseDto"][];
+            /**
+             * @description Pagination metadata for all matching users
+             * @example {
+             *       "hasNextPage": false,
+             *       "hasPreviousPage": false,
+             *       "limit": 20,
+             *       "page": 1,
+             *       "total": 1,
+             *       "totalPages": 1
+             *     }
+             */
+            meta: components["schemas"]["DashboardUsersMetaDto"];
+        };
         DeleteCategoryResponseDto: {
             /**
              * @description Category booking mode
@@ -9393,10 +9854,17 @@ export interface components {
              */
             id: string;
             /**
+             * @description Employee activation permits booking admission; does not guarantee a free slot
+             * @example true
+             */
+            isAcceptingBookings: boolean;
+            /**
              * @description Whether the employee is active
              * @example true
              */
             isActive: boolean;
+            /** @description Whether the employee is published in the directory */
+            isPublic?: boolean;
             /**
              * @description Full display name
              * @example Dr. Khalid Al-Otaibi
@@ -9422,6 +9890,12 @@ export interface components {
              * @example +966501234567
              */
             phone?: Record<string, never> | null;
+            /** @description Public biography in Arabic */
+            publicBioAr?: string | null;
+            /** @description Public biography in English */
+            publicBioEn?: string | null;
+            /** @description Readable selected public portrait URL */
+            publicImageUrl?: string | null;
             /**
              * @description Total rating count
              * @example 32
@@ -9429,6 +9903,8 @@ export interface components {
             ratingCount: number;
             /** @description Assigned service UUIDs */
             serviceIds: string[];
+            /** @description Public directory slug */
+            slug?: string | null;
             /**
              * @description Specialty label
              * @example Family Therapy
@@ -10961,6 +11437,146 @@ export interface components {
             /** @description Operation state version shown on the action card */
             expectedVersion: number;
         };
+        OrganizationRatingResponseDto: {
+            /**
+             * Format: uuid
+             * @description Booking that the client rated
+             * @example 44444444-4444-4444-8444-444444444444
+             */
+            bookingId: string;
+            /**
+             * @description Current client display details, or null when unavailable
+             * @example {
+             *       "id": "22222222-2222-4222-8222-222222222222",
+             *       "name": "عميل تجريبي"
+             *     }
+             */
+            client: components["schemas"]["RatingClientResponseDto"] | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the client who submitted the rating
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Client feedback text, or null when no comment was submitted
+             * @example Helpful session
+             */
+            comment: string | null;
+            /**
+             * Format: date-time
+             * @description Rating submission time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Current employee display details, or null when unavailable
+             * @example {
+             *       "id": "33333333-3333-4333-8333-333333333333",
+             *       "name": "أخصائي تجريبي",
+             *       "nameEn": "Example Counselor"
+             *     }
+             */
+            employee: components["schemas"]["RatingEmployeeResponseDto"] | null;
+            /**
+             * Format: uuid
+             * @description Identifier of the employee being rated
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Unique rating identifier
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            id: string;
+            /**
+             * @description Whether the rating is approved for public display
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Rating score from one to five stars
+             * @example 5
+             */
+            score: number;
+        };
+        OrganizationRatingsMetaDto: {
+            /**
+             * @description Whether another page follows the current page
+             * @example false
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a page precedes the current page
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Maximum number of items returned per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description Current page number, starting at one
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total number of matching ratings
+             * @example 1
+             */
+            total: number;
+            /**
+             * @description Total number of pages for the matching result set
+             * @example 1
+             */
+            totalPages: number;
+        };
+        OrganizationRatingsResponseDto: {
+            /**
+             * @description Average score across all matching ratings, independent of pagination; null when empty
+             * @example 5
+             */
+            averageRating: number | null;
+            /**
+             * @description Ratings on the requested page
+             * @example [
+             *       {
+             *         "bookingId": "44444444-4444-4444-8444-444444444444",
+             *         "client": {
+             *           "id": "22222222-2222-4222-8222-222222222222",
+             *           "name": "عميل تجريبي"
+             *         },
+             *         "clientId": "22222222-2222-4222-8222-222222222222",
+             *         "comment": "Helpful session",
+             *         "createdAt": "2026-10-10T09:00:00.000Z",
+             *         "employee": {
+             *           "id": "33333333-3333-4333-8333-333333333333",
+             *           "name": "أخصائي تجريبي",
+             *           "nameEn": "Example Counselor"
+             *         },
+             *         "employeeId": "33333333-3333-4333-8333-333333333333",
+             *         "id": "55555555-5555-4555-8555-555555555555",
+             *         "isPublic": false,
+             *         "score": 5
+             *       }
+             *     ]
+             */
+            items: components["schemas"]["OrganizationRatingResponseDto"][];
+            /**
+             * @description Pagination metadata for all matching ratings
+             * @example {
+             *       "hasNextPage": false,
+             *       "hasPreviousPage": false,
+             *       "limit": 20,
+             *       "page": 1,
+             *       "total": 1,
+             *       "totalPages": 1
+             *     }
+             */
+            meta: components["schemas"]["OrganizationRatingsMetaDto"];
+        };
         PackageConstraintInputDto: {
             /**
              * @description Constraint dimension
@@ -11110,6 +11726,76 @@ export interface components {
              * @enum {string}
              */
             window: "EARLY" | "LATE";
+        };
+        PhoneEntryChallengeDto: {
+            /**
+             * Format: uuid
+             * @description Opaque identifier of the delivered phone ownership challenge
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Phone challenge lifetime in seconds
+             * @example 300
+             * @enum {number}
+             */
+            expiresIn: 300;
+            /**
+             * @description Masked destination of the phone ownership code
+             * @example +966***78
+             */
+            maskedPhone: string;
+            /**
+             * @description Minimum seconds before another phone code may be requested
+             * @example 60
+             * @enum {number}
+             */
+            retryAfterSeconds: 60;
+        };
+        PhoneEntryContinueDto: {
+            /**
+             * @description Opaque continuation held only in memory; never an access token
+             * @example xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+             */
+            continuationToken: string;
+            /**
+             * @description Maximum continuation lifetime in seconds
+             * @example 600
+             * @enum {number}
+             */
+            expiresIn: 600;
+            /**
+             * @description Required next step for a proven phone without an existing account (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "PhoneEntryContinueDto";
+        };
+        PhoneEntrySessionDto: {
+            /**
+             * @description Whether to show the unresolved legacy email prompt after authentication
+             * @example false
+             */
+            emailPrompt: boolean;
+            /**
+             * @description Authenticated outcome discriminator (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "PhoneEntrySessionDto";
+            /**
+             * @description Server-selected native session namespace after phone verification
+             * @example client
+             * @enum {string}
+             */
+            sessionKind: "client" | "staff";
+            /** @description Native access and refresh token pair for the server-selected session */
+            tokens: components["schemas"]["EmailEntryTokensDto"];
+        };
+        PhoneEntryUnavailableDto: {
+            /**
+             * @description Generic outcome for an identity unable to use client phone entry (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            next: "PhoneEntryUnavailableDto";
         };
         PreviewEmailTemplateDto: {
             /**
@@ -11295,6 +11981,269 @@ export interface components {
              */
             status: string;
         };
+        ProgramDetailResponseDto: {
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Cancellation time as an ISO 8601 UTC timestamp, or null when not cancelled
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Recorded cancellation reason, or null for a program without a reason
+             * @example null
+             */
+            cancelReason: string | null;
+            /**
+             * Format: date-time
+             * @description Program creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Program price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
+            daysCount: number;
+            /**
+             * Format: uuid
+             * @description Department that owns the program
+             * @example 77777777-7777-4777-8777-777777777777
+             */
+            departmentId: string;
+            /**
+             * @description Deposit in halalas, serialized as a decimal string
+             * @example 30000
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether the program accepts a deposit
+             * @example true
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Arabic staff-facing program description, or null when unspecified
+             * @example برنامج لتنمية مهارات التواصل الأسري
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English staff-facing program description, or null when unspecified
+             * @example A program for family communication skills
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Current number of program enrollments
+             * @example 1
+             */
+            enrolledCount: number;
+            /**
+             * @description Enrollments and their associated clients and bookings
+             * @example [
+             *       {
+             *         "booking": {
+             *           "bookingNumber": 1024,
+             *           "clientId": "22222222-2222-4222-8222-222222222222",
+             *           "currency": "SAR",
+             *           "id": "44444444-4444-4444-8444-444444444444",
+             *           "price": "150000",
+             *           "scheduledAt": "2026-10-10T09:00:00.000Z",
+             *           "status": "CONFIRMED"
+             *         },
+             *         "clientId": "22222222-2222-4222-8222-222222222222",
+             *         "clientName": "عميل تجريبي",
+             *         "enrolledAt": "2026-10-10T09:00:00.000Z",
+             *         "id": "99999999-9999-4999-8999-999999999999"
+             *       }
+             *     ]
+             */
+            enrollments: components["schemas"]["ProgramEnrollmentResponseDto"][];
+            /**
+             * @description Number of program hours per day
+             * @example 2
+             */
+            hoursPerDay: number;
+            /**
+             * Format: uuid
+             * @description Unique program identifier
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Whether enrolled count has reached the maximum participant capacity
+             * @example false
+             */
+            isFull: boolean;
+            /**
+             * @description Whether the program is published in the public catalog
+             * @example true
+             */
+            isPublic: boolean;
+            /**
+             * @description Maximum number of enrolled participants
+             * @example 12
+             */
+            maxParticipants: number;
+            /**
+             * @description Minimum participants required for the program
+             * @example 3
+             */
+            minParticipants: number;
+            /**
+             * @description Arabic program name
+             * @example برنامج التواصل الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English program name, or null when unspecified
+             * @example Family Communication Program
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * @description Arabic public catalog description, or null when unspecified
+             * @example تعرف على مهارات التواصل الأسري
+             */
+            publicDescriptionAr: string | null;
+            /**
+             * @description English public catalog description, or null when unspecified
+             * @example Learn family communication skills
+             */
+            publicDescriptionEn: string | null;
+            /**
+             * @description Numeric program reference accepted by the program detail lookup
+             * @example 24
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Program start time as an ISO 8601 UTC timestamp, or null when unscheduled
+             * @example null
+             */
+            startDate: string | null;
+            /**
+             * @description Current program lifecycle status
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+            /**
+             * @description Identifiers of employees supervising the program
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
+            supervisorIds: string[];
+            /**
+             * @description Display details of the program supervisors
+             * @example [
+             *       {
+             *         "id": "33333333-3333-4333-8333-333333333333",
+             *         "name": "أخصائي البرامج",
+             *         "nameEn": "Program Counselor"
+             *       }
+             *     ]
+             */
+            supervisors: components["schemas"]["ProgramSupervisorResponseDto"][];
+            /**
+             * Format: date-time
+             * @description Most recent program update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ProgramEnrollmentBookingResponseDto: {
+            /**
+             * @description Numeric reference of the associated booking
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * Format: uuid
+             * @description Client identifier associated with the booking
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Booking price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: uuid
+             * @description Booking identifier associated with this enrollment
+             * @example 44444444-4444-4444-8444-444444444444
+             */
+            id: string;
+            /**
+             * @description Price in halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * Format: date-time
+             * @description Scheduled booking time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Current booking lifecycle status
+             * @example CONFIRMED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        };
+        ProgramEnrollmentResponseDto: {
+            /**
+             * @description Booking associated with the enrollment
+             * @example {
+             *       "bookingNumber": 1024,
+             *       "clientId": "22222222-2222-4222-8222-222222222222",
+             *       "currency": "SAR",
+             *       "id": "44444444-4444-4444-8444-444444444444",
+             *       "price": "150000",
+             *       "scheduledAt": "2026-10-10T09:00:00.000Z",
+             *       "status": "CONFIRMED"
+             *     }
+             */
+            booking: components["schemas"]["ProgramEnrollmentBookingResponseDto"];
+            /**
+             * Format: uuid
+             * @description Enrolled client identifier
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Current client display name, or null if unavailable
+             * @example عميل تجريبي
+             */
+            clientName: string | null;
+            /**
+             * Format: date-time
+             * @description Enrollment creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            enrolledAt: string;
+            /**
+             * Format: uuid
+             * @description Program enrollment identifier
+             * @example 99999999-9999-4999-8999-999999999999
+             */
+            id: string;
+        };
         ProgramParticipantRefundDto: {
             /** @description Additional refund in integer halalas */
             amount: number;
@@ -11304,6 +12253,24 @@ export interface components {
              * @example 11111111-1111-4111-8111-111111111111
              */
             bookingId: string;
+        };
+        ProgramSupervisorResponseDto: {
+            /**
+             * Format: uuid
+             * @description Program supervisor employee identifier
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            id: string;
+            /**
+             * @description Program supervisor display name in the default language
+             * @example أخصائي البرامج
+             */
+            name: string;
+            /**
+             * @description English supervisor display name, or null when unavailable
+             * @example Program Counselor
+             */
+            nameEn: string | null;
         };
         PublicBrandingDto: {
             /**
@@ -11531,6 +12498,37 @@ export interface components {
             /** @description Card title in English. */
             titleEn: string | null;
         };
+        RatingClientResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identifier of the person associated with the rating
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            id: string;
+            /**
+             * @description Display name of the person associated with the rating
+             * @example عميل تجريبي
+             */
+            name: string;
+        };
+        RatingEmployeeResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identifier of the person associated with the rating
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            id: string;
+            /**
+             * @description Display name of the person associated with the rating
+             * @example عميل تجريبي
+             */
+            name: string;
+            /**
+             * @description English employee display name, or null when unavailable
+             * @example Example Counselor
+             */
+            nameEn: string | null;
+        };
         RecordLateSessionDto: {
             /**
              * @description Actual net amount in integer halalas
@@ -11727,6 +12725,20 @@ export interface components {
             /** @description Cards in their requested display order, with last known update timestamps. */
             items: components["schemas"]["ReorderMobileHomeCardItemDto"][];
         };
+        RequestClientEmailDto: {
+            /**
+             * @description New email to prove ownership of with a six-digit code
+             * @example person@example.test
+             */
+            email: string;
+        };
+        RequestClientPhoneDto: {
+            /**
+             * @description New Saudi mobile number to prove ownership of with a six-digit SMS code
+             * @example 0512345678
+             */
+            phone: string;
+        };
         RequestDashboardOtpDto: {
             /**
              * @description Email address or Saudi mobile number (E.164 format)
@@ -11819,6 +12831,13 @@ export interface components {
              */
             email: string;
         };
+        RequestPhoneEntryDto: {
+            /**
+             * @description Saudi mobile phone to prove ownership of
+             * @example +966512345678
+             */
+            phone: string;
+        };
         RequestRefundDto: {
             /**
              * @description ID of the invoice to request a refund for
@@ -11861,6 +12880,14 @@ export interface components {
              * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
              */
             phoneChallengeId: string;
+        };
+        ResendPhoneEntryDto: {
+            /**
+             * Format: uuid
+             * @description Current phone ownership challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
         };
         ResetPasswordDto: {
             /**
@@ -12487,30 +13514,31 @@ export interface components {
              */
             discountValue?: number;
             /**
-             * @description ISO datetime when the coupon expires
+             * Format: date-time
+             * @description ISO datetime when the coupon expires; null clears expiry
              * @example 2026-12-31T23:59:59.000Z
              */
-            expiresAt?: string;
+            expiresAt?: string | null;
             /**
              * @description Whether the coupon is active and redeemable
              * @example true
              */
             isActive?: boolean;
             /**
-             * @description Maximum number of total redemptions allowed
+             * @description Maximum number of total redemptions allowed; null clears limit
              * @example 100
              */
-            maxUses?: number;
+            maxUses?: number | null;
             /**
-             * @description Maximum redemptions per individual user
+             * @description Maximum redemptions per individual user; null clears limit
              * @example 1
              */
-            maxUsesPerUser?: number;
+            maxUsesPerUser?: number | null;
             /**
-             * @description Minimum order amount required to use this coupon
+             * @description Minimum order amount required to use this coupon; null clears limit
              * @example 50
              */
-            minOrderAmt?: number;
+            minOrderAmt?: number | null;
             /**
              * @description Restrict coupon to specific service UUIDs
              * @example [
@@ -12521,20 +13549,20 @@ export interface components {
         };
         UpdateDepartmentDto: {
             /**
-             * @description Department description in Arabic
+             * @description Department description in Arabic; null clears it
              * @example قسم طب وجراحة الفم والأسنان
              */
-            descriptionAr?: string;
+            descriptionAr?: string | null;
             /**
-             * @description Department description in English
+             * @description Department description in English; null clears it
              * @example Oral and dental surgery department
              */
-            descriptionEn?: string;
+            descriptionEn?: string | null;
             /**
-             * @description Icon identifier (e.g. Lucide icon name)
+             * @description Icon identifier; null clears it
              * @example tooth
              */
-            icon?: string;
+            icon?: string | null;
             /**
              * @description Whether the department is active
              * @example true
@@ -12648,22 +13676,22 @@ export interface components {
              * @description Short biography in English
              * @example Specialist with 10 years of experience.
              */
-            bio?: string;
+            bio?: string | null;
             /**
              * @description Short biography in Arabic
              * @example متخصص بخبرة 10 سنوات.
              */
-            bioAr?: string;
+            bioAr?: string | null;
             /**
              * @description Education details in English
              * @example King Saud University — BSc Physical Therapy
              */
-            education?: string;
+            education?: string | null;
             /**
              * @description Education details in Arabic
              * @example جامعة الملك سعود — بكالوريوس علاج طبيعي
              */
-            educationAr?: string;
+            educationAr?: string | null;
             /**
              * @description Email address
              * @example user@example.com
@@ -12708,33 +13736,33 @@ export interface components {
              * @description Phone number (any common format; normalized to E.164)
              * @example +966501234567
              */
-            phone?: string;
+            phone?: string | null;
             /** @description Public biography (Arabic) */
-            publicBioAr?: Record<string, never>;
+            publicBioAr?: string | null;
             /** @description Public biography (English) */
-            publicBioEn?: Record<string, never>;
+            publicBioEn?: string | null;
             /** @description Public profile image URL */
-            publicImageUrl?: Record<string, never>;
+            publicImageUrl?: string | null;
             /**
              * @description Public slug (unique, URL-safe)
              * @example dr-khalid
              */
-            slug?: Record<string, never>;
+            slug?: string | null;
             /**
              * @description Specialty label in English
              * @example Physiotherapy
              */
-            specialty?: string;
+            specialty?: string | null;
             /**
              * @description Specialty label in Arabic
              * @example العلاج الطبيعي
              */
-            specialtyAr?: string;
+            specialtyAr?: string | null;
             /**
              * @description Professional title (e.g. Dr.)
              * @example Dr.
              */
-            title?: string;
+            title?: string | null;
         };
         UpdateIntakeFormDto: {
             /** @description Optional replacement field list (max 100) */
@@ -13089,10 +14117,10 @@ export interface components {
              */
             name?: string;
             /**
-             * @description Updated phone number
+             * @description Updated phone number; null clears the stored number
              * @example +966501234567
              */
-            phone?: string;
+            phone?: string | null;
         };
         UpdateUserRoleDto: {
             /**
@@ -13530,15 +14558,41 @@ export interface components {
             zoomClientSecret?: string;
         };
         /**
-         * @description Gender
+         * @description User gender, or null when unspecified
          * @enum {string}
          */
         UserGender: "MALE" | "FEMALE";
         /**
-         * @description System role
+         * @description Assigned built-in user role
          * @enum {string}
          */
         UserRole: "SUPER_ADMIN" | "ADMIN" | "RECEPTIONIST" | "ACCOUNTANT" | "EMPLOYEE" | "CLIENT";
+        VerifyClientEmailDto: {
+            /**
+             * Format: uuid
+             * @description Challenge returned by the request endpoint
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit ownership code
+             * @example 123456
+             */
+            code: string;
+        };
+        VerifyClientPhoneDto: {
+            /**
+             * Format: uuid
+             * @description Challenge returned by the request endpoint
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Six-digit SMS code sent to the new number
+             * @example 123456
+             */
+            code: string;
+        };
         VerifyDashboardOtpDto: {
             /**
              * @description 6-digit OTP code
@@ -13648,6 +14702,19 @@ export interface components {
              * @example TRF-20260501-001
              */
             transferRef?: string;
+        };
+        VerifyPhoneEntryDto: {
+            /**
+             * Format: uuid
+             * @description Current phone ownership challenge identifier
+             * @example b93b1499-dd38-4f61-97bc-e1bd0053903e
+             */
+            challengeId: string;
+            /**
+             * @description Exactly six ASCII digits from the delivered ownership code
+             * @example 123456
+             */
+            code: string;
         };
     };
     responses: never;
@@ -15126,6 +16193,8 @@ export interface operations {
     DashboardBookingsController_listBookings_v1: {
         parameters: {
             query?: {
+                /** @description Appointment date ordering before pagination */
+                sortOrder?: "asc" | "desc";
                 /** @description Filter sessions entered through late recording */
                 isLateEntry?: boolean;
                 /** @description Filter by client */
@@ -21235,24 +22304,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items?: {
-                            email?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            isActive?: boolean;
-                            name?: string;
-                            role?: string;
-                        }[];
-                        meta?: {
-                            hasNextPage?: boolean;
-                            hasPreviousPage?: boolean;
-                            limit?: number;
-                            page?: number;
-                            total?: number;
-                            totalPages?: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["DashboardUsersResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -21381,21 +22433,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        customRoleId?: string | null;
-                        /** Format: email */
-                        email?: string;
-                        gender?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        isActive?: boolean;
-                        name?: string;
-                        phone?: string | null;
-                        role?: string;
-                    };
+                    "application/json": components["schemas"]["DashboardUserResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -23824,6 +24862,74 @@ export interface operations {
             };
         };
     };
+    DashboardOrganizationCategoriesController_getCategoryEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Category UUID or readable CAT reference */
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardOrganizationCategoriesController_deleteCategoryEndpoint_v1: {
         parameters: {
             query?: never;
@@ -24071,6 +25177,74 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationDepartmentsController_getDepartmentEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Department UUID */
+                departmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Department details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Department not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25715,7 +26889,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationRatingsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -25877,6 +27053,14 @@ export interface operations {
     DashboardOrganizationSettingsController_listServicesEndpoint_v1: {
         parameters: {
             query?: {
+                /** @description Filter by a branch where an active assigned practitioner works */
+                branchId?: string;
+                /** @description Filter by the category department */
+                departmentId?: string;
+                /** @description Global ordering field */
+                sortBy?: "createdAt" | "nameAr" | "nameEn" | "price" | "durationMins" | "isActive";
+                /** @description Global ordering direction */
+                sortOrder?: "asc" | "desc";
                 /** @description Include historical inactive/archived references for staff recording */
                 historicalContext?: boolean;
                 /** @description Filter by active status */
@@ -26695,6 +27879,8 @@ export interface operations {
     DashboardPeopleController_listClientsEndpoint_v1: {
         parameters: {
             query?: {
+                sortBy?: "name" | "createdAt" | "isActive";
+                sortOrder?: "asc" | "desc";
                 /** @description Search by name or phone */
                 search?: string;
                 /** @description Filter by active status */
@@ -27253,6 +28439,82 @@ export interface operations {
         };
         responses: {
             /** @description Avatar uploaded — returns fileId and URL */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadAvatarResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_uploadPublicImageEndpoint_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                employeeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Public profile image (JPEG/PNG/WebP)
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Public image uploaded — returns fileId and signed URL */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -28572,6 +29834,10 @@ export interface operations {
                             page?: number;
                             total?: number;
                             totalPages?: number;
+                        };
+                        /** @description Score counts across every rating for this employee */
+                        starCounts?: {
+                            [key: string]: number;
                         };
                     };
                 };
@@ -30158,7 +31424,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31200,6 +32468,242 @@ export interface operations {
                             refreshToken: string;
                         };
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_completeAccount_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompletePhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntrySessionDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_requestPhone_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestPhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntryChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_resendPhone_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendPhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntryChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobilePhoneEntryController_verifyPhone_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyPhoneEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneEntrySessionDto"] | components["schemas"]["PhoneEntryContinueDto"] | components["schemas"]["PhoneEntryUnavailableDto"];
                 };
             };
             /** @description Validation failed */
@@ -33388,7 +34892,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paginated list of upcoming bookings with status PENDING or CONFIRMED. */
+            /** @description Paginated list of upcoming bookings with status pending, confirmed or deposit_paid, sorted by nearest future appointment. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -33627,6 +35131,352 @@ export interface operations {
             };
         };
     };
+    MobileClientEmailController_status_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailStatusDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_decline_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailStatusDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_request_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestClientEmailDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientEmailController_verify_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyClientEmailDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientEmailStatusDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPhoneController_request_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestClientPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientPhoneChallengeDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileClientPhoneController_verify_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyClientPhoneDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientPhoneVerifiedDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     MobileClientProgramsController_enroll_v1: {
         parameters: {
             query?: never;
@@ -33711,6 +35561,8 @@ export interface operations {
     MobileEmployeeBookingsController_listMyBookings_v1: {
         parameters: {
             query?: {
+                /** @description Appointment date ordering before pagination */
+                sortOrder?: "asc" | "desc";
                 /** @description Filter sessions entered through late recording */
                 isLateEntry?: boolean;
                 /** @description Filter by client */
@@ -36179,6 +38031,52 @@ export interface operations {
                 };
             };
             /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicEmployeesController_image_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public slug or employee UUID */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to a freshly signed private image URL */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Public employee or selected image not found */
             404: {
                 headers: {
                     [name: string]: unknown;

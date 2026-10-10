@@ -40,6 +40,17 @@ it('hands off its new epoch before asynchronous persistence so cancellation can 
   await pending;
 });
 
+it('routes a server-selected staff session to employee home rather than a client continuation', async () => {
+  jest.mocked(authService.getProfile).mockResolvedValueOnce({ success: true, data: { role: 'EMPLOYEE' } } as Awaited<ReturnType<typeof authService.getProfile>>);
+  const dispatch = jest.fn(); const replace = jest.fn();
+  await completeNativeSession({ ...session, sessionKind: 'staff', sessionEpoch: 3 }, {
+    dispatch, replace, redirect: '/(client)/(tabs)/home',
+  });
+  expect(authService.getProfile).toHaveBeenCalledWith('staff');
+  expect(dispatch).toHaveBeenCalled();
+  expect(replace).toHaveBeenCalledWith('/(employee)/(tabs)/today');
+});
+
 it('rejects a staff profile for an explicit client response', async () => {
   jest.mocked(authService.getProfile).mockResolvedValueOnce({ success: true, data: { role: 'ADMIN' } } as Awaited<ReturnType<typeof authService.getProfile>>);
   const dispatch = jest.fn(); const replace = jest.fn();

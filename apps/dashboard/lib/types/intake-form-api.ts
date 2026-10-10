@@ -22,6 +22,7 @@ export type IntakeFieldApi = Omit<IntakeFormWire["fields"][number], "fieldType">
 export type IntakeFormApi = Omit<IntakeFormWire, "type" | "scope" | "fields"> & {
   type: FormType
   scope: FormScope
+  scopeLabel?: string | null
   fields: IntakeFieldApi[]
 }
 export type IntakeResponseApi = Omit<IntakeResponseWire, "form"> & {

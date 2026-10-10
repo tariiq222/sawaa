@@ -1,0 +1,32 @@
+export const enAuditFinance = {
+  "dashboard.metricsError": "Could not load dashboard metrics. Please retry.",
+  "coupons.validation.percentageMax": "Percentage cannot exceed 100%",
+  "coupons.toggle.success": "Coupon status updated",
+  "coupons.toggle.error": "Could not update coupon status",
+  "payments.status.partiallyRefunded": "Partially refunded",
+  "payments.method.mada": "Mada",
+  "payments.method.tabby": "Tabby",
+  "payments.receipt.open": "View transfer receipt",
+  "payments.refund.gatewayRemaining":
+    "Moyasar does not support a second refund for the same payment. Review the remaining balance with the accountant.",
+  "invoices.allStatuses": "All statuses",
+  "invoices.popupBlocked": "Allow pop-up windows to download the invoice",
+  "reports.financial.avgPerBooking": "Collection per non-cancelled appointment",
+  "reports.previousPeriod": "Previous period",
+  "reports.revenueBasis":
+    "Revenue follows the collection date; bookings follow the session date. They may fall on different days.",
+  "reports.bookingPriceBasis":
+    "Completed session value by appointment date; may differ from actual collections.",
+  "reports.paymentStatus.PARTIALLY_REFUNDED": "Partially refunded",
+  "reports.bookingStatus.DEPOSIT_PAID": "Deposit paid",
+  "reports.paymentMethod.MADA": "Mada",
+  "reports.paymentMethod.TABBY": "Tabby",
+  "reports.packageExport": "Export packages CSV",
+  "reports.export.metric": "Metric",
+  "reports.export.value": "Value",
+  "reports.export.amountSar": "Amount (SAR)",
+  "reports.export.count": "Count",
+  "reports.export.date": "Date",
+  "reports.export.reference": "Reference",
+  "reports.export.method": "Payment method",
+}

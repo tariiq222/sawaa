@@ -148,6 +148,7 @@ export const arClients: Record<string, string> = {
   "clients.detail.nationality": "الجنسية",
   "clients.detail.contactInfo": "بيانات التواصل",
   "clients.detail.email": "البريد الإلكتروني",
+  "clients.detail.emailUnverified": "غير مؤكد",
   "clients.detail.phone": "رقم الجوال",
   "clients.detail.emergencyContact": "جهة اتصال الطوارئ",
   "clients.detail.name": "الاسم",

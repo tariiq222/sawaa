@@ -1,4 +1,6 @@
 import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { sawaaSpacing } from '@/theme/sawaa/tokens';
 import { useTranslation } from 'react-i18next';
 
 import { SettingsScaffold } from '@/components/features/settings/SettingsScaffold';
@@ -11,10 +13,12 @@ export default function ProfileSettingsScreen() {
   const { t } = useTranslation();
 
   return (
-    <SettingsScaffold title={t('settings.profile')} keyboardSafe>
+    <SettingsScaffold title={t('profile.personalDetails')} keyboardSafe>
       <UnverifiedEmailBanner />
       <SettingsProfileSection />
-      <DeleteAccountButton />
+      <View style={styles.danger}><DeleteAccountButton /></View>
     </SettingsScaffold>
   );
 }
+
+const styles = StyleSheet.create({ danger: { marginTop: sawaaSpacing['2xl'] } });

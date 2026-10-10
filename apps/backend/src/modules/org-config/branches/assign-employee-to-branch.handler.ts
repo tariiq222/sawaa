@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
@@ -11,6 +13,7 @@ export type AssignEmployeeToBranchCommand = AssignEmployeeToBranchDto & {
 export class AssignEmployeeToBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: AssignEmployeeToBranchCommand) {
@@ -28,12 +31,14 @@ export class AssignEmployeeToBranchHandler {
     if (!employee) throw new NotFoundException('Employee not found');
 
     try {
-      return await this.prisma.employeeBranch.create({
+      const result = await this.prisma.employeeBranch.create({
         data: {
           branchId: dto.branchId,
           employeeId: dto.employeeId,
         },
       });
+      await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
+      return result;
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException('Employee is already assigned to this branch');

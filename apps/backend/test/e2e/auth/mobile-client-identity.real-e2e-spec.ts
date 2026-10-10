@@ -173,7 +173,7 @@ describeRealE2e('Mobile Client identity — real HTTP e2e', () => {
 
   async function issueClientPair(clientId: string) {
     const client = await prisma.client.findUniqueOrThrow({ where: { id: clientId } });
-    return clientTokens.issueTokenPair({ id: client.id, email: client.email, tokenVersion: client.tokenVersion });
+    return clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified, tokenVersion: client.tokenVersion });
   }
 
   it('supports new registration and keeps the Client namespace on profile/bookings', async () => {

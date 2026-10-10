@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import {
   fetchConversation,
@@ -16,9 +17,15 @@ import type {
 export const CONVERSATION_POLL_INTERVAL = 7_500
 
 export function useConversations(filters: ConversationFilters = {}) {
+  const [search, setSearch] = useState(filters.search)
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(filters.search), 300)
+    return () => clearTimeout(timer)
+  }, [filters.search])
+  const queryFilters = { ...filters, search }
   return useInfiniteQuery({
-    queryKey: queryKeys.conversations.list(filters),
-    queryFn: ({ pageParam }) => fetchConversations(pageParam ? { ...filters, cursor: pageParam } : filters),
+    queryKey: queryKeys.conversations.list(queryFilters),
+    queryFn: ({ pageParam }) => fetchConversations(pageParam ? { ...queryFilters, cursor: pageParam } : queryFilters),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.meta.hasMore ? lastPage.meta.nextCursor : undefined,
     staleTime: 5_000,

@@ -62,14 +62,45 @@ describe('MobilePasswordLoginHandler', () => {
     issueTokenPair = jest.fn().mockResolvedValue({ accessToken: 'client-access', rawRefresh: 'client-refresh', accessMaxAgeMs: 1, refreshMaxAgeMs: 2 });
     const login = new ClientLoginHandler(prisma as any, { getClient: () => redisClient } as any,
       new PasswordService(), { issueTokenPair } as any);
-    handler = new MobilePasswordLoginHandler(prisma as any, login);
+    handler = new MobilePasswordLoginHandler(prisma as any, login,
+      { getClient: () => redisClient } as any, new PasswordService());
+  });
+
+  it('counts unknown mobile accounts before eligibility rejection', async () => {
+    clients = []; users = [];
+    await expect(handler.execute({ email: 'unknown@example.com', password: 'WrongPass1' }, '1.2.3.4'))
+      .rejects.toThrow('Invalid credentials');
+    expect(counters.get('client_login:id:unknown@example.com')).toBe(1);
+    expect(counters.get('client_login:ip:1.2.3.4')).toBe(1);
+    expect(issueTokenPair).not.toHaveBeenCalled();
+  });
+
+  it.each(['unknown', 'eligible', 'unverified'] as const)('rejects %s mobile identity before bcrypt when the shared IP budget is exhausted', async (state) => {
+    if (state === 'unknown') { clients = []; users = []; }
+    if (state === 'unverified') { clients[0].emailVerified = null; users[0].emailVerifiedAt = null; }
+    counters.set('client_login:ip:1.2.3.4', 20);
+    const verify = jest.spyOn(PasswordService.prototype, 'verify');
+    try {
+      await expect(handler.execute({ email: 'client@example.com', password: 'WrongPass1' }, '1.2.3.4'))
+        .rejects.toThrow('Invalid credentials');
+      expect(verify).not.toHaveBeenCalled();
+      expect(counters.get('client_login:ip:1.2.3.4')).toBe(21);
+      expect(issueTokenPair).not.toHaveBeenCalled();
+    } finally { verify.mockRestore(); }
+  });
+
+  it('counts the shared IP budget exactly once for an eligible failed attempt', async () => {
+    await expect(handler.execute({ email: 'client@example.com', password: 'WrongPass1' }, '1.2.3.4'))
+      .rejects.toThrow('Invalid credentials');
+    expect(counters.get('client_login:ip:1.2.3.4')).toBe(1);
+    expect(counters.get('client_login:id:client@example.com')).toBe(1);
   });
 
   it.each([{ email: ' CLIENT@EXAMPLE.COM ' }, { phone: '0501234567' }])('returns only native client tokens for %j', async (identifier) => {
     expect(await handler.execute({ ...identifier, password: 'CorrectPass123' }, '1.2.3.4')).toEqual({
       sessionKind: 'client', tokens: { accessToken: 'client-access', refreshToken: 'client-refresh' },
     });
-    expect(issueTokenPair).toHaveBeenCalledWith({ id: 'client-1', email: 'client@example.com', tokenVersion: 7 });
+    expect(issueTokenPair).toHaveBeenCalledWith({ id: 'client-1', email: 'client@example.com', emailVerified: expect.any(Date), tokenVersion: 7 });
     expect(clients[0].lastLoginAt).toBeInstanceOf(Date);
   });
 
@@ -77,6 +108,21 @@ describe('MobilePasswordLoginHandler', () => {
     clients[0].email = null;
     clients[0].emailVerified = null;
     expect((await handler.execute({ email: 'client@example.com', password: 'CorrectPass123' })).sessionKind).toBe('client');
+  });
+
+  it('pads canonical alias exhaustion once without tokens or IP double counting', async () => {
+    clients[0].email = null;
+    clients[0].emailVerified = null;
+    counters.set('client_login:id:+966501234567', 5);
+    const verify = jest.spyOn(PasswordService.prototype, 'verify');
+    try {
+      await expect(handler.execute({ email: 'client@example.com', password: 'CorrectPass123' }, '1.2.3.4')).rejects.toThrow('Invalid credentials');
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(counters.get('client_login:id:+966501234567')).toBe(6);
+      expect(counters.get('client_login:ip:1.2.3.4')).toBe(1);
+      expect(clients[0].loginAttempts).toBe(0);
+      expect(issueTokenPair).not.toHaveBeenCalled();
+    } finally { verify.mockRestore(); }
   });
 
   it('allows a verified standalone website client', async () => {

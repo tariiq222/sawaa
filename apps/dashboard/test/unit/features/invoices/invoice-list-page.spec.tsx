@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 
+vi.mock("@/components/providers/auth-provider",()=>({useAuth:()=>({canDo:()=>true})}))
+
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({ t: (k: string) => k, locale: "en" }),
 }))
@@ -19,6 +21,7 @@ vi.mock("@/hooks/use-invoices", () => ({
     refetch: vi.fn(),
     search: "",
     setSearch: vi.fn(),
+    status:undefined,setStatus:vi.fn(),
   }),
 }))
 

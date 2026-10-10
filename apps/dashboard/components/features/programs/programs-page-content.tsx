@@ -17,6 +17,7 @@ interface ProgramsPageContentProps {
 export function ProgramsPageContent({
   statusFilter,
   onSelect,
+  onStatusFilterChange,
 }: ProgramsPageContentProps) {
   const { t } = useLocale();
   const queryArg = useMemo(
@@ -29,17 +30,19 @@ export function ProgramsPageContent({
     [onSelect, t],
   );
 
-  if (isError) {
-    return <p className="text-sm text-(--text-error)">{t('common.errorLoading')}</p>;
-  }
-  if (!isLoading && (!data || data.length === 0)) {
-    return <EmptyState title={t('programs.empty')} />;
-  }
-
   return (
-    <DataTable
-      columns={columns}
-      data={data ?? []}
-    />
+    <div className="space-y-4">
+      <label className="flex items-center gap-3 text-sm">
+        {t('programs.column.status')}
+        <select className="rounded border border-border bg-surface-solid p-2" value={statusFilter} onChange={e => onStatusFilterChange(e.target.value)}>
+          <option value="ALL">{t('auditOperations.allStatuses')}</option>
+          {(['DRAFT', 'OPEN', 'MIN_REACHED', 'SCHEDULED', 'COMPLETED', 'CANCELLED'] as const).map(status => <option key={status} value={status}>{t(`programs.status.${status}`)}</option>)}
+        </select>
+      </label>
+      {isError ? <p role="alert" className="text-sm text-error">{t('common.errorLoading')}</p>
+        : isLoading ? <p role="status" className="text-sm text-muted-foreground">{t('common.loading')}</p>
+        : !data?.length ? <EmptyState title={t('programs.empty')} />
+        : <DataTable columns={columns} data={data} />}
+    </div>
   );
 }

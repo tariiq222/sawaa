@@ -126,6 +126,10 @@ export interface IntakeField {
 /* ─── Query ─── */
 
 export interface ServiceListQuery extends PaginatedQuery {
+  branchId?: string
+  departmentId?: string
+  sortBy?: "createdAt" | "nameAr" | "nameEn" | "price" | "durationMins" | "isActive"
+  sortOrder?: "asc" | "desc"
   categoryId?: string
   isActive?: boolean
   includeHidden?: boolean

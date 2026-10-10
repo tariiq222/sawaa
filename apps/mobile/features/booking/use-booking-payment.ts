@@ -6,7 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import { useDir } from '@/hooks/useDir';
+import { showBookingPaymentError } from '@/features/booking/booking-payment-error';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useBankTransferSettings, usePublicPaymentMethods } from '@/hooks/queries';
 import { clientBookingsService } from '@/services/client/bookings';
@@ -19,6 +19,7 @@ import {
   savePendingBookingCheckout,
   resolvePendingBookingResume,
   type PendingBookingCheckout,
+  type BookingCheckoutUnavailableReason,
 } from '@/features/booking/payment-resume-state';
 import type { DeliveryType } from '@/types/booking-enums';
 
@@ -43,6 +44,7 @@ async function bankTransferBlocked(invoiceId: string): Promise<string | null> {
 export type BookingPaymentMethod = 'card' | 'apple_pay' | 'bank_transfer' | 'at_center';
 
 export interface BookingPaymentInput {
+  clinicId?: string;
   branchId?: string;
   employeeId?: string;
   serviceId?: string;
@@ -61,7 +63,6 @@ export interface BookingPaymentInput {
 export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const dir = useDir();
   const { t } = useTranslation();
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const bankQuery = useBankTransferSettings(Boolean(userId));
@@ -122,11 +123,14 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
   );
 
   const ownerScope = JSON.stringify([userId, draft]);
+  const [unavailable, setUnavailable] = useState<{ scope: string; reason: BookingCheckoutUnavailableReason } | null>(null);
+  const unavailableReason = unavailable?.scope === ownerScope ? unavailable.reason : undefined;
   const ownerScopeRef = useRef(ownerScope);
   ownerScopeRef.current = ownerScope;
   const total = input.amount ? Number(input.amount) : 0;
 
   const canStart = enabled
+    && !unavailableReason
     && !submitting
     && !methodsLoading && !methodsError
     && availableMethods.length > 0
@@ -135,19 +139,26 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
 
   const canPay = canStart && availableMethods.includes(method);
 
-  const start = useCallback(async (selected: BookingPaymentMethod, prepareOnly = false): Promise<PendingBookingCheckout | null> => {
+  const start = useCallback(async (selected: BookingPaymentMethod, prepareOnly = false, bound?: Pick<PendingBookingCheckout, 'bookingId' | 'invoiceId'>): Promise<PendingBookingCheckout | null> => {
     if (!canStart || !availableMethods.includes(selected) || !userId || !draft || inFlight.current) return null;
     inFlight.current = true;
     setSubmitting(true);
     try {
       const key = JSON.stringify([userId, draft]);
+      // Keep a known identity even if verification fails. Every retry still verifies it
+      // on the server; losing storage must never turn it into a fresh booking request.
+      if (bound) pending.current = { key, checkout: { ...bound, draft } };
       const remembered = pending.current?.key === key ? pending.current.checkout : undefined;
-      const resume = await resolvePendingBookingResume(userId, draft, remembered);
+      const resume = await resolvePendingBookingResume(userId, draft, bound ?? remembered);
       if (userRef.current !== userId || ownerScopeRef.current !== ownerScope) return null;
-      if (resume.kind === 'invalid') throw new Error('Invalid pending booking');
+      if (resume.kind === 'invalid') {
+        if (resume.unavailableReason) { setUnavailable({ scope: ownerScope, reason: resume.unavailableReason }); return null; }
+        throw new Error('Invalid pending booking');
+      }
       let booking: PendingBookingCheckout;
       if (resume.kind === 'ready' || resume.kind === 'complete') {
         booking = resume.checkout;
+        pending.current = { key, checkout: booking };
         if (resume.kind === 'complete') {
           void invalidateClientBookingResources(queryClient);
           router.replace({ pathname: '/(client)/booking/success', params: {
@@ -157,7 +168,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         }
         // An existing online invoice cannot be converted into pay-at-center.
         if (selected === 'at_center') {
-          Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'));
+          Alert.alert(t('booking.paymentMethod'), t('booking.existingOnlineInvoice'), [{ text: t('common.ok') }]);
           return null;
         }
         // Committed payments (such as a pending card/Apple Pay attempt) reserve the invoice amount,
@@ -165,7 +176,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
         const blocked = selected === 'bank_transfer' && booking.invoiceId
           ? await bankTransferBlocked(booking.invoiceId) : null;
         if (blocked) {
-          Alert.alert(t('booking.paymentMethod'), t(blocked));
+          Alert.alert(t('booking.paymentMethod'), t(blocked), [{ text: t('common.ok') }]);
           return null;
         }
       } else {
@@ -223,23 +234,28 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
           invoiceId: booking.invoiceId,
           method: selected === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
           fromBookingConfirm: 'true',
+          ...(input.clinicId ? { clinicId: input.clinicId } : {}),
         },
       });
       return null;
     } catch (err) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        (dir.isRTL ? 'تعذّر إكمال الدفع. حاولي مرة أخرى.' : 'Could not continue payment. Try again.');
-      Alert.alert(dir.isRTL ? 'خطأ' : 'Error', message);
+      showBookingPaymentError(err, t, () => router.push('/(client)/(tabs)/appointments'));
       return null;
     } finally {
       inFlight.current = false;
       setSubmitting(false);
     }
-  }, [canStart, availableMethods, userId, draft, ownerScope, input.deliveryType, router, queryClient, dir.isRTL, total, t]);
+  }, [canStart, availableMethods, userId, draft, ownerScope, input.deliveryType, input.clinicId, router, queryClient, total, t]);
 
-  const pay = useCallback((selected: BookingPaymentMethod = method) => start(selected), [start, method]);
+  const pay = useCallback((selected: BookingPaymentMethod = method, bound?: Pick<PendingBookingCheckout, 'bookingId' | 'invoiceId'>) => start(selected, false, bound), [start, method]);
   const prepareApplePay = useCallback(() => start('apple_pay', true), [start]);
+  const reviewAvailability = () => {
+    if (!userId || !input.serviceId || !input.employeeId || !input.branchId) return;
+    router.replace({ pathname: '/(client)/booking/[serviceId]', params: {
+      serviceId: input.serviceId, employeeId: input.employeeId, branchId: input.branchId,
+      ...(input.clinicId ? { clinicId: input.clinicId } : {}),
+    } });
+  };
 
-  return { canStart, prepareApplePay, method, setMethod, availableMethods, submitting, canPay, pay, total, methodsLoading, methodsError, retryMethods };
+  return { canStart, prepareApplePay, method, setMethod, availableMethods, submitting, canPay, pay, total, methodsLoading, methodsError, retryMethods, unavailableReason, reviewAvailability };
 }

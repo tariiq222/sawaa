@@ -49,3 +49,8 @@ describe("couponSchema", () => {
     expect(result.success).toBe(true)
   })
 })
+
+it("rejects percentages above 100 while allowing fractional fixed SAR", () => {
+ expect(couponSchema.safeParse({...validCoupon, discountValue:100.01}).success).toBe(false)
+ expect(couponSchema.safeParse({...validCoupon, discountType:"FIXED",discountValue:49.50}).success).toBe(true)
+})

@@ -9,12 +9,11 @@ import { clearSessionAtEpoch, persistSessionTokensAtEpoch } from '@/services/nat
 import { authService } from '@/services/auth';
 import EmailEntryScreen from '../(auth)/email-entry';
 import RegisterScreen from '../(auth)/register';
-import LoginScreen from '../(auth)/login';
 const mockLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: '***12' });
 jest.mock('@/hooks/queries', () => ({ useRequestLoginOtp: () => ({ mutateAsync: mockLoginOtp, isPending: false }) }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), impactAsync: jest.fn(), NotificationFeedbackType: { Success: 'success', Error: 'error' }, ImpactFeedbackStyle: { Light: 'light' } }));
 const mockPush = jest.fn(); const mockReplace = jest.fn(); const mockBack = jest.fn(); let mockEpoch = 1;
-jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: mockBack, push: mockPush }), useLocalSearchParams: () => mockParams, useFocusEffect: jest.fn() }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: mockBack, push: mockPush }), useLocalSearchParams: () => mockParams, useFocusEffect: jest.fn(), Redirect: ({ href }: { href: unknown }) => { mockRedirectHref = href; return null; } }));
 jest.mock('@/theme', () => ({ Glass: jest.requireActual('@/theme/components/Glass').Glass }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/services/api', () => ({ __esModule: true, default: { post: jest.fn() } }));
@@ -26,6 +25,7 @@ jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: { colors: { surface: '#FFF', surfaceHigh: '#EEE', textPrimary: '#000', textSecondary: '#666', textMuted: '#999', primary: '#098a7d', primaryFill: '#087a6f', primaryGradient: ['#087a6f', '#066962'], primaryForeground: '#FFF' }, typography: { fontFamily: { arabic: 'System', english: 'System' } } }, isRTL: false, language: 'en' }) }));
 let mockParams: Record<string, string> = { redirect: '/(client)/(tabs)/appointments' };
+let mockRedirectHref: unknown = null;
 const api = jest.mocked(emailEntryService);
 const challenge = { challengeId: 'c', maskedEmail: 'a***@example.test', expiresIn: 300 as const, retryAfterSeconds: 60 as const };
 function mount(component: React.ReactElement = <EmailEntryScreen />) { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: 0 } } })}>{component}</QueryClientProvider>); }
@@ -36,7 +36,7 @@ async function enterCode(ui: ReturnType<typeof mount>) {
 }
 beforeAll(() => { notifyManager.setNotifyFunction(callback => { act(callback); }); });
 afterAll(() => { notifyManager.setNotifyFunction(callback => callback()); });
-beforeEach(() => { jest.clearAllMocks(); mockEpoch = 1; mockParams = { redirect: '/(client)/(tabs)/appointments' }; api.request.mockResolvedValue(challenge); });
+beforeEach(() => { jest.clearAllMocks(); mockEpoch = 1; mockParams = { redirect: '/(client)/(tabs)/appointments' }; mockRedirectHref = null; api.request.mockResolvedValue(challenge); });
 it('accepts six-digit paste/autofill and prevents duplicate verification', async () => {
   api.verify.mockReturnValue(new Promise(() => {})); const ui = mount(); await enterCode(ui);
   const input = ui.getByLabelText('auth.emailEntry.code');
@@ -73,26 +73,11 @@ it('never persists a late authenticated response after restart and a newer sessi
   expect(persistSessionTokensAtEpoch).not.toHaveBeenCalled(); expect(mockReplace).not.toHaveBeenCalled();
 });
 
-it('starts account registration with email ownership rather than profile details', () => {
-  const ui = mount(<RegisterScreen />);
-  expect(ui.getByLabelText('auth.register.email')).toBeTruthy();
-  expect(ui.queryByLabelText('auth.register.phone')).toBeNull();
+it('redirects registration to the phone-first entry screen preserving continuation', () => {
+  mount(<RegisterScreen />);
+  expect(mockRedirectHref).toEqual({ pathname: '/(auth)/login', params: { redirect: '/(client)/(tabs)/appointments' } });
 });
-it('enters email login locally without route parameters or calling the legacy endpoint', async () => {
-  const ui = mount(<LoginScreen />);
-  fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), 'a@example.test');
-  fireEvent.press(ui.getByText('auth.loginWithOtp'));
-  fireEvent.press(ui.getByText('auth.login.sendCode'));
-  await waitFor(() => expect(ui.getByLabelText('auth.emailEntry.code')).toBeTruthy());
-  expect(mockLoginOtp).not.toHaveBeenCalled(); expect(mockPush).not.toHaveBeenCalled();
-});
-it('preserves the legacy phone login path and booking context', async () => {
-  const ui = mount(<LoginScreen />);
-  fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), '0501234567');
-  fireEvent.press(ui.getByText('auth.loginWithOtp'));
-  fireEvent.press(ui.getByText('auth.login.sendCode'));
-  await waitFor(() => expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/otp-verify', params: { purpose: 'login', identifier: '0501234567', maskedIdentifier: '***12', redirect: '/(client)/(tabs)/appointments' } }));
-});
+
 it.each(['register', 'verify_phone'] as const)('completes %s with rotated proof and explicit registration consent', async next => {
   api.verify.mockResolvedValue({ next, email: 'a@example.test', continuationToken: 'email-proof', expiresIn: 600 });
   api.requestPhone.mockResolvedValue({ phoneChallengeId: 'p', continuationToken: 'phone-proof', maskedPhone: '***12', expiresIn: 300, retryAfterSeconds: 60 });

@@ -32,7 +32,7 @@ function EditClientPageInner() {
   const router = useRouter()
   const { t } = useLocale()
 
-  const { data: client, isLoading } = useClient(params.id)
+  const { data: client, isLoading, error, refetch } = useClient(params.id)
   const { updateMut } = useClientMutations()
 
   const form = useForm<EditClientFormData>({ resolver: zodResolver(editClientSchema) })
@@ -56,11 +56,12 @@ function EditClientPageInner() {
   }, [client, form])
 
   const onSubmit = form.handleSubmit(async (data) => {
+    if (!client) return
     try {
       const { fullName, ...rest } = data
       const { firstName, middleName, lastName } = splitFullName(fullName)
-      const payload = { ...rest, firstName, middleName, lastName }
-      await updateMut.mutateAsync({ id: client!.id, payload })
+      const payload = { ...rest, firstName, middleName: middleName ?? null, lastName, gender:rest.gender ?? null, bloodType:rest.bloodType ?? null }
+      await updateMut.mutateAsync({ id: client.id, payload })
       toast.success(t("clients.edit.changesSaved"))
       router.push("/clients")
     } catch (err) {
@@ -84,6 +85,8 @@ function EditClientPageInner() {
       </ListPageShell>
     )
   }
+
+  if (error || !client) return <ListPageShell><p role="alert">{t(error instanceof ApiError && error.status === 404 ? "clients.detail.notFound" : "error.server")}</p><Button onClick={() => void refetch()}>{t("common.retry")}</Button></ListPageShell>
 
   const clientName = client ? composeFullName(client.firstName, client.middleName, client.lastName) : ""
 

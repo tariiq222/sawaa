@@ -39,14 +39,17 @@ export function RatingsReportPage() {
     queryFn: () => fetchRatingsReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
-  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
+  const errMsg =
+    error instanceof Error ? t("error.server") : t("error.unexpected")
 
-  const positiveRate = data && data.totalRatings > 0
-    ? (data.positiveCount / data.totalRatings) * 100
-    : 0
-  const negativeRate = data && data.totalRatings > 0
-    ? (data.negativeCount / data.totalRatings) * 100
-    : 0
+  const positiveRate =
+    data && data.totalRatings > 0
+      ? (data.positiveCount / data.totalRatings) * 100
+      : 0
+  const negativeRate =
+    data && data.totalRatings > 0
+      ? (data.negativeCount / data.totalRatings) * 100
+      : 0
 
   return (
     <ReportPageShell
@@ -70,7 +73,10 @@ export function RatingsReportPage() {
             <KpiCard
               label={t("reports.ratings.average")}
               value={`${data.averageScore.toFixed(1)} / 5`}
-              delta={computeDelta(data.averageScore, data.previous?.averageScore)}
+              delta={computeDelta(
+                data.averageScore,
+                data.previous?.averageScore
+              )}
             />
             <KpiCard
               label={t("reports.ratings.totalRatings")}
@@ -78,7 +84,7 @@ export function RatingsReportPage() {
               delta={computeDelta(
                 data.totalRatings,
                 data.previous?.totalRatings,
-                { format: "count" },
+                { format: "count" }
               )}
             />
             <KpiCard
@@ -95,6 +101,7 @@ export function RatingsReportPage() {
             <Section title={t("reports.ratings.distribution")}>
               <DistributionBars
                 items={data.distribution
+                  .slice()
                   .sort((a, b) => b.score - a.score)
                   .map((d) => ({
                     key: String(d.score),
@@ -116,6 +123,8 @@ export function RatingsReportPage() {
             {data.trend.length > 0 && (
               <Section title={t("reports.ratings.trend")}>
                 <TrendChart
+                  currentFrom={period.normalizedFrom}
+                  previousFrom={period.previousRange.from}
                   data={data.trend.map((d) => ({
                     date: d.date,
                     average: d.average,
@@ -154,7 +163,8 @@ export function RatingsReportPage() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {r.employeeName} · {new Date(r.createdAt).toLocaleDateString(locale)}
+                      {r.employeeName} ·{" "}
+                      {new Date(r.createdAt).toLocaleDateString(locale)}
                     </p>
                     {r.comment && (
                       <p className="mt-2 text-sm text-foreground">

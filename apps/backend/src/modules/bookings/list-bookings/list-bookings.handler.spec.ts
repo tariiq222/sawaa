@@ -83,6 +83,13 @@ describe('ListBookingsHandler', () => {
     expect(prisma.booking.count).toHaveBeenCalledWith({ where: { clientId: 'client-1', AND: [{ status }] } });
   });
 
+  it('orders all-time bookings newest first before server pagination', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([]);
+    await new ListBookingsHandler(prisma as never).execute({ page: 2, limit: 20, sortOrder: 'desc' } as never);
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 20, take: 20, orderBy: [{ scheduledAt: 'desc' }, { id: 'desc' }] }));
+  });
+
   it('returns paginated bookings', async () => {
     const prisma = buildPrisma();
     prisma.booking.findMany = jest.fn().mockResolvedValue([mockBooking]);

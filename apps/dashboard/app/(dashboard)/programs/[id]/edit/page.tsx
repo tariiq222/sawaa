@@ -8,7 +8,7 @@ export default async function EditProgramRoute({
 }) {
   const { id } = await params;
   return (
-    <PermissionGuard module="booking" action="update">
+    <PermissionGuard module="booking" action="manage">
       <ProgramFormPage mode="edit" programId={id} />
     </PermissionGuard>
   );

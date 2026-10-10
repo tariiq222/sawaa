@@ -1,6 +1,6 @@
 import { BookingSource, BookingStatus, BookingType, DeliveryType } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto';
 import { mapDeliveryType } from '../booking-enum-transforms';
@@ -35,6 +35,9 @@ const mapBookingStatus = (v: unknown) => {
 };
 
 export class ListBookingsDto extends PaginationDto {
+  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'asc', description: 'Appointment date ordering before pagination' })
+  @IsOptional() @IsIn(['asc', 'desc']) sortOrder?: 'asc' | 'desc';
+
   @ApiPropertyOptional({ description: 'Filter sessions entered through late recording', example: true })
   @IsOptional() @Transform(({ obj }) => obj.isLateEntry === 'true' ? true : obj.isLateEntry === 'false' ? false : obj.isLateEntry) @IsBoolean() isLateEntry?: boolean;
 

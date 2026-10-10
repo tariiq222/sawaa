@@ -64,7 +64,7 @@ export interface BookingRelations {
  * Normalize a Prisma Booking row + its eagerly-loaded (by id) relations into
  * the shape the dashboard expects:
  *   - lowercase `type` (enum snake_case)
- *   - `date` + `startTime` + `endTime` derived from scheduledAt / endsAt (UTC)
+ *   - `date` + `startTime` + `endTime` derived from scheduledAt / endsAt (Riyadh wall-clock)
  *   - nested `client / employee.user / service / payment`
  *
  * Booking lives in its own bounded context; `client / employee / service` are
@@ -131,6 +131,8 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     branchNameSnapshot: b.branchNameSnapshot ?? null,
     durationMinutesSnapshot: b.durationMinutesSnapshot ?? null,
     priceSnapshot: b.priceSnapshot != null ? Number(b.priceSnapshot) : null,
+    scheduledAt: isValidDate(scheduled) ? scheduled.toISOString() : null,
+    endsAt: isValidDate(ends) ? ends.toISOString() : null,
     date,
     startTime,
     endTime,

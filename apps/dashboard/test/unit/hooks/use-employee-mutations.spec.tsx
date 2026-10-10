@@ -170,6 +170,7 @@ describe("useEmployeeMutations", () => {
     const calledKeys = invalidateSpy.mock.calls.map(
       ([arg]) => (arg as { queryKey: unknown }).queryKey
     )
+    expect(calledKeys).toContainEqual(queryKeys.services.all)
     expect(calledKeys).toContainEqual(queryKeys.employees.list())
     expect(calledKeys).toContainEqual(queryKeys.employees.detail("p-1"))
     expect(calledKeys).toContainEqual(queryKeys.employees.account("p-1"))

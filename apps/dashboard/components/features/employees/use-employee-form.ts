@@ -4,7 +4,7 @@
 // pipeline (the create path does transactional rollback on partial failure).
 // Pure helpers extracted to ./lib/employee-form-helpers.ts.
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, type BaseSyntheticEvent } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { UseFormReturn } from "react-hook-form"
@@ -56,6 +56,7 @@ interface UseEmployeeFormOptions {
     | {
         user: { firstName: string; lastName: string; email?: string | null }
         title?: string | null
+        nameEn?: string | null
         nameAr?: string | null
         specialty?: string | null
         specialtyAr?: string | null
@@ -107,9 +108,15 @@ export function useEmployeeForm({
   setBranchIds,
   setIsSubmitting,
 }: UseEmployeeFormOptions) {
+  // Keep completed non-idempotent edit steps across a partial-failure retry.
+  const savedVacations = useRef(new Set<string>())
+  const addedServices = useRef(new Set<string>())
+  const removedServices = useRef(new Set<string>())
+  const addedBranches = useRef(new Set<string>())
+  const removedBranches = useRef(new Set<string>())
   const router = useRouter()
   const { t } = useLocale()
-  const { onboardMutation, updateMutation } = useEmployeeMutations()
+  const { onboardMutation, updateMutation, invalidateCatalog } = useEmployeeMutations()
   const setAvailabilityMut = useSetAvailability()
   const setBreaksMut = useSetBreaks()
   // employeeId may be undefined during create — hooks safe with empty string (won't invalidate wrong key)
@@ -134,7 +141,7 @@ export function useEmployeeForm({
     }
     form.reset({
       title: employee.title ?? "",
-      nameEn: `${employee.user.firstName} ${employee.user.lastName}`.trim(),
+      nameEn: employee.nameEn ?? "",
       nameAr: employee.nameAr ?? "",
       email: employee.user.email ?? "",
       phone: anyEmp.phone ?? "",
@@ -154,7 +161,7 @@ export function useEmployeeForm({
   }, [employee, form])
 
   useEffect(() => {
-    if (!availability?.length || hydratedRef.current.availability) return
+    if (availability === undefined || hydratedRef.current.availability) return
     hydratedRef.current.availability = true
     const merged = defaultSchedule.map((def) => {
       const found = availability.find(
@@ -166,7 +173,7 @@ export function useEmployeeForm({
   }, [availability, setSchedule])
 
   useEffect(() => {
-    if (!existingBreaks?.length || hydratedRef.current.breaks) return
+    if (existingBreaks === undefined || hydratedRef.current.breaks) return
     hydratedRef.current.breaks = true
     setBreaksState(
       existingBreaks.map(({ dayOfWeek, startTime, endTime }, i: number) => ({
@@ -179,7 +186,7 @@ export function useEmployeeForm({
   }, [existingBreaks, setBreaksState])
 
   useEffect(() => {
-    if (!existingServices?.length || hydratedRef.current.services) return
+    if (existingServices === undefined || hydratedRef.current.services) return
     hydratedRef.current.services = true
     setDraftServices(
       existingServices
@@ -209,21 +216,22 @@ export function useEmployeeForm({
     try {
       await updateMutation.mutateAsync({
         id,
-        title: data.title || undefined,
+        title: data.title || null,
         nameEn: data.nameEn || undefined,
         nameAr: data.nameAr || undefined,
         email: data.email || undefined,
-        phone: data.phone || undefined,
+        phone: data.phone || null,
         gender: data.gender,
         employmentType: data.employmentType,
-        specialty: data.specialty || undefined,
-        specialtyAr: data.specialtyAr || undefined,
-        bio: data.bio || undefined,
-        bioAr: data.bioAr || undefined,
+        specialty: data.specialty || null,
+        specialtyAr: data.specialtyAr || null,
+        bio: data.bio || null,
+        bioAr: data.bioAr || null,
         experience: data.experience,
-        education: data.education || undefined,
-        educationAr: data.educationAr || undefined,
-        avatarUrl: data.avatarUrl || undefined,
+        education: data.education || null,
+        educationAr: data.educationAr || null,
+        // Only the upload endpoint persists images; previews and signed read URLs are temporary.
+        avatarUrl: data.avatarUrl === "" && !data.avatarFile ? null : undefined,
         isActive: data.isActive,
         isPublic: data.isPublic,
       })
@@ -242,34 +250,21 @@ export function useEmployeeForm({
       }
     }
     const activeSlots = schedule.filter((s) => s.isActive)
-    if (activeSlots.length > 0) {
-      try {
-        await setAvailabilityMut.mutateAsync({ id, schedule: activeSlots })
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorSchedule"))
-      }
-    }
-    if (breaks.length > 0) {
-      try {
-        await setBreaksMut.mutateAsync({
-          id,
-          breaks: breaks.map(({ dayOfWeek, startTime, endTime }) => ({
-            dayOfWeek,
-            startTime,
-            endTime,
-          })),
-        })
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorBreaks"))
-      }
-    }
-    if (vacation.enabled && vacation.startDate && vacation.endDate) {
+    try {
+      await setAvailabilityMut.mutateAsync({ id, schedule: activeSlots })
+    } catch { stepErrors.push(t("employees.form.stepErrorSchedule")) }
+    try {
+      await setBreaksMut.mutateAsync({ id, breaks: breaks.map(({dayOfWeek, startTime, endTime}) => ({dayOfWeek, startTime, endTime})) })
+    } catch { stepErrors.push(t("employees.form.stepErrorBreaks")) }
+    const vacationKey = JSON.stringify([id, vacation.startDate, vacation.endDate, vacation.reason])
+    if (vacation.enabled && vacation.startDate && vacation.endDate && !savedVacations.current.has(vacationKey)) {
       try {
         await vacationMuts.createMut.mutateAsync({
           startDate: vacation.startDate,
           endDate: vacation.endDate,
           reason: vacation.reason || undefined,
         })
+        savedVacations.current.add(vacationKey)
       } catch {
         stepErrors.push(t("employees.form.stepErrorVacation"))
       }
@@ -277,6 +272,19 @@ export function useEmployeeForm({
     const existingIds = new Set(
       (existingServices ?? []).map((ps) => ps.serviceId)
     )
+    for (const key of addedServices.current) if (key.startsWith(`${id}:`)) existingIds.add(key.slice(id.length + 1))
+    for (const key of removedServices.current) if (key.startsWith(`${id}:`)) existingIds.delete(key.slice(id.length + 1))
+    const targetServiceIds = new Set(draftServices.map((ds) => ds.serviceId))
+    for (const serviceId of existingIds) {
+      if (!targetServiceIds.has(serviceId)) {
+        try {
+          await serviceMuts.removeMut.mutateAsync(serviceId)
+          removedServices.current.add(`${id}:${serviceId}`)
+          addedServices.current.delete(`${id}:${serviceId}`)
+        }
+        catch { stepErrors.push(t("employees.form.stepErrorServices")) }
+      }
+    }
     for (const ds of draftServices) {
       const payload = {
         availableTypes: ds.availableTypes,
@@ -296,6 +304,8 @@ export function useEmployeeForm({
           // fields 400s. Per-type custom prices persist via the owned-durations
           // call below, matching the create path.
           await assignService(id, { serviceId: ds.serviceId })
+          addedServices.current.add(`${id}:${ds.serviceId}`)
+          removedServices.current.delete(`${id}:${ds.serviceId}`)
         }
         // Persist per-type custom prices as owned duration rows + flip the
         // pricing mode to custom. Leaving them unsent would silently drop them.
@@ -310,12 +320,22 @@ export function useEmployeeForm({
     }
     try {
       const existing = new Set(employee?.branchIds ?? [])
+      for (const key of addedBranches.current) if (key.startsWith(`${id}:`)) existing.add(key.slice(id.length + 1))
+      for (const key of removedBranches.current) if (key.startsWith(`${id}:`)) existing.delete(key.slice(id.length + 1))
       const target = new Set(branchIds)
       const toAdd = [...target].filter((id) => !existing.has(id))
       const toRemove = [...existing].filter((id) => !target.has(id))
       await Promise.all([
-        ...toAdd.map((branchId) => assignEmployeeToBranch(branchId, id)),
-        ...toRemove.map((branchId) => unassignEmployeeFromBranch(branchId, id)),
+        ...toAdd.map(async (branchId) => {
+          await assignEmployeeToBranch(branchId, id)
+          addedBranches.current.add(`${id}:${branchId}`)
+          removedBranches.current.delete(`${id}:${branchId}`)
+        }),
+        ...toRemove.map(async (branchId) => {
+          await unassignEmployeeFromBranch(branchId, id)
+          removedBranches.current.add(`${id}:${branchId}`)
+          addedBranches.current.delete(`${id}:${branchId}`)
+        }),
       ])
     } catch {
       stepErrors.push(t("employees.form.stepErrorBranches"))
@@ -323,9 +343,9 @@ export function useEmployeeForm({
     if (stepErrors.length > 0) {
       // Not a full success — surface the failed step names so the user re-submits them.
       const failedList = [...new Set(stepErrors)].join(t("common.listSep"))
-      toast.error(
-        t("employees.form.partialFailure").replace("{list}", failedList)
-      )
+      toast.error(t("employees.form.partialFailure").replace("{list}", failedList))
+      setIsSubmitting(false)
+      return
     } else {
       toast.success(t("employees.edit.success"))
     }
@@ -351,7 +371,8 @@ export function useEmployeeForm({
         experience: data.experience,
         education: data.education || undefined,
         educationAr: data.educationAr || undefined,
-        avatarUrl: data.avatarUrl || undefined,
+        // Selected images are persisted after the employee exists.
+        avatarUrl: undefined,
         isActive: data.isActive,
         isPublic: data.isPublic,
       })
@@ -439,12 +460,19 @@ export function useEmployeeForm({
     router.push("/employees")
   }
 
-  const onSubmit = form.handleSubmit(
+  const submittingRef = useRef(false)
+  const onSubmit = (event?: BaseSyntheticEvent) => form.handleSubmit(
     async (data) => {
-      if (isEdit) {
-        await submitEdit(data as EditEmployeeFormData)
-      } else {
-        await submitCreate(data as CreateEmployeeFormData)
+      if (submittingRef.current) return
+      submittingRef.current = true
+      setIsSubmitting(true)
+      try {
+        if (isEdit) await submitEdit(data as EditEmployeeFormData)
+        else await submitCreate(data as CreateEmployeeFormData)
+      } finally {
+        void invalidateCatalog()
+        submittingRef.current = false
+        setIsSubmitting(false)
       }
     },
     (errors) => {
@@ -463,7 +491,7 @@ export function useEmployeeForm({
         : ""
       toast.error(firstMessage || t("employees.form.validationFailed"))
     }
-  )
+  )(event)
 
   return { onSubmit }
 }

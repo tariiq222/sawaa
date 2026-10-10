@@ -25,12 +25,14 @@ interface UserFormFieldsProps {
   isEdit: boolean
   roles: Role[]
   rolesLoading: boolean
+  showRole?: boolean
 }
 
-export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFieldsProps) {
+export function UserFormFields({ form, isEdit, roles, rolesLoading, showRole = true }: UserFormFieldsProps) {
   const { t } = useLocale()
 
-  const systemRoles = roles.filter((r) => r.isSystem && r.systemKey)
+  const loadedSystemRoles = roles.filter((r) => r.isSystem && r.systemKey)
+  const systemRoles = loadedSystemRoles.length ? loadedSystemRoles : (["ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"] as const).map((systemKey) => ({ id: systemKey, systemKey }))
   const customRoles = roles.filter((r) => !r.isSystem)
 
   return (
@@ -101,7 +103,7 @@ export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFi
       </FormSection>
 
       {/* ── Role (create required / edit optional) ── */}
-      <FormSection title={t("users.section.role")} className="lg:col-span-2">
+      {showRole && <FormSection title={t("users.section.role")} className="lg:col-span-2">
         <FormField
           error={(form.formState.errors as { roleSelection?: { message?: string } }).roleSelection?.message}
         >
@@ -144,7 +146,7 @@ export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFi
             />
           )}
         </FormField>
-      </FormSection>
+      </FormSection>}
     </div>
   )
 }

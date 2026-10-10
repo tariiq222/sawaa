@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { resolveEffectiveDurations } from './set-employee-durations/set-employee-durations.handler';
@@ -15,6 +16,7 @@ export interface ListServiceEmployeesQuery {
 export class ListServiceEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(query: ListServiceEmployeesQuery) {
@@ -68,7 +70,7 @@ export class ListServiceEmployeesHandler {
     const availableTypes = configs.map((c) => c.deliveryType);
     const empById = new Map(employees.map((e) => [e.id, e]));
 
-    return links
+    return Promise.all(links
       .filter((l) => empById.has(l.employeeId))
       .sort((a, b) =>
         (empById.get(a.employeeId)!.name ?? '').localeCompare(
@@ -76,7 +78,7 @@ export class ListServiceEmployeesHandler {
           'ar',
         ),
       )
-      .map((l) => {
+      .map(async (l) => {
         const e = empById.get(l.employeeId)!;
         const { firstName, lastName } = splitName(e.name, e.nameAr, e.nameEn);
         const empOptions = optionsByLink.get(l.id) ?? new Map<string, (typeof allOptions)[0]>();
@@ -139,7 +141,7 @@ export class ListServiceEmployeesHandler {
             id: e.id,
             nameAr: e.nameAr,
             title: e.title,
-            avatarUrl: e.avatarUrl,
+            avatarUrl: await this.images.execute({ employeeId: e.id, reference: e.avatarUrl }),
             isActive: e.isActive,
             branchIds: (e.branches ?? []).map((b) => b.branchId),
             user: { firstName, lastName },
@@ -154,7 +156,7 @@ export class ListServiceEmployeesHandler {
           isActive: l.isActive,
           effectiveDurations: resolveEffectiveDurations(serviceDefaults, ownedByLink.get(l.id) ?? []),
         };
-      });
+      }));
   }
 }
 

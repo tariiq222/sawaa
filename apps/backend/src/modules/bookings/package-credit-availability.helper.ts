@@ -7,6 +7,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { lockPackagePurchase } from './package-purchase-lock.helper';
+import { packageCreditGroupCreditSelect } from './package-credit-group-select';
 import { BookingTarget, creditMatchesTarget } from './package-credit-matching.helper';
 import { validateBookingTargetEligibility } from './booking-target-eligibility.helper';
 
@@ -217,28 +218,10 @@ function lifecycleSelect() {
         id: true,
         sequenceMode: true,
         dependsOnGroupId: true,
-        credits: {
-          select: {
-            id: true,
-            sessionPosition: true,
-            totalQuantity: true,
-            usedQuantity: true,
-            reservedQuantity: true,
-            usages: { select: { status: true, deliveredAt: true } },
-          },
-        },
+        credits: { select: packageCreditGroupCreditSelect },
         dependsOnGroup: {
           select: {
-            credits: {
-              select: {
-                id: true,
-                sessionPosition: true,
-                totalQuantity: true,
-                usedQuantity: true,
-                reservedQuantity: true,
-                usages: { select: { status: true, deliveredAt: true } },
-              },
-            },
+            credits: { select: packageCreditGroupCreditSelect },
           },
         },
       },

@@ -10,6 +10,9 @@ import {
 } from "@/lib/package-family-form"
 import type { PackageFamilyOptionInput } from "@sawaa/shared/types"
 
+const { uploadImage } = vi.hoisted(() => ({ uploadImage: vi.fn() }))
+vi.mock("@/lib/api/package-families", () => ({ uploadPackageFamilyImage: uploadImage }))
+
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({ locale: "en", dir: "ltr", t: (key: string) => key }),
 }))
@@ -65,6 +68,33 @@ const family = (options: PackageFamilyOptionInput[]): PackageFamilyEditorValue =
 })
 
 describe("PackageFamilyEditor", () => {
+  it("merges a delayed image upload into the latest family draft and propagates it", async () => {
+    let resolveUpload!: (key: string) => void
+    uploadImage.mockReturnValueOnce(new Promise<string>(resolve => { resolveUpload = resolve }))
+    URL.createObjectURL = vi.fn(() => "blob:family-preview")
+    URL.revokeObjectURL = vi.fn()
+    const change = vi.fn()
+    const save = vi.fn()
+    render(<PackageFamilyEditor initialValue={family([option("خمس جلسات", [group("clinic", 5)])])} onChange={change} onSubmit={save} onCancel={vi.fn()} />)
+
+    const file = new File(["image"], "family.png", { type: "image/png" })
+    fireEvent.change(screen.getByLabelText("catalog.familyImage"), { target: { files: [file] } })
+    expect(uploadImage).toHaveBeenCalledWith(file)
+    expect(screen.getByRole("button", { name: "packages.family.save" })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText("packages.create.nameAr"), { target: { value: "جلسات محدثة" } })
+    fireEvent.click(screen.getByRole("button", { name: "packages.family.options.copy" }))
+    expect(change.mock.lastCall?.[0].options).toHaveLength(2)
+
+    resolveUpload("objects/family.png")
+    await waitFor(() => expect(change.mock.lastCall?.[0].imageUrl).toBe("objects/family.png"))
+    expect(screen.getByLabelText("packages.create.nameAr")).toHaveValue("جلسات محدثة")
+    expect(change.mock.lastCall?.[0].nameAr).toBe("جلسات محدثة")
+    expect(change.mock.lastCall?.[0].options).toHaveLength(2)
+    fireEvent.click(screen.getByRole("button", { name: "packages.family.save" }))
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ nameAr: "جلسات محدثة", imageUrl: "objects/family.png", options: expect.any(Array) })))
+    expect(save.mock.lastCall?.[0].options).toHaveLength(2)
+  })
+
   it("derives total sessions from all groups and displays separate 5 and 9 option counts", () => {
     const value = family([
       option("خمس جلسات", [group("assessment", 1), group("clinic", 4)]),

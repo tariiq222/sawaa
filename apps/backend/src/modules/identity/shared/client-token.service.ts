@@ -46,6 +46,8 @@ export class ClientTokenService {
     client: {
       id: string;
       email: string | null;
+      /** Only a proven address is placed in the token; unverified ones stay server-side. */
+      emailVerified: Date | null;
       tokenVersion?: number;
     },
     transaction?: Prisma.TransactionClient,
@@ -53,7 +55,9 @@ export class ClientTokenService {
     const jti = randomUUID();
     const payload: ClientJwtPayload = {
       sub: client.id,
-      email: client.email ?? '',
+      // The session itself is rebuilt from the database (ClientJwtStrategy);
+      // this claim is informational, so it must never echo an unproven address.
+      email: client.emailVerified && client.email ? client.email : '',
       namespace: 'client',
       jti,
       tokenVersion: client.tokenVersion ?? 0,

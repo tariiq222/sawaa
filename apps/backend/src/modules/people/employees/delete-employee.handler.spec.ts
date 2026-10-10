@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -19,16 +21,19 @@ const buildPrisma = () => ({
 
 describe('DeleteEmployeeHandler', () => {
   let handler: DeleteEmployeeHandler;
+  let cache: { invalidatePrefix: jest.Mock };
   let prisma: ReturnType<typeof buildPrisma>;
   let rlsTransaction: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrisma();
+    cache = { invalidatePrefix: jest.fn().mockResolvedValue(undefined) };
     rlsTransaction = {
       withTransaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: CacheService, useValue: cache },
         DeleteEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: RlsTransactionService, useValue: rlsTransaction },
@@ -95,6 +100,7 @@ describe('DeleteEmployeeHandler', () => {
     });
     expect(prisma.$queryRaw).toHaveBeenCalled();
     expect(prisma.employee.delete).toHaveBeenCalledWith({ where: { id: 'emp-1' } });
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith(SERVICES_CACHE_PREFIX);
   });
 
   it('deletes practitioner-owned ServiceDurationOption/EmployeeServiceOption rows before cascade (no orphans)', async () => {
@@ -137,5 +143,6 @@ describe('DeleteEmployeeHandler', () => {
     expect(prisma.employeeServiceOption.deleteMany).not.toHaveBeenCalled();
     expect(prisma.serviceDurationOption.deleteMany).not.toHaveBeenCalled();
     expect(prisma.employee.delete).toHaveBeenCalledWith({ where: { id: 'emp-1' } });
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith(SERVICES_CACHE_PREFIX);
   });
 });

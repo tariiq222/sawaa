@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { normalizePublicImageUrl } from '../../../people/employees/public/public-image-url';
@@ -19,6 +20,7 @@ export interface PublicBranchEmployee {
 export class ListPublicBranchEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
   ) {}
 
   async execute(branchId: string): Promise<PublicBranchEmployee[]> {
@@ -50,11 +52,11 @@ export class ListPublicBranchEmployeesHandler {
       },
     });
 
-    return links
+    return Promise.all(links
       .filter((l) => l.employee.isPublic && l.employee.isActive)
-      .map((l) => {
+      .map(async (l) => {
         const { isPublic: _ip, isActive: _ia, ...e } = l.employee;
-        return { ...e, publicImageUrl: normalizePublicImageUrl(e.publicImageUrl) };
-      });
+        return { ...e, publicImageUrl: normalizePublicImageUrl(e.publicImageUrl, e.id, this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get<number>('PORT') || 5200}`) };
+      }));
   }
 }

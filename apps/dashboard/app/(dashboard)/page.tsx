@@ -1,8 +1,7 @@
 "use client"
 
 import { Suspense, useMemo } from "react"
-import { format } from "date-fns"
-import { ar } from "date-fns/locale"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { FlashIcon } from "@hugeicons/core-free-icons"
 import { GreetingHeader } from "@/components/features/dashboard/greeting-header"
 import { QuickActions } from "@/components/features/dashboard/quick-actions"
@@ -27,16 +26,15 @@ export default function DashboardPage() {
     [userRole, canDo],
   )
 
-  const dateLabel = format(
-    new Date(),
-    locale === "ar" ? "EEEE، d MMMM yyyy" : "EEEE, MMMM d, yyyy",
-    locale === "ar" ? { locale: ar } : undefined,
-  )
+  const dateLabel = new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory" : "en-US", {
+    timeZone: "Asia/Riyadh", weekday: "long", day: "numeric", month: "long", year: "numeric",
+  }).format(new Date())
 
   const userName = user?.name || user?.email || "—"
 
   const {
     overview,
+    error,
     todayBookingsCount,
     todayConfirmedCount,
     todayPendingCount,
@@ -58,6 +56,8 @@ export default function DashboardPage() {
         </section>
       </Suspense>
 
+      {error && <ErrorBanner message={t("dashboard.metricsError")} />}
+
       <TodayPulse
         visible={visible.todayPulse}
         total={todayBookingsCount}
@@ -66,12 +66,12 @@ export default function DashboardPage() {
         awaitingPayment={todayAwaitingPaymentCount}
       />
 
-      <HomeStats
+      {!error && <HomeStats
         overview={overview}
         pendingPayments={pendingPaymentsCount}
         visible={visible.stats}
         isLoading={isLoading}
-      />
+      />}
 
       <AttentionAlerts
         pendingPayments={pendingPaymentsCount}

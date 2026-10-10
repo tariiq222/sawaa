@@ -1,0 +1,32 @@
+export const arAuditFinance = {
+  "dashboard.metricsError": "تعذر تحميل مؤشرات اللوحة. أعد المحاولة.",
+  "coupons.validation.percentageMax": "النسبة يجب ألا تتجاوز 100٪",
+  "coupons.toggle.success": "تم تحديث حالة الكوبون",
+  "coupons.toggle.error": "تعذر تحديث حالة الكوبون",
+  "payments.status.partiallyRefunded": "مسترد جزئيًا",
+  "payments.method.mada": "مدى",
+  "payments.method.tabby": "تابي",
+  "payments.receipt.open": "عرض إيصال التحويل",
+  "payments.refund.gatewayRemaining":
+    "ميسر لا يدعم استردادًا ثانيًا للدفعة نفسها. راجع الرصيد المتبقي مع المحاسب.",
+  "invoices.allStatuses": "جميع الحالات",
+  "invoices.popupBlocked": "اسمح بفتح النوافذ لتنزيل الفاتورة",
+  "reports.financial.avgPerBooking": "متوسط التحصيل لكل موعد غير ملغي",
+  "reports.previousPeriod": "الفترة السابقة",
+  "reports.revenueBasis":
+    "الإيراد حسب تاريخ التحصيل، وعدد المواعيد حسب تاريخ الجلسة؛ قد يقعان في يومين مختلفين.",
+  "reports.bookingPriceBasis":
+    "قيمة الجلسات المكتملة حسب موعدها؛ قد تختلف عن التحصيل الفعلي.",
+  "reports.paymentStatus.PARTIALLY_REFUNDED": "مسترد جزئيًا",
+  "reports.bookingStatus.DEPOSIT_PAID": "تم دفع العربون",
+  "reports.paymentMethod.MADA": "مدى",
+  "reports.paymentMethod.TABBY": "تابي",
+  "reports.packageExport": "تصدير الباقات CSV",
+  "reports.export.metric": "البيان",
+  "reports.export.value": "القيمة",
+  "reports.export.amountSar": "المبلغ (ريال)",
+  "reports.export.count": "العدد",
+  "reports.export.date": "التاريخ",
+  "reports.export.reference": "المرجع",
+  "reports.export.method": "طريقة الدفع",
+}

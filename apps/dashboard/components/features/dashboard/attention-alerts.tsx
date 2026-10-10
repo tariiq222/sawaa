@@ -116,7 +116,7 @@ export function AttentionAlerts({ pendingPayments, cancelRequests, visible }: At
       )}
       {showCancels && (
         <AlertTile
-          href="/bookings"
+          href="/bookings?tab=all&status=cancel_requested"
           testId="alert-cancel-requests"
           count={cancelRequests}
           label={t("alerts.cancelRequests")}

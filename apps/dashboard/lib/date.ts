@@ -14,11 +14,12 @@
  * "ar-SA" : "en-US", …)` so AR/EN parity stays consistent.
  */
 
-import { format, formatDistanceToNow } from "date-fns"
+import { formatDistanceToNow } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
 
 export type DateLike = Date | string | number | null | undefined
 
-type DatePatternOptions = NonNullable<Parameters<typeof format>[2]> & {
+type DatePatternOptions = NonNullable<Parameters<typeof formatInTimeZone>[3]> & {
   fallback?: string
 }
 
@@ -52,7 +53,7 @@ export function formatLocaleDate(
 ): string {
   const d = toValidDate(date)
   if (!d) return "—"
-  return d.toLocaleDateString(resolveDateLocale(locale), options)
+  return d.toLocaleDateString(resolveDateLocale(locale), {...options, timeZone:"Asia/Riyadh", calendar:"gregory"})
 }
 
 /**
@@ -68,7 +69,7 @@ export function formatDatePattern(
   const { fallback = "—", ...formatOptions } = options
   const d = toValidDate(date)
   if (!d) return fallback
-  return format(d, pattern, formatOptions)
+  return formatInTimeZone(d, "Asia/Riyadh", pattern, formatOptions)
 }
 
 export function formatRelativeTime(
@@ -84,5 +85,5 @@ export function formatRelativeTime(
 export function formatDateTimeLocalValue(date: DateLike): string {
   const d = toValidDate(date)
   if (!d) return ""
-  return d.toISOString().slice(0, 16)
+  return formatInTimeZone(d, "Asia/Riyadh", "yyyy-MM-dd'T'HH:mm")
 }

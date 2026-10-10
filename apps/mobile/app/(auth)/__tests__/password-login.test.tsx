@@ -78,7 +78,7 @@ jest.mock('@/hooks/use-redux', () => ({ useAppDispatch: () => mockDispatch }));
 jest.mock('@/services/password-login', () => ({ loginWithPassword: jest.fn() }));
 jest.mock('@/services/auth', () => ({ authService: { getProfile: jest.fn().mockResolvedValue({ success: true, data: { id: 'client', role: 'CLIENT' } }) }, SessionSupersededError: class extends Error {} }));
 jest.mock('@/services/native-session-state', () => ({ isSessionCurrent: (epoch: number) => epoch === mockEpoch, fenceSession: () => ++mockEpoch, clearSessionAtEpoch: jest.fn().mockResolvedValue(true) }));
-import LoginScreen from '../login';
+import StaffLoginScreen from '../staff-login';
 import { loginWithPassword } from '@/services/password-login';
 import { authService } from '@/services/auth';
 const login = jest.mocked(loginWithPassword);
@@ -89,7 +89,7 @@ function fill(ui: ReturnType<typeof render>) {
   fireEvent.changeText(ui.getByLabelText('auth.password'), 'Secret1');
 }
 it('defaults to masked password with a visibility control and retains identifier across modes', () => {
-  const ui = render(<LoginScreen />); fill(ui);
+  const ui = render(<StaffLoginScreen />); fill(ui);
   expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(true);
   expect(ui.queryByText('auth.showPassword')).toBeNull();
   expect(ui.queryByText('auth.hidePassword')).toBeNull();
@@ -105,7 +105,7 @@ it('defaults to masked password with a visibility control and retains identifier
   expect(ui.getByLabelText('auth.password').props.value).toBe('');
 });
 it('validates empty password and shows a generic failure for rejected credentials', async () => {
-  const ui = render(<LoginScreen />);
+  const ui = render(<StaffLoginScreen />);
   fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), 'sara@example.test');
   await act(async () => { fireEvent.press(ui.getByText('auth.loginNow')); });
   expect(ui.getByText('auth.passwordRequired')).toBeTruthy(); expect(login).not.toHaveBeenCalled();
@@ -116,14 +116,14 @@ it('validates empty password and shows a generic failure for rejected credential
 });
 it('completes a password login directly into booking continuation', async () => {
   mockParams = { booking: JSON.stringify({ clinicId: 'c', serviceId: 's', employeeId: 'e', branchId: 'b', deliveryType: 'in_person', scheduledAt: '2026-10-08T10:00:00.000Z', amount: '45000', currency: 'SAR' }) };
-  const ui = render(<LoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
   await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/confirm', params: { clinicId: 'c', serviceId: 's', employeeId: 'e', branchId: 'b', deliveryType: 'in_person', scheduledAt: '2026-10-08T10:00:00.000Z', chargedPrice: '45000', currency: 'SAR' } }));
   expect(mockDispatch).toHaveBeenCalled(); expect(mockOtp).not.toHaveBeenCalled();
 });
 it.each(['switch', 'back', 'unmount'])('suppresses a late password response after %s', async action => {
   let resolve!: (value: typeof session) => void;
   login.mockImplementationOnce((_id, _pw, start) => { start?.(1); return new Promise(r => { resolve = r; }); });
-  const ui = render(<LoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
   if (action === 'switch') fireEvent.press(ui.getByText('auth.loginWithOtp'));
   else if (action === 'back') fireEvent.press(ui.getByLabelText('a11y.buttonBack'));
   else ui.unmount();
@@ -132,14 +132,14 @@ it.each(['switch', 'back', 'unmount'])('suppresses a late password response afte
 });
 it('prefills recovery from the identifier while preserving continuation', () => {
   mockParams = { redirect: '/(client)/(tabs)/appointments' };
-  const ui = render(<LoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.forgotPassword.linkLabel'));
+  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.forgotPassword.linkLabel'));
   expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/forgot-password', params: { identifier: 'sara@example.test', redirect: '/(client)/(tabs)/appointments' } });
 });
 
 it('suppresses profile completion when switching modes after tokens arrive', async () => {
   let resolve!: (value: Awaited<ReturnType<typeof authService.getProfile>>) => void;
   jest.mocked(authService.getProfile).mockReturnValueOnce(new Promise(r => { resolve = r; }));
-  const ui = render(<LoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
   await waitFor(() => expect(authService.getProfile).toHaveBeenCalled());
   fireEvent.press(ui.getByText('auth.loginWithOtp'));
   await act(async () => resolve({ success: true, data: { id: 'client', role: 'CLIENT' } } as Awaited<ReturnType<typeof authService.getProfile>>));
@@ -148,7 +148,7 @@ it('suppresses profile completion when switching modes after tokens arrive', asy
 it('suppresses a phone OTP navigation after switching modes', async () => {
   let resolve!: (value: { maskedIdentifier: string }) => void;
   mockOtp.mockReturnValueOnce(new Promise(r => { resolve = r; }));
-  const ui = render(<LoginScreen />);
+  const ui = render(<StaffLoginScreen />);
   fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), '0501234567');
   fireEvent.press(ui.getByText('auth.loginWithOtp')); fireEvent.press(ui.getByText('auth.login.sendCode'));
   fireEvent.press(ui.getByText('auth.loginWithPassword'));

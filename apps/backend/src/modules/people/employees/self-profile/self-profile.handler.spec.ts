@@ -9,9 +9,10 @@ function fixture() {
     user: { findUnique: jest.fn(async () => user) },
   };
   const transactions = { withTransaction: async (fn: (value: typeof tx) => unknown) => fn(tx) };
-  const read = new GetSelfProfileHandler(tx as never);
+  const images = { resolve: jest.fn(async (_type: string, _id: string, value: string | null) => value) };
+  const read = new GetSelfProfileHandler(tx as never, images as never);
   const update = new UpdateSelfProfileHandler(transactions as never, read);
-  return { employee, user, read, update };
+  return { employee, user, read, update, images };
 }
 
 describe('Employee self profile', () => {
@@ -36,5 +37,14 @@ describe('Employee self profile', () => {
     expect(employee.bioAr).toBe('');
     expect(employee.experience).toBeNull();
     expect(employee.name).toBe('Nora');
+  });
+
+  it('signs a dashboard-uploaded storage key through the owned image resolver', async () => {
+    const { read, employee, images } = fixture();
+    employee.publicImageUrl = 'org/photo.webp' as never;
+    images.resolve.mockResolvedValueOnce('https://signed.example/photo.webp');
+    const result = await read.execute('user-a');
+    expect(images.resolve).toHaveBeenCalledWith('employee', 'employee-a', 'org/photo.webp');
+    expect(result.avatarUrl).toBe('https://signed.example/photo.webp');
   });
 });

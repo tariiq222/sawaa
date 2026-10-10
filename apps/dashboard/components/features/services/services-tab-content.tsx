@@ -30,10 +30,8 @@ export function ServicesTabContent() {
     categoryId, setCategoryId,
     isActive, setIsActive,
     page, setPage,
-    resetFilters,
+    resetFilters, refetch, branchId, setBranchId, sortBy, sortOrder, setSorting,
   } = useServices()
-  const branchId: string | undefined = undefined
-  const setBranchId = (_v: string | undefined) => { /* branch filter not supported */ }
   const { data: categories } = useCategories()
   const categoryItems = Array.isArray(categories) ? categories : (categories?.items ?? [])
   const { branches } = useBranches()
@@ -91,6 +89,17 @@ export function ServicesTabContent() {
             options: categoryOptions,
             onValueChange: (v) => setCategoryId(v === "all" ? undefined : v),
           },
+          {
+            key: "sort", value: `${sortBy}:${sortOrder}`, placeholder: t("catalog.sort"),
+            options: [
+              {value:"createdAt:desc",label:t("catalog.sortNewest")},
+              {value:"createdAt:asc",label:t("catalog.sortOldest")},
+              {value:`${locale === "ar" ? "nameAr" : "nameEn"}:asc`,label:t("catalog.sortName")},
+              {value:"price:asc",label:t("catalog.sortPrice")},
+              {value:"durationMins:asc",label:t("catalog.sortDuration")},
+            ],
+            onValueChange: (value) => { const [field, order] = value.split(":"); setSorting(field as typeof sortBy, order as typeof sortOrder) },
+          },
           // Branch filter — only when multi_branch feature is enabled
           ...(isMultiBranch ? [{
             key: "branch",
@@ -112,7 +121,7 @@ export function ServicesTabContent() {
       />
 
       {/* Error */}
-      {error && <ErrorBanner message={error} />}
+      {error && <ErrorBanner message={error} onRetry={() => refetch()} />}
 
       {/* Table */}
       {isLoading && services.length === 0 ? (

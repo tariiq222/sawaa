@@ -23,9 +23,9 @@ export function PaymentRefundStep({
   const { t } = useLocale()
   const { refundMut, manualRefundMut } = usePaymentMutations()
 
-  // Off-gateway payments (cash/mada/bank-transfer, no gatewayRef) refund through
+  // Off-gateway payments (cash/mada/bank-transfer, identified by method) refund through
   // the manual path; card/gateway payments go through Moyasar.
-  const isManual = !payment.gatewayRef
+  const isManual = payment.method !== "ONLINE_CARD"
   const mut = isManual ? manualRefundMut : refundMut
 
   const maxSar = halalasToSar(Math.max(Number(payment.amount) - Number(payment.refundedAmount ?? 0), 0))

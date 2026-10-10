@@ -27,6 +27,7 @@ export function useActivityLogs() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [...QUERY_KEY, "list", query],
     queryFn: () => fetchActivityLogs(query),
+    staleTime: 30_000,
   })
 
   const hasFilters = !!module || !!action || !!dateFrom || !!dateTo
@@ -62,9 +63,9 @@ export function useActivityLogs() {
     action,
     setAction: (a: string | undefined) => { setAction(a); setPage(1) },
     dateFrom,
-    setDateFrom,
+    setDateFrom: (value: string) => { setDateFrom(value); setPage(1) },
     dateTo,
-    setDateTo,
+    setDateTo: (value: string) => { setDateTo(value); setPage(1) },
     hasFilters,
     resetFilters,
   }

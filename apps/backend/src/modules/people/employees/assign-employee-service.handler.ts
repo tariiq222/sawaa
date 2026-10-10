@@ -1,3 +1,5 @@
+import { CacheService } from '../../../infrastructure/cache';
+import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { BadRequestException, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 
@@ -5,7 +7,7 @@ export interface AssignEmployeeServiceCommand { employeeId: string; serviceId: s
 
 @Injectable()
 export class AssignEmployeeServiceHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cache: CacheService) {}
 
   async execute(cmd: AssignEmployeeServiceCommand) {
     if (!cmd.serviceId) {
@@ -33,11 +35,13 @@ export class AssignEmployeeServiceHandler {
     });
     if (existing) throw new ConflictException('Service already assigned to employee');
 
-    return this.prisma.employeeService.create({
+    const result = await this.prisma.employeeService.create({
       data: {
         employeeId: cmd.employeeId,
         serviceId: cmd.serviceId,
       },
     });
+    await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
+    return result;
   }
 }

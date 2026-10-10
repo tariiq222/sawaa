@@ -100,6 +100,8 @@ export class RegisterHandler {
     const tokens = await this.clientTokens.issueTokenPair({
       id: clientId,
       email: isEmailChannel ? identifier : null,
+      // Registering by email proves that address with the OTP just consumed.
+      emailVerified: isEmailChannel ? new Date() : null,
       tokenVersion,
     });
 

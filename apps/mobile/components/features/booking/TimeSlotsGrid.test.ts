@@ -12,8 +12,7 @@ jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').Vi
 
 import { formatTime, slotGridLayout } from './TimeSlotsGrid';
 
-it('formats the same local slot in readable Arabic and English numerals', () => {
-  const atFour = new Date(2026, 8, 28, 16, 0).toISOString();
+it.each(['2026-09-28T16:00:00+03:00', '2026-09-28T13:00:00Z'])('formats the Riyadh slot %s in readable Arabic and English numerals', (atFour) => {
   expect(formatTime(atFour, false)).toBe('4:00 PM');
   expect(formatTime(atFour, true)).toBe('٤:٠٠ م');
 });

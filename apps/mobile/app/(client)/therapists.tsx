@@ -1,3 +1,4 @@
+import { getCategoryBookingServices } from '@sawaa/shared/catalog';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,7 +12,7 @@ import { BookingStepHeader } from '@/components/features/booking/BookingStepHead
 import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
 import { TherapistCard } from '@/components/features/directory/TherapistCard';
 import { useDir } from '@/hooks/useDir';
-import { useClinics, useServicePriceFloors, useTherapists } from '@/hooks/queries';
+import { useClinics, usePublicCatalog, useServicePriceFloors, useTherapists } from '@/hooks/queries';
 import { bookingStep, stepsAfterSkip } from '@/features/booking/booking-entry';
 import { applyTherapistFilters, type TherapistChip } from '@/features/therapists/therapistsFilter';
 import type { PublicEmployeeItem } from '@/services/client/employees';
@@ -43,6 +44,7 @@ export default function TherapistsListScreen() {
   const therapistsQuery = useTherapists();
   const { data, isLoading: therapistsLoading, isError: therapistDirectoryFailed, refetch: refetchTherapists } = therapistsQuery;
   const clinicsQuery = useClinics();
+  const catalogQuery = usePublicCatalog(Boolean(serviceId));
   const { isLoading: clinicsLoading, isError: clinicsFailed, refetch: refetchClinics } = clinicsQuery;
   const rawList = useMemo(() => data ?? [], [data]);
   const selectedClinic = useMemo(
@@ -112,6 +114,20 @@ export default function TherapistsListScreen() {
     );
   }, [router, clinicId, serviceId, steps, priceFloors, timeStepParams]);
 
+  // Presentation only: the existing scoped list and booking navigation stay unchanged.
+  const selectedService = useMemo(() => {
+    const catalog = catalogQuery.data;
+    if (!serviceId || !catalog) return undefined;
+    const service = catalog.services.find((entry) => entry.id === serviceId);
+    if (!service || service.isHidden === true || (clinicId && service.categoryId !== clinicId)) return undefined;
+    const category = catalog.categories.find((entry) => entry.id === service.categoryId);
+    if (!category || category.bookingMode === 'DIRECT') return undefined;
+    return getCategoryBookingServices(category, catalog.services).find((entry) => entry.id === serviceId);
+  }, [catalogQuery.data, clinicId, serviceId]);
+  const serviceName = selectedService
+    ? (dir.isRTL ? selectedService.nameAr : (selectedService.nameEn ?? selectedService.nameAr))
+    : undefined;
+
   const screenTitle = selectedClinic
     ? (dir.isRTL ? selectedClinic.nameAr : (selectedClinic.nameEn ?? selectedClinic.nameAr))
     : t('therapists.listTitle');
@@ -136,6 +152,16 @@ export default function TherapistsListScreen() {
       ) : (
         <ScreenHeader title={screenTitle} onBack={() => router.back()} />
       )}
+      {serviceName ? (
+        <View style={styles.serviceContext}>
+          <Text style={[styles.serviceName, { color: colors.ink[900], fontFamily: f600, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+            {serviceName}
+          </Text>
+          {steps && selectedClinic ? (
+            <Text style={[styles.message, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>{screenTitle}</Text>
+          ) : null}
+        </View>
+      ) : null}
       <DirectorySearch
         value={query}
         onChangeText={setQuery}
@@ -197,6 +223,8 @@ function Separator() {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: sawaaSpacing.lg },
   header: { gap: sawaaSpacing.md, marginBottom: sawaaSpacing.xl },
+  serviceContext: { gap: sawaaSpacing.xs },
+  serviceName: { fontSize: sawaaType.subheading.fontSize, lineHeight: sawaaType.subheading.lineHeight },
   chipsRow: { gap: sawaaSpacing.sm },
   separator: { height: sawaaSpacing.md },
   message: { fontSize: sawaaType.body.fontSize + 1, lineHeight: 22 },

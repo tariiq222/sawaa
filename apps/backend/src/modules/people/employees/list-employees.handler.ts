@@ -1,8 +1,10 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListEmployeesDto, type EmployeeSortField } from './list-employees.dto';
+import { OwnedImageResolver } from '../../media/owned-image.resolver';
 import { mapEmployeeRow } from './employee-row.mapper';
 
 export type ListEmployeesQuery = ListEmployeesDto & {
@@ -28,6 +30,7 @@ function buildOrderBy(
 export class ListEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly images: ResolveEmployeeImageHandler,
   ) {}
 
   async execute(query: ListEmployeesQuery) {
@@ -85,7 +88,10 @@ export class ListEmployeesHandler {
     const bookingsByEmployee = new Map(bookings.map((b) => [b.employeeId, b._count?._all ?? 0]));
 
     return toListResponse(
-      items.map((e) => mapEmployeeRow(e, ratingsByEmployee.get(e.id), bookingsByEmployee.get(e.id))),
+      await Promise.all(items.map(async (e) => ({
+        ...mapEmployeeRow(e, ratingsByEmployee.get(e.id), bookingsByEmployee.get(e.id)),
+        avatarUrl: await this.images.execute({ employeeId: e.id, reference: e.avatarUrl }),
+      }))),
       total,
       query.page,
       query.limit,

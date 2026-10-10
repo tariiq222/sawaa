@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/components/providers/auth-provider"
 import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -35,12 +36,12 @@ import { useSidebarNav } from "@/hooks/use-sidebar-nav"
 
 export function AppSidebar() {
   const { t, dir } = useLocale()
+  const { canDo } = useAuth()
   const { isMobile, setOpenMobile } = useSidebar()
 
   const {
     filteredGroups,
     isItemActive,
-    navigate,
     prefetchItem,
   } = useSidebarNav()
   const conversationShortcut = filteredGroups
@@ -70,7 +71,7 @@ export function AppSidebar() {
         </SidebarHeader>
 
         {/* ─── Quick action: new booking ─── */}
-        <div className="px-3 pb-2">
+        {canDo("booking", "create") && <div className="px-3 pb-2">
           <Link
             href="/bookings?new=1"
             onClick={() => isMobile && setOpenMobile(false)}
@@ -84,7 +85,7 @@ export function AppSidebar() {
             <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2.5} />
             <span>{t("bookings.newBooking")}</span>
           </Link>
-        </div>
+        </div>}
 
         {/* ─── Navigation ─── */}
         <SidebarContent className="pt-0">
@@ -101,8 +102,8 @@ export function AppSidebar() {
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
                           isActive={isActive}
+                          asChild
                           onMouseEnter={() => prefetchItem(item.href)}
-                          onClick={() => navigate(item.href, isMobile ? () => setOpenMobile(false) : undefined)}
                           className={cn(
                             "cursor-pointer",
                             isActive
@@ -110,8 +111,10 @@ export function AppSidebar() {
                               : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60",
                           )}
                         >
+                          <Link href={item.href} onClick={isMobile ? () => setOpenMobile(false) : undefined}>
                           <HugeiconsIcon icon={item.icon} size={18} />
                           <span className="flex-1">{t(item.titleKey)}</span>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )

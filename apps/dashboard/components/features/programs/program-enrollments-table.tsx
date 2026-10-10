@@ -33,7 +33,7 @@ export function ProgramEnrollmentsTable({
           header: t('programs.enrollment.client'),
           accessorFn: (e) => e.clientId,
           cell: ({ row }) => (
-            <span className="text-sm">{row.original.clientId.slice(0, 8)}…</span>
+            <span className="text-sm">{row.original.clientName || t('auditOperations.clientUnavailable')}</span>
           ),
         },
         {

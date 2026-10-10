@@ -29,7 +29,7 @@ export function ServiceBreadcrumb({
       {departmentName && departmentId && (
         <>
           <a
-            href={`/categories?departmentId=${departmentId}`}
+            href={`/departments/${departmentId}/edit`}
             className="hover:text-foreground transition-colors"
           >
             {departmentName}

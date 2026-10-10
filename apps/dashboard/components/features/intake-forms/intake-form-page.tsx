@@ -1,10 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { fetchEmployees } from "@/lib/api/employees"
-import { fetchServices } from "@/lib/api/services"
-import { fetchBranches } from "@/lib/api/branches"
+import { useState } from "react"
+import { useIntakeScopeOptions } from '@/hooks/use-intake-scope-options'
+import { validateIntakeDraft } from '@/lib/schemas/intake-form.schema'
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon, FloppyDiskIcon } from "@hugeicons/core-free-icons"
@@ -71,26 +69,14 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
     ...initialDraft,
   }))
 
-  /* ─── Scope Options — real API data ─── */
-
-  const { data: employeesData } = useQuery({
-    queryKey: ["employees", "scope-select"],
-    queryFn: () => fetchEmployees({ page: 1, limit: 100 }),
-    enabled: draft.scope === "employee",
-  })
-
-  const { data: servicesData } = useQuery({
-    queryKey: ["services", "scope-select"],
-    queryFn: () => fetchServices({ page: 1, limit: 100 }),
-    enabled: draft.scope === "service",
-  })
-
-  const { data: branchesData } = useQuery({
-    queryKey: ["branches", "scope-select"],
-    queryFn: () => fetchBranches({ page: 1, limit: 100 }),
-    // Only fetch branches when multi_branch is enabled and scope is "branch"
-    enabled: isMultiBranch && draft.scope === "branch",
-  })
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const scopeQuery = useIntakeScopeOptions(draft.scope, locale)
+  const scopeOptions = scopeQuery.data?.pages.flatMap(page => page.items) ?? []
+  function save() {
+    const errors = validateIntakeDraft(draft)
+    setValidationErrors(errors)
+    if (!errors.length) onSave(draft)
+  }
 
   function update(patch: Partial<IntakeFormDraft>) {
     setDraft((prev) => ({ ...prev, ...patch }))
@@ -122,28 +108,6 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
     update({ fields })
   }
 
-  const scopeOptions = useMemo(() => {
-    if (draft.scope === "employee") {
-      return (employeesData?.items ?? []).map((p) => ({
-        value: p.id,
-        label: `${p.user.firstName} ${p.user.lastName}`,
-      }))
-    }
-    if (draft.scope === "service") {
-      return (servicesData?.items ?? []).map((s) => ({
-        value: s.id,
-        label: isAr ? s.nameAr : (s.nameEn ?? s.nameAr),
-      }))
-    }
-    if (draft.scope === "branch" && isMultiBranch) {
-      return (branchesData?.items ?? []).map((b) => ({
-        value: b.id,
-        label: isAr ? b.nameAr : b.nameEn,
-      }))
-    }
-    return []
-  }, [draft.scope, employeesData, servicesData, branchesData, isAr, isMultiBranch])
-
   const isEdit = mode === "edit"
 
   return (
@@ -154,6 +118,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
         description={t("intakeForms.page.description")}
       />
 
+      {validationErrors.length > 0 && <ul role="alert" className="text-error">{validationErrors.map(key => <li key={key}>{t(key)}</li>)}</ul>}
       <div className="flex flex-col gap-6 pb-24">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
@@ -169,6 +134,12 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
             onUpdate={update}
             onScopeChange={handleScopeChange}
             isAr={isAr}
+            isLoadingOptions={scopeQuery.isLoading}
+            optionsError={Boolean(scopeQuery.error)}
+            hasMoreOptions={Boolean(scopeQuery.hasNextPage)}
+            isLoadingMore={scopeQuery.isFetchingNextPage}
+            onLoadMore={() => void scopeQuery.fetchNextPage()}
+            onRetry={() => void scopeQuery.refetch()}
           />
         </div>
 
@@ -211,7 +182,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
         <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/intake-forms")}>
           {t("intakeForms.page.cancel")}
         </Button>
-        <Button size="lg" className="rounded-lg gap-2" onClick={() => onSave(draft)} disabled={isSaving || isLoadingDraft}>
+        <Button size="lg" className="rounded-lg gap-2" onClick={save} disabled={isSaving || isLoadingDraft}>
           <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
           {isSaving
             ? t("intakeForms.page.saving")

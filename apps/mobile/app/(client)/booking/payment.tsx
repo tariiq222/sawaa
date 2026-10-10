@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { createPaymentStyles as createStyles } from '@/components/features/booking/payment-styles';
 import { useTheme } from '@/theme/useTheme';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
 import { isClientBankTransferAvailable } from '@/features/booking/payment-methods';
+import { showBookingPaymentError } from '@/features/booking/booking-payment-error';
 import { useAppSelector } from '@/hooks/use-redux';
 import {
   bookingPaymentDraft,
@@ -189,10 +190,7 @@ export default function BookingPaymentScreen() {
       await Promise.resolve();
     } catch (err) {
       if (!resumeSafe) setResumeState('invalid');
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        (t('payment.couldNotContinuePaymentTryAgain'));
-      Alert.alert(t('common.error'), message);
+      showBookingPaymentError(err, t, () => router.push('/(client)/(tabs)/appointments'));
     } finally {
       inFlight.current = false;
       setSubmitting(false);

@@ -22,12 +22,14 @@ const buildPrisma = () => {
       create: jest.fn().mockResolvedValue(mockRating),
       findMany: jest.fn().mockResolvedValue([mockRating]),
       count: jest.fn().mockResolvedValue(1),
+      aggregate: jest.fn().mockResolvedValue({ _avg: { score: 5 } }),
     },
     booking: {
       findUnique: jest.fn().mockResolvedValue({
         id: 'booking-1', clientId: 'client-1', employeeId: 'emp-1', status: 'COMPLETED',
       }),
     },
+    employee: { findMany: jest.fn().mockResolvedValue([{id:'emp-1',name:'أخصائي',nameEn:'Practitioner'}]) },
     client: {
       findMany: jest.fn().mockResolvedValue([mockClient]),
     },

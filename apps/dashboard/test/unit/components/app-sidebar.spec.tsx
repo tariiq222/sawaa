@@ -2,8 +2,9 @@ import type { ReactNode } from "react"
 import { render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ canReadConversations: true }))
+const mocks = vi.hoisted(() => ({ canReadConversations: true, canCreateBooking: true }))
 
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => ({ canDo: () => mocks.canCreateBooking }) }))
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key, dir: "ltr" }),
 }))
@@ -39,9 +40,16 @@ describe("AppSidebar conversation cutover", () => {
   it("uses the permission-filtered conversations destination in the footer", () => {
     render(<AppSidebar />)
     const links = screen.getAllByRole("link", { name: "nav.conversations" })
-    expect(links).toHaveLength(1)
+    expect(links).toHaveLength(2)
     expect(links[0]).toHaveAttribute("href", "/conversations")
     expect(screen.queryByRole("link", { name: "nav.whatsapp" })).not.toBeInTheDocument()
+  })
+
+  it("hides new booking without create permission", () => {
+    mocks.canCreateBooking = false
+    render(<AppSidebar />)
+    expect(screen.queryByRole("link", { name: "bookings.newBooking" })).not.toBeInTheDocument()
+    mocks.canCreateBooking = true
   })
 
   it("hides the footer conversation shortcut without conversation read access", () => {

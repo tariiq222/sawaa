@@ -1,3 +1,4 @@
+import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { Test } from '@nestjs/testing';
 import { GetTopPerformersHandler } from './get-top-performers.handler';
 import { PrismaService } from '../../../infrastructure/database';
@@ -10,6 +11,7 @@ describe('GetTopPerformersHandler', () => {
     prisma = { $queryRaw: jest.fn() };
     const mod = await Test.createTestingModule({
       providers: [
+        { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },
         GetTopPerformersHandler,
         { provide: PrismaService, useValue: prisma },
       ],
@@ -42,6 +44,6 @@ describe('GetTopPerformersHandler', () => {
 
 it('uses effective receipt date with PROCESSED fallback for revenue bounds', async () => {
  const prisma = {$queryRaw: jest.fn().mockResolvedValue([]), booking: {groupBy: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0)}, client: {count: jest.fn().mockResolvedValue(0)}};
- await new GetTopPerformersHandler(prisma as never).execute({period: 'month'});
+ await new GetTopPerformersHandler(prisma as never, { execute: async () => null } as never).execute({period: 'month'});
  expect(prisma.$queryRaw.mock.calls[0][0].sql).toContain('COALESCE(p."effectiveReceivedAt", p."processedAt")');
 });

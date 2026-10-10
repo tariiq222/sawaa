@@ -1,6 +1,6 @@
 import { ClientTokenService } from './client-token.service';
 
-const mockClient = { id: 'client-1', email: 'walk-in@clinic.sa' };
+const mockClient = { id: 'client-1', email: 'walk-in@clinic.sa', emailVerified: null };
 
 const buildJwt = () => ({
   sign: jest.fn().mockReturnValue('signed.access.token'),
@@ -58,6 +58,15 @@ describe('ClientTokenService.issueTokenPair', () => {
       expect.not.objectContaining({ organizationId: expect.anything() }),
       expect.anything(),
     );
+  });
+
+  it('puts only a verified email in the token claim', async () => {
+    const jwt = buildJwt();
+    const svc = new ClientTokenService(jwt as never, buildConfig() as never, buildPrisma() as never);
+    await svc.issueTokenPair(mockClient);
+    expect(jwt.sign.mock.calls[0][0]).toMatchObject({ email: '' });
+    await svc.issueTokenPair({ ...mockClient, emailVerified: new Date() });
+    expect(jwt.sign.mock.calls[1][0]).toMatchObject({ email: 'walk-in@clinic.sa' });
   });
 
   it('persists refresh token row keyed by clientId only', async () => {

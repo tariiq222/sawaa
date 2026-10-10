@@ -68,7 +68,7 @@ export function getUserColumns(
       header: t("users.col.roles"),
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-[10px]">
-          {formatUserRole(row.original.role, t, locale)}
+          {formatUserRole(row.original.role, t, locale, row.original.customRole)}
         </Badge>
       ),
     },
@@ -183,7 +183,9 @@ export function formatUserRole(
   role: UserRole,
   t: (key: string) => string,
   locale: Locale,
+  customRole?: User["customRole"],
 ) {
+  if (customRole) return customRole.name
   const key = `users.role.${role}`
   const label = t(key)
   return label === key ? USER_ROLE_FALLBACKS[locale][role] : label

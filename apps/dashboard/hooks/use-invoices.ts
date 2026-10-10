@@ -2,9 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchInvoices } from "@/lib/api/invoices"
-import type { InvoiceListItem, InvoiceListRow } from "@/lib/types/invoice"
+import type {
+  InvoiceListItem,
+  InvoiceListRow,
+  InvoiceStatus,
+} from "@/lib/types/invoice"
 
 export function toInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
   return {
@@ -22,13 +27,26 @@ export function toInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
 
 export function useInvoices() {
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
+  const searchParams = useSearchParams()
+  const [searchOverride, setSearch] = useState<string | undefined>()
+  const search = searchOverride ?? searchParams?.get("search") ?? ""
+
+  const [status, setStatusState] = useState<InvoiceStatus | undefined>()
 
   const trimmedSearch = search.trim()
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.invoices.list({ page, search: trimmedSearch }),
+    queryKey: queryKeys.invoices.list({
+      page,
+      search: trimmedSearch,
+      ...(status ? { status } : {}),
+    }),
     queryFn: () =>
-      fetchInvoices({ page, limit: 20, search: trimmedSearch || undefined }),
+      fetchInvoices({
+        page,
+        limit: 20,
+        search: trimmedSearch || undefined,
+        status,
+      }),
     staleTime: 5 * 60 * 1000,
     // Payment mutations explicitly refetch inactive invoice queries because
     // the provider intentionally disables automatic mount refetches.
@@ -42,10 +60,20 @@ export function useInvoices() {
     meta: data?.meta ?? null,
     isLoading,
     error: error?.message ?? null,
-    refetch: () => { void refetch() },
+    refetch: () => {
+      void refetch()
+    },
     page,
     setPage,
     search,
-    setSearch: (s: string) => { setSearch(s); setPage(1) },
+    status,
+    setStatus: (value: InvoiceStatus | undefined) => {
+      setStatusState(value)
+      setPage(1)
+    },
+    setSearch: (s: string) => {
+      setSearch(s)
+      setPage(1)
+    },
   }
 }
