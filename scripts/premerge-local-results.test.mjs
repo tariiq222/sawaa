@@ -7,11 +7,15 @@ test('a zero-exit Playwright run cannot pass with skipped, flaky, or missing tes
   const website = { ...result, projectName: 'website' };
   const dashboard = { ...result, projectName: 'dashboard' };
   const report = { stats: { expected: 2, skipped: 0, unexpected: 0, flaky: 0 }, errors: [],
-    suites: [{ specs: [{ tests: [website] }], suites: [{ specs: [{ tests: [dashboard] }] }] }] };
+    suites: [{ file: 'website/smoke.spec.ts', specs: [{ file: 'website/smoke.spec.ts', tests: [website] }],
+      suites: [{ specs: [{ file: 'dashboard/smoke.spec.ts', tests: [dashboard] }] }] }] };
   assert.equal(assertPlaywrightReport(report), 2);
-  // A renamed or unmatched smoke spec must not let one project satisfy the gate alone.
+  // A renamed or unmatched smoke spec must not let one project, or a blank seed, satisfy the gate.
   assert.throws(() => assertPlaywrightReport({ ...report,
-    suites: [{ specs: [{ tests: [website] }], suites: [{ specs: [{ tests: [website] }] }] }] }), /dashboard ran no tests/);
+    suites: [{ specs: [{ file: 'website/smoke.spec.ts', tests: [website] }],
+      suites: [{ specs: [{ file: 'website/smoke.spec.ts', tests: [website] }] }] }] }), /dashboard did not run/);
+  assert.throws(() => assertPlaywrightReport({ ...report,
+    suites: [{ specs: [{ file: 'seed.spec.ts', tests: [website, dashboard] }] }] }), /did not run/);
   for (const stats of [
     { ...report.stats, expected: 0 }, { ...report.stats, skipped: 1 },
     { ...report.stats, flaky: 1 }, { ...report.stats, unexpected: 1 },

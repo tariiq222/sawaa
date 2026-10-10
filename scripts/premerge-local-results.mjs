@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export function assertPlaywrightReport(report, requiredProjects = ['website', 'dashboard']) {
+export function assertPlaywrightReport(report, requiredSpecs = { website: 'website/smoke.spec.ts', dashboard: 'dashboard/smoke.spec.ts' }) {
   const stats = report?.stats;
   assert.ok(stats && Number.isInteger(stats.expected) && stats.expected > 0,
     'Playwright must execute at least one passing test');
@@ -15,7 +15,7 @@ export function assertPlaywrightReport(report, requiredProjects = ['website', 'd
     for (const suite of suites) {
       for (const spec of suite.specs ?? []) {
         assert.ok(Array.isArray(spec.tests), 'Invalid Playwright test results');
-        tests.push(...spec.tests);
+        tests.push(...spec.tests.map(test => ({ ...test, file: spec.file ?? suite.file })));
       }
       if (suite.suites) visit(suite.suites);
     }
@@ -29,9 +29,10 @@ export function assertPlaywrightReport(report, requiredProjects = ['website', 'd
       && test.results[0].status === 'passed' && Array.isArray(test.results[0].errors)
       && test.results[0].errors.length === 0, 'Every Playwright test must pass without retries or errors');
   }
-  const projects = new Set(tests.map(test => test.projectName));
-  for (const project of requiredProjects) {
-    assert.ok(projects.has(project), `Playwright project ${project} ran no tests`);
+  // A blank agent seed also matches both projects, so require each real smoke spec.
+  for (const [project, file] of Object.entries(requiredSpecs)) {
+    assert.ok(tests.some(test => test.projectName === project && test.file === file),
+      `Playwright project ${project} did not run ${file}`);
   }
   return stats.expected;
 }

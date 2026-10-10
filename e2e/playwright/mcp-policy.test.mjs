@@ -36,6 +36,15 @@ test('file reads stay under e2e/playwright', () => {
   assert.match(policy(call('browser_file_upload', { paths: '.env' })), /e2e\/playwright/);
 });
 
+test('run_code is denied and session-written files never run as seeds', () => {
+  const session = createMcpPolicy('/repo', [55200, 55203, 55205]);
+  assert.match(session(call('browser_run_code', { code: 'async page => page.screenshot({ path: "/repo/x" })' })), /disabled/);
+  assert.match(session(call('generator_write_test', { fileName: 'e2e/playwright/seed.spec.ts', code: '' })), /reserved/);
+  assert.equal(session(call('generator_write_test', { fileName: 'e2e/playwright/website/new.spec.ts', code: '' })), null);
+  assert.match(session(call('generator_setup_page', { seedFile: 'e2e/playwright/website/new.spec.ts' })), /written in this session/);
+  assert.equal(session(call('generator_setup_page', { seedFile: 'e2e/playwright/website/smoke.spec.ts' })), null);
+});
+
 test('navigation stays on the local loopback origins', () => {
   assert.equal(policy(call('browser_navigate', { url: 'http://127.0.0.1:55205/booking' })), null);
   assert.equal(policy(call('browser_navigate', { url: 'http://127.0.0.1:55203/' })), null);
