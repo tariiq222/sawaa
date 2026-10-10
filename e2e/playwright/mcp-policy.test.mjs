@@ -23,6 +23,19 @@ test('optional file outputs of other tools stay under e2e/playwright', () => {
   assert.match(policy(call('generator_write_test', {})), /e2e\/playwright/);
 });
 
+test('file reads stay under e2e/playwright', () => {
+  assert.equal(policy(call('generator_setup_page', { plan: 'x' })), null);
+  assert.equal(policy(call('planner_setup_page', { seedFile: 'e2e/playwright/seed.spec.ts' })), null);
+  for (const seedFile of ['/repo/.env', '.env', 'apps/dashboard/.env.local', 'e2e/playwright/../../.env']) {
+    assert.match(policy(call('generator_setup_page', { seedFile })), /e2e\/playwright/, seedFile);
+    assert.match(policy(call('planner_setup_page', { seedFile })), /e2e\/playwright/, seedFile);
+  }
+  assert.equal(policy(call('browser_file_upload', { paths: ['e2e/playwright/fixtures/a.png'] })), null);
+  assert.equal(policy(call('browser_file_upload', {})), null);
+  assert.match(policy(call('browser_file_upload', { paths: ['e2e/playwright/fixtures/a.png', '.env'] })), /e2e\/playwright/);
+  assert.match(policy(call('browser_file_upload', { paths: '.env' })), /e2e\/playwright/);
+});
+
 test('navigation stays on the local loopback origins', () => {
   assert.equal(policy(call('browser_navigate', { url: 'http://127.0.0.1:55205/booking' })), null);
   assert.equal(policy(call('browser_navigate', { url: 'http://127.0.0.1:55203/' })), null);
