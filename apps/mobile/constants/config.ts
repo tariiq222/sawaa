@@ -6,6 +6,7 @@ export type { ApiUrlResolutionEnv } from './api-url-validation';
 export const API_URL = resolveApiUrl({
   configuredApiUrl: process.env.EXPO_PUBLIC_API_URL,
   easBuildProfile: process.env.EAS_BUILD_PROFILE,
+  releaseEnvironment: process.env.EXPO_PUBLIC_RELEASE_ENVIRONMENT,
   nodeEnv: process.env.NODE_ENV,
 });
 

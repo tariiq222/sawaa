@@ -1,5 +1,9 @@
 /* global URL, module -- Shared by Node's Expo config loader and React Native. */
 const DEVELOPMENT_API_URL = 'http://localhost:5200/api/v1';
+const RELEASE_API_HOSTS = {
+  staging: 'staging.sawaa.sa',
+  production: 'api.sawaa.sa',
+};
 
 function isPrivateIpv4(hostname) {
   const octets = hostname.split('.');
@@ -62,9 +66,20 @@ function assertProductionApiUrl(apiUrl) {
   }
 }
 
-function resolveApiUrl({ configuredApiUrl, easBuildProfile, nodeEnv }) {
+function resolveApiUrl({ configuredApiUrl, easBuildProfile, releaseEnvironment, nodeEnv }) {
+  if (releaseEnvironment !== undefined) {
+    if (!Object.prototype.hasOwnProperty.call(RELEASE_API_HOSTS, releaseEnvironment)) {
+      throw new Error('Unknown EXPO_PUBLIC release environment');
+    }
+    if (easBuildProfile && easBuildProfile !== releaseEnvironment) {
+      throw new Error('EXPO_PUBLIC release environment conflicts with EAS build profile');
+    }
+  }
+  const releaseProfile = releaseEnvironment || easBuildProfile;
   const apiUrl = configuredApiUrl?.trim();
-  const isProduction = easBuildProfile === 'production' || nodeEnv === 'production';
+  const releaseHost = RELEASE_API_HOSTS[releaseProfile];
+  const expectedUrl = releaseHost ? `https://${releaseHost}/api/v1` : undefined;
+  const isProduction = Boolean(expectedUrl) || nodeEnv === 'production';
 
   if (!isProduction) {
     return apiUrl || DEVELOPMENT_API_URL;
@@ -75,7 +90,18 @@ function resolveApiUrl({ configuredApiUrl, easBuildProfile, nodeEnv }) {
   }
 
   assertProductionApiUrl(apiUrl);
+  if (expectedUrl && apiUrl !== expectedUrl) {
+    throw new Error(`EXPO_PUBLIC_API_URL must match ${releaseProfile}: ${expectedUrl}`);
+  }
   return apiUrl;
 }
 
-module.exports = { assertProductionApiUrl, resolveApiUrl };
+function resolveIosBuildNumber(value) {
+  if (value === undefined) return undefined;
+  if (!/^[1-9]\d{0,3}$/.test(value)) {
+    throw new Error('IOS_BUILD_NUMBER must be an integer from 1 to 9999');
+  }
+  return value;
+}
+
+module.exports = { assertProductionApiUrl, resolveApiUrl, resolveIosBuildNumber };

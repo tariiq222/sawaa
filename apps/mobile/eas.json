@@ -16,16 +16,37 @@
         "buildType": "apk"
       }
     },
+    "staging": {
+      "distribution": "store",
+      "channel": "staging",
+      "autoIncrement": true,
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://staging.sawaa.sa/api/v1",
+        "EXPO_PUBLIC_RELEASE_ENVIRONMENT": "staging",
+        "EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID": "merchant.sa.sawa.app",
+        "SENTRY_ALLOW_FAILURE": "true"
+      }
+    },
     "production": {
       "channel": "production",
       "autoIncrement": true,
       "environment": "production",
       "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.sawaa.sa/api/v1",
+        "EXPO_PUBLIC_RELEASE_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID": "merchant.sa.sawa.app",
         "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },
   "submit": {
+    "staging": {
+      "ios": {
+        "ascAppId": "6815632181",
+        "appleTeamId": "569M49FYA6"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "6815632181",
