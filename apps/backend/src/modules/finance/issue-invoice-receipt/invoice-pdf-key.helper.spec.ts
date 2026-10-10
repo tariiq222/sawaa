@@ -29,7 +29,7 @@ describe('extractInvoicePdfKey', () => {
 
 describe('resolveReceiptPdfKey', () => {
   const paidAt = new Date('2026-10-01T10:00:00Z');
-  const base = { receiptPdfKey: null, pdfUrl: null, pdfGeneratedAt: null, paidAt };
+  const base = { receiptPdfKey: null, pdfUrl: null, pdfGeneratedAt: null, paidAt, total: 15000 };
 
   it('prefers receiptPdfKey over any legacy pdfUrl', () => {
     expect(
@@ -59,6 +59,15 @@ describe('resolveReceiptPdfKey', () => {
         pdfUrl: 'invoices/inv/0.pdf',
         pdfGeneratedAt: new Date('2026-09-30T00:00:00Z'),
       }),
+    ).toBeNull();
+  });
+
+  it('rejects a legacy pdfUrl on a zero-total invoice (free package, no payment)', () => {
+    expect(
+      resolveReceiptPdfKey({ ...base, total: 0, pdfUrl: 'invoices/inv/4.pdf', pdfGeneratedAt: paidAt }),
+    ).toBeNull();
+    expect(
+      resolveReceiptPdfKey({ ...base, total: '0.00', pdfUrl: 'invoices/inv/4.pdf', pdfGeneratedAt: paidAt }),
     ).toBeNull();
   });
 

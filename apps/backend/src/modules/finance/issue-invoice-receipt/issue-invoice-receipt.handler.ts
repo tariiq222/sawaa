@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Invoice } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
@@ -137,7 +137,30 @@ export class IssueInvoiceReceiptHandler {
       pdfUrl: key,
       organizationId: options.organizationId ?? DEFAULT_ORG_ID,
     });
-    const won = await this.cls.run(async () => {
+    let won: boolean;
+    try {
+      won = await this.commitReceipt(invoice, key, paymentId, issued, deliver, booking);
+    } catch (err) {
+      // The upload is already in storage; if the transaction did not commit our
+      // key, nothing references it and a retry will upload under a new key.
+      await this.discardUploadUnlessCommitted(invoice.id, key);
+      throw err;
+    }
+    if (!won) {
+      this.logger.log(`Receipt: invoice ${invoiceId} was receipted concurrently — discarding ${key}`);
+      await this.discardLostUpload(key);
+    }
+  }
+
+  private async commitReceipt(
+    invoice: Invoice,
+    key: string,
+    paymentId: string,
+    issued: InvoiceReceiptIssuedEvent,
+    deliver: boolean,
+    booking: { lateEntryRecordedAt: Date | null } | null,
+  ): Promise<boolean> {
+    return this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.rlsTransaction.withTransaction(async (tx) => {
         // Commit the receipt and its delivery intent together. The guarded
@@ -188,10 +211,28 @@ export class IssueInvoiceReceiptHandler {
         return true;
       });
     });
-    if (!won) {
-      this.logger.log(`Receipt: invoice ${invoiceId} was receipted concurrently — discarding ${key}`);
-      await this.discardLostUpload(key);
+  }
+
+  /**
+   * After a failed transaction, delete our upload unless a re-read shows the
+   * commit actually landed (ambiguous failure). If the re-read itself fails we
+   * keep the object: an orphan is cheaper than deleting a committed receipt.
+   */
+  private async discardUploadUnlessCommitted(invoiceId: string, key: string): Promise<void> {
+    try {
+      const current = await this.cls.run(async () => {
+        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+        return this.prisma.invoice.findUnique({
+          where: { id: invoiceId },
+          select: { receiptPdfKey: true },
+        });
+      });
+      if (current?.receiptPdfKey === key) return;
+    } catch (readErr) {
+      this.logger.warn(`Receipt: could not verify commit of ${key}: ${(readErr as Error).message}`);
+      return;
     }
+    await this.discardLostUpload(key);
   }
 
   /** Best-effort cleanup of an upload whose guarded update lost the race. */

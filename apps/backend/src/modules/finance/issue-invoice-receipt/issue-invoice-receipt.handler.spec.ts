@@ -154,6 +154,31 @@ describe('IssueInvoiceReceiptHandler', () => {
     expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/));
   });
 
+  it('deletes its own upload and rethrows the original error when the transaction throws', async () => {
+    prisma.invoice.findUnique
+      .mockResolvedValueOnce(paidInvoice())
+      .mockResolvedValueOnce({ id: 'inv-1', receiptPdfKey: null });
+    const boom = new Error('deadlock detected');
+    rlsTransaction.withTransaction.mockRejectedValueOnce(boom);
+    await expect(
+      handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any),
+    ).rejects.toBe(boom);
+    expect(storage.deleteFile).toHaveBeenCalledTimes(1);
+    expect(storage.deleteFile).toHaveBeenCalledWith('finance-invoices', expect.stringMatching(/^receipts\/inv-1\/p1-[0-9a-f-]{36}\.pdf$/));
+  });
+
+  it('keeps the upload when the commit is ambiguous and the re-read shows our key', async () => {
+    prisma.invoice.findUnique.mockResolvedValueOnce(paidInvoice());
+    const boom = new Error('connection lost');
+    rlsTransaction.withTransaction.mockRejectedValueOnce(boom);
+    const uploadedKey = () => storage.uploadFile.mock.calls[0][1];
+    prisma.invoice.findUnique.mockImplementationOnce(async () => ({ id: 'inv-1', receiptPdfKey: uploadedKey() }));
+    await expect(
+      handler.handle({ payload: { paymentId: 'p1', invoiceId: 'inv-1' } } as any),
+    ).rejects.toBe(boom);
+    expect(storage.deleteFile).not.toHaveBeenCalled();
+  });
+
   it('guards the update against a legacy receipt committed by an old worker mid-flight', async () => {
     const paidAt = new Date('2026-05-24T10:05:00Z');
     prisma.invoice.findUnique.mockResolvedValue({ ...paidInvoice(), paidAt, receiptPdfKey: null, pdfUrl: null, pdfGeneratedAt: null });

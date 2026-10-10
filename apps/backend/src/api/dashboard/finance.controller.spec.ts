@@ -103,6 +103,7 @@ describe('DashboardFinanceController', () => {
       id: 'inv-1',
       pdfUrl: 'invoices/inv-1/1700000000000.pdf',
       receiptPdfKey: null,
+      total: 100,
     });
     await expect(controller.getInvoicePdf('inv-1')).rejects.toThrow(NotFoundException);
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
