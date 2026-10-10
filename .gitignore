@@ -20,7 +20,7 @@ out/
 .env
 .env.*
 !.env.example
-!.env.prod.example
+!.env.*.example
 
 # ─── OS files ─────────────────────────────────────────────────
 .DS_Store
@@ -53,20 +53,21 @@ pnpm-debug.log*
 # ─── Coverage & test artifacts ────────────────────────────────
 coverage/
 coverage-e2e/
-**/test-results/
+test-results/
 **/test-results-*.json
-**/playwright-report/
+playwright-report/
 **/playwright-*-results.json
 apps/dashboard/playwright/.auth/
 **/~$*
 
 # Ad-hoc test reports + artifact analyzers (not source code)
 TESTING_REPORT*.md
-**/TESTING_REPORT*.md
 **/test-report-*.md
 analyze-results.py
-**/analyze-results.py
-**/analyze-test-*.{py,js,mjs,ts}
+**/analyze-test-*.py
+**/analyze-test-*.js
+**/analyze-test-*.mjs
+**/analyze-test-*.ts
 
 # ─── Docker volumes (local) ───────────────────────────────────
 docker/data/
@@ -74,6 +75,7 @@ docker/data/
 # ─── Temporary files ──────────────────────────────────────────
 *.tmp
 *.temp
+.tmp/
 
 # ─── Performance test artifacts ───────────────────────────────
 scripts/performance/results/
@@ -102,7 +104,9 @@ __pycache__/
 *.pyc
 *.pyo
 
-# ─── Local-only folders (not tracked) ─────────────────────────
+# ─── Curated documentation ───────────────────────────────────
+# Keep local legacy documents private; explicitly allow maintained docs below.
+# Tracked historical reports remain tracked regardless of ignore rules.
 docs/*
 !docs/e2e.md
 !docs/testing/
@@ -111,6 +115,12 @@ docs/testing/*
 !docs/testing/e2e-local-runbook.md
 !docs/testing/e2e-phase2-plan.md
 !docs/testing/e2e-phase2-acceptance.md
+!docs/testing/e2e-phase3-plan.md
+!docs/testing/e2e-phase3-acceptance.md
+!docs/testing/local-premerge.md
+!docs/testing/evidence/
+docs/testing/evidence/*
+!docs/testing/evidence/2026-10-09-auth-login/
 !docs/README.md
 !docs/operations/
 !docs/operations/**
@@ -121,6 +131,21 @@ docs/performance/*
 !docs/performance/capacity-runbook.md
 !docs/audits/
 !docs/audits/**
+!docs/plans/
+docs/plans/*
+!docs/plans/employee-email-payments-remediation.md
+!docs/plans/page-auth-architecture-remediation.md
+!docs/archive/
+docs/archive/*
+!docs/archive/project-memory.md
+# Mobile release documentation and approved public screenshots.
+!docs/mobile-app/
+# Canonical clinic/service contracts and the project code map.
+!docs/architecture/
+docs/architecture/*
+!docs/architecture/clinic-service-booking-contract.md
+!docs/architecture/mobile-client-flow.md
+!docs/architecture/code-map.md
 # Contains a QA login in clear text — keep local only
 docs/audits/2026-06-29-website-integration-audit.md
 .superpowers/
@@ -137,24 +162,12 @@ apps/backend/coverage.backup-*/
 graphify-out/
 
 # ─── Local scratch / tool artifacts (never commit) ────────────
-.worktrees/
 testsprite_tests/
-test-results/
 .dsh-auto/
 .scannerwork/
+/.release-work/
 
-# ─── Sawaa Orchestrator runtime state (local-only) ────────────
-.kilo/orchestrator/tasks/
-.kilo/orchestrator/pending/
-.kilo/orchestrator/trace.jsonl
-
-# ─── Bespoke/Sawa mobile native build artifacts (from `expo prebuild`) ─
-# These directories are generated locally and must never enter the pipeline.
-# Sawa mobile is currently paused from production (CLAUDE.md note: 2026-05-08).
-apps/bespoke/sawa/mobile/android/
-apps/bespoke/sawa/mobile/ios/
-apps/bespoke/sawa/mobile/.expo/
-apps/bespoke/sawa/mobile/node_modules/
+# Native mobile builds and signing files are governed by apps/mobile/.gitignore.
 
 # ─── Local secrets (NEVER commit) ─────────────────────────────
 .secrets/
@@ -165,8 +178,6 @@ credentials.local.md
 sawaa-prod-secrets.md
 
 # Local data ops — backups, comparison reports, backfill scripts (contains real client data)
-.tariq/memory/
-.tariq/memory/store.db
 .sawaa-data/
 
 # Ad-hoc review/migration artifacts — SQL dumps + reports with real client data
@@ -179,18 +190,5 @@ outputs/
 .pnpm-store/
 .agent-teams/
 
-# Mobile release documentation and approved public screenshots
-!docs/mobile-app/
-
-# Canonical clinic/service developer contract
-!docs/architecture/
-docs/architecture/*
-!docs/architecture/clinic-service-booking-contract.md
-!docs/architecture/mobile-client-flow.md
-
 # Agentic E2E reports, traces, sessions and replay cache.
 .e2e/
-
-# Continued local E2E acceptance plan and evidence summary.
-!docs/testing/e2e-phase3-plan.md
-!docs/testing/e2e-phase3-acceptance.md

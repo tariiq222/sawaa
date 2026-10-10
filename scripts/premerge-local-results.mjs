@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+
+export function assertPlaywrightReport(report, requiredSpecs = { website: 'website/smoke.spec.ts', dashboard: 'dashboard/smoke.spec.ts' }) {
+  const stats = report?.stats;
+  assert.ok(stats && Number.isInteger(stats.expected) && stats.expected > 0,
+    'Playwright must execute at least one passing test');
+  for (const key of ['skipped', 'unexpected', 'flaky']) {
+    assert.equal(stats[key], 0, `Playwright ${key} tests block local acceptance`);
+  }
+  assert.ok(Array.isArray(report.errors) && report.errors.length === 0,
+    'Playwright infrastructure errors block local acceptance');
+  const tests = [];
+  function visit(suites) {
+    assert.ok(Array.isArray(suites), 'Playwright report must contain executed test suites');
+    for (const suite of suites) {
+      for (const spec of suite.specs ?? []) {
+        assert.ok(Array.isArray(spec.tests), 'Invalid Playwright test results');
+        tests.push(...spec.tests.map(test => ({ ...test, file: spec.file ?? suite.file })));
+      }
+      if (suite.suites) visit(suite.suites);
+    }
+  }
+  visit(report.suites);
+  assert.equal(tests.length, stats.expected, 'Missing executed Playwright test results');
+  for (const test of tests) {
+    assert.equal(test.expectedStatus, 'passed', 'Expected failures block local acceptance');
+    assert.equal(test.status, 'expected', 'Every Playwright test must pass');
+    assert.ok(Array.isArray(test.results) && test.results.length === 1
+      && test.results[0].status === 'passed' && Array.isArray(test.results[0].errors)
+      && test.results[0].errors.length === 0, 'Every Playwright test must pass without retries or errors');
+  }
+  // A blank agent seed also matches both projects, so require each real smoke spec.
+  for (const [project, file] of Object.entries(requiredSpecs)) {
+    assert.ok(tests.some(test => test.projectName === project && test.file === file),
+      `Playwright project ${project} did not run ${file}`);
+  }
+  return stats.expected;
+}
+
+export function assertE2eReport(report) {
+  const run = report?.run;
+  assert.ok(run && run.exitCode === 0 && Array.isArray(run.results), 'Invalid or failed E2E report');
+  assert.ok(Array.isArray(run.errors) && run.errors.length === 0,
+    'E2E infrastructure errors block local acceptance');
+  const selected = run.results.filter(result => !(result.selected === false
+    && result.status === 'skipped' && result.skip?.cause === 'filtered'));
+  assert.ok(selected.length > 0, 'E2E must execute at least one selected test');
+  for (const result of selected) {
+    assert.equal(result.selected, true, 'An unselected non-filtered result blocks acceptance');
+    assert.equal(result.status, 'passed', `E2E ${result.status} result blocks local acceptance`);
+  }
+  return selected.length;
+}

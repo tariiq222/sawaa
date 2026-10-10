@@ -45,6 +45,8 @@ On authorized commit, merge or publication requests, write clear commit subjects
 
 Common checks: backend `pnpm --filter=backend test -- path/to/file.spec.ts`; dashboard or website `pnpm --filter=<app> test -- path/to/file.test.ts`; dashboard smoke `pnpm --filter=dashboard run e2e:smoke`; mobile types `pnpm --dir apps/mobile typecheck`. For other commands and test coverage, read [the command and test reference](docs/operations/agent-command-reference.md). Root commands do not cover mobile.
 
+Before merging backend, website, dashboard, or local test-harness changes, run `pnpm test:premerge` (Node 22.12+; local only, not a CI check) alongside the focused checks above. It builds a fresh isolated local stack, runs Playwright smoke and the website-to-staff booking journey, rejects skipped/flaky selected tests, and records the exact working-tree candidate under `.e2e/premerge-*/acceptance.json`. Re-run if the candidate changes. This local check does not replace staging acceptance, payment-provider or physical-device verification. See [the local premerge guide](docs/testing/local-premerge.md).
+
 ## Single-tenant
 
 Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.

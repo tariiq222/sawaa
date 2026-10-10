@@ -12,7 +12,7 @@ This is the shared deployment policy for every AI tool and contributor working o
 
 ### Local and remote branches — owner-approved 2026-10-04
 
-- `develop` is the primary local branch. Keep temporary task branches as needed; a local `main` branch is not required and may be removed after verifying its commits are preserved. Keep remote `main` as the production branch.
+- `develop` is the primary local branch. Keep temporary task branches as needed; a local `main` branch is not required and may be removed after verifying its commits are preserved. Keep remote `main` as the production branch. Without a local `main`, run `git remote set-head origin develop` once per clone: lefthook's pre-push hook diffs new branches against the local branch named by `origin/HEAD`, and fails with `bad revision 'main'` otherwise.
 - Integrate task branches through PRs into remote `develop`, then synchronize local `develop` from `origin/develop` with a fast-forward while preserving uncommitted work.
 - Validate the resulting revision on staging and obtain the owner's manual acceptance before promotion.
 - Promote the accepted release through a PR from remote `develop` to remote `main` only after explicit production authorization, then deploy and verify production under the rules below.

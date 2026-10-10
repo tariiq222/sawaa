@@ -5,7 +5,7 @@ services:
       POSTGRES_USER: e2e
       POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?}
       POSTGRES_DB: ${LOCAL_DB_NAME:?}
-    ports: ["127.0.0.1:55761:5432"]
+    ports: ["127.0.0.1:${LOCAL_DB_PORT:-55761}:5432"]
     volumes: ["postgres:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U e2e -d $$POSTGRES_DB"]
@@ -14,7 +14,7 @@ services:
       retries: 30
   redis:
     image: redis:7-alpine
-    ports: ["127.0.0.1:55762:6379"]
+    ports: ["127.0.0.1:${LOCAL_REDIS_PORT:-55762}:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
@@ -26,7 +26,7 @@ services:
     environment:
       MINIO_ROOT_USER: e2e-local
       MINIO_ROOT_PASSWORD: ${LOCAL_MINIO_PASSWORD:?}
-    ports: ["127.0.0.1:55763:9000"]
+    ports: ["127.0.0.1:${LOCAL_MINIO_PORT:-55763}:9000"]
     volumes: ["minio:/data"]
 volumes:
   postgres:
