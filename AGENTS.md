@@ -15,6 +15,13 @@ These are project law for every AI tool; details in [the deployment policy](docs
 
 The step-by-step release procedure (staging automation, production backup/restore test, merge, verification, main→develop sync, receipt) lives in [the sawaa-release skill](.claude/skills/sawaa-release/SKILL.md). Follow it for every publish.
 
+### Fixed staging mechanism — owner-approved 2026-10-11
+
+Staging always uses `build-images.yml` → all images built on GitHub → `scripts/openship/staging-deploy.mjs` → the existing application-scoped OpenShip hook → verified image digests and backend SHA. Manual publication uses `gh workflow run build-images.yml --ref develop` through that same path. Never improvise a different deploy path, enable OpenShip git auto-deploy, use mutable tags for runtime selection, or replace containers by SSH as a fallback. Failure stops publication and requires repair of this mechanism.
+
+Application deploys target backend/dashboard/website only; preserve PostgreSQL/Redis/MinIO containers and volumes. The prebuilt backend starts without migrations; read-only migration compatibility and unchanged migration metadata are required. A pending migration blocks publication until separately authorized. Production is outside staging authorization and retains its current runtime until explicit production approval. See the deployment policy for fixed project IDs, secrets, activation and evidence requirements.
+
+
 
 Single-tenant family counseling platform for one counseling center (مركز سواء).
 

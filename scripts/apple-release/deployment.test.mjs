@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const sha = 'a'.repeat(40);
-const target = { branch: 'develop', projectId: 'proj_staging' };
+const target = { profile: 'staging', branch: 'develop', projectId: 'proj_7M0RNj59nQnafh1m' };
 function fixture() {
   return {
-    project: { id: 'proj_staging', gitBranch: 'develop', activeDeploymentId: 'dep_current' },
-    deployment: { id: 'dep_current', projectId: 'proj_staging', branch: 'develop', commitSha: sha, status: 'ready' },
+    project: { id: target.projectId, gitBranch: 'develop', activeDeploymentId: 'dep_current' },
+    deployment: { id: 'dep_current', projectId: target.projectId, branch: 'develop', commitSha: sha, status: 'ready' },
     containers: ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'].map((serviceName) => ({ serviceName, containerId: serviceName, status: 'running', duplicates: [], imageRef: 'image/' + serviceName })),
   };
 }
@@ -81,4 +81,19 @@ test('matching no_changes plus identical server tree unlocks live checks, record
  const {waitForDeployment}=await import('./deployment.mjs');const f=fixture();f.deployment.commitSha='b'.repeat(40);const checks=[];
  const request=async url=>{let data;if(url.includes('/git/ref/'))data={object:{sha}};else if(url.includes('/git/trees/'))data={truncated:false,tree:[{path:'apps/backend/a.ts',type:'blob',mode:'100644',sha:'same'}]};else if(url.includes('/services/containers'))data={success:true,containers:f.containers};else if(url.includes('/deployments?'))data={data:[{...f.deployment,id:'nochanges',commitSha:sha,status:'no_changes'}]};else if(url.includes('/api/projects/'))data={data:f.project};else if(url.includes('/api/deployments/'))data={data:f.deployment};else {checks.push(url);data={};}return {ok:true,status:200,json:async()=>data};};
  let clock=0;const result=await waitForDeployment({...target,profile:'staging',readinessUrl:'https://staging.test/ready',websiteUrl:'https://staging.test/'},sha,'read',{githubToken:'read',request,timeoutMs:20,intervalMs:10,now:()=>clock,sleep:async ms=>{clock+=ms}});assert.equal(result.sourceSha,sha);assert.equal(result.deployedSha,'b'.repeat(40));assert.equal(result.noChangesDeploymentId,'nochanges');assert.equal(checks.length,2);
+});
+
+test('staging accepts only its exact frozen deployment ref; production stays branch-bound', async () => {
+ const {verifyDeployment}=await import('./deployment.mjs'); const f=fixture(); f.deployment.branch=sha;
+ assert.equal(verifyDeployment(target,sha,f).deploymentId,'dep_current');
+ f.deployment.branch='b'.repeat(40); assert.throws(()=>verifyDeployment(target,sha,f));
+ const prod={profile:'production',branch:'main',projectId:'proj_production'}; f.project.id=prod.projectId; f.project.gitBranch='main'; f.deployment.projectId=prod.projectId; f.deployment.branch=sha;
+ assert.throws(()=>verifyDeployment(prod,sha,f));
+});
+
+test('staging gate waits for its temporary SHA source selection to return to develop', async () => {
+ const {waitForDeployment}=await import('./deployment.mjs'); const f=fixture();f.deployment.branch=sha;let clock=0;
+ const request=async url=>({ok:true,status:200,json:async()=>url.includes('api.github.com')?{object:{sha}}:url.includes('/services/containers')?{success:true,containers:f.containers}:url.includes('/projects/')?{data:{...f.project,gitBranch:clock===0?sha:'develop'}}:{data:f.deployment}});
+ const result=await waitForDeployment(target,sha,'read',{githubToken:'read',timeoutMs:20,intervalMs:10,now:()=>clock,sleep:async ms=>{clock+=ms},request});
+ assert.equal(result.deploymentId,'dep_current');assert.equal(clock,10);
 });

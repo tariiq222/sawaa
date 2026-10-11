@@ -15,6 +15,7 @@ const HEADER = `# GENERATED from compose.yml by scripts/openship/prebuilt-compos
 # Runs prebuilt GHCR images; OpenShip pulls them and never builds on the host.
 # POSTGRES_IMAGE, BACKEND_IMAGE, DASHBOARD_IMAGE and WEBSITE_IMAGE are required
 # and have no defaults, so a missing value fails instead of running a stale image.
+# Application-only deployment: backend starts without running database migrations.
 `;
 
 const indentOf = line => line.length - line.trimStart().length;
@@ -28,6 +29,11 @@ export function derivePrebuiltCompose(source) {
     const line = lines[i];
     if (/^ {2}[A-Za-z0-9_-]+:\s*$/.test(line)) service = line.trim().slice(0, -1);
     if (/^[A-Za-z]/.test(line)) service = null;
+    if (service === 'backend' && /MIGRATION_DATABASE_URL|# Backend-scoped owner URL/.test(line)) continue;
+    if (service === 'backend' && /^ {4}command:/.test(line)) {
+      out.push('    command: ["node", "dist/src/main.js"]');
+      continue;
+    }
     if (service && /^ {4}build:\s*$/.test(line)) {
       built.add(service);
       while (i + 1 < lines.length && (lines[i + 1].trim() === '' || indentOf(lines[i + 1]) > 4)) i++;

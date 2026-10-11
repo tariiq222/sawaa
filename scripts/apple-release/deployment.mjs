@@ -7,12 +7,20 @@ import { releaseTarget } from './target.mjs';
 const OPENSHIP = 'https://open.webvue.pro/api/proxy';
 const SERVICES = ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'];
 
+function frozenStagingRef(target, ref, sha) {
+  return target.profile === 'staging' && target.branch === 'develop'
+    && target.projectId === 'proj_7M0RNj59nQnafh1m' && /^[a-f0-9]{40}$/.test(sha) && ref === sha;
+}
+function deploymentRefMatches(target, deployment) {
+  return deployment.branch === target.branch || frozenStagingRef(target, deployment.branch, deployment.commitSha);
+}
+
 export function verifyDeployment(target, sha, { project, deployment, containers }) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.equal(project.id, target.projectId);
   assert.equal(project.gitBranch, target.branch);
   assert.equal(deployment.projectId, target.projectId);
-  assert.equal(deployment.branch, target.branch);
+  assert.ok(deploymentRefMatches(target, deployment), 'Deployment source ref mismatch');
   assert.equal(deployment.commitSha, sha);
   assert.equal(deployment.status, 'ready');
   assert.equal(project.activeDeploymentId, deployment.id);
@@ -71,7 +79,13 @@ export async function waitForDeployment(target, sha, token, {
   while (now() < deadline) {
     await assertCurrentSource(target, sha, githubToken, request);
     const { data: project } = await getJson(`${OPENSHIP}/api/projects/${target.projectId}`, token, request);
-    if (!project || project.id !== target.projectId || project.gitBranch !== target.branch) throw new Error('OpenShip project identity mismatch');
+    if (!project || project.id !== target.projectId) throw new Error('OpenShip project identity mismatch');
+    if (frozenStagingRef(target, project.gitBranch, sha)) {
+      console.log('Waiting for staging source selection to return to develop');
+      await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
+      continue;
+    }
+    if (project.gitBranch !== target.branch) throw new Error('OpenShip project identity mismatch');
     if (project.activeDeploymentId) {
       const { data: deployment } = await getJson(`${OPENSHIP}/api/deployments/${project.activeDeploymentId}`, token, request);
       if (deployment?.commitSha === sha && ['failed', 'cancelled', 'partial_failure', 'action_required'].includes(deployment.status)) {
@@ -81,9 +95,9 @@ export async function waitForDeployment(target, sha, token, {
       if (deployment?.commitSha !== sha && deployment?.status === 'ready') {
         const history = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/deployments?perPage=20`, token, request);
         if (!Array.isArray(history.data)) throw new Error('OpenShip deployment history response is malformed');
-        const matching = history.data.find(d => d.commitSha === sha && d.projectId === target.projectId && d.branch === target.branch);
+        const matching = history.data.find(d => d.commitSha === sha && d.projectId === target.projectId && deploymentRefMatches(target, d));
         if (matching && ['failed', 'cancelled', 'partial_failure', 'action_required'].includes(matching.status)) throw new Error(`Matching deployment failed: ${matching.status}`);
-        noChanges = history.data.find(d => d.commitSha === sha && d.status === 'no_changes' && d.projectId === target.projectId && d.branch === target.branch);
+        noChanges = history.data.find(d => d.commitSha === sha && d.status === 'no_changes' && d.projectId === target.projectId && deploymentRefMatches(target, d));
         if (noChanges) await assertSameServerInputs(deployment.commitSha, sha, githubToken, request);
       }
       if (deployment?.status === 'ready' && (deployment.commitSha === sha || noChanges)) {
