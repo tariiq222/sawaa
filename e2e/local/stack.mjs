@@ -132,7 +132,9 @@ try {
     });
     await redirect.arrayBuffer();
     assert.equal(redirect.status, 307, 'Local website auth redirect must be temporary');
-    assert.equal(redirect.headers.get('location'), `${env.E2E_WEBSITE_URL}/account`,
+    const location = redirect.headers.get('location');
+    assert.ok(location, 'Local website auth redirect must include a location');
+    assert.equal(new URL(location, env.E2E_WEBSITE_URL).href, `${env.E2E_WEBSITE_URL}/account`,
       'Local website auth redirect must preserve the canonical loopback origin');
   }
   console.log(`READY ${runDir}`);
