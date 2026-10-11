@@ -19,3 +19,7 @@ command = "npx"
 [features]
 apps = false
 remote_plugin = false
+
+[mcp_servers.playwright-test-local]
+command = "node"
+args = ["e2e/playwright/run-mcp.mjs"]

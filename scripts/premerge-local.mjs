@@ -117,7 +117,7 @@ try {
   evidence.candidate = candidate();
   writeEvidence();
   await command('Local isolation and acceptance guards', process.execPath,
-    ['--test', 'e2e/local/safety.test.mjs', 'scripts/premerge-local-results.test.mjs']);
+    ['--test', 'e2e/local/safety.test.mjs', 'e2e/playwright/mcp-policy.test.mjs', 'scripts/premerge-local-results.test.mjs']);
   await command('Build shared types', 'pnpm', ['--filter', '@sawaa/shared', 'build']);
   await command('Build backend', 'pnpm', ['--filter', 'backend', 'build']);
   // Same CLI as the smoke run below; a no-op when the matching Chromium is present.
