@@ -244,3 +244,33 @@ test('production rejects app startup immediately', async () => {
   await assert.rejects(waitForDeployment(prod, sha, 'read', f.options), /not running/);
   assert.equal(f.observed().clock, 0);
 });
+
+function productionPrebuiltFixture() {
+  const target = { profile: 'production', branch: 'main', projectId: 'proj_tsxe0sAW3u2AMSGO' };
+  const f = prebuiltFixture();
+  f.project = { ...f.project, id: target.projectId, gitBranch: 'main', autoDeploy: false, composePath: 'docker/openship/compose.prebuilt.yml' };
+  f.deployment.projectId = target.projectId;
+  f.backendGitSha = sha;
+  return { target, f };
+}
+
+test('production prebuilt release proves frozen ref, explicit project mode, digests and backend SHA', async () => {
+  const { verifyDeployment } = await import('./deployment.mjs');
+  const { target, f } = productionPrebuiltFixture();
+  assert.equal(verifyDeployment(target, sha, f).deploymentId, 'dep_current');
+  for (const change of [
+    x => { x.project.autoDeploy = true; },
+    x => { x.project.composePath = 'docker/openship/compose.yml'; },
+    x => { x.backendGitSha = 'b'.repeat(40); },
+    x => { x.deployment.branch = 'b'.repeat(40); },
+    x => { x.containers[0].imageRef = 'backend:production'; },
+  ]) { const { f: bad } = productionPrebuiltFixture(); change(bad); assert.throws(() => verifyDeployment(target, sha, bad)); }
+});
+
+test('populated production prebuilt commit metadata still requires digests and independent backend health', async () => {
+  const { verifyDeployment } = await import('./deployment.mjs');
+  const { target, f } = productionPrebuiltFixture(); f.deployment.commitSha = sha;
+  assert.equal(verifyDeployment(target, sha, f).deploymentId, 'dep_current');
+  f.backendGitSha = 'b'.repeat(40);
+  assert.throws(() => verifyDeployment(target, sha, f));
+});

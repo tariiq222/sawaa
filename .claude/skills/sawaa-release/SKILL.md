@@ -18,9 +18,9 @@ Work only on Sawaa (`tariiq222/sawaa`); never touch other projects on the shared
 | Server | `f2c67bb9-d9bf-415d-a92f-66663ca512c5` (shared with other projects) | same |
 | Public checks | `https://staging.sawaa.sa/` and `/api/v1/health/ready` | `https://sawaa.sa/`, `https://admin.sawaa.sa/`, `https://api.sawaa.sa/api/v1/health/ready`, `https://files.sawaa.sa/minio/health/live` |
 | Images | `ghcr.io/tariiq222/sawaa-{postgres,backend,dashboard,website}:staging[-<sha>]` | `…:production[-<sha>]` |
-| How it runs | digest-pinned application images via `docker/openship/compose.prebuilt.yml` | OpenShip builds on the host from `compose.yml` (until switched like staging) |
+| How it runs | digest-pinned application images via `docker/openship/compose.prebuilt.yml` | digest-pinned application images via `compose.prebuilt.yml`, explicit production admission |
 
-`/api/v1/health` returns `gitSha`. Images built by `build-images.yml` carry the full commit; host builds report `unknown`.
+`/api/v1/health` returns `gitSha`. Images built by `build-images.yml` carry the full commit; legacy host builds report `unknown`; new production publication requires the image SHA.
 
 ## Command meaning
 
@@ -45,7 +45,7 @@ Use the mechanism in [the deployment policy](../../../docs/operations/deployment
 4. It temporarily selects the immutable candidate SHA as the staging Git ref, pins only backend/dashboard/website image variables to the build digests, then invokes the existing token-authenticated hook scoped to exactly those three service IDs with strict scope. The hook snapshots that SHA before the selected ref returns to `develop`. PostgreSQL/Redis/MinIO retain their containers, images and mounts. A superseding push is reported explicitly; never substitute its source files into an older image set.
 5. It verifies the returned deployment is active/ready for the expected SHA, all three runtime digests match, backend health reports that SHA, public API/website and internal dashboard answer 200, infrastructure containers are unchanged and migration metadata is identical. OpenShip `ready` can precede container health: application-only `starting` is polled for at most 20 observations, 15 seconds apart, with identity/digest/infrastructure checks on each observation. Invalid state fails immediately; all six must be running before success. It saves the sanitized artifact `staging-deployment-<sha>`.
 
-For fully image-backed deployments OpenShip can omit `commitSha`. This staging path still requires the exact immutable candidate SHA in the recorded branch, matching application digests and an independently observed live backend `gitSha`. Populated contradictory metadata fails; production remains branch/commit-bound.
+For fully image-backed deployments OpenShip can omit `commitSha`. This staging path still requires the exact immutable candidate SHA in the recorded branch, matching application digests and an independently observed live backend `gitSha`. Populated contradictory metadata fails; production uses its separately authorized frozen-source/digest/health proof.
 
 Required variables: `STAGING_PREBUILT_DEPLOY=true`, `OPENSHIP_STAGING_HOOK_ID`. Required automation secrets: `OPENSHIP_STAGING_DEPLOY_TOKEN` (read/write limited to this staging project) and `OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN`. The existing `OPENSHIP_STAGING_READ_TOKEN` remains for other read-only release gates. Never print tokens or include hook secrets in logs, reports or artifacts; private credential transfer for setup is allowed.
 
@@ -64,13 +64,15 @@ Preconditions, all required:
 - The `release/<date>` → `main` PR head equals that accepted candidate; `gate` and `critical-real-e2e` pass on it.
 - New migrations are additive only (read their SQL).
 
+Before merging, configure the fixed production path and scoped credentials from the deployment policy; set `PRODUCTION_RELEASE_AUTHORIZATION` and `PRODUCTION_BACKUP_EVIDENCE` only from observed owner acceptance and verified backup/restore evidence. A pending migration blocks application publication until separately authorized, tested on an isolated restore and applied with `prisma migrate deploy`.
+
 Steps:
 1. **Backup** on the server: `pg_dumpall` (gzip), `pg_dump -Fc`, Redis `SAVE` + tar, MinIO data tar, row counts (finished migrations, `Client`, `Booking`, `Payment`) and `SHA256SUMS`, into `/var/backups/sawaa/pre-production-<UTC>/` with mode 700/600. Use the container credentials through `sh -c '… "$POSTGRES_USER" …'`; never print secrets.
 2. **Restore test**: restore `db.dump` into a throwaway container with `--network none` from the production Postgres image and compare the counts. Stop if they differ.
 3. Record the rollback point: current `main` SHA and active deployment id.
 4. Mark the PR ready if it is a draft, then `gh pr merge <n> --merge --match-head-commit <candidate sha>`. Never squash the promotion.
-5. Production auto-deploys from `main`. Poll the deployment to `ready` (`get_projects_by_id_deployments` with `perPage: 1`, or host `docker ps`); answer no prompts by guessing.
-6. **Verify**: six containers healthy with the new deployment label; the public checks above return 200; finished migrations = before + new, zero failed; the row counts equal the backup; backend log shows no ` ERROR ` after start.
+5. `build-images.yml` on `main` builds every image, then `production-deploy.mjs` checks the explicit accepted release and backup receipts, selects immutable source and digests, and invokes the production application-only hook. Git auto-deploy stays disabled. Poll the deployment to `ready` (`get_projects_by_id_deployments` with `perPage: 1`, or host `docker ps`); answer no prompts by guessing.
+6. **Verify**: six containers healthy, applications with the new deployment label and unchanged infrastructure container identities; the public checks above return 200; finished migrations unchanged by application publication after separately authorized additive migration work, zero failed; the row counts equal the backup; backend log shows no ` ERROR ` after start.
 7. **Sync**: open a PR `main` → `develop` (no code change), wait for its checks, merge with a merge commit. Without it, the next develop PR fails `Deploy-state consistency`.
 8. **Receipt**: write a private evidence JSON (shape of `docs/operations/deployments/evidence.example.json`) from observed values, run `node scripts/record-deployment.mjs <evidence> docs/operations/deployments/<date>-production-<dep id>.json` within 24 hours, add a dated top entry to `docs/operations/current-state.md`, and land both through a PR into `develop`.
 
@@ -86,7 +88,7 @@ Production code rollback requires the owner's separate explicit authorization an
 
 | Symptom | Cause | Action |
 |---|---|---|
-| `only one connection allowed`, BuildKit session failed | OpenShip 0.8.x host builds (dockerode session health) | Staging avoids it with prebuilt images. For production host builds, one retry; then stop and report. Upgrading OpenShip does not fix it as of 0.8.2. |
+| `only one connection allowed`, BuildKit session failed | OpenShip 0.8.x host builds (dockerode session health) | Staging avoids it with prebuilt images. Production now uses prebuilt images as well; host builds are not a fallback. Repair the fixed mechanism and stop on a failed gate. Upgrading OpenShip does not fix it as of 0.8.2. |
 | TestFlight `unexpected redirect` | a checked URL redirects (`www.sawaa.sa` → `sawaa.sa`) | check URLs must answer 200 directly |
 | `Deploy-state consistency` fails on a develop PR | `main` has a commit `develop` lacks | do step 3.7, then update the PR branch |
 | `image-website` fails on `main` | `PRODUCTION_WEBSITE_API_URL` / `PRODUCTION_DEFAULT_ORG_ID` repo variables missing | values come from the production project's OpenShip env |
