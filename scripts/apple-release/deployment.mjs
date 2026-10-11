@@ -8,12 +8,13 @@ const OPENSHIP = 'https://open.webvue.pro/api/proxy';
 const SERVICES = ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'];
 const APPLICATIONS = ['backend', 'dashboard', 'website'];
 
-function frozenStagingRef(target, ref, sha) {
-  return target.profile === 'staging' && target.branch === 'develop'
-    && target.projectId === 'proj_7M0RNj59nQnafh1m' && /^[a-f0-9]{40}$/.test(sha) && ref === sha;
+function frozenPrebuiltRef(target, ref, sha) {
+  const knownTarget = (target.profile === 'staging' && target.branch === 'develop' && target.projectId === 'proj_7M0RNj59nQnafh1m')
+    || (target.profile === 'production' && target.branch === 'main' && target.projectId === 'proj_tsxe0sAW3u2AMSGO');
+  return knownTarget && /^[a-f0-9]{40}$/.test(sha) && ref === sha;
 }
 export function deploymentSourceSha(target, deployment) {
-  if (deployment && frozenStagingRef(target, deployment.branch, deployment.branch)) {
+  if (deployment && frozenPrebuiltRef(target, deployment.branch, deployment.branch)) {
     if (deployment.commitSha != null) {
       assert.equal(deployment.commitSha, deployment.branch, 'Frozen deployment metadata contradicts its source ref');
     }
@@ -22,17 +23,21 @@ export function deploymentSourceSha(target, deployment) {
   return deployment?.commitSha;
 }
 function deploymentRefMatches(target, deployment) {
-  return deployment.branch === target.branch || frozenStagingRef(target, deployment.branch, deploymentSourceSha(target, deployment));
+  return deployment.branch === target.branch || frozenPrebuiltRef(target, deployment.branch, deploymentSourceSha(target, deployment));
 }
 
 function validateDeploymentIdentity(target, sha, { project, deployment }) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.equal(project.id, target.projectId);
+  if (target.profile === 'production' && frozenPrebuiltRef(target, deployment.branch, sha)) {
+    assert.equal(project.composePath, 'docker/openship/compose.prebuilt.yml', 'Production prebuilt mode required');
+    assert.equal(project.autoDeploy, false, 'Production Git auto-deploy must be disabled');
+  }
   assert.equal(project.gitBranch, target.branch);
   assert.equal(deployment.projectId, target.projectId);
   assert.ok(deploymentRefMatches(target, deployment), 'Deployment source ref mismatch');
   assert.equal(deploymentSourceSha(target, deployment), sha);
-  if (deployment.commitSha == null) assert.ok(frozenStagingRef(target, deployment.branch, sha), 'Missing deployment source metadata');
+  if (deployment.commitSha == null) assert.ok(frozenPrebuiltRef(target, deployment.branch, sha), 'Missing deployment source metadata');
   assert.equal(deployment.status, 'ready');
   assert.equal(project.activeDeploymentId, deployment.id);
 }
@@ -55,10 +60,11 @@ function validateContainers(containers, { requireDigests, allowStarting = false 
 
 export function verifyDeployment(target, sha, { project, deployment, containers, backendGitSha }) {
   validateDeploymentIdentity(target, sha, { project, deployment });
-  if (deployment.commitSha == null) {
+  const prebuiltProof = deployment.commitSha == null || (target.profile === 'production' && frozenPrebuiltRef(target, deployment.branch, sha));
+  if (prebuiltProof) {
     assert.equal(backendGitSha, sha, 'Running backend SHA must independently prove the frozen source');
   }
-  validateContainers(containers, { requireDigests: deployment.commitSha == null });
+  validateContainers(containers, { requireDigests: prebuiltProof });
   return {
     environment: target.profile, sourceSha: sha, projectId: project.id,
     deploymentId: deployment.id, observedAt: new Date().toISOString(),
@@ -121,8 +127,8 @@ export async function waitForDeployment(target, sha, token, {
     await assertCurrentSource(target, sha, githubToken, request);
     const { data: project } = await getJson(`${OPENSHIP}/api/projects/${target.projectId}`, token, request);
     if (!project || project.id !== target.projectId) throw new Error('OpenShip project identity mismatch');
-    if (frozenStagingRef(target, project.gitBranch, sha)) {
-      console.log('Waiting for staging source selection to return to develop');
+    if (frozenPrebuiltRef(target, project.gitBranch, sha)) {
+      console.log('Waiting for immutable source selection to return to its long-lived branch');
       await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
       continue;
     }
@@ -146,13 +152,13 @@ export async function waitForDeployment(target, sha, token, {
         validateDeploymentIdentity(target, deployedSha, { project, deployment });
         const { success, containers } = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/services/containers`, token, request);
         if (success !== true || !Array.isArray(containers)) throw new Error('Runtime observations unavailable');
-        const imageOnlyStaging = deployment.commitSha == null && frozenStagingRef(target, deployment.branch, deployedSha);
-        if (!validateContainers(containers, { requireDigests: deployment.commitSha == null, allowStarting: imageOnlyStaging })) {
-          console.log('Waiting for staging application containers to finish startup');
+        const imageOnlyPrebuilt = frozenPrebuiltRef(target, deployment.branch, deployedSha) && (deployment.commitSha == null || target.profile === 'production');
+        if (!validateContainers(containers, { requireDigests: deployment.commitSha == null || imageOnlyPrebuilt, allowStarting: imageOnlyPrebuilt })) {
+          console.log('Waiting for application containers to finish startup');
           await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
           continue;
         }
-        const backendGitSha = deployment.commitSha == null ? await readBackendGitSha(target, request) : undefined;
+        const backendGitSha = deployment.commitSha == null || imageOnlyPrebuilt ? await readBackendGitSha(target, request) : undefined;
         const evidence = verifyDeployment(target, deployedSha, { project, deployment, containers, backendGitSha });
         evidence.deployedSha = deployedSha;
         if (backendGitSha !== undefined) evidence.backendGitSha = backendGitSha;

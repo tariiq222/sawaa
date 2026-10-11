@@ -39,6 +39,10 @@ with the restricted runtime URL. A failed migration stops startup. The
 optional `compose.migration.yml` file remains available for manual recovery and
 does not participate in routine deploys.
 
+## Approved prebuilt publication
+
+The approved staging and production application paths use `compose.prebuilt.yml`: GitHub builds images, the environment-specific orchestrator pins their digests and calls a strict application-only hook. The backend starts directly without applying migrations or receiving a migration owner credential. See [deployment policy](../../docs/operations/deployment-policy.md) for production release acceptance and backup gates. The host-build/startup-migration instructions below describe the legacy compose and isolated recovery contract, not the active publication path.
+
 ## Deployment sequence
 
 1. Before creating or redeploying the native application, pre-provision the

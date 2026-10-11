@@ -19,6 +19,8 @@ The step-by-step release procedure (staging automation, production backup/restor
 
 Staging always uses `build-images.yml` → all images built on GitHub → `scripts/openship/staging-deploy.mjs` → the existing application-scoped OpenShip hook → verified image digests and backend SHA. Manual publication uses `gh workflow run build-images.yml --ref develop` through that same path. Never improvise a different deploy path, enable OpenShip git auto-deploy, use mutable tags for runtime selection, or replace containers by SSH as a fallback. Failure stops publication and requires repair of this mechanism.
 
+Production follows the separately owner-approved prebuilt image path in `scripts/openship/production-deploy.mjs` after an accepted frozen release, verified backup/restore receipt and separately authorized migration work; see the production section of the deployment policy. Production git auto-deploy stays disabled.
+
 Application deploys target backend/dashboard/website only; preserve PostgreSQL/Redis/MinIO containers and volumes. The prebuilt backend starts without migrations; read-only migration compatibility and unchanged migration metadata are required. A pending migration blocks publication until separately authorized. Production is outside staging authorization and retains its current runtime until explicit production approval. See the deployment policy for fixed project IDs, secrets, activation and evidence requirements.
 
 

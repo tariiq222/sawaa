@@ -1,6 +1,6 @@
 # Builds the deployable Docker images on GitHub and publishes them to GHCR.
-# Staging only pulls verified digests. Production runtime remains unchanged
-# until a separately authorized production migration.
+# Both environments pull verified application digests through scoped hooks.
+# Production requires explicit release authorization and verified backup evidence.
 # A pushed image is not a deployment. Verify the running revision separately.
 name: build-images
 
@@ -206,5 +206,47 @@ jobs:
         with:
           name: staging-deployment-${{ github.sha }}
           path: staging-deployment.json
+          if-no-files-found: error
+          retention-days: 90
+
+  deploy-production:
+    name: deploy-production
+    needs: build
+    if: github.ref_name == 'main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://sawaa.sa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: image-*-${{ github.sha }}
+          path: image-manifests
+          merge-multiple: true
+      - name: Publish the explicitly accepted release and verify production
+        env:
+          PRODUCTION_PREBUILT_DEPLOY: ${{ vars.PRODUCTION_PREBUILT_DEPLOY }}
+          PRODUCTION_RELEASE_AUTHORIZATION: ${{ vars.PRODUCTION_RELEASE_AUTHORIZATION }}
+          PRODUCTION_BACKUP_EVIDENCE: ${{ vars.PRODUCTION_BACKUP_EVIDENCE }}
+          OPENSHIP_PRODUCTION_HOOK_ID: ${{ vars.OPENSHIP_PRODUCTION_HOOK_ID }}
+          OPENSHIP_PRODUCTION_DEPLOY_TOKEN: ${{ secrets.OPENSHIP_PRODUCTION_DEPLOY_TOKEN }}
+          OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN: ${{ secrets.OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN }}
+          OPENSHIP_STAGING_READ_TOKEN: ${{ secrets.OPENSHIP_STAGING_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/openship/production-deploy.mjs image-manifests production-deployment.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: production-deployment-${{ github.sha }}
+          path: production-deployment.json
           if-no-files-found: error
           retention-days: 90
