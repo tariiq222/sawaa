@@ -41,3 +41,9 @@ test('rejects a built service without an overridable image', () => {
 test('committed compose.prebuilt.yml matches compose.yml', () => {
   assert.equal(readFileSync(TARGET, 'utf8'), derivePrebuiltCompose(readFileSync(SOURCE, 'utf8')));
 });
+
+test('prebuilt backend starts directly without migration credentials or migration commands', () => {
+  const out = derivePrebuiltCompose(readFileSync(SOURCE, 'utf8'));
+  assert.match(out, /command: \["node", "dist\/src\/main.js"\]/);
+  assert.doesNotMatch(out, /MIGRATION_DATABASE_URL|start-backend\.sh|prisma migrate/);
+});

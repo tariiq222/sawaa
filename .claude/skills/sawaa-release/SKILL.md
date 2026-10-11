@@ -18,14 +18,14 @@ Work only on Sawaa (`tariiq222/sawaa`); never touch other projects on the shared
 | Server | `f2c67bb9-d9bf-415d-a92f-66663ca512c5` (shared with other projects) | same |
 | Public checks | `https://staging.sawaa.sa/` and `/api/v1/health/ready` | `https://sawaa.sa/`, `https://admin.sawaa.sa/`, `https://api.sawaa.sa/api/v1/health/ready`, `https://files.sawaa.sa/minio/health/live` |
 | Images | `ghcr.io/tariiq222/sawaa-{postgres,backend,dashboard,website}:staging[-<sha>]` | `…:production[-<sha>]` |
-| How it runs | prebuilt images via `docker/openship/compose.prebuilt.yml` | OpenShip builds on the host from `compose.yml` (until switched like staging) |
+| How it runs | digest-pinned application images via `docker/openship/compose.prebuilt.yml` | OpenShip builds on the host from `compose.yml` (until switched like staging) |
 
 `/api/v1/health` returns `gitSha`. Images built by `build-images.yml` carry the full commit; host builds report `unknown`.
 
 ## Command meaning
 
 - «انشر» / «ننشر»: PR into `develop`, then staging. Stop and hand over for the owner's manual test.
-- «انشر للإنتاج» / «انشر للبرودكشن»: promote the accepted candidate `develop` → `main` and deploy production. Do not ask again for steps this skill lists.
+- «انشر للإنتاج» / «انشر للبرودكشن»: promote the accepted frozen candidate `release/<date>` → `main` and deploy production. Do not ask again for steps this skill lists.
 - A request to fix or implement something does not authorize commit, push, merge or deploy.
 
 ## 1. Into develop
@@ -35,23 +35,29 @@ Work only on Sawaa (`tariiq222/sawaa`); never touch other projects on the shared
 3. Push and open a PR into `develop`. The pre-push hook needs `node_modules`; if the worktree has none, push the commit from the main checkout. Never bypass hooks.
 4. Merge only when `gate` and `critical-real-e2e` pass on the PR head. Use a merge commit.
 
-## 2. Staging (automatic)
+## 2. Staging — the single fixed path
 
-After a push to `develop`, `build-images.yml` builds and pushes the four images, then the `deploy-staging` job:
-1. calls the OpenShip staging deploy webhook (secrets `OPENSHIP_STAGING_DEPLOY_HOOK_URL` / `_TOKEN`);
-2. runs `scripts/openship/verify-prebuilt-deploy.mjs`: waits for a `ready` deployment of the commit with six running services and HTTP 200 checks, then requires `/api/v1/health` `gitSha` to equal the commit.
+Use the mechanism in [the deployment policy](../../../docs/operations/deployment-policy.md#fixed-staging-publication-path--owner-approved-2026-10-11). Do not create another deploy recipe when it fails.
 
-The job runs only while repository variable `STAGING_PREBUILT_DEPLOY=true`. Staging auto-deploy on git push is off; the workflow is the only trigger.
+1. `build-images.yml` builds all four images on GitHub and emits application SHA/digest artifacts. No runtime changes occur after a partial build.
+2. `scripts/openship/staging-deploy.mjs` accepts only develop and staging project `proj_7M0RNj59nQnafh1m`, with `autoDeploy=false` and prebuilt compose. It rejects missing activation, wrong hook scope or unsafe backend startup.
+3. It reads migration metadata with a SELECT-only read-only transaction. Pending/failed/unknown/new checksum drift blocks deployment. Three exact historical checksum pairs from the existing provenance report are preserved, never repaired. The prebuilt backend starts directly without migrations or migration credentials.
+4. It temporarily selects the immutable candidate SHA as the staging Git ref, pins only backend/dashboard/website image variables to the build digests, then invokes the existing token-authenticated hook scoped to exactly those three service IDs with strict scope. The hook snapshots that SHA before the selected ref returns to `develop`. PostgreSQL/Redis/MinIO retain their containers, images and mounts. A superseding push is reported explicitly; never substitute its source files into an older image set.
+5. It verifies the returned deployment is active/ready for the expected SHA, all three runtime digests match, backend health reports that SHA, public API/website and internal dashboard answer 200, infrastructure containers are unchanged and migration metadata is identical. It saves the sanitized artifact `staging-deployment-<sha>`.
 
-Your part: confirm the `deploy-staging` job is green for the merged commit, then give the owner the staging URL, the commit, a change summary and what to test manually. A green job is not owner acceptance.
+Required variables: `STAGING_PREBUILT_DEPLOY=true`, `OPENSHIP_STAGING_HOOK_ID`. Required automation secrets: `OPENSHIP_STAGING_DEPLOY_TOKEN` (read/write limited to this staging project) and `OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN`. The existing `OPENSHIP_STAGING_READ_TOKEN` remains for other read-only release gates. Do not log tokens or read-back hook secrets.
 
-If it fails: read the job log. `Running backend is not <sha>` means a stale image ran: check the four packages are public and the moving `:staging` tags point at the commit. Do not redeploy blindly more than once.
+Manual publication or retry: `gh workflow run build-images.yml --repo tariiq222/sawaa --ref develop`. This uses exactly the same job and concurrency group. Do not use ordinary Redeploy, host rebuilds, moving tags or SSH container operations as a substitute. Read the failure, repair the path, then allow at most one bounded transient retry. Never claim success from build/ready alone.
+
+Docs/mobile-only commits may be ahead of the server image because automatic server publication ignores them. Verify and record unchanged server inputs; for a fresh exact-SHA runtime use the manual workflow on current develop through this same path.
+
+Give the owner the staging URL, actual runtime SHA, deployment id, verified evidence and relevant manual test steps. Automated success is not owner acceptance.
 
 ## 3. Production (agent-driven, on explicit command only)
 
 Preconditions, all required:
-- The owner accepted the exact candidate on staging. Staging runs the same tree you will merge (`git diff --quiet <staging sha> origin/develop`). Anything new in `develop` since acceptance stops promotion until it is tested too.
-- The `develop` → `main` PR head equals that candidate; `gate` and `critical-real-e2e` pass on it.
+- The owner accepted the exact candidate on staging. Cut `release/<YYYY-MM-DD>` from the exact staging SHA after it is ready and the owner starts its manual test. The accepted release branch stays frozen; later develop changes cannot enter it.
+- The `release/<date>` → `main` PR head equals that accepted candidate; `gate` and `critical-real-e2e` pass on it.
 - New migrations are additive only (read their SQL).
 
 Steps:
@@ -68,7 +74,9 @@ Report to the owner: commit, deployment id, checks, backup path and restore resu
 
 ## Rollback
 
-Code only: redeploy the previous good deployment (`get_deployments_by_id_restore_plan`, then rollback on the target) or, for prebuilt services, point the image variables at the previous `<env>-<sha>` tag. Ask the owner first in production. Never restore an old database as part of a code rollback; that needs separate explicit authorization.
+Staging code rollback: review a revert, merge it into `develop` through a PR, and publish it through `build-images.yml` → `staging-deploy.mjs`, including fresh build manifests and verification. Bare OpenShip rollback/redeploy and selecting old digests are not supported staging shortcuts.
+
+Production code rollback requires the owner's separate explicit authorization and its own reviewed restore-plan. Never restore an old database as part of a code rollback; that needs separate explicit authorization.
 
 ## Known failure modes
 

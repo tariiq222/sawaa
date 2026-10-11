@@ -1,5 +1,6 @@
 # Builds the deployable Docker images on GitHub and publishes them to GHCR.
-# OpenShip then only pulls and runs them; it never builds on the server.
+# Staging only pulls verified digests. Production runtime remains unchanged
+# until a separately authorized production migration.
 # A pushed image is not a deployment. Verify the running revision separately.
 name: build-images
 
@@ -22,7 +23,8 @@ on:
       - "apps/website/Dockerfile"
   workflow_dispatch:
 
-# Never cancel a running build: a half-pushed tag set must not be possible.
+# Serialize builds and staging deployment. Runtime references change only
+# after every build succeeds; a partial tag set cannot enter the deploy job.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -121,9 +123,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           build-args: ${{ steps.args.outputs.build_args }}
           # Environment-specific tags. Frontend images bake public URLs at build
-          # time, so staging and production tags differ. `<env>-<sha>` is
-          # immutable (rollback target); the moving `<env>` tag is what OpenShip
-          # pulls through compose.prebuilt.yml, and only develop/main move it.
+          # time, so staging and production tags differ. Tags locate artifacts;
+          # staging deploys the emitted digest, never the moving tag.
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:${{ env.TARGET_ENV }}-${{ github.sha }}
             ${{ (github.ref_name == 'develop' || github.ref_name == 'main') && format('{0}-{1}:{2}', env.IMAGE_PREFIX, matrix.image, env.TARGET_ENV) || '' }}
@@ -142,14 +143,31 @@ jobs:
             printf '`%s-%s:%s-%s` digest `%s`\n' "$IMAGE_PREFIX" "$IMAGE" "$TARGET_ENV" "$GITHUB_SHA" "$DIGEST" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Save application image identity
+        if: github.event_name != 'pull_request' && matrix.image != 'postgres'
+        env:
+          IMAGE: ${{ matrix.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          mkdir -p image-manifests
+          node -e 'const fs=require("node:fs"); fs.writeFileSync(`image-manifests/${process.env.IMAGE}.json`, JSON.stringify({service:process.env.IMAGE,sha:process.env.GITHUB_SHA,environment:process.env.TARGET_ENV,digest:process.env.DIGEST})+"\n")'
+
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request' && matrix.image != 'postgres'
+        with:
+          name: image-${{ matrix.image }}-${{ github.sha }}
+          path: image-manifests/${{ matrix.image }}.json
+          if-no-files-found: error
+          retention-days: 30
+
   # Staging only: trigger the OpenShip deploy once all four images are pushed,
-  # then prove the running backend is this commit. Production stays agent-driven
-  # (see .claude/skills/sawaa-release). Enabled by repository variable
-  # STAGING_PREBUILT_DEPLOY=true after the staging project uses compose.prebuilt.yml.
+  # then pin digests, fire the existing scoped hook and prove the exact runtime.
+  # Missing activation/credentials FAIL instead of silently skipping publication.
+  # Manual reruns on develop use this same job. Production is never targeted here.
   deploy-staging:
     name: deploy-staging
     needs: build
-    if: github.event_name == 'push' && github.ref_name == 'develop' && vars.STAGING_PREBUILT_DEPLOY == 'true'
+    if: github.ref_name == 'develop' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # Records each verified run as a GitHub deployment, so the repository's
@@ -169,19 +187,24 @@ jobs:
         with:
           node-version: 22
 
-      - name: Trigger OpenShip staging deploy
-        env:
-          HOOK_URL: ${{ secrets.OPENSHIP_STAGING_DEPLOY_HOOK_URL }}
-          HOOK_TOKEN: ${{ secrets.OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN }}
-        run: |
-          set -euo pipefail
-          : "${HOOK_URL:?OPENSHIP_STAGING_DEPLOY_HOOK_URL secret is missing}"
-          : "${HOOK_TOKEN:?OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN secret is missing}"
-          curl -fsS --max-time 60 -X POST -H "Authorization: Bearer ${HOOK_TOKEN}" "$HOOK_URL"
-          echo
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: image-*-${{ github.sha }}
+          path: image-manifests
+          merge-multiple: true
 
-      - name: Verify staging runs this commit
+      - name: Publish and verify staging through the single scoped path
         env:
-          OPENSHIP_READ_TOKEN: ${{ secrets.OPENSHIP_STAGING_READ_TOKEN }}
+          STAGING_PREBUILT_DEPLOY: ${{ vars.STAGING_PREBUILT_DEPLOY }}
+          OPENSHIP_STAGING_HOOK_ID: ${{ vars.OPENSHIP_STAGING_HOOK_ID }}
+          OPENSHIP_STAGING_DEPLOY_TOKEN: ${{ secrets.OPENSHIP_STAGING_DEPLOY_TOKEN }}
+          OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN: ${{ secrets.OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/openship/verify-prebuilt-deploy.mjs
+        run: node scripts/openship/staging-deploy.mjs image-manifests staging-deployment.json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: staging-deployment-${{ github.sha }}
+          path: staging-deployment.json
+          if-no-files-found: error
+          retention-days: 90
