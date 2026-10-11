@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "deploymentScope": "applications",
+  "infrastructureBefore": [
+    {
+      "name": "postgres",
+      "deploymentId": "dep_6WwSoqpt_PJmgQMy",
+      "containerId": "06a23e206d27202d51584a35e0a1cffe0498c7441423ed463f627c73d2d275c8",
+      "imageId": "sha256:2036b2105baf926cb321c812682ee85817bc0c8cdc74921d92b9eb364d3dbea2"
+    },
+    {
+      "name": "redis",
+      "deploymentId": "dep_6WwSoqpt_PJmgQMy",
+      "containerId": "fce52ac888c38c9e95467dbb6cd71bd8133fae9d09a66d4e5e47937c39b6f60a",
+      "imageId": "sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf"
+    },
+    {
+      "name": "minio",
+      "deploymentId": "dep_6WwSoqpt_PJmgQMy",
+      "containerId": "04bb6c6684842687349595849f009030ecae7d58a99d721f501fa4ff5ddc6cb1",
+      "imageId": "sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e"
+    }
+  ],
+  "environment": "production",
+  "commit": "eeb521b2a11c0860fef40b517047c0a5a972b9bf",
+  "deploymentId": "dep_eC7mq1XQqhBMPTYD",
+  "observedAt": "2026-10-11T15:56:08.238Z",
+  "recordedAt": "2026-10-11T15:56:37.453Z",
+  "status": "verified",
+  "evidenceSha256": "c1483f5811c5ea599600ca28c7370c16a5ce2bc251d57fe1fd41b8260c410628",
+  "verificationSource": "operator-attestation",
+  "verifiedBy": "codex-sol61",
+  "services": [
+    {
+      "name": "backend",
+      "health": "healthy",
+      "deploymentId": "dep_eC7mq1XQqhBMPTYD",
+      "containerId": "b5e9187d2207695fb18eeb32abed670f0d39b294c2574dd755a20e7e57cdd664",
+      "imageId": "sha256:a74a676d7e77cca484b4955cb3d1567140b33b25ec26ba18df67b3960e5628b3"
+    },
+    {
+      "name": "dashboard",
+      "health": "healthy",
+      "deploymentId": "dep_eC7mq1XQqhBMPTYD",
+      "containerId": "cc1811aed2064a25c50e264682d8573efb522fc147e1dbb631c564e2e40a5bf0",
+      "imageId": "sha256:67235a7089bc46cd13beb8f0fa022112ab8091f18acaaaa55c2156af42330982"
+    },
+    {
+      "name": "website",
+      "health": "healthy",
+      "deploymentId": "dep_eC7mq1XQqhBMPTYD",
+      "containerId": "2d970c4198726085f6fa620b75ae7905c7608141639f98d597492c8a4b26e7f4",
+      "imageId": "sha256:6654a0003aefa575c8b42151196345133ea030cb60c34fcbbc55ac81139e32b1"
+    },
+    {
+      "name": "postgres",
+      "health": "healthy",
+      "deploymentId": "dep_6WwSoqpt_PJmgQMy",
+      "containerId": "06a23e206d27202d51584a35e0a1cffe0498c7441423ed463f627c73d2d275c8",
+      "imageId": "sha256:2036b2105baf926cb321c812682ee85817bc0c8cdc74921d92b9eb364d3dbea2"
+    },
+    {
+      "name": "redis",
+      "health": "healthy",
+      "deploymentId": "dep_6WwSoqpt_PJmgQMy",
+      "containerId": "fce52ac888c38c9e95467dbb6cd71bd8133fae9d09a66d4e5e47937c39b6f60a",
+      "imageId": "sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf"
+    },
+    {
+      "name": "minio",
+      "health": "healthy",
+      "deploymentId": "dep_6WwSoqpt_PJmgQMy",
+      "containerId": "04bb6c6684842687349595849f009030ecae7d58a99d721f501fa4ff5ddc6cb1",
+      "imageId": "sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e"
+    }
+  ],
+  "checks": [
+    {
+      "name": "backend",
+      "status": 200
+    },
+    {
+      "name": "dashboard",
+      "status": 200
+    },
+    {
+      "name": "website",
+      "status": 200
+    }
+  ]
+}

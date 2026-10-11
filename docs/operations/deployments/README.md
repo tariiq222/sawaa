@@ -1,6 +1,6 @@
 # Deployment records
 
-A code release and a successfully observed deployment are different events. `release.yml` owns only the former. This directory may contain reviewed, sanitized deployment receipts; it does not contain a verified receipt for existing environments yet.
+A code release and a successfully observed deployment are different events. `release.yml` owns only the former. This directory contains reviewed, sanitized observations; a receipt describes its recorded time, not continuous availability.
 
 ## Collection and recording
 
@@ -15,6 +15,14 @@ A code release and a successfully observed deployment are different events. `rel
 
    Choose a new filename containing the observation date, environment and deployment identity. The script refuses existing output paths, failed/incomplete checks, mismatched commits or deployment IDs, observations in the future or older than 24 hours, and inputs larger than 64 KiB. It copies only permitted fields, includes a SHA-256 of the input evidence, and creates the file with mode 0600. Review the result before adding it to a PR. It never commits, pushes or contacts OpenShip.
 5. Preserve the input evidence privately to allow hash verification. Link the receipt from `../current-state.md` with its observation time and verification limits. Update through the normal PR path, not a direct commit to main. Recording a receipt is not authorization to deploy.
+
+## Application-only publication
+
+The digest-pinned publication path replaces backend/dashboard/website and preserves PostgreSQL/Redis/MinIO. Their Docker deployment labels therefore retain the earlier deployment ID. Never replace those observed IDs with the new application deployment ID to satisfy a receipt.
+
+Use `schemaVersion: 2` and `deploymentScope: applications` for this path. Every service additionally records its full Docker `containerId` and immutable `imageId` (`sha256:<64 hex>`). `infrastructureBefore` contains exactly the three data services' independently observed `name`, `deploymentId`, `containerId` and `imageId` before publication. The CLI requires each data service to match that baseline exactly and each application to carry the current deployment ID; all six must be healthy and have unique container IDs. Source identity, HTTP checks, freshness and credential whitelisting remain mandatory. Schema 1 continues to require one deployment ID for all six services without changing its output.
+
+Both schemas are operator attestations. Baseline values must come from actual pre-publication inspection; the CLI cannot independently confirm remote observations.
 
 ## Meaning and limits
 

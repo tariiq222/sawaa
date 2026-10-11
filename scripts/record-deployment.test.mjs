@@ -127,3 +127,56 @@ test('rejects wrong argument counts without writing', t => {
     assert.equal(existsSync(f.output), false);
   }
 });
+
+function applicationEvidence() {
+  const data = { ...evidence(), schemaVersion: 2, deploymentScope: 'applications' };
+  data.services = data.services.map((s, i) => ({ ...s,
+    containerId: String(i + 1).repeat(64), imageId: 'sha256:' + String(i + 1).repeat(64),
+    deploymentId: i < 3 ? data.deploymentId : 'dep_previous',
+  }));
+  data.infrastructureBefore = data.services.slice(3).map(({ health, ...s }) => s);
+  return data;
+}
+
+test('records application-only publication with independently preserved infrastructure identities', t => {
+  const data = applicationEvidence();
+  const f = fixture(t, JSON.stringify(data));
+  assert.equal(f.run(f.input, f.output).status, 0);
+  const record = JSON.parse(readFileSync(f.output, 'utf8'));
+  assert.equal(record.schemaVersion, 2);
+  assert.equal(record.deploymentScope, 'applications');
+  assert.deepEqual(record.services, data.services);
+  assert.deepEqual(record.infrastructureBefore, data.infrastructureBefore);
+});
+
+const invalidApplicationCases = {
+  'unknown scope': e => { e.deploymentScope = 'all'; },
+  'missing prior infrastructure': e => { delete e.infrastructureBefore; },
+  'partial prior infrastructure': e => { e.infrastructureBefore.pop(); },
+  'duplicate prior infrastructure': e => { e.infrastructureBefore[2] = e.infrastructureBefore[0]; },
+  'application from another deployment': e => { e.services[0].deploymentId = 'dep_other'; },
+  'replaced infrastructure container': e => { e.services[3].containerId = 'f'.repeat(64); },
+  'changed infrastructure image': e => { e.services[3].imageId = 'sha256:' + 'f'.repeat(64); },
+  'changed infrastructure deployment': e => { e.services[3].deploymentId = 'dep_other'; },
+  'invalid infrastructure deployment': e => { e.services[3].deploymentId = e.infrastructureBefore[0].deploymentId = 'bad'; },
+  'invalid container identity': e => { e.services[0].containerId = 'short'; },
+  'invalid image identity': e => { e.services[0].imageId = 'mutable:tag'; },
+  'duplicate container identity': e => { e.services[1].containerId = e.services[0].containerId; },
+};
+for (const [name, mutate] of Object.entries(invalidApplicationCases)) {
+  test(`rejects application receipt ${name}`, t => {
+    const data = applicationEvidence(); mutate(data);
+    const f = fixture(t, JSON.stringify(data));
+    assert.notEqual(f.run(f.input, f.output).status, 0);
+    assert.equal(existsSync(f.output), false);
+  });
+}
+
+test('application receipt whitelists all identity evidence', t => {
+  const data = applicationEvidence();
+  data.infrastructureBefore[0].token = 'SECRET_SENTINEL';
+  data.services[0].env = 'SECRET_SENTINEL';
+  const f = fixture(t, JSON.stringify(data));
+  assert.equal(f.run(f.input, f.output).status, 0);
+  assert.doesNotMatch(readFileSync(f.output, 'utf8'), /SECRET_SENTINEL|token|"env"/);
+});
