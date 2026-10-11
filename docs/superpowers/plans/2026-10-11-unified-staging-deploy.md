@@ -32,9 +32,9 @@
 
 **Interfaces:** Input: full source SHA and three image build artifacts `{service, sha, digest, environment}`. APIs: project/services/containers, scoped incoming hook, temporary staging source-ref selection, PATCH project env, backend exec for a read-only migration query. Output: sanitized exact-source deployment receipt, image refs, preserved infrastructure identities and migration fingerprint.
 
-- [ ] Add failing regression checks for stale refs, wrong project, hook broad scope, migration drift, changed infra and generated backend startup command.
-- [ ] Run `node --test scripts/openship/*.test.mjs` and observe intended failures.
-- [ ] Implement the contract/orchestrator and regenerate prebuilt compose. Re-run the complete focused suite.
+- [x] Add failing regression checks for stale refs, wrong project, hook broad scope, migration drift, changed infra and generated backend startup command.
+- [x] Run `node --test scripts/openship/*.test.mjs` and observe intended failures.
+- [x] Implement the contract/orchestrator and regenerate prebuilt compose. Re-run the complete focused suite.
 
 ### Task 2: Workflow and permanent instructions
 
@@ -42,23 +42,27 @@
 
 **Interfaces:** Build jobs publish digest artifacts; deploy job downloads them and calls Task 1 once. Missing activation causes an explicit failure; push/manual develop executions share the same job. Production retains its existing runtime until separately authorized.
 
-- [ ] Wire digest artifacts and the new orchestrator, removing the old bare curl path and silent activation skip.
-- [ ] Make CI execute the complete OpenShip regression suite; document one canonical staging path and frozen-release production boundary.
-- [ ] Run focused tests and workflow parse checks; run `pnpm test:premerge` on the exact candidate if the changed surface requires it.
+- [x] Wire digest artifacts and the new orchestrator, removing the old bare curl path and silent activation skip.
+- [x] Make CI execute the complete OpenShip regression suite; document one canonical staging path and frozen-release production boundary.
+- [x] Run focused tests and workflow parse checks; run `pnpm test:premerge` on the exact candidate if the changed surface requires it.
 
 ### Task 3: Review, live setup and authorized staging publication
 
 **Responsibility:** Coordinator, scoped OpenShip staging configuration and GitHub secrets/variable only.
 
-- [ ] Independent Sol 6.1 review of the actual diff; resolve material findings with regression tests.
-- [ ] Capture baseline infrastructure/production identities and read-only migration state. Scope the existing hook, prepare direct backend startup, mint a staging-only API token and save it directly into GitHub secret input without displaying it.
-- [ ] Commit/push task branch, open/attach PR, wait for required checks and merge with a merge commit. Run `scripts/sync-develop.sh` and confirm equality.
+- [x] Independent Sol 6.1 review of the actual diff; resolve material findings with regression tests.
+- [x] Capture baseline infrastructure/production identities and read-only migration state. Scope the existing hook, prepare direct backend startup, mint a staging-only API token and save it directly into GitHub secret input without displaying it.
+- [x] Commit/push task branch, open/attach PR, wait for required checks and merge with a merge commit. Run `scripts/sync-develop.sh` and confirm equality.
 - [ ] Observe GitHub build/deploy success, verify public read-only discovery/UI and exact image digests; rerun the same workflow for the same SHA and verify again.
 
 ### Task 4: Evidence and branch acceptance
 
 **Files:** dated staging receipt/current-state update and private evidence outside Git.
 
-- [ ] Record live source/deployment IDs, HTTP checks, digest identities, unchanged infrastructure/production containers, migration metadata and branch ancestor results.
+- [x] Record live source/deployment IDs, HTTP checks, digest identities, unchanged infrastructure/production containers, migration metadata and branch ancestor results.
 - [ ] Land documentation evidence through a merge-commit PR into develop, synchronize and verify its source/server-input relationship with the accepted runtime. No deployment for docs-only updates.
 - [ ] Report automated evidence and any remaining owner/device/provider acceptance limits.
+
+## Live verification correction
+
+The first scoped image deployment became ready, but the workflow verifier rejected OpenShip’s intentionally absent commit metadata for fully image-backed snapshots. Add a staging-only null-metadata regression, retain exact frozen ref/digest/live-health SHA proof and production’s existing commit binding. Correct the historical website image override without a container action. Publish the correction and dated initial evidence in one reviewed PR, then prove green automatic and unchanged-source manual publication. Final workflow receipts remain the authoritative successful-publication evidence.

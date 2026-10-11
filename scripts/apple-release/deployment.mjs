@@ -11,17 +11,30 @@ function frozenStagingRef(target, ref, sha) {
   return target.profile === 'staging' && target.branch === 'develop'
     && target.projectId === 'proj_7M0RNj59nQnafh1m' && /^[a-f0-9]{40}$/.test(sha) && ref === sha;
 }
+export function deploymentSourceSha(target, deployment) {
+  if (deployment && frozenStagingRef(target, deployment.branch, deployment.branch)) {
+    if (deployment.commitSha != null) {
+      assert.equal(deployment.commitSha, deployment.branch, 'Frozen deployment metadata contradicts its source ref');
+    }
+    return deployment.branch;
+  }
+  return deployment?.commitSha;
+}
 function deploymentRefMatches(target, deployment) {
-  return deployment.branch === target.branch || frozenStagingRef(target, deployment.branch, deployment.commitSha);
+  return deployment.branch === target.branch || frozenStagingRef(target, deployment.branch, deploymentSourceSha(target, deployment));
 }
 
-export function verifyDeployment(target, sha, { project, deployment, containers }) {
+export function verifyDeployment(target, sha, { project, deployment, containers, backendGitSha }) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.equal(project.id, target.projectId);
   assert.equal(project.gitBranch, target.branch);
   assert.equal(deployment.projectId, target.projectId);
   assert.ok(deploymentRefMatches(target, deployment), 'Deployment source ref mismatch');
-  assert.equal(deployment.commitSha, sha);
+  assert.equal(deploymentSourceSha(target, deployment), sha);
+  if (deployment.commitSha == null) {
+    assert.ok(frozenStagingRef(target, deployment.branch, sha), 'Missing deployment source metadata');
+    assert.equal(backendGitSha, sha, 'Running backend SHA must independently prove the frozen source');
+  }
   assert.equal(deployment.status, 'ready');
   assert.equal(project.activeDeploymentId, deployment.id);
   assert.equal(containers.length, SERVICES.length);
@@ -32,12 +45,30 @@ export function verifyDeployment(target, sha, { project, deployment, containers 
     assert.ok(container?.containerId && container.imageRef, `Missing ${name} runtime identity`);
     assert.equal(container.status, 'running', `${name} is not running`);
     assert.deepEqual(container.duplicates, [], `${name} has duplicate runtime matches`);
+    if (deployment.commitSha == null && ['backend', 'dashboard', 'website'].includes(name)) {
+      assert.match(container.imageRef, /@sha256:[a-f0-9]{64}$/, `${name} must run a digest-pinned image`);
+    }
   }
   return {
     environment: target.profile, sourceSha: sha, projectId: project.id,
     deploymentId: deployment.id, observedAt: new Date().toISOString(),
     services: containers.map(c => ({ name: c.serviceName, containerId: c.containerId, imageRef: c.imageRef, status: c.status })),
   };
+}
+
+async function readBackendGitSha(target, request) {
+  const health = target.apiUrl
+    ? new URL(`${target.apiUrl.replace(/\/+$/, '')}/health`)
+    : new URL(target.readinessUrl);
+  if (!target.apiUrl) {
+    assert.ok(health.pathname.endsWith('/health/ready'), 'A backend health URL is required');
+    health.pathname = health.pathname.slice(0, -'/ready'.length);
+  }
+  health.search = ''; health.hash = '';
+  assert.equal(health.protocol, 'https:');
+  const response = await request(health.href, { signal: AbortSignal.timeout(15000), redirect: 'error' });
+  if (!response.ok) throw new Error(`Running backend health HTTP ${response.status}`);
+  return (await response.json()).gitSha;
 }
 
 async function getJson(url, token, request = fetch) {
@@ -88,23 +119,26 @@ export async function waitForDeployment(target, sha, token, {
     if (project.gitBranch !== target.branch) throw new Error('OpenShip project identity mismatch');
     if (project.activeDeploymentId) {
       const { data: deployment } = await getJson(`${OPENSHIP}/api/deployments/${project.activeDeploymentId}`, token, request);
-      if (deployment?.commitSha === sha && ['failed', 'cancelled', 'partial_failure', 'action_required'].includes(deployment.status)) {
+      const deployedSha = deploymentSourceSha(target, deployment);
+      if (deployedSha === sha && ['failed', 'cancelled', 'partial_failure', 'action_required'].includes(deployment.status)) {
         throw new Error(`Matching deployment failed: ${deployment.status}`);
       }
       let noChanges;
-      if (deployment?.commitSha !== sha && deployment?.status === 'ready') {
+      if (deployedSha !== sha && deployment?.status === 'ready') {
         const history = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/deployments?perPage=20`, token, request);
         if (!Array.isArray(history.data)) throw new Error('OpenShip deployment history response is malformed');
-        const matching = history.data.find(d => d.commitSha === sha && d.projectId === target.projectId && deploymentRefMatches(target, d));
+        const matching = history.data.find(d => d.projectId === target.projectId && deploymentSourceSha(target, d) === sha && deploymentRefMatches(target, d));
         if (matching && ['failed', 'cancelled', 'partial_failure', 'action_required'].includes(matching.status)) throw new Error(`Matching deployment failed: ${matching.status}`);
-        noChanges = history.data.find(d => d.commitSha === sha && d.status === 'no_changes' && d.projectId === target.projectId && deploymentRefMatches(target, d));
-        if (noChanges) await assertSameServerInputs(deployment.commitSha, sha, githubToken, request);
+        noChanges = history.data.find(d => d.projectId === target.projectId && deploymentSourceSha(target, d) === sha && d.status === 'no_changes' && deploymentRefMatches(target, d));
+        if (noChanges) await assertSameServerInputs(deployedSha, sha, githubToken, request);
       }
-      if (deployment?.status === 'ready' && (deployment.commitSha === sha || noChanges)) {
+      if (deployment?.status === 'ready' && (deployedSha === sha || noChanges)) {
         const { success, containers } = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/services/containers`, token, request);
         if (success !== true || !Array.isArray(containers)) throw new Error('Runtime observations unavailable');
-        const evidence = verifyDeployment(target, deployment.commitSha, { project, deployment, containers });
-        evidence.deployedSha = deployment.commitSha;
+        const backendGitSha = deployment.commitSha == null ? await readBackendGitSha(target, request) : undefined;
+        const evidence = verifyDeployment(target, deployedSha, { project, deployment, containers, backendGitSha });
+        evidence.deployedSha = deployedSha;
+        if (backendGitSha !== undefined) evidence.backendGitSha = backendGitSha;
         evidence.sourceSha = sha;
         if (noChanges) evidence.noChangesDeploymentId = noChanges.id;
         evidence.httpChecks = [];

@@ -57,7 +57,7 @@ test('runtime verification rejects stale application images and replaced infrast
   assert.throws(() => assertRuntime(before, after.map(c => c.serviceName === 'postgres' ? { ...c, containerId: 'replaced' } : c), refs));
 });
 
-function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceBeforeHook = false, compensationFails = false } = {}) {
+function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceBeforeHook = false, compensationFails = false, recordedCommit = SHA, healthSha = SHA } = {}) {
   const calls = [];
   const refs = buildImageRefs(SHA, manifests);
   let fired = false; let pinned = 'develop'; let advanced = false;
@@ -74,9 +74,9 @@ function fixture({ superseded = false, missingMigration = false, disabled = fals
     else if (u.pathname.endsWith('/branch')) { pinned = JSON.parse(opts.body).branch; body = { success: true }; }
     else if (u.pathname.endsWith('/env')) { if (method === 'PATCH' && advanced && compensationFails) return { ok: false, status: 503 }; if (method === 'PATCH' && advanceDuringPatch) advanced = true; body = { data: APP_SERVICES.map(name => ({ key: `${name.toUpperCase()}_IMAGE`, value: `old:${name}` })) }; }
     else if (u.pathname.endsWith('/incoming/hook1')) { assert.equal(pinned, SHA); if (advanceBeforeHook) advanced = true; fired = true; body = { data: { action: 'deploy', ref: 'dep_new' } }; }
-    else if (u.pathname.endsWith('/deployments/dep_new')) body = { data: { id: 'dep_new', projectId: PROJECT_ID, branch: SHA, commitSha: SHA, status: 'ready', meta: { strictServiceScope: true, targetServiceIds: hook.actionConfig.serviceIds } } };
+    else if (u.pathname.endsWith('/deployments/dep_new')) body = { data: { id: 'dep_new', projectId: PROJECT_ID, branch: SHA, commitSha: recordedCommit, status: 'ready', meta: { strictServiceScope: true, targetServiceIds: hook.actionConfig.serviceIds } } };
     else if (u.pathname.endsWith(`/projects/${PROJECT_ID}`)) body = { data: { ...project, gitBranch: pinned, activeDeploymentId: fired ? 'dep_new' : 'dep_old' } };
-    else if (u.pathname.endsWith('/health')) body = { gitSha: SHA };
+    else if (u.pathname.endsWith('/health')) body = { gitSha: healthSha };
     else body = {};
     return { ok: true, status: 200, json: async () => body, body: { cancel: async () => {} } };
   };
@@ -96,6 +96,20 @@ test('deployment pins images only after read-only schema and scope gates, then v
   assert.match(command, /BEGIN READ ONLY/);
   assert.doesNotMatch(command, /migrate deploy|INSERT|UPDATE|DELETE|CREATE|DROP/);
   assert.ok(f.calls.every(c => !c.url.includes('proj_tsxe0sAW3u2AMSGO')));
+});
+
+test('image-only deployments may omit commit metadata but must prove the frozen source through live health', async () => {
+  const f = fixture({ recordedCommit: null });
+  const result = await deployStaging(f.options);
+  assert.equal(result.sourceSha, SHA);
+  assert.equal(result.backendGitSha, SHA);
+  const stale = fixture({ recordedCommit: null, healthSha: 'b'.repeat(40) });
+  await assert.rejects(deployStaging(stale.options), /SHA|sha|revision|gitSha/);
+});
+
+test('populated contradictory deployment commit metadata still blocks publication', async () => {
+  const f = fixture({ recordedCommit: 'b'.repeat(40) });
+  await assert.rejects(deployStaging(f.options), /different source/);
 });
 
 test('superseded SHA, disabled automation and pending schema never change image refs or invoke the hook', async () => {

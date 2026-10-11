@@ -191,7 +191,11 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
     const { data: deployment } = await json(`/api/deployments/${triggered.ref}`);
     assert.equal(deployment.projectId, PROJECT_ID);
     assert.equal(deployment.branch, sha, 'Deployment source ref was not frozen');
-    assert.equal(deployment.commitSha, sha, 'Hook selected a different source');
+    // OpenShip omits commitSha for fully image-backed snapshots because no
+    // service needs Git source. The exact frozen ref is still required here;
+    // digest identities and the independent live backend SHA are proved below.
+    if (deployment.commitSha != null)
+      assert.equal(deployment.commitSha, sha, 'Hook selected a different source');
     assert.equal(deployment.meta?.strictServiceScope, true);
     assert.deepEqual([...deployment.meta.targetServiceIds].sort(), [...hookIds(hooks, hookId)].sort());
     if (['failed', 'cancelled', 'partial_failure', 'action_required', 'rejected', 'no_changes'].includes(deployment.status))
