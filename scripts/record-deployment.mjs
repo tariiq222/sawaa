@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { closeSync, openSync, readSync, writeFileSync } from 'node:fs';
 
 const SERVICE_NAMES = ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'];
+const INFRA_NAMES = ['postgres', 'redis', 'minio'];
 const CHECK_NAMES = ['backend', 'dashboard', 'website'];
 const MAX_BYTES = 64 * 1024;
 
@@ -40,7 +41,7 @@ function normalizeEntries(entries, names, validate, normalize) {
 
 function createRecord(raw, now) {
   const data = JSON.parse(raw.toString('utf8'));
-  requireValid(data && data.schemaVersion === 1);
+  requireValid(data && [1, 2].includes(data.schemaVersion));
   requireValid(['staging', 'production'].includes(data.environment));
   requireValid(typeof data.expectedCommit === 'string' && /^[a-f0-9]{40}$/.test(data.expectedCommit));
   requireValid(data.expectedCommit === data.deployedCommit);
@@ -52,16 +53,35 @@ function createRecord(raw, now) {
   requireValid(new Date(observed).toISOString() === data.observedAt);
   requireValid(observed <= now && now - observed <= 24 * 60 * 60 * 1000);
 
-  const services = normalizeEntries(data.services, SERVICE_NAMES,
-    entry => entry.health === 'healthy' && entry.deploymentId === data.deploymentId,
-    entry => ({ name: entry.name, health: 'healthy', deploymentId: data.deploymentId }));
+  let services, infrastructureBefore;
+  if (data.schemaVersion === 1) {
+    services = normalizeEntries(data.services, SERVICE_NAMES,
+      entry => entry.health === 'healthy' && entry.deploymentId === data.deploymentId,
+      entry => ({ name: entry.name, health: 'healthy', deploymentId: data.deploymentId }));
+  } else {
+    requireValid(data.deploymentScope === 'applications');
+    const validIdentity = entry => typeof entry.containerId === 'string' && /^[a-f0-9]{64}$/.test(entry.containerId)
+      && typeof entry.imageId === 'string' && /^sha256:[a-f0-9]{64}$/.test(entry.imageId)
+      && typeof entry.deploymentId === 'string' && /^dep_[A-Za-z0-9_-]+$/.test(entry.deploymentId);
+    const identity = entry => ({ name: entry.name, deploymentId: entry.deploymentId,
+      containerId: entry.containerId, imageId: entry.imageId });
+    infrastructureBefore = normalizeEntries(data.infrastructureBefore, INFRA_NAMES, validIdentity, identity);
+    services = normalizeEntries(data.services, SERVICE_NAMES,
+      entry => entry.health === 'healthy' && validIdentity(entry) && (INFRA_NAMES.includes(entry.name)
+        ? ['containerId', 'imageId', 'deploymentId'].every(key => entry[key] === infrastructureBefore.find(s => s.name === entry.name)[key])
+        : entry.deploymentId === data.deploymentId),
+      entry => ({ name: entry.name, health: 'healthy', deploymentId: entry.deploymentId,
+        containerId: entry.containerId, imageId: entry.imageId }));
+    requireValid(new Set(services.map(s => s.containerId)).size === SERVICE_NAMES.length);
+  }
   const checks = normalizeEntries(data.checks, CHECK_NAMES,
     entry => entry.status === 200,
     entry => ({ name: entry.name, status: 200 }));
 
   // Explicit fields only: extra input fields may contain credentials.
   return {
-    schemaVersion: 1,
+    schemaVersion: data.schemaVersion,
+    ...(data.schemaVersion === 2 ? { deploymentScope: 'applications', infrastructureBefore } : {}),
     environment: data.environment,
     commit: data.expectedCommit,
     deploymentId: data.deploymentId,
