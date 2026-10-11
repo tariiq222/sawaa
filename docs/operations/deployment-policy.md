@@ -64,6 +64,13 @@ The only staging publication path is `build-images.yml` → successful complete 
 
 The operational procedure is [the sawaa-release skill](../../.claude/skills/sawaa-release/SKILL.md). Changes to this path require a scoped reviewed PR, regression checks and live staging evidence; new instructions cannot silently redefine the mechanism.
 
+### Staging provider configuration
+
+- FCM backend credentials use `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL` and `FCM_PRIVATE_KEY` in the staging project's secret environment. The mobile Firebase client configuration is not a server credential. Provisioning a new Google service account, access grant or private key requires the applicable security confirmation; keep keys outside Git, logs and evidence artifacts.
+- For a provider-only configuration change, update only the staging project's environment, then publish through the same `build-images.yml` path. OpenShip names this project's runtime environment `production`; the project ID must still be `proj_7M0RNj59nQnafh1m`. Never use the production project's environment or change application database settings to enable staging FCM.
+- Verify Firebase Admin initialization and a provider validation-only request separately from actual device delivery. Initialization alone does not prove delivery. Without an FCM provider, new resilient push dispatches are recorded as skipped, not sent; never rewrite historical notification rows or replay messages as part of configuration.
+- Moyasar verification uses test-mode credentials and read-only provider lookups when database writes are prohibited. A native SDK UUID reservation can legitimately return 404 before a payment exists; only validated reservation provenance permits suppressing its missing-reference warning. A successful lookup or local regression test does not establish a completed payment flow.
+
 ## Data and failure boundaries
 
 - Staging and production have separate databases and credentials. Promote code and compatible additive migrations, never staging data into production.

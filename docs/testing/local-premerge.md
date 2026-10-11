@@ -4,7 +4,9 @@
 
 The stack uses the `premerge` port set (infrastructure on 55771/55772/55773, apps on 55200/55203/55205), so the default local-stack ports stay free. Premerge runs remove their Docker volumes on shutdown, and a failed shutdown fails the run.
 
-`playwright.local.config.ts` fails closed unless `e2e/local/with-env.mjs` supplied the owned synthetic fixture, isolated database and fixed localhost origins. Every browser request except the three app origins goes to a closed proxy port, so external sites, other local services and literal IPs are unreachable. The Next apps start with every key from their ignored `.env*` files pinned, so checkout values cannot leak into the run.
+`playwright.local.config.ts` fails closed unless `e2e/local/with-env.mjs` supplied the owned synthetic fixture, isolated database and fixed `127.0.0.1` origins. Every browser request except the three app origins goes to a closed proxy port, so external sites and other local services are unreachable. The Next apps start with every key from their ignored `.env*` files pinned, so checkout values cannot leak into the run.
+
+In the isolated development stack (`E2E_TEST=true` and `NODE_ENV=development`), the website preserves the incoming middleware URL instead of Next.js normalizing `127.0.0.1` to `localhost`. This keeps host-only client cookies attached across redirects. Premerge checks the real authenticated-page redirect before starting the browser journeys. Production builds retain the default URL normalization; do not weaken auth assertions, broaden the browser origin allowlist, or add retries to mask hostname drift.
 
 To list or run the specs against a live stack started with `pnpm e2e:local:stack --port-set=premerge`:
 
