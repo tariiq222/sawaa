@@ -97,3 +97,80 @@ test('staging gate waits for its temporary SHA source selection to return to dev
  const result=await waitForDeployment(target,sha,'read',{githubToken:'read',timeoutMs:20,intervalMs:10,now:()=>clock,sleep:async ms=>{clock+=ms},request});
  assert.equal(result.deploymentId,'dep_current');assert.equal(clock,10);
 });
+
+function prebuiltFixture(source = sha) {
+  const f = fixture();
+  f.deployment.branch = source;
+  f.deployment.commitSha = null;
+  for (const c of f.containers.filter(c => ['backend', 'dashboard', 'website'].includes(c.serviceName))) {
+    c.imageRef = `ghcr.io/tariiq222/sawaa-${c.serviceName}@sha256:${'c'.repeat(64)}`;
+  }
+  return f;
+}
+
+test('image-only staging metadata requires a frozen ref, digest refs and independent backend SHA proof', async () => {
+  const { verifyDeployment } = await import('./deployment.mjs');
+  const f = prebuiltFixture();
+  assert.throws(() => verifyDeployment(target, sha, f), /backend/);
+  assert.equal(verifyDeployment(target, sha, { ...f, backendGitSha: sha }).deploymentId, 'dep_current');
+  assert.throws(() => verifyDeployment(target, sha, { ...f, backendGitSha: 'b'.repeat(40) }), /backend/);
+  f.deployment.commitSha = 'b'.repeat(40);
+  assert.throws(() => verifyDeployment(target, sha, { ...f, backendGitSha: sha }), /contradict/);
+  f.deployment.commitSha = null;
+  f.containers[0].imageRef = 'backend:staging';
+  assert.throws(() => verifyDeployment(target, sha, { ...f, backendGitSha: sha }), /digest/);
+  f.deployment.branch = 'develop';
+  assert.throws(() => verifyDeployment(target, sha, { ...f, backendGitSha: sha }));
+  const prod = { profile: 'production', branch: 'main', projectId: 'proj_tsxe0sAW3u2AMSGO' };
+  const p = prebuiltFixture();
+  p.project.id = prod.projectId; p.project.gitBranch = 'main'; p.deployment.projectId = prod.projectId;
+  assert.throws(() => verifyDeployment(prod, sha, { ...p, backendGitSha: sha }));
+});
+
+test('image-only ready staging gate reads public health without credentials and rejects mismatched SHA', async () => {
+  const { waitForDeployment } = await import('./deployment.mjs');
+  const f = prebuiltFixture();
+  const healthUrl = 'https://staging.test/api/v1/health';
+  const nullTarget = { ...target, readinessUrl: `${healthUrl}/ready` };
+  let healthSha = sha; const healthRequests = [];
+  const request = async (url, opts) => {
+    let data;
+    if (url.includes('api.github.com')) data = { object: { sha } };
+    else if (url === healthUrl) { healthRequests.push(opts); data = { gitSha: healthSha }; }
+    else if (url.includes('/services/containers')) data = { success: true, containers: f.containers };
+    else if (url.includes('/projects/')) data = { data: f.project };
+    else if (url.includes('/deployments/')) data = { data: f.deployment };
+    else if (url === `${healthUrl}/ready`) data = {};
+    else throw new Error(`Unexpected URL ${url}`);
+    return { ok: true, status: 200, json: async () => data };
+  };
+  const evidence = await waitForDeployment(nullTarget, sha, 'read', { githubToken: 'read', request });
+  assert.equal(evidence.deployedSha, sha);
+  assert.equal(evidence.backendGitSha, sha);
+  assert.equal(healthRequests.length, 1);
+  assert.equal(healthRequests[0].headers, undefined);
+  healthSha = 'b'.repeat(40);
+  await assert.rejects(waitForDeployment(nullTarget, sha, 'read', { githubToken: 'read', request }), /backend/);
+});
+
+test('no_changes matching resolves frozen refs with null metadata while proving the active backend source', async () => {
+  const { waitForDeployment } = await import('./deployment.mjs');
+  const oldSha = 'b'.repeat(40); const f = prebuiltFixture(oldSha);
+  const nullTarget = { ...target, apiUrl: 'https://staging.test/api/v1' };
+  const request = async url => {
+    let data;
+    if (url.includes('/git/ref/')) data = { object: { sha } };
+    else if (url.includes('/git/trees/')) data = { truncated: false, tree: [{ path: 'apps/backend/a.ts', type: 'blob', mode: '100644', sha: 'same' }] };
+    else if (url.endsWith('/health')) data = { gitSha: oldSha };
+    else if (url.includes('/services/containers')) data = { success: true, containers: f.containers };
+    else if (url.includes('/deployments?')) data = { data: [{ ...f.deployment, id: 'nochanges', branch: sha, status: 'no_changes' }] };
+    else if (url.includes('/projects/')) data = { data: f.project };
+    else data = { data: f.deployment };
+    return { ok: true, status: 200, json: async () => data };
+  };
+  const evidence = await waitForDeployment(nullTarget, sha, 'read', { githubToken: 'read', request });
+  assert.equal(evidence.sourceSha, sha);
+  assert.equal(evidence.deployedSha, oldSha);
+  assert.equal(evidence.backendGitSha, oldSha);
+  assert.equal(evidence.noChangesDeploymentId, 'nochanges');
+});
