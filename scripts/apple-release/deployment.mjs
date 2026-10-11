@@ -6,6 +6,7 @@ import { releaseTarget } from './target.mjs';
 
 const OPENSHIP = 'https://open.webvue.pro/api/proxy';
 const SERVICES = ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'];
+const APPLICATIONS = ['backend', 'dashboard', 'website'];
 
 function frozenStagingRef(target, ref, sha) {
   return target.profile === 'staging' && target.branch === 'develop'
@@ -24,31 +25,40 @@ function deploymentRefMatches(target, deployment) {
   return deployment.branch === target.branch || frozenStagingRef(target, deployment.branch, deploymentSourceSha(target, deployment));
 }
 
-export function verifyDeployment(target, sha, { project, deployment, containers, backendGitSha }) {
+function validateDeploymentIdentity(target, sha, { project, deployment }) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.equal(project.id, target.projectId);
   assert.equal(project.gitBranch, target.branch);
   assert.equal(deployment.projectId, target.projectId);
   assert.ok(deploymentRefMatches(target, deployment), 'Deployment source ref mismatch');
   assert.equal(deploymentSourceSha(target, deployment), sha);
-  if (deployment.commitSha == null) {
-    assert.ok(frozenStagingRef(target, deployment.branch, sha), 'Missing deployment source metadata');
-    assert.equal(backendGitSha, sha, 'Running backend SHA must independently prove the frozen source');
-  }
+  if (deployment.commitSha == null) assert.ok(frozenStagingRef(target, deployment.branch, sha), 'Missing deployment source metadata');
   assert.equal(deployment.status, 'ready');
   assert.equal(project.activeDeploymentId, deployment.id);
+}
+
+function validateContainers(containers, { requireDigests, allowStarting = false }) {
   assert.equal(containers.length, SERVICES.length);
   assert.equal(new Set(containers.map(c => c.serviceName)).size, SERVICES.length);
   assert.equal(new Set(containers.map(c => c.containerId)).size, SERVICES.length);
   for (const name of SERVICES) {
     const container = containers.find(c => c.serviceName === name);
     assert.ok(container?.containerId && container.imageRef, `Missing ${name} runtime identity`);
-    assert.equal(container.status, 'running', `${name} is not running`);
+    assert.ok(container.status === 'running' || (allowStarting && APPLICATIONS.includes(name) && container.status === 'starting'), `${name} is not running`);
     assert.deepEqual(container.duplicates, [], `${name} has duplicate runtime matches`);
-    if (deployment.commitSha == null && ['backend', 'dashboard', 'website'].includes(name)) {
-      assert.match(container.imageRef, /@sha256:[a-f0-9]{64}$/, `${name} must run a digest-pinned image`);
+    if (requireDigests && APPLICATIONS.includes(name)) {
+      assert.match(container.imageRef, new RegExp(`^ghcr\\.io/tariiq222/sawaa-${name}@sha256:[a-f0-9]{64}$`), `${name} must run its canonical digest-pinned image`);
     }
   }
+  return containers.every(c => c.status === 'running');
+}
+
+export function verifyDeployment(target, sha, { project, deployment, containers, backendGitSha }) {
+  validateDeploymentIdentity(target, sha, { project, deployment });
+  if (deployment.commitSha == null) {
+    assert.equal(backendGitSha, sha, 'Running backend SHA must independently prove the frozen source');
+  }
+  validateContainers(containers, { requireDigests: deployment.commitSha == null });
   return {
     environment: target.profile, sourceSha: sha, projectId: project.id,
     deploymentId: deployment.id, observedAt: new Date().toISOString(),
@@ -133,8 +143,15 @@ export async function waitForDeployment(target, sha, token, {
         if (noChanges) await assertSameServerInputs(deployedSha, sha, githubToken, request);
       }
       if (deployment?.status === 'ready' && (deployedSha === sha || noChanges)) {
+        validateDeploymentIdentity(target, deployedSha, { project, deployment });
         const { success, containers } = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/services/containers`, token, request);
         if (success !== true || !Array.isArray(containers)) throw new Error('Runtime observations unavailable');
+        const imageOnlyStaging = deployment.commitSha == null && frozenStagingRef(target, deployment.branch, deployedSha);
+        if (!validateContainers(containers, { requireDigests: deployment.commitSha == null, allowStarting: imageOnlyStaging })) {
+          console.log('Waiting for staging application containers to finish startup');
+          await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
+          continue;
+        }
         const backendGitSha = deployment.commitSha == null ? await readBackendGitSha(target, request) : undefined;
         const evidence = verifyDeployment(target, deployedSha, { project, deployment, containers, backendGitSha });
         evidence.deployedSha = deployedSha;

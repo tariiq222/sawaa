@@ -57,17 +57,21 @@ test('runtime verification rejects stale application images and replaced infrast
   assert.throws(() => assertRuntime(before, after.map(c => c.serviceName === 'postgres' ? { ...c, containerId: 'replaced' } : c), refs));
 });
 
-function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceBeforeHook = false, compensationFails = false, recordedCommit = SHA, healthSha = SHA } = {}) {
+function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceBeforeHook = false, compensationFails = false, recordedCommit = SHA, healthSha = SHA, runtimeState } = {}) {
   const calls = [];
   const refs = buildImageRefs(SHA, manifests);
-  let fired = false; let pinned = 'develop'; let advanced = false;
+  let fired = false; let pinned = 'develop'; let advanced = false; let runtimeReads = 0;
   const request = async (url, opts = {}) => {
     const u = new URL(url); const method = opts.method ?? 'GET';
     calls.push({ url, method, body: opts.body && JSON.parse(opts.body) });
     let body;
     if (u.hostname === 'api.github.com') body = { object: { sha: superseded || advanced ? 'b'.repeat(40) : SHA } };
     else if (u.pathname.endsWith('/incoming-webhooks')) body = { data: [hook] };
-    else if (u.pathname.endsWith('/services/containers')) body = { success: true, containers: fired ? before.map(c => APP_SERVICES.includes(c.serviceName) ? { ...c, containerId: `new_${c.serviceName}`, imageRef: refs[c.serviceName] } : c) : before };
+    else if (u.pathname.endsWith('/services/containers')) {
+      let containers = fired ? before.map(c => APP_SERVICES.includes(c.serviceName) ? { ...c, containerId: `new_${c.serviceName}`, imageRef: refs[c.serviceName] } : c) : before;
+      if (fired && runtimeState) containers = runtimeState(containers, ++runtimeReads);
+      body = { success: true, containers };
+    }
     else if (u.pathname.endsWith('/services')) body = { success: true, services };
     else if (u.pathname.endsWith('/services/svc_dashboard/exec')) body = { data: { exitCode: 0, output: '{"status":200}' } };
     else if (u.pathname.endsWith('/exec')) body = { success: true, exitCode: 0, output: JSON.stringify(missingMigration ? [] : migrationRows) };
@@ -143,4 +147,36 @@ test('branch restoration is attempted even if image compensation fails', async (
  const f=fixture({advanceDuringPatch:true,compensationFails:true});
  await assert.rejects(deployStaging(f.options), /cleanup failed/);
  assert.deepEqual(f.calls.filter(c=>c.url.endsWith('/branch')).map(c=>c.body.branch),[SHA,'develop']);
+});
+
+const startingWebsite = containers => containers.map(c => c.serviceName === 'website' ? { ...c, status: 'starting' } : c);
+
+test('ready deployment waits for application health without weakening runtime identity checks', async () => {
+  const f = fixture({ runtimeState: (containers, observation) => observation === 1 ? startingWebsite(containers) : containers });
+  const result = await deployStaging({ ...f.options, runtimeAttempts: 2 });
+  assert.ok(result.services.every(c => c.status === 'running'));
+  const reads = f.calls.filter(c => c.url.endsWith('/services/containers'));
+  assert.equal(reads.length, 3);
+  assert.ok(f.calls.filter(c => c.url.endsWith(`/projects/${PROJECT_ID}`)).length >= 5);
+});
+
+test('indefinite startup fails within the bounded runtime health wait', async () => {
+  const f = fixture({ runtimeState: startingWebsite });
+  await assert.rejects(deployStaging({ ...f.options, runtimeAttempts: 2 }), /runtime health timed out/);
+  assert.equal(f.calls.filter(c => c.url.endsWith('/services/containers')).length, 3);
+  assert.equal(f.calls.filter(c => c.url.endsWith('/health')).length, 0);
+});
+
+test('startup cannot hide stale digests, replaced infrastructure or unhealthy containers', async () => {
+  for (const mutate of [
+    c => c.serviceName === 'backend' ? { ...c, imageRef: 'stale:tag' } : c,
+    c => c.serviceName === 'postgres' ? { ...c, containerId: 'replaced' } : c,
+    c => c.serviceName === 'redis' ? { ...c, status: 'starting' } : c,
+    c => c.serviceName === 'backend' ? { ...c, status: 'unhealthy' } : c,
+    c => c.serviceName === 'backend' ? { ...c, duplicates: ['other'] } : c,
+  ]) {
+    const f = fixture({ runtimeState: containers => startingWebsite(containers).map(mutate) });
+    await assert.rejects(deployStaging({ ...f.options, runtimeAttempts: 2 }));
+    assert.equal(f.calls.filter(c => c.url.endsWith('/services/containers')).length, 2);
+  }
 });

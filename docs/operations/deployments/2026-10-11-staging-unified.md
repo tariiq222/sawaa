@@ -15,7 +15,7 @@ This is a dated diagnostic observation, not owner acceptance or a successful wor
 | website | `sha256:a532ee1ee794f6841594a602b28802a9ac934d6bcc494b1833e023ad09d1b3c1` |
 
 - All six staging containers and all six production containers were healthy. Staging PostgreSQL, Redis and MinIO retained their baseline container IDs and image refs. All production container IDs/image refs and its `main`, auto-deploy, compose path and active deployment `dep_6WwSoqpt_PJmgQMy` were unchanged.
-- The 120 migration metadata rows are identical before/after in SELECT-only read-only transactions. No live migration, seed, booking, payment or customer-data mutation was performed.
+- Separate coordinator SELECT-only reads found the 120 migration metadata rows identical before/after in read-only transactions. No live migration, seed, booking, payment or customer-data mutation was performed.
 - Public staging pages `/`, `/services`, `/clinics`, `/booking`, `/packages`, three public catalog endpoints and ten referenced static assets returned HTTP 200. This does not prove a real booking/payment/device journey.
 - All then-existing local/remote branch tips, including `main`, `chore/playwright-test-agents`, `fix/mobile-review-findings` and the deployment task branch, were ancestors of the merged `develop`; local `develop` matched its remote. Branches were preserved.
 
@@ -28,3 +28,9 @@ Initial website runtime used a moving tag whose actual digest matched this candi
 Scope/authority updates can rotate the incoming-hook token. Finalize the three-application scope before privately synchronizing the credential into GitHub. Diagnose failures in this path; do not use host builds, bare Redeploy or manual container replacement.
 
 Final acceptance requires a green corrected publication and a manual repeat through the same workflow without file changes, with a `staging-deployment-<sha>` artifact and fresh independent preservation checks. Those results are recorded by the workflow/private evidence after this snapshot. Owner manual acceptance remains separate.
+
+## Container startup observation
+
+[PR #206](https://github.com/tariiq222/sawaa/pull/206) merged the source-metadata correction into `develop` at `64b50bf30215e11940962a8477e5241a7ce6bbeb` after both required checks passed. [Run 38132276580](https://github.com/tariiq222/sawaa/actions/runs/38132276580) built all four images and the scoped hook produced `dep_TIoM6-oF2wkaogfE`. The verifier passed the exact runtime image references but failed because website health was still `starting` immediately after OpenShip announced `ready`.
+
+The same publication verifier now waits within a fixed bound for application startup while preserving strict identity, image and infrastructure checks. A startup timeout or invalid runtime fails; `ready` alone is never success. Final automatic/manual receipts must still be observed after this correction, through the canonical workflow.

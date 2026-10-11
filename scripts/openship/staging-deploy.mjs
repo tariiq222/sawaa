@@ -67,14 +67,14 @@ export function assertMigrationState(expected, rows) {
   }
 }
 
-export function assertRuntime(before, after, refs) {
+export function assertRuntime(before, after, refs, { allowStarting = false } = {}) {
   assert.equal(after.length, 6);
   assert.equal(new Set(after.map(c => c.serviceName)).size, 6);
   assert.equal(new Set(after.map(c => c.containerId)).size, 6);
   for (const name of [...APP_SERVICES, ...INFRA_SERVICES]) {
     const c = after.find(x => x.serviceName === name);
     assert.ok(c?.containerId);
-    assert.equal(c.status, 'running', `${name} is not running`);
+    assert.ok(c.status === 'running' || (allowStarting && APP_SERVICES.includes(name) && c.status === 'starting'), `${name} is not running`);
     assert.deepEqual(c.duplicates, []);
     if (APP_SERVICES.includes(name)) assert.equal(c.imageRef, refs[name], `${name} is running a stale image`);
     else {
@@ -83,6 +83,7 @@ export function assertRuntime(before, after, refs) {
       assert.equal(c.imageRef, previous.imageRef);
     }
   }
+  return after.every(c => c.status === 'running');
 }
 
 export async function migrationManifest(root = resolve(import.meta.dirname, '../..')) {
@@ -99,7 +100,7 @@ const MIGRATION_READ = `const {Client}=require('pg');(async()=>{const c=new Clie
 export const MIGRATION_READ_COMMAND = `node --no-warnings -e '${MIGRATION_READ.replaceAll("'", "'\\''")}'`;
 
 export async function deployStaging({ sha, branch, enabled, manifests, hookId, writeToken, hookToken, githubToken,
-  request = fetch, sleep = delay, migrations, attempts = 80, intervalMs = 15000, onProgress = () => {},
+  request = fetch, sleep = delay, migrations, attempts = 80, runtimeAttempts = 20, intervalMs = 15000, onProgress = () => {},
 }) {
   assert.equal(branch, 'develop', 'Only develop may publish staging');
   assert.equal(enabled, 'true', 'STAGING_PREBUILT_DEPLOY must be true; publication is not silently skipped');
@@ -205,11 +206,22 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
     onProgress(`Waiting for staging deployment ${triggered.ref}: ${deployment.status}`);
     await sleep(intervalMs);
   }
-  const { data: current } = await json(`/api/projects/${PROJECT_ID}`);
-  assertStagingProject(current);
-  assert.equal(current.activeDeploymentId, ready.id);
-  const { success: observed, containers: after } = await json(`/api/projects/${PROJECT_ID}/services/containers`);
-  assert.equal(observed, true);
+  // OpenShip ready precedes Docker's first health probe. Only application
+  // startup may wait; every observation still proves exact refs and preserves
+  // infrastructure identities. Never record starting as successful evidence.
+  assert.ok(Number.isInteger(runtimeAttempts) && runtimeAttempts > 0);
+  let after;
+  for (let i = 0; i < runtimeAttempts; i++) {
+    const { data: current } = await json(`/api/projects/${PROJECT_ID}`);
+    assertStagingProject(current);
+    assert.equal(current.activeDeploymentId, ready.id);
+    const { success: observed, containers } = await json(`/api/projects/${PROJECT_ID}/services/containers`);
+    assert.equal(observed, true);
+    if (assertRuntime(before, containers, refs, { allowStarting: true })) { after = containers; break; }
+    if (i === runtimeAttempts - 1) throw new Error('Staging runtime health timed out');
+    onProgress(`Waiting for staging application health: ${triggered.ref}`);
+    await sleep(intervalMs);
+  }
   assertRuntime(before, after, refs);
   const health = await waitForGitSha(API, sha, { request, sleep });
   const httpChecks = [];
@@ -235,6 +247,7 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
   assertMigrationState(expectedMigrations, postRows);
   assert.deepEqual(postRows, rows, 'Migration metadata changed during publication');
   const { data: finalProject } = await json(`/api/projects/${PROJECT_ID}`);
+  assertStagingProject(finalProject);
   assert.equal(finalProject.activeDeploymentId, ready.id);
   const finalSource = await request('https://api.github.com/repos/tariiq222/sawaa/git/ref/heads/develop', {
     headers: { Authorization: `Bearer ${githubToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' });

@@ -174,3 +174,73 @@ test('no_changes matching resolves frozen refs with null metadata while proving 
   assert.equal(evidence.backendGitSha, oldSha);
   assert.equal(evidence.noChangesDeploymentId, 'nochanges');
 });
+
+function startupFixture({ indefinitely = false, change } = {}) {
+  const f = prebuiltFixture();
+  if (change) change(f);
+  let clock = 0; let healthReads = 0; let sourceReads = 0; let runtimeReads = 0;
+  const request = async url => {
+    let data;
+    if (url.includes('api.github.com')) { sourceReads++; data = { object: { sha } }; }
+    else if (url.endsWith('/health')) { healthReads++; data = { gitSha: sha }; }
+    else if (url.includes('/services/containers')) {
+      runtimeReads++;
+      data = { success: true, containers: f.containers.map(c => c.serviceName === 'website'
+        ? { ...c, status: clock === 0 || indefinitely ? 'starting' : c.status } : c) };
+    } else if (url.includes('/projects/')) data = { data: f.project };
+    else data = { data: f.deployment };
+    return { ok: true, status: 200, json: async () => data };
+  };
+  return {
+    f, request, options: { githubToken: 'read', request, timeoutMs: 20, intervalMs: 10,
+      now: () => clock, sleep: async ms => { clock += ms; } },
+    observed: () => ({ clock, healthReads, sourceReads, runtimeReads }),
+  };
+}
+
+test('ready image-only staging waits for validated app startup, then reobserves source and runtime', async () => {
+  const { waitForDeployment, verifyDeployment } = await import('./deployment.mjs');
+  const f = startupFixture();
+  assert.throws(() => verifyDeployment(target, sha, { ...f.f, backendGitSha: sha,
+    containers: f.f.containers.map(c => c.serviceName === 'website' ? { ...c, status: 'starting' } : c) }), /not running/);
+  const evidence = await waitForDeployment({ ...target, apiUrl: 'https://staging.test/api/v1' }, sha, 'read', f.options);
+  assert.equal(evidence.backendGitSha, sha);
+  assert.deepEqual(f.observed(), { clock: 10, healthReads: 1, sourceReads: 3, runtimeReads: 2 });
+});
+
+test('indefinite app startup expires without inventing backend health evidence', async () => {
+  const { waitForDeployment } = await import('./deployment.mjs');
+  const f = startupFixture({ indefinitely: true });
+  await assert.rejects(waitForDeployment({ ...target, apiUrl: 'https://staging.test/api/v1' }, sha, 'read', f.options), /timed out/);
+  assert.deepEqual(f.observed(), { clock: 20, healthReads: 0, sourceReads: 2, runtimeReads: 2 });
+});
+
+test('startup never excuses invalid identities, refs, source metadata or infrastructure state', async () => {
+  const { waitForDeployment } = await import('./deployment.mjs');
+  for (const change of [
+    f => { f.containers[0].duplicates = ['other']; },
+    f => { f.containers[0].imageRef = 'backend:staging'; },
+    f => { f.containers[0].imageRef = f.containers[1].imageRef; },
+    f => { f.containers[0].status = 'stopped'; },
+    f => { f.containers[3].status = 'starting'; },
+    f => { f.containers[0].containerId = f.containers[1].containerId; },
+    f => { f.deployment.projectId = 'wrong'; },
+    f => { f.deployment.commitSha = 'b'.repeat(40); },
+  ]) {
+    const f = startupFixture({ change });
+    await assert.rejects(waitForDeployment({ ...target, apiUrl: 'https://staging.test/api/v1' }, sha, 'read', f.options));
+    assert.equal(f.observed().clock, 0);
+    assert.equal(f.observed().healthReads, 0);
+  }
+});
+
+test('production rejects app startup immediately', async () => {
+  const { waitForDeployment } = await import('./deployment.mjs');
+  const prod = { profile: 'production', branch: 'main', projectId: 'proj_tsxe0sAW3u2AMSGO' };
+  const f = startupFixture({ change: f => {
+    f.project.id = prod.projectId; f.project.gitBranch = 'main';
+    f.deployment.projectId = prod.projectId; f.deployment.branch = 'main'; f.deployment.commitSha = sha;
+  } });
+  await assert.rejects(waitForDeployment(prod, sha, 'read', f.options), /not running/);
+  assert.equal(f.observed().clock, 0);
+});
