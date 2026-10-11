@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync, openSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createServer } from 'node:net';
+import assert from 'node:assert/strict';
 import { seed } from './seed.mjs';
 import { assertIsolatedDatabase } from './safety.mjs';
 
@@ -122,6 +123,19 @@ try {
   if (portSet === 'premerge') {
     for (const route of ['/login', '/clinics', '/booking']) await ready(`${env.E2E_WEBSITE_URL}${route}`);
     await ready(`${env.E2E_DASHBOARD_URL}/login`);
+    // Probe middleware only: an inert cookie exercises its presence check,
+    // without logging in or following the redirect to an authenticated page.
+    const redirect = await fetch(`${env.E2E_WEBSITE_URL}/login`, {
+      redirect: 'manual',
+      headers: { Cookie: 'client_access_token=local-origin-probe' },
+      signal: AbortSignal.timeout(5000),
+    });
+    await redirect.arrayBuffer();
+    assert.equal(redirect.status, 307, 'Local website auth redirect must be temporary');
+    const location = redirect.headers.get('location');
+    assert.ok(location, 'Local website auth redirect must include a location');
+    assert.equal(new URL(location, env.E2E_WEBSITE_URL).href, `${env.E2E_WEBSITE_URL}/account`,
+      'Local website auth redirect must preserve the canonical loopback origin');
   }
   console.log(`READY ${runDir}`);
   console.log('Stop with Ctrl-C; only this run’s processes and Compose project are stopped, volumes retained.');

@@ -9,21 +9,23 @@ const buildFcm = (available = true) => ({
 describe('SendPushHandler', () => {
   it('sends push via FCM', async () => {
     const fcm = buildFcm(true);
-    await new SendPushHandler(fcm as unknown as FcmService).execute({
+    const result = await new SendPushHandler(fcm as unknown as FcmService).execute({
       token: 'tok-1',
       title: 'Hello',
       body: 'World',
     });
+    expect(result).toEqual({ sent: true });
     expect(fcm.sendPush).toHaveBeenCalledWith('tok-1', 'Hello', 'World', undefined);
   });
 
   it('skips when FCM unavailable', async () => {
     const fcm = buildFcm(false);
-    await new SendPushHandler(fcm as unknown as FcmService).execute({
+    const result = await new SendPushHandler(fcm as unknown as FcmService).execute({
       token: 'tok-1',
       title: 'Hello',
       body: 'World',
     });
+    expect(result).toEqual({ sent: false, reason: 'NO_PROVIDER' });
     expect(fcm.sendPush).not.toHaveBeenCalled();
   });
 
@@ -40,7 +42,7 @@ describe('SendPushHandler', () => {
     const fcm = buildFcm(false);
     fcm.sendPush = jest.fn().mockRejectedValue(new Error('FCM error'));
     const handler = new SendPushHandler(fcm as unknown as FcmService);
-    await expect(handler.execute({ token: 'tok', title: 'T', body: 'B' })).resolves.toBeUndefined();
+    await expect(handler.execute({ token: 'tok', title: 'T', body: 'B' })).resolves.toEqual({ sent: false, reason: 'NO_PROVIDER' });
     expect(fcm.sendPush).not.toHaveBeenCalled();
   });
 

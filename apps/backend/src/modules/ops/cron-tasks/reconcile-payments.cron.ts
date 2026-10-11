@@ -86,6 +86,8 @@ export class ReconcilePaymentsCron {
           amount: true,
           currency: true,
           gatewayRef: true,
+          idempotencyKey: true,
+          nativeConfigFingerprint: true,
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
         take: BATCH_SIZE,
@@ -103,6 +105,10 @@ export class ReconcilePaymentsCron {
             invoiceId: row.invoiceId,
             rowAmount: Math.round(Number(row.amount)),
             gatewayRef,
+            isNativeReservation: gatewayRef === row.id
+              && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(gatewayRef)
+              && row.idempotencyKey === `native:${row.invoiceId}`
+              && /^[a-f0-9]{64}$/.test(row.nativeConfigFingerprint ?? ''),
           });
         } catch (err) {
           this.logger.error(
@@ -120,8 +126,9 @@ export class ReconcilePaymentsCron {
     invoiceId: string;
     rowAmount: number;
     gatewayRef: string;
+    isNativeReservation: boolean;
   }): Promise<void> {
-    const { paymentRowId, invoiceId, rowAmount, gatewayRef } = args;
+    const { paymentRowId, invoiceId, rowAmount, gatewayRef, isNativeReservation } = args;
 
     // Source of truth: re-fetch the authoritative status from Moyasar.
     let fetched: MoyasarPaymentStatusResult | null = null;
@@ -129,6 +136,10 @@ export class ReconcilePaymentsCron {
       fetched = await this.moyasar.getPaymentStatus(DEFAULT_ORG_ID, gatewayRef);
     } catch (err) {
       if (err instanceof NotFoundException) {
+        // Native init reserves this UUID before the SDK creates a provider
+        // payment. Absence is not a hosted-invoice identity or proof of failure;
+        // retain the reservation and let native reconciliation recheck its target.
+        if (isNativeReservation) return;
         // New hosted-checkout rows initially carry the Moyasar *invoice* ID.
         // If the payment webhook was lost, resolve its terminal payment from
         // that hosted invoice and then re-fetch the payment authoritatively.

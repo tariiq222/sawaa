@@ -1,9 +1,10 @@
 import { InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
-import { NotFoundException } from '@nestjs/common';
+import { InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { ReconcilePaymentsCron } from './reconcile-payments.cron';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const NOW = new Date('2026-05-10T10:00:00Z');
+const NATIVE_PAYMENT_ID = '11111111-1111-4111-8111-111111111111';
 
 type StuckRow = {
   id: string;
@@ -11,6 +12,8 @@ type StuckRow = {
   amount: number;
   currency: string;
   gatewayRef: string;
+  idempotencyKey?: string | null;
+  nativeConfigFingerprint?: string | null;
 };
 
 type InvoiceRow = {
@@ -165,6 +168,85 @@ describe('ReconcilePaymentsCron', () => {
     jest.spyOn(Date, 'now').mockReturnValue(NOW.getTime());
   });
   afterEach(() => jest.restoreAllMocks());
+
+  const nativeRow = (over: Partial<StuckRow> = {}) => row({
+    id: NATIVE_PAYMENT_ID,
+    gatewayRef: NATIVE_PAYMENT_ID,
+    idempotencyKey: 'native:inv_1',
+    nativeConfigFingerprint: 'a'.repeat(64),
+    ...over,
+  });
+
+  it('preserves an unsubmitted native reservation after provider 404 without treating it as a hosted invoice', async () => {
+    const tx = buildTx();
+    const prisma = buildPrisma({ stuckRows: [nativeRow()] });
+    const moyasar = buildMoyasar({});
+    const warning = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ idempotencyKey: true, nativeConfigFingerprint: true }),
+    }));
+    expect(moyasar.getPaymentStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, NATIVE_PAYMENT_ID);
+    expect(moyasar.getCheckoutInvoice).not.toHaveBeenCalled();
+    expect(warning).not.toHaveBeenCalled();
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+    expect(tx.activityLog.create).not.toHaveBeenCalled();
+  });
+
+  it('still settles a native reservation when the authoritative provider payment is paid', async () => {
+    const tx = buildTx();
+    const prisma = buildPrisma({ stuckRows: [nativeRow()] });
+    const moyasar = buildMoyasar({ [NATIVE_PAYMENT_ID]: { status: 'paid', amount: 10_000 } });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(tx.payment.update).toHaveBeenCalledWith({
+      where: { id: NATIVE_PAYMENT_ID },
+      data: expect.objectContaining({ status: PaymentStatus.COMPLETED }),
+    });
+    expect(tx.invoice.update).toHaveBeenCalledWith({
+      where: { id: 'inv_1' }, data: expect.objectContaining({ status: InvoiceStatus.PAID }),
+    });
+    expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { id: 'pay_1', gatewayRef: 'pay_1' },
+    { gatewayRef: 'other_ref' },
+    { idempotencyKey: null },
+    { idempotencyKey: 'native:another_invoice' },
+    { nativeConfigFingerprint: null },
+    { nativeConfigFingerprint: 'not-a-fingerprint' },
+  ])('does not suppress missing-resource warnings for incomplete native provenance: %p', async (over) => {
+    const tx = buildTx();
+    const prisma = buildPrisma({ stuckRows: [nativeRow(over)] });
+    const moyasar = buildMoyasar({});
+    const warning = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(moyasar.getCheckoutInvoice).toHaveBeenCalledWith(DEFAULT_ORG_ID, over.gatewayRef ?? NATIVE_PAYMENT_ID);
+    expect(warning).toHaveBeenCalled();
+    expect(tx.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('does not suppress a provider 5xx error for a native reservation', async () => {
+    const tx = buildTx();
+    const prisma = buildPrisma({ stuckRows: [nativeRow()] });
+    const moyasar = buildMoyasar({});
+    moyasar.getPaymentStatus.mockRejectedValue(new InternalServerErrorException('provider HTTP 503'));
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    expect(error).toHaveBeenCalled();
+    expect(moyasar.getCheckoutInvoice).not.toHaveBeenCalled();
+    expect(tx.payment.update).not.toHaveBeenCalled();
+  });
 
   it('finalizes a fully-paid card payment → COMPLETED + invoice PAID + outbox PaymentCompletedEvent', async () => {
     const tx = buildTx({ paidAfter: 10_000 });

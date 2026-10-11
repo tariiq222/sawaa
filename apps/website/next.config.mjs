@@ -40,6 +40,9 @@ const websiteApiProxyUrl = normalizeWebsiteApiProxyUrl(process.env.WEBSITE_API_P
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Next normalizes loopback IPs to localhost in middleware URLs. Preserve
+  // host-only cookies across redirects in the isolated development harness.
+  skipMiddlewareUrlNormalize: process.env.E2E_TEST === 'true' && process.env.NODE_ENV === 'development',
   async rewrites() {
     if (!websiteApiProxyUrl) return [];
     return [

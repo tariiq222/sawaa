@@ -5,6 +5,7 @@ import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { SendEmailHandler } from '../send-email/send-email.handler';
 import { SendSmsHandler } from '../send-sms/send-sms.handler';
 import { SendPushHandler } from '../send-push/send-push.handler';
+import type { FcmService } from '../../../infrastructure/mail';
 
 describe('ResilientNotificationDispatcher', () => {
   let service: ResilientNotificationDispatcher;
@@ -26,7 +27,7 @@ describe('ResilientNotificationDispatcher', () => {
     bullmq = { getQueue: jest.fn().mockReturnValue(queue) };
     email = { execute: jest.fn().mockResolvedValue({ sent: true }) };
     sms = { execute: jest.fn().mockResolvedValue({ sent: true }) };
-    push = { execute: jest.fn().mockResolvedValue(undefined) };
+    push = { execute: jest.fn().mockResolvedValue({ sent: true }) };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -128,6 +129,103 @@ describe('ResilientNotificationDispatcher', () => {
       pushBody: 'Body',
     }, 1);
     expect(push.execute).toHaveBeenCalledTimes(1);
+  });
+
+  describe('with the real SendPushHandler', () => {
+    const pushPayload = {
+      ...basePayload,
+      fcmTokens: ['t1', 't2'],
+      pushTitle: 'Title',
+      pushBody: 'Body',
+    };
+
+    function useRealPush(availability: boolean | boolean[]) {
+      const fcm = {
+        isAvailable: Array.isArray(availability)
+          ? jest.fn().mockReturnValueOnce(availability[0]).mockReturnValueOnce(availability[1])
+          : jest.fn().mockReturnValue(availability),
+        sendPush: jest.fn().mockResolvedValue('message-id'),
+      };
+      service = new ResilientNotificationDispatcher(
+        prisma as unknown as PrismaService,
+        bullmq as unknown as BullMqService,
+        email as unknown as SendEmailHandler,
+        sms as unknown as SendSmsHandler,
+        new SendPushHandler(fcm as unknown as FcmService),
+      );
+      return fcm;
+    }
+
+    it('records SKIPPED without a retry or provider call when FCM is unavailable', async () => {
+      const fcm = useRealPush(false);
+      await service.dispatch(pushPayload, ['push']);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledTimes(1);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith({
+        where: { id: 'log-1' },
+        data: {
+          status: 'SKIPPED', attempts: 1, lastAttemptAt: expect.any(Date),
+          errorMessage: 'No FCM provider configured',
+        },
+      });
+      expect(fcm.sendPush).not.toHaveBeenCalled();
+      expect(queue.add).not.toHaveBeenCalled();
+    });
+
+    it('records SENT after available FCM sends successfully', async () => {
+      const fcm = useRealPush(true);
+      await service.attemptSend('log-1', 'PUSH', pushPayload, 1);
+      expect(fcm.sendPush).toHaveBeenCalledTimes(2);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'SENT' }) }),
+      );
+      expect(queue.add).not.toHaveBeenCalled();
+    });
+
+    it('retries genuine provider failure when every token rejects', async () => {
+      const fcm = useRealPush(true);
+      fcm.sendPush.mockRejectedValue(new Error('FCM transport failure'));
+      await service.attemptSend('log-1', 'PUSH', pushPayload, 1);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }),
+      );
+      expect(queue.add).toHaveBeenCalledWith(
+        'retry', expect.objectContaining({ attempt: 2 }),
+        expect.objectContaining({ delay: 30_000 }),
+      );
+    });
+
+    it('preserves SENT without retry when one token sends and another rejects', async () => {
+      const fcm = useRealPush(true);
+      fcm.sendPush.mockRejectedValueOnce(new Error('invalid token'));
+      await service.attemptSend('log-1', 'PUSH', pushPayload, 1);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'SENT' }) }),
+      );
+      expect(queue.add).not.toHaveBeenCalled();
+    });
+
+    it('records SENT when one token sends and another skips', async () => {
+      const fcm = useRealPush([true, false]);
+      await service.attemptSend('log-1', 'PUSH', pushPayload, 1);
+      expect(fcm.sendPush).toHaveBeenCalledTimes(1);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'SENT' }) }),
+      );
+      expect(queue.add).not.toHaveBeenCalled();
+    });
+
+    it('retries a genuine failure when the other token skips and none sends', async () => {
+      const fcm = useRealPush([true, false]);
+      fcm.sendPush.mockRejectedValueOnce(new Error('FCM transport failure'));
+      await service.attemptSend('log-1', 'PUSH', pushPayload, 1);
+      expect(prisma.notificationDeliveryLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }),
+      );
+      expect(queue.add).toHaveBeenCalledWith(
+        'retry', expect.objectContaining({ attempt: 2 }),
+        expect.objectContaining({ delay: 30_000 }),
+      );
+    });
   });
 
   // ── attemptSend failure + retry paths ──────────────────────────────────
@@ -250,7 +348,7 @@ describe('ResilientNotificationDispatcher', () => {
   it('succeeds when some push tokens fail but not all', async () => {
     push.execute
       .mockRejectedValueOnce(new Error('invalid token'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce({ sent: true });
     await service.attemptSend('log-1', 'PUSH', {
       ...basePayload,
       fcmTokens: ['t1', 't2'],
