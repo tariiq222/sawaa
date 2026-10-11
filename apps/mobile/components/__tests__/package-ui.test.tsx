@@ -163,3 +163,20 @@ it('ignores an old account checkout completion after the account changes', async
   await act(async () => { finish({ purchaseId: 'old-purchase', invoiceId: 'old-invoice' }); });
   expect(mockReplace).not.toHaveBeenCalled();
 });
+
+it('sends the client to a native pending purchase only once per app session', async () => {
+  const { getPendingPackagePurchase } = jest.requireMock('@/services/client/packages') as { getPendingPackagePurchase: jest.Mock };
+  getPendingPackagePurchase.mockResolvedValue({ clientId: 'client', purchaseId: 'native-once', packageId: 'opt', familyId: 'family', branchId: 'branch-1', invoiceId: 'invoice-1' });
+  mockBranches = [{ id: 'branch-1', name: 'Branch' }];
+  mockQuery.data = vatFamily();
+  const first = render(<Detail />);
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/(client)/packages/return' })));
+  first.unmount();
+  mockReplace.mockClear();
+  const callsBefore = getPendingPackagePurchase.mock.calls.length;
+  render(<Detail />);
+  await waitFor(() => expect(getPendingPackagePurchase.mock.calls.length).toBeGreaterThan(callsBefore));
+  await act(async () => {});
+  expect(mockReplace).not.toHaveBeenCalled();
+  getPendingPackagePurchase.mockImplementation(async () => null);
+});

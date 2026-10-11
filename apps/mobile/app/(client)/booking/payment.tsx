@@ -21,6 +21,8 @@ import { getFontName } from '@/theme/fonts';
 import { clientBookingsService } from '@/services/client/bookings';
 import { useNativePaymentCapabilities } from '@/features/payments/native-payment-capabilities';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateClientBookingResources } from '@/hooks/queries/invalidateClientBookingResources';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 import type { DeliveryType } from '@/types/booking-enums';
 import { useBankTransferSettings } from '@/hooks/queries';
@@ -40,6 +42,7 @@ export default function BookingPaymentScreen() {
   const { t } = useTranslation();
   const native = useNativePaymentCapabilities();
   const inFlight = useRef(false);
+  const queryClient = useQueryClient();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme.colors), [colors, theme.colors]);
   const params = useLocalSearchParams<{
@@ -71,10 +74,15 @@ export default function BookingPaymentScreen() {
   userRef.current = userId;
   const draft = useMemo<BookingPaymentDraft | null>(() => bookingPaymentDraft({ branchId: params.branchId, employeeId: params.employeeId, serviceId: params.serviceId, scheduledAt: params.scheduledAt, durationOptionId: params.durationOptionId, deliveryType: params.deliveryType }), [params.branchId, params.employeeId, params.serviceId, params.scheduledAt, params.durationOptionId, params.deliveryType]);
   const [createdBooking, setCreatedBooking] = useState<{ bookingId: string; invoiceId: string | null } | null>(null);
+  // Keeps a server-created booking identity even if persisting the resume record fails, so retries never create a second booking.
+  const createdRef = useRef<{ ownerKey: string; bookingId: string; invoiceId: string | null } | null>(null);
+  const ownerKey = JSON.stringify([userId, draft]);
   const [resumeState, setResumeState] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const [resumeRetry, setResumeRetry] = useState(0);
   const [resumeReadRetryable, setResumeReadRetryable] = useState(false);
-  const total = params.amount ? Number(params.amount) : 0;
+  const parsedAmount = params.amount ? Number(params.amount) : 0;
+  const hasAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const total = hasAmount ? parsedAmount : 0;
   const formatMoney = (halalas: number) => formatCurrencyAmount(halalas, params.currency, dir.isRTL);
   const methods = useMemo<Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }>>(() => [
     { key: 'card', icon: <CreditCard size={20} color={colors.teal[600]} strokeWidth={1.75} />, labelAr: t('nativePayment.cards'), labelEn: t('nativePayment.cards'), subAr: t('nativePayment.cardNetworks'), subEn: t('nativePayment.cardNetworks'), color: colors.teal[600] },
@@ -97,6 +105,12 @@ export default function BookingPaymentScreen() {
     setResumeState('loading');
     setResumeReadRetryable(false);
     setCreatedBooking(null);
+    const known = createdRef.current;
+    if (userId && known && known.ownerKey === ownerKey) {
+      setCreatedBooking({ bookingId: known.bookingId, invoiceId: known.invoiceId });
+      setResumeState('ready');
+      return () => { active = false; };
+    }
     if (!userId || (!draft && !params.bookingId)) { setResumeState('invalid'); return () => { active = false; }; }
     void resolvePendingBookingResume(userId, draft, params.bookingId
       ? { bookingId: params.bookingId, ...(params.invoiceId ? { invoiceId: params.invoiceId } : {}) } : undefined)
@@ -119,7 +133,7 @@ export default function BookingPaymentScreen() {
       })
       .catch(() => { if (active) { setResumeReadRetryable(true); setResumeState('invalid'); } });
     return () => { active = false; };
-  }, [draft, params.bookingId, params.invoiceId, router, userId, resumeRetry]);
+  }, [draft, ownerKey, params.bookingId, params.invoiceId, router, userId, resumeRetry]);
   const canPay =
     resumeState === 'ready' &&
     (!!createdBooking || !!draft) &&
@@ -130,7 +144,8 @@ export default function BookingPaymentScreen() {
     setSubmitting(true);
     let resumeSafe = Boolean(createdBooking);
     try {
-      let booking = createdBooking;
+      let booking = createdBooking ?? (createdRef.current?.ownerKey === ownerKey ? createdRef.current : null);
+      if (booking && !createdBooking) { resumeSafe = true; setCreatedBooking({ bookingId: booking.bookingId, invoiceId: booking.invoiceId }); }
       if (!booking) {
         if (!userId || !draft) throw new Error('Booking details are unavailable');
         try {
@@ -143,15 +158,21 @@ export default function BookingPaymentScreen() {
             deliveryType: params.deliveryType,
           });
           booking = { bookingId: created.id, invoiceId: created.invoiceId ?? null };
-          await savePendingBookingCheckout(userId, draft, booking);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          createdRef.current = { ownerKey, ...booking };
           resumeSafe = true;
+          setCreatedBooking(booking);
+          if (userRef.current === userId) void invalidateClientBookingResources(queryClient);
         } catch (error) {
           setResumeReadRetryable(false);
           setResumeState('invalid');
           throw error;
         }
-        setCreatedBooking(booking);
+        try {
+          await savePendingBookingCheckout(userId, draft, booking);
+        } catch {
+          // The booking exists server-side and its identity is kept in memory; continue to payment with it.
+        }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       if (userRef.current !== userId) return;
       if (method === 'bank_transfer') {
@@ -209,7 +230,7 @@ export default function BookingPaymentScreen() {
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-            {t('payment.totalAmount', { amount: formatMoney(total) })}
+            {hasAmount ? t('payment.totalAmount', { amount: formatMoney(total) }) : null}
           </Text>
         </Animated.View>
 
@@ -273,7 +294,7 @@ export default function BookingPaymentScreen() {
       </ScrollView>
       <FloatingCta onHeightChange={setFooterHeight}>
         <AppButton testID="booking-payment-submit"
-          label={t('booking.payAmount', { amount: formatMoney(total) })}
+          label={hasAmount ? t('booking.payAmount', { amount: formatMoney(total) }) : t('booking.continue')}
           onPress={handlePay} disabled={!canPay} loading={submitting}
         />
       </FloatingCta>

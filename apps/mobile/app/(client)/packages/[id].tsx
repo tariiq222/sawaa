@@ -24,6 +24,10 @@ import { FloatingCta } from '@/components/ui/FloatingCta';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 
+// Native purchases stay recoverable while their payment may still settle, so the
+// package screen only sends the client to their return screen once per app session.
+const recoveredNativePurchases = new Set<string>();
+
 export default function PackageFamilyDetailScreen() {
   const colors = useSawaaColors();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -75,6 +79,10 @@ export default function PackageFamilyDetailScreen() {
     // Ignore a previous account's asynchronous recovery read.
     if (checkoutInFlight.current || userRef.current !== user?.id) return;
     if (pending && pending.clientId === user?.id && pending.packageId === option?.id) {
+      if (pending.invoiceId) {
+        if (recoveredNativePurchases.has(pending.purchaseId)) return;
+        recoveredNativePurchases.add(pending.purchaseId);
+      }
       router.replace({ pathname: '/(client)/packages/return', params: {
         purchaseId: pending.purchaseId,
         clientId: pending.clientId,

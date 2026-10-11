@@ -95,10 +95,22 @@ jest.mock('@/services/client/payments', () => ({
   clientPaymentsService: { initPayment: (...args: unknown[]) => mockInitPayment(...args) },
 }));
 
+const mockInvalidate = jest.fn();
+const mockSavePending = jest.fn();
+jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({}) }));
+jest.mock('@/hooks/queries/invalidateClientBookingResources', () => ({
+  invalidateClientBookingResources: (...args: unknown[]) => mockInvalidate(...args),
+}));
+jest.mock('@/features/booking/payment-resume-state', () => ({
+  ...jest.requireActual('@/features/booking/payment-resume-state'),
+  savePendingBookingCheckout: (...args: unknown[]) => mockSavePending(...args),
+}));
+
 import BookingPaymentScreen from '../payment';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSavePending.mockReset().mockResolvedValue(undefined);
   mockCapabilityError = false;
   mockCapabilityEnabled = true;
   for (const key of Object.keys(mockParams)) delete mockParams[key];
@@ -209,4 +221,34 @@ it('does not offer a read retry that could re-enable creation after a failed boo
   expect(screen.queryByText('Try again')).toBeNull();
   expect(screen.getByTestId('booking-payment-submit')).toBeDisabled();
   expect(mockBookingCreate).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the created booking and continues to payment when saving the resume record fails', async () => {
+  for (const key of Object.keys(mockParams)) delete mockParams[key];
+  Object.assign(mockParams, { serviceId: 'service-1', employeeId: 'employee-1', branchId: 'branch-1', scheduledAt: '2026-10-01T10:00:00.000Z', amount: '45000', currency: 'SAR' });
+  mockBookingCreate.mockResolvedValue({ id: 'booking-9', invoiceId: 'invoice-9' });
+  mockSavePending.mockRejectedValue(new Error('storage full'));
+  const screen = render(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+  await act(async () => fireEvent.press(screen.getByTestId('booking-payment-submit')));
+  expect(mockBookingCreate).toHaveBeenCalledTimes(1);
+  expect(mockInvalidate).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Cannot continue checkout')).toBeNull();
+  expect(mockReplace).toHaveBeenCalledWith({
+    pathname: '/(client)/payments/native-checkout',
+    params: { bookingId: 'booking-9', invoiceId: 'invoice-9', method: 'ONLINE_CARD' },
+  });
+  // A second tap (e.g. after returning to this screen) reuses the same booking.
+  await act(async () => fireEvent.press(screen.getByTestId('booking-payment-submit')));
+  expect(mockBookingCreate).toHaveBeenCalledTimes(1);
+  expect(mockReplace).toHaveBeenCalledTimes(2);
+});
+
+it('never shows a zero pay amount when the amount param is missing', async () => {
+  delete mockParams.amount;
+  const screen = render(<BookingPaymentScreen />);
+  await waitFor(() => expect(screen.getByTestId('booking-payment-submit')).not.toBeDisabled());
+  expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
+  expect(screen.queryByText(/0\.00/)).toBeNull();
+  expect(screen.queryByText(/^Total/)).toBeNull();
 });
