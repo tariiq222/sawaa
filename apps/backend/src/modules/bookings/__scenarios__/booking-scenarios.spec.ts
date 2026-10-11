@@ -315,7 +315,6 @@ describe("Scenario 2 — Father gets distracted at payment page, booking expires
 		const expireHandler = new ExpireBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
-			eventBus as never,
 			refundHandler as never,
 			buildGroupCapacity() as never,
 		);
@@ -1683,7 +1682,6 @@ describe("Scenario 25 — Deposit paid, balance unpaid, appointment remains conf
 		const expireHandler = new ExpireBookingHandler(
 			prisma as never,
 			rlsTransaction as never,
-			eventBus as never,
 			refundHandler as never,
 			groupCapacity as never,
 		);

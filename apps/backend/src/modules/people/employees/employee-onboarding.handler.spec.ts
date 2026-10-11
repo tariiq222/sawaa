@@ -34,7 +34,9 @@ describe('EmployeeOnboardingHandler', () => {
         update: jest.fn(),
       },
       employeeBranch: { deleteMany: jest.fn(), createMany: jest.fn() },
-      employeeService: { deleteMany: jest.fn(), createMany: jest.fn() },
+      employeeService: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn(), createMany: jest.fn() },
+      employeeServiceOption: { deleteMany: jest.fn() },
+      serviceDurationOption: { deleteMany: jest.fn() },
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
 
@@ -115,6 +117,57 @@ describe('EmployeeOnboardingHandler', () => {
       expect(prisma.employeeBranch.createMany).toHaveBeenCalledWith({
         data: [{ employeeId: 'emp-1', branchId: 'br-1' }],
       });
+    });
+  });
+
+  describe('services step', () => {
+    it('deletes option rows of existing employee services before replacing them', async () => {
+      const order: string[] = [];
+      prisma.employee.findFirst.mockResolvedValueOnce(mockEmployee);
+      prisma.employee.findUnique.mockResolvedValueOnce(mockEmployee);
+      prisma.employee.update.mockResolvedValue(mockEmployee);
+      prisma.employeeService.findMany.mockResolvedValue([{ id: 'es-1' }, { id: 'es-2' }]);
+      prisma.employeeServiceOption.deleteMany.mockImplementation(async () => {
+        order.push('employeeServiceOption.deleteMany');
+      });
+      prisma.serviceDurationOption.deleteMany.mockImplementation(async () => {
+        order.push('serviceDurationOption.deleteMany');
+      });
+      prisma.employeeService.deleteMany.mockImplementation(async () => {
+        order.push('employeeService.deleteMany');
+      });
+      prisma.employeeService.createMany.mockResolvedValue({ count: 1 });
+
+      await handler.execute({ employeeId: 'emp-1', step: 'services', serviceIds: ['svc-1'] });
+
+      expect(prisma.employeeService.findMany).toHaveBeenCalledWith({
+        where: { employeeId: 'emp-1' },
+        select: { id: true },
+      });
+      expect(prisma.employeeServiceOption.deleteMany).toHaveBeenCalledWith({
+        where: { employeeServiceId: { in: ['es-1', 'es-2'] } },
+      });
+      expect(prisma.serviceDurationOption.deleteMany).toHaveBeenCalledWith({
+        where: { employeeServiceId: { in: ['es-1', 'es-2'] } },
+      });
+      expect(order).toEqual([
+        'employeeServiceOption.deleteMany',
+        'serviceDurationOption.deleteMany',
+        'employeeService.deleteMany',
+      ]);
+    });
+
+    it('skips option cleanup when the employee has no services yet', async () => {
+      prisma.employee.findFirst.mockResolvedValueOnce(mockEmployee);
+      prisma.employee.findUnique.mockResolvedValueOnce(mockEmployee);
+      prisma.employee.update.mockResolvedValue(mockEmployee);
+      prisma.employeeService.findMany.mockResolvedValue([]);
+      prisma.employeeService.createMany.mockResolvedValue({ count: 1 });
+
+      await handler.execute({ employeeId: 'emp-1', step: 'services', serviceIds: ['svc-1'] });
+
+      expect(prisma.employeeServiceOption.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.serviceDurationOption.deleteMany).not.toHaveBeenCalled();
     });
   });
 

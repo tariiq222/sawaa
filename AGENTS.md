@@ -2,7 +2,27 @@
 
 ## Mandatory deployment policy for all AI tools
 
-Read and follow [the approved deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. «انشر» / «ننشر» means **develop + staging only**, followed by the owner's manual test. Only an explicit «انشر للإنتاج» / «انشر للبرودكشن» authorizes **develop → main → production**, after verifying the manually accepted release content and required checks. This policy supersedes older deployment guidance.
+Read and follow [the approved deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. «انشر» / «ننشر» means **develop + staging only**, followed by the owner's manual test. Only an explicit «انشر للإنتاج» / «انشر للبرودكشن» authorizes **frozen `release/<date>` → main → production**, after verifying the manually accepted release content and required checks. This policy supersedes older deployment guidance.
+
+### Local `develop` and release rules (owner-approved 2026-10-10)
+
+These are project law for every AI tool; details in [the deployment policy](docs/operations/deployment-policy.md).
+
+- The owner works directly on local `develop`. Never reset, rebase, force-update or discard it or its uncommitted changes, and never push `develop` directly (lefthook blocks it).
+- Publish local commits on «انشر» via `git push origin develop:refs/heads/publish/<topic>` and a PR into `develop`. Merge PRs with a **merge commit** only; squash and rebase merges are disabled on GitHub.
+- Local `develop` is auto-synced every 5 minutes by `scripts/sync-develop.sh` (launchd `sa.sawaa.develop-sync`, installed with `scripts/install-develop-sync.sh`). After any merge you perform, run `scripts/sync-develop.sh` and confirm local `develop` matches `origin/develop`; report divergence instead of resolving it silently.
+- Production promotes a frozen `release/<YYYY-MM-DD>` branch cut from the exact SHA the owner accepted on staging (observed `ready` on OpenShip). Never open the production PR from `develop`. A `cancelled` check counts as failed.
+
+The step-by-step release procedure (staging automation, production backup/restore test, merge, verification, main→develop sync, receipt) lives in [the sawaa-release skill](.claude/skills/sawaa-release/SKILL.md). Follow it for every publish.
+
+### Fixed staging mechanism — owner-approved 2026-10-11
+
+Staging always uses `build-images.yml` → all images built on GitHub → `scripts/openship/staging-deploy.mjs` → the existing application-scoped OpenShip hook → verified image digests and backend SHA. Manual publication uses `gh workflow run build-images.yml --ref develop` through that same path. Never improvise a different deploy path, enable OpenShip git auto-deploy, use mutable tags for runtime selection, or replace containers by SSH as a fallback. Failure stops publication and requires repair of this mechanism.
+
+Production follows the separately owner-approved prebuilt image path in `scripts/openship/production-deploy.mjs` after an accepted frozen release, verified backup/restore receipt and separately authorized migration work; see the production section of the deployment policy. Production git auto-deploy stays disabled.
+
+Application deploys target backend/dashboard/website only; preserve PostgreSQL/Redis/MinIO containers and volumes. The prebuilt backend starts without migrations; read-only migration compatibility and unchanged migration metadata are required. A pending migration blocks publication until separately authorized. Production is outside staging authorization and retains its current runtime until explicit production approval. See the deployment policy for fixed project IDs, secrets, activation and evidence requirements.
+
 
 
 Single-tenant family counseling platform for one counseling center (مركز سواء).
@@ -33,6 +53,8 @@ On authorized commit, merge or publication requests, write clear commit subjects
 ## Commands and focused tests
 
 Common checks: backend `pnpm --filter=backend test -- path/to/file.spec.ts`; dashboard or website `pnpm --filter=<app> test -- path/to/file.test.ts`; dashboard smoke `pnpm --filter=dashboard run e2e:smoke`; mobile types `pnpm --dir apps/mobile typecheck`. For other commands and test coverage, read [the command and test reference](docs/operations/agent-command-reference.md). Root commands do not cover mobile.
+
+Before merging backend, website, dashboard, or local test-harness changes, run `pnpm test:premerge` (Node 22.12+; local only, not a CI check) alongside the focused checks above. It builds a fresh isolated local stack, runs Playwright smoke and the website-to-staff booking journey, rejects skipped/flaky selected tests, and records the exact working-tree candidate under `.e2e/premerge-*/acceptance.json`. Re-run if the candidate changes. This local check does not replace staging acceptance, payment-provider or physical-device verification. See [the local premerge guide](docs/testing/local-premerge.md). The three Playwright Test Agents use `gpt-6-luna` under the owner's task-specific authorization; other model-routing policies remain unchanged. See [the local agent guide](docs/testing/playwright-test-agents.md).
 
 ## Single-tenant
 

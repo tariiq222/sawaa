@@ -17,6 +17,7 @@
     "check:openapi-coverage": "pnpm --filter=backend run check:openapi-coverage",
     "test": "turbo run test",
     "test:cov": "turbo run test:cov",
+    "test:premerge": "node scripts/premerge-local.mjs",
     "typecheck": "turbo run typecheck",
     "docker:up": "docker compose -f docker/docker-compose.yml --env-file docker/.env up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml --env-file docker/.env down",

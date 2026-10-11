@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import * as React from 'react';
+import { formatInTimeZone } from 'date-fns-tz';
+import { BUSINESS_TZ } from '../../../common/timezone';
 
 const DEFAULT_BRAND = '#55CCB0';
 const INK = '#1a1a1a';
@@ -104,11 +106,29 @@ const styles = StyleSheet.create({
   ref: { fontSize: 7, color: '#9ca3af', marginTop: 6, textAlign: 'right' },
 });
 
+export interface InvoicePdfPayment {
+  date: Date;
+  method: string;
+  /** Integer halalas. */
+  amount: number;
+  /** Integer halalas already refunded from this payment. */
+  refundedAmount: number;
+}
+
+/** `receipt` is the frozen proof of payment; `statement` is the live invoice document. */
+export type InvoicePdfKind = 'statement' | 'receipt';
+
 export interface InvoicePdfData {
+  kind: InvoicePdfKind;
+  /** Invoice status at render time (InvoiceStatus enum value). */
+  status: string;
+  /** Integer halalas still unpaid: total minus completed payments. */
+  outstanding: number;
   invoiceNumber: number;
   invoiceId: string;
   issuedAt: Date;
-  paidAt: Date;
+  /** Null until the invoice is PAID. */
+  paidAt: Date | null;
   sellerNameAr: string;
   sellerVatNumber: string | null;
   sellerAddress: string | null;
@@ -124,20 +144,35 @@ export interface InvoicePdfData {
   total: number;
   currency: string;
   paymentMethod: string;
+  /** Every COMPLETED payment, oldest first. */
+  payments: InvoicePdfPayment[];
   /** Base64 data URL for QR PNG. When null, no QR is rendered. */
   qrDataUrl: string | null;
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
-  CASH: 'نقدي',
-  CARD: 'بطاقة',
-  TRANSFER: 'تحويل بنكي',
-  MOYASAR: 'دفع إلكتروني',
+  ONLINE_CARD: 'بطاقة إلكترونية',
+  BANK_TRANSFER: 'تحويل بنكي',
+  CASH: 'نقداً',
+  COUPON: 'قسيمة',
+  MADA: 'مدى',
+  TABBY: 'تابي',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'مسودة',
+  ISSUED: 'غير مدفوعة',
+  PARTIALLY_PAID: 'مدفوعة جزئياً',
+  PAID: 'مدفوعة',
+  PARTIALLY_REFUNDED: 'مستردة جزئياً',
+  REFUNDED: 'مستردة',
+  VOID: 'ملغاة',
 };
 
 const formatHalalas = (h: number) => (h / 100).toFixed(2);
-const formatDate = (d: Date) => d.toISOString().slice(0, 10);
-const formatDateTime = (d: Date) => d.toISOString().slice(0, 16).replace('T', ' ');
+// Business-timezone (Asia/Riyadh) wall-clock, never the UTC instant.
+export const formatDate = (d: Date) => formatInTimeZone(d, BUSINESS_TZ, 'yyyy-MM-dd');
+export const formatDateTime = (d: Date) => formatInTimeZone(d, BUSINESS_TZ, 'yyyy-MM-dd HH:mm');
 
 export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
   const cur = data.currency;
@@ -145,6 +180,12 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
   const netBeforeVat = data.subtotal - data.discountAmt;
   const hasVat = data.vatAmt > 0;
   const paymentLabel = PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod;
+  const isReceipt = data.kind === 'receipt';
+  // Payment details show whenever there are settled payments (or on a receipt).
+  const showPaymentDetails = isReceipt || data.payments.length > 0;
+  const titleAr = isReceipt ? 'إيصال دفع' : hasVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة';
+  const titleEn = isReceipt ? 'PAYMENT RECEIPT' : hasVat ? 'SIMPLIFIED TAX INVOICE' : 'INVOICE';
+  const statusLabel = STATUS_LABELS[data.status] ?? data.status;
 
   return (
     <Document>
@@ -164,8 +205,8 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             ) : null}
           </View>
           <View style={styles.docTypeBox}>
-            <Text style={styles.docTitleAr}>{hasVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة'}</Text>
-            <Text style={styles.docTitleEn}>{hasVat ? 'SIMPLIFIED TAX INVOICE' : 'INVOICE'}</Text>
+            <Text style={styles.docTitleAr}>{titleAr}</Text>
+            <Text style={styles.docTitleEn}>{titleEn}</Text>
             <Text style={styles.invoiceNo}>رقم الفاتورة</Text>
             <Text style={styles.invoiceNoVal}>#{data.invoiceNumber}</Text>
           </View>
@@ -179,10 +220,12 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
               <Text style={styles.infoKey}>العميل</Text>
               <Text style={styles.infoVal}>{data.clientName}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoKey}>طريقة الدفع</Text>
-              <Text style={styles.infoVal}>{paymentLabel}</Text>
-            </View>
+            {showPaymentDetails && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoKey}>طريقة الدفع</Text>
+                <Text style={styles.infoVal}>{paymentLabel}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.infoCard}>
             <Text style={styles.infoCardLabel}>تفاصيل الفاتورة</Text>
@@ -190,10 +233,18 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
               <Text style={styles.infoKey}>تاريخ الإصدار</Text>
               <Text style={styles.infoVal}>{formatDate(data.issuedAt)}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoKey}>تاريخ الدفع</Text>
-              <Text style={styles.infoVal}>{formatDateTime(data.paidAt)}</Text>
-            </View>
+            {showPaymentDetails && data.paidAt && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoKey}>تاريخ الدفع</Text>
+                <Text style={styles.infoVal}>{formatDateTime(data.paidAt)}</Text>
+              </View>
+            )}
+            {!isReceipt && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoKey}>الحالة</Text>
+                <Text style={styles.infoVal}>{statusLabel}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -210,6 +261,32 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             </Text>
           </View>
         </View>
+
+        {/* Completed payments */}
+        {showPaymentDetails && data.payments.length > 0 && (
+          <View style={styles.serviceTable}>
+            {data.payments.map((p, i) => (
+              <React.Fragment key={i}>
+                <View style={styles.serviceBody}>
+                  <Text style={styles.colDesc}>
+                    {formatDateTime(p.date)} - {PAYMENT_LABELS[p.method] ?? p.method}
+                  </Text>
+                  <Text style={styles.colAmt}>
+                    {formatHalalas(p.amount)} {cur}
+                  </Text>
+                </View>
+                {p.refundedAmount > 0 && (
+                  <View style={styles.serviceBody}>
+                    <Text style={styles.colDesc}>مبلغ مسترد</Text>
+                    <Text style={styles.discountVal}>
+                      -{formatHalalas(p.refundedAmount)} {cur}
+                    </Text>
+                  </View>
+                )}
+              </React.Fragment>
+            ))}
+          </View>
+        )}
 
         {/* Totals */}
         <View style={styles.totalsWrap}>
@@ -242,12 +319,20 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
                 {formatHalalas(data.total)} {cur}
               </Text>
             </View>
+            {!isReceipt && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalKey}>المبلغ المتبقي</Text>
+                <Text style={styles.totalVal}>
+                  {formatHalalas(data.outstanding)} {cur}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
         {/* QR + footer */}
         <View style={styles.bottom}>
-          {data.qrDataUrl ? (
+          {isReceipt && data.qrDataUrl ? (
             <View style={styles.qrBox}>
               <Image src={data.qrDataUrl} style={styles.qr} />
               <Text style={styles.qrCaption}>امسح للتحقق — هيئة الزكاة والضريبة والجمارك</Text>

@@ -1,4 +1,4 @@
-import { decodeRedirect, encodeRedirect, goBackOrHome, guardedRoute, loginRedirectHref } from '../navigation';
+import { decodeRedirect, encodeRedirect, goBackOrHome, guardedRoute, loginRedirectHref, openOrReturnTo } from '../navigation';
 
 describe('encodeRedirect', () => {
   it('keeps a bare pathname when there are no params', () => {
@@ -158,5 +158,45 @@ describe('goBackOrHome', () => {
 
     expect(router.back).toHaveBeenCalledTimes(1);
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('openOrReturnTo', () => {
+  const stack = (...names: string[]) => ({ index: names.length - 1, routes: names.map((name) => ({ name })) });
+
+  it('pops back when the target is the screen right below', () => {
+    const router = { back: jest.fn(), push: jest.fn() };
+
+    openOrReturnTo(router as never, stack('(tabs)', 'packages/index', 'packages/purchases'), 'packages/index', '/(client)/packages');
+
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it('pushes when the screen below is a different route', () => {
+    const router = { back: jest.fn(), push: jest.fn() };
+
+    openOrReturnTo(router as never, stack('(tabs)', 'packages/purchases'), 'packages/index', '/(client)/packages');
+
+    expect(router.push).toHaveBeenCalledWith('/(client)/packages');
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it('pushes when the target is deeper in the stack but not directly below', () => {
+    const router = { back: jest.fn(), push: jest.fn() };
+
+    openOrReturnTo(router as never, stack('packages/index', 'packages/[id]', 'packages/purchases'), 'packages/index', '/(client)/packages');
+
+    expect(router.push).toHaveBeenCalledWith('/(client)/packages');
+  });
+
+  it('pushes when the screen is the first in the stack or the state is missing', () => {
+    const router = { back: jest.fn(), push: jest.fn() };
+
+    openOrReturnTo(router as never, stack('packages/purchases'), 'packages/index', '/(client)/packages');
+    openOrReturnTo(router as never, undefined, 'packages/index', '/(client)/packages');
+
+    expect(router.push).toHaveBeenCalledTimes(2);
+    expect(router.back).not.toHaveBeenCalled();
   });
 });

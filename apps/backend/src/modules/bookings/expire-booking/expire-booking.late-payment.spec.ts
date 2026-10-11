@@ -38,6 +38,7 @@ describe('captured elapsed hold → booking expiry', () => {
       refundedAmount: 0,
     };
     const reviews: any[] = [];
+    const outbox: any[] = [];
     const program = { enrolledCount: 1 };
     let enrollmentPresent = true;
     const prisma: any = {
@@ -84,7 +85,12 @@ describe('captured elapsed hold → booking expiry', () => {
           return row;
         }),
       },
-      outboxEvent: { create: jest.fn() },
+      outboxEvent: {
+        create: jest.fn(async ({ data }: any) => {
+          outbox.push(data);
+          return data;
+        }),
+      },
       programEnrollment: {
         deleteMany: jest.fn(async () => {
           enrollmentPresent = false;
@@ -110,15 +116,15 @@ describe('captured elapsed hold → booking expiry', () => {
       finalizeRefundFromCancellation: jest.fn(async () => provider.refund()),
       execute: jest.fn(async () => provider.refund()),
     };
-    const eventBus = { publish: jest.fn() };
     const consumer = new OnBookingCancelledRefundHandler(
-      eventBus as never,
+      { publish: jest.fn() } as never,
       refundHandler as never,
       {} as never,
     );
-    eventBus.publish.mockImplementation(async (_name, envelope) =>
-      consumer.handle(envelope),
-    );
+    // Stand-in for the outbox relay: deliver staged rows to the real consumer.
+    const relayOutbox = async () => {
+      for (const row of outbox.splice(0)) await consumer.handle(row.payload);
+    };
     const capacity = {
       decrementEnrollment: jest.fn(async () => {
         program.enrolledCount -= 1;
@@ -131,7 +137,6 @@ describe('captured elapsed hold → booking expiry', () => {
     const expire = new ExpireBookingHandler(
       prisma,
       transactions as never,
-      eventBus as never,
       refundHandler as never,
       capacity as never,
     );
@@ -144,7 +149,8 @@ describe('captured elapsed hold → booking expiry', () => {
       prisma,
       provider,
       refundHandler,
-      eventBus,
+      outbox,
+      relayOutbox,
       settle,
       expire,
       enrollmentPresent: () => enrollmentPresent,
@@ -178,21 +184,28 @@ describe('captured elapsed hold → booking expiry', () => {
     expect(state.booking.status).toBe('EXPIRED');
     expect(state.program.enrolledCount).toBe(state.booking.programId ? 0 : 1);
     expect(state.enrollmentPresent()).toBe(!programId);
-    expect(state.prisma.outboxEvent.create).not.toHaveBeenCalled();
     expect(state.reviews).toHaveLength(1);
     expect(state.reviews[0].status).toBe('PENDING_REVIEW');
     expect(state.refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
     expect(state.provider.refund).not.toHaveBeenCalled();
-    expect(state.eventBus.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancelled',
+    expect(state.outbox).toHaveLength(1);
+    expect(state.outbox[0]).toEqual(
       expect.objectContaining({
+        aggregateId: 'booking',
+        eventType: 'bookings.booking.cancelled',
         payload: expect.objectContaining({
-          refundType: 'NONE',
-          refundRequestId: null,
-          idempotencyKey: null,
+          payload: expect.objectContaining({
+            refundType: 'NONE',
+            refundRequestId: null,
+            idempotencyKey: null,
+          }),
         }),
       }),
     );
+    // Relaying the staged event must not create a refund beside the review.
+    await state.relayOutbox();
+    expect(state.reviews).toHaveLength(1);
+    expect(state.provider.refund).not.toHaveBeenCalled();
     // A repeated cron selection cannot decrement capacity or create another request.
     await expect(
       state.expire.execute({
@@ -218,16 +231,23 @@ describe('captured elapsed hold → booking expiry', () => {
     expect(state.refundHandler.createRefundRequestInTx).toHaveBeenCalledTimes(
       1,
     );
-    expect(state.provider.refund).toHaveBeenCalledTimes(1);
-    expect(state.eventBus.publish).toHaveBeenCalledWith(
-      'bookings.booking.cancelled',
+    expect(state.outbox).toHaveLength(1);
+    expect(state.outbox[0]).toEqual(
       expect.objectContaining({
+        aggregateId: 'booking',
+        eventType: 'bookings.booking.cancelled',
         payload: expect.objectContaining({
-          refundType: 'FULL',
-          paymentId: 'payment',
-          refundRequestId: state.reviews[0].id,
+          payload: expect.objectContaining({
+            refundType: 'FULL',
+            paymentId: 'payment',
+            refundRequestId: state.reviews[0].id,
+          }),
         }),
       }),
     );
+    // Previously the refund was finalized by the direct publish; now by relaying
+    // the staged outbox envelope to the same consumer.
+    await state.relayOutbox();
+    expect(state.provider.refund).toHaveBeenCalledTimes(1);
   });
 });

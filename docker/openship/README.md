@@ -39,6 +39,10 @@ with the restricted runtime URL. A failed migration stops startup. The
 optional `compose.migration.yml` file remains available for manual recovery and
 does not participate in routine deploys.
 
+## Approved prebuilt publication
+
+The approved staging and production application paths use `compose.prebuilt.yml`: GitHub builds images, the environment-specific orchestrator pins their digests and calls a strict application-only hook. The backend starts directly without applying migrations or receiving a migration owner credential. See [deployment policy](../../docs/operations/deployment-policy.md) for production release acceptance and backup gates. The host-build/startup-migration instructions below describe the legacy compose and isolated recovery contract, not the active publication path.
+
 ## Deployment sequence
 
 1. Before creating or redeploying the native application, pre-provision the
@@ -88,8 +92,11 @@ does not participate in routine deploys.
    relay below; never attach the backend itself to an outbound bridge.
 5. Keep the existing migration-history and checksum review as a separate
    provenance report. Never reset or rewrite checksums, and do not represent
-   that report as a repair. Routine updates use Prisma's `migrate deploy`; its
-   own migration bookkeeping and retry behavior remain authoritative.
+   that report as a repair. The fixed prebuilt staging application path performs read-only migration
+   compatibility checks and starts backend directly, without migration execution.
+   Host-built production startup retains its existing `migrate deploy` behavior
+   until separately authorized changes. Never change either database as part of
+   switching the staging publication mechanism.
 6. Build the four images from the repository root context selected by
    `compose.yml`. The dashboard and website Dockerfiles are used as configured;
    the backend Dockerfile copies the startup script into the runner. The custom

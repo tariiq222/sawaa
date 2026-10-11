@@ -1,5 +1,6 @@
 # Builds the deployable Docker images on GitHub and publishes them to GHCR.
-# OpenShip then only pulls and runs them; it never builds on the server.
+# Both environments pull verified application digests through scoped hooks.
+# Production requires explicit release authorization and verified backup evidence.
 # A pushed image is not a deployment. Verify the running revision separately.
 name: build-images
 
@@ -16,12 +17,14 @@ on:
     paths:
       - ".github/workflows/build-images.yml"
       - "docker/openship/**"
+      - "scripts/openship/**"
       - "apps/backend/Dockerfile"
       - "apps/dashboard/Dockerfile"
       - "apps/website/Dockerfile"
   workflow_dispatch:
 
-# Never cancel a running build: a half-pushed tag set must not be possible.
+# Serialize builds and staging deployment. Runtime references change only
+# after every build succeeds; a partial tag set cannot enter the deploy job.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -119,10 +122,12 @@ jobs:
           # Pull requests only prove the build; they never publish an image.
           push: ${{ github.event_name != 'pull_request' }}
           build-args: ${{ steps.args.outputs.build_args }}
-          # Environment-specific tag, immutable by commit. Frontend images bake
-          # public URLs at build time, so staging and production tags differ.
+          # Environment-specific tags. Frontend images bake public URLs at build
+          # time, so staging and production tags differ. Tags locate artifacts;
+          # staging deploys the emitted digest, never the moving tag.
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:${{ env.TARGET_ENV }}-${{ github.sha }}
+            ${{ (github.ref_name == 'develop' || github.ref_name == 'main') && format('{0}-{1}:{2}', env.IMAGE_PREFIX, matrix.image, env.TARGET_ENV) || '' }}
           cache-from: type=gha,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
           provenance: false
@@ -137,3 +142,111 @@ jobs:
           else
             printf '`%s-%s:%s-%s` digest `%s`\n' "$IMAGE_PREFIX" "$IMAGE" "$TARGET_ENV" "$GITHUB_SHA" "$DIGEST" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Save application image identity
+        if: github.event_name != 'pull_request' && matrix.image != 'postgres'
+        env:
+          IMAGE: ${{ matrix.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          mkdir -p image-manifests
+          node -e 'const fs=require("node:fs"); fs.writeFileSync(`image-manifests/${process.env.IMAGE}.json`, JSON.stringify({service:process.env.IMAGE,sha:process.env.GITHUB_SHA,environment:process.env.TARGET_ENV,digest:process.env.DIGEST})+"\n")'
+
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request' && matrix.image != 'postgres'
+        with:
+          name: image-${{ matrix.image }}-${{ github.sha }}
+          path: image-manifests/${{ matrix.image }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  # Staging only: trigger the OpenShip deploy once all four images are pushed,
+  # then pin digests, fire the existing scoped hook and prove the exact runtime.
+  # Missing activation/credentials FAIL instead of silently skipping publication.
+  # Manual reruns on develop use this same job. Production is never targeted here.
+  deploy-staging:
+    name: deploy-staging
+    needs: build
+    if: github.ref_name == 'develop' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Records each verified run as a GitHub deployment, so the repository's
+    # Environments page shows which commit staging runs now.
+    environment:
+      name: staging
+      url: https://staging.sawaa.sa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: image-*-${{ github.sha }}
+          path: image-manifests
+          merge-multiple: true
+
+      - name: Publish and verify staging through the single scoped path
+        env:
+          STAGING_PREBUILT_DEPLOY: ${{ vars.STAGING_PREBUILT_DEPLOY }}
+          OPENSHIP_STAGING_HOOK_ID: ${{ vars.OPENSHIP_STAGING_HOOK_ID }}
+          OPENSHIP_STAGING_DEPLOY_TOKEN: ${{ secrets.OPENSHIP_STAGING_DEPLOY_TOKEN }}
+          OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN: ${{ secrets.OPENSHIP_STAGING_DEPLOY_HOOK_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/openship/staging-deploy.mjs image-manifests staging-deployment.json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: staging-deployment-${{ github.sha }}
+          path: staging-deployment.json
+          if-no-files-found: error
+          retention-days: 90
+
+  deploy-production:
+    name: deploy-production
+    needs: build
+    if: github.ref_name == 'main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://sawaa.sa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: image-*-${{ github.sha }}
+          path: image-manifests
+          merge-multiple: true
+      - name: Publish the explicitly accepted release and verify production
+        env:
+          PRODUCTION_PREBUILT_DEPLOY: ${{ vars.PRODUCTION_PREBUILT_DEPLOY }}
+          PRODUCTION_RELEASE_AUTHORIZATION: ${{ vars.PRODUCTION_RELEASE_AUTHORIZATION }}
+          PRODUCTION_BACKUP_EVIDENCE: ${{ vars.PRODUCTION_BACKUP_EVIDENCE }}
+          OPENSHIP_PRODUCTION_HOOK_ID: ${{ vars.OPENSHIP_PRODUCTION_HOOK_ID }}
+          OPENSHIP_PRODUCTION_DEPLOY_TOKEN: ${{ secrets.OPENSHIP_PRODUCTION_DEPLOY_TOKEN }}
+          OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN: ${{ secrets.OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN }}
+          OPENSHIP_STAGING_READ_TOKEN: ${{ secrets.OPENSHIP_STAGING_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/openship/production-deploy.mjs image-manifests production-deployment.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: production-deployment-${{ github.sha }}
+          path: production-deployment.json
+          if-no-files-found: error
+          retention-days: 90

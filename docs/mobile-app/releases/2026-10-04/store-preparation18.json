@@ -62,13 +62,13 @@
   },
   "submissionScreenshot": "screenshots18/apple-submitted-build18.png",
   "monitor": {
-    "checkedAt": "2026-10-09T18:07:27.324Z",
-    "checkedAtRiyadh": "2026-10-09 21:07:27 +03:00",
+    "checkedAt": "2026-10-10T12:29:54.487Z",
+    "checkedAtRiyadh": "2026-10-10 15:29:54 +03:00",
     "versionState": "REJECTED",
     "submissionState": "UNRESOLVED_ISSUES",
     "build": "18",
     "reasonVerified": true,
-    "reviewMessagesAccess": "Codex browser remains on App Store Connect login page with authResult=FAILED; authentication intervention already requested",
+    "reviewMessagesAccess": "Codex browser redirects requested review page to App Store Connect login with authResult=FAILED; authentication intervention already requested",
     "actionRequired": "Sign in to App Store Connect in Codex browser to restore review-message monitoring",
     "lastNotifiedState": "REJECTED",
     "requestChanged": false,
@@ -88,6 +88,7 @@
     "requestedDelivery": "Reply in App Store Connect and add same information to App Review Information Notes",
     "lastNotifiedMessageCount": 1,
     "messagesVerifiedThisCheck": false,
-    "lastNotifiedAccessIssue": "AUTHENTICATION_REQUIRED"
+    "lastNotifiedAccessIssue": "AUTHENTICATION_REQUIRED",
+    "apiCheckedAt": "2026-10-10T12:28:53.976Z"
   }
 }

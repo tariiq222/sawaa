@@ -889,6 +889,7 @@
     "noResults": "No results found",
     "tryAgain": "Try again",
     "errorDescription": "We could not load the data. Please try again.",
+    "requestFailed": "Could not complete the request. Please try again.",
     "noResultsDescription": "Try different words or change the filter.",
     "clearSearch": "Clear search",
     "offlineTitle": "No internet connection",

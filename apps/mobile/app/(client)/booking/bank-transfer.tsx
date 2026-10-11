@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
@@ -27,6 +27,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { BankTransferAccountDetails } from '@/components/features/booking/BankTransferAccountDetails';
 
+// Thrown by getReceiptUploadMetadata for non PNG/JPEG receipts.
+const UNSUPPORTED_RECEIPT_ERROR = 'Unsupported receipt file type';
+
 export default function BankTransferScreen() {
   const colors = useSawaaColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -46,6 +49,7 @@ export default function BankTransferScreen() {
   const f700 = getFontName(dir.locale, '700');
   const [receipt, setReceipt] = useState<ReceiptUploadAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const uploadInFlight = useRef(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const selected = !!receipt;
   const readFailed = bankTransferQuery.isError || invoiceQuery.isError;
@@ -77,18 +81,20 @@ export default function BankTransferScreen() {
   };
 
   const submitReceipt = async () => {
-    if (!receipt || !invoiceId || !selectedAccount || submitting || readFailed) return;
+    if (!receipt || !invoiceId || !selectedAccount || submitting || readFailed || uploadInFlight.current) return;
     if (!numericAmount || numericAmount <= 0) {
       Alert.alert(t('payment.invalidAmount'));
       return;
     }
+    uploadInFlight.current = true;
     setSubmitting(true);
     try {
       const payment = await clientPaymentsService.uploadBankTransfer(invoiceId, numericAmount, receipt);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const amountParams = { amount: String(numericAmount), currency: 'SAR' };
       const successParams = bookingId
-        ? { bookingId, invoiceId, paymentId: payment.id }
-        : { invoiceId, paymentId: payment.id };
+        ? { bookingId, invoiceId, paymentId: payment.id, ...amountParams }
+        : { invoiceId, paymentId: payment.id, ...amountParams };
       router.replace({
         pathname: '/(client)/booking/success',
         params: successParams,
@@ -97,9 +103,10 @@ export default function BankTransferScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         t('payment.couldNotUploadReceipt'),
-        error instanceof Error ? error.message : String(error),
+        t(error instanceof Error && error.message === UNSUPPORTED_RECEIPT_ERROR ? 'payment.receiptFileFormats' : 'payment.uploadError'),
       );
     } finally {
+      uploadInFlight.current = false;
       setSubmitting(false);
     }
   };

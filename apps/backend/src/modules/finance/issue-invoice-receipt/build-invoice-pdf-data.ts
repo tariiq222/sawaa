@@ -3,24 +3,28 @@ import type { ClsService } from 'nestjs-cls';
 import { PLATFORM_BRAND } from '@sawaa/shared';
 import type { PrismaService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
-import type { InvoicePdfData } from './invoice-pdf.template';
+import { decimalToHalalas } from '../money.helper';
+import { SETTLED_PAYMENT_STATUSES, calculateInvoiceBalance } from '../invoice-balance.helper';
+import type { InvoicePdfData, InvoicePdfKind } from './invoice-pdf.template';
 
 /**
  * Assemble the data needed to render an invoice PDF. Shared by the
- * payment-completed receipt handler (which knows the exact payment) and the
- * on-demand dashboard generator (which falls back to the latest completed
- * payment). All lookups run inside a system CLS context.
+ * payment-completed receipt handler and the on-demand dashboard generator.
+ * All lookups run inside a system CLS context.
  *
- * @param paymentId when provided, resolves the payment method from that exact
- *   payment; otherwise uses the invoice's latest COMPLETED payment (or '—').
+ * `payments` lists every settled payment (COMPLETED, PARTIALLY_REFUNDED, REFUNDED) (oldest first) with its effective
+ * date, method, amount and refunded amount in halalas. `paidAt` is the invoice's real paidAt
+ * and stays null until the invoice is PAID — never a render-time clock.
+ * `outstanding` comes from calculateInvoiceBalance: total minus settled payments
+ * net of their refunds (never below zero).
  */
 export async function buildInvoicePdfData(
   prisma: PrismaService,
   cls: ClsService,
   invoice: Invoice,
-  paymentId?: string | null,
+  kind: InvoicePdfKind,
 ): Promise<InvoicePdfData> {
-  const [orgSettings, client, payment, booking] = await cls.run(async () => {
+  const [orgSettings, client, paymentRows, booking] = await cls.run(async () => {
     cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
     return Promise.all([
       prisma.organizationSettings.findFirst({
@@ -30,16 +34,17 @@ export async function buildInvoicePdfData(
         where: { id: invoice.clientId },
         select: { firstName: true, lastName: true },
       }),
-      paymentId
-        ? prisma.payment.findFirst({
-            where: { id: paymentId },
-            select: { method: true },
-          })
-        : prisma.payment.findFirst({
-            where: { invoiceId: invoice.id, status: 'COMPLETED' },
-            orderBy: { createdAt: 'desc' },
-            select: { method: true },
-          }),
+      prisma.payment.findMany({
+        where: { invoiceId: invoice.id, status: { in: [...SETTLED_PAYMENT_STATUSES] } },
+        select: {
+          method: true,
+          amount: true,
+          refundedAmount: true,
+          effectiveReceivedAt: true,
+          processedAt: true,
+          createdAt: true,
+        },
+      }),
       invoice.bookingId
         ? prisma.booking.findFirst({
             where: { id: invoice.bookingId },
@@ -49,11 +54,32 @@ export async function buildInvoicePdfData(
     ]);
   });
 
+  const payments = paymentRows
+    .map((p) => ({
+      date: p.effectiveReceivedAt ?? p.processedAt ?? p.createdAt,
+      method: p.method as string,
+      amount: decimalToHalalas(p.amount),
+      refundedAmount: decimalToHalalas(p.refundedAmount ?? 0),
+    }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const total = decimalToHalalas(invoice.total);
+  const { outstanding } = calculateInvoiceBalance({
+    invoiceTotal: total,
+    grossSettled: payments.reduce((sum, p) => sum + p.amount, 0),
+    refundedSettled: payments.reduce((sum, p) => sum + p.refundedAmount, 0),
+    reservedPending: 0,
+    newCollectionBlocked: false,
+  });
+
   return {
+    kind,
+    status: invoice.status,
+    outstanding,
     invoiceNumber: invoice.number,
     invoiceId: invoice.id,
     issuedAt: invoice.issuedAt ?? invoice.createdAt,
-    paidAt: invoice.paidAt ?? new Date(),
+    paidAt: invoice.paidAt ?? null,
     sellerNameAr: orgSettings?.companyNameAr ?? 'مركز سواء',
     sellerVatNumber: orgSettings?.vatRegistrationNumber ?? null,
     sellerAddress: orgSettings?.sellerAddress ?? null,
@@ -61,12 +87,13 @@ export async function buildInvoicePdfData(
     brandColor: PLATFORM_BRAND.colors.primary,
     clientName: client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '—',
     serviceName: booking?.serviceNameSnapshot ?? (invoice.packagePurchaseId ? 'باقة جلسات' : '—'),
-    subtotal: Number(invoice.subtotal),
-    discountAmt: Number(invoice.discountAmt),
-    vatAmt: Number(invoice.vatAmt),
-    total: Number(invoice.total),
+    subtotal: decimalToHalalas(invoice.subtotal),
+    discountAmt: decimalToHalalas(invoice.discountAmt),
+    vatAmt: decimalToHalalas(invoice.vatAmt),
+    total,
     currency: invoice.currency,
-    paymentMethod: payment?.method ?? '—',
+    paymentMethod: payments.length > 0 ? payments[payments.length - 1].method : '—',
+    payments,
     qrDataUrl: null,
   };
 }

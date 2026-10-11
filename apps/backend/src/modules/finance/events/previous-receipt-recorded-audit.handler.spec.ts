@@ -133,15 +133,19 @@ describe("PreviousReceiptRecordedAuditHandler", () => {
       $queryRaw: async (parts: TemplateStringsArray, ...values: unknown[]) => {
         if (parts.join("").includes('"CronLock"'))
           return [{ name: "outbox-publisher" }];
-        const now = values[0] as Date,
-          limit = values[1] as number;
-        return rows
+        // Atomic claim: UPDATE ... SET "lockedUntil" WHERE id IN (SELECT ...) RETURNING.
+        const lockUntil = values[0] as Date,
+          now = values[1] as Date,
+          limit = values[2] as number;
+        const claimed = rows
           .filter(
             (row) =>
               row.status === "PENDING_V2" &&
               (!row.lockedUntil || row.lockedUntil < now),
           )
           .slice(0, limit);
+        for (const row of claimed) row.lockedUntil = lockUntil;
+        return claimed;
       },
       $executeRaw: async (
         parts: TemplateStringsArray,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Ticket } from 'lucide-react-native';
@@ -10,7 +10,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
 import { Glass } from '@/theme/components/Glass';
 import { AquaBackground, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
-import { goBackOrHome } from '@/lib/navigation';
+import { goBackOrHome, openOrReturnTo } from '@/lib/navigation';
 import { useDir } from '@/hooks/useDir';
 import { usePackageFamilies } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
@@ -19,6 +19,7 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 export default function PackagesIndexScreen() {
   const colors = useSawaaColors();
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
@@ -40,7 +41,7 @@ export default function PackagesIndexScreen() {
         <Glass
           radius={sawaaRadius.lg}
           style={styles.balanceCard}
-          onPress={() => router.push('/(client)/packages/purchases')}
+          onPress={() => openOrReturnTo(router, navigation.getState(), 'packages/purchases', '/(client)/packages/purchases')}
           interactive
           accessibilityLabel={t('packages.balance')}
         >

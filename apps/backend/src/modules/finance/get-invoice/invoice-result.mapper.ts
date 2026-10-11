@@ -1,5 +1,6 @@
 import type { Invoice } from '@prisma/client';
 import type { GetPublicInvoiceResult } from './get-public-invoice.handler';
+import { resolveReceiptPdfKey } from '../issue-invoice-receipt/invoice-pdf-key.helper';
 
 /** Map the stored invoice to the client-facing representation shared by both lookups. */
 export function mapInvoiceResult(invoice: Invoice, sellerName: string): GetPublicInvoiceResult {
@@ -24,6 +25,7 @@ export function mapInvoiceResult(invoice: Invoice, sellerName: string): GetPubli
     dueAt: invoice.dueAt?.toISOString() ?? null,
     paidAt: invoice.paidAt?.toISOString() ?? null,
     createdAt: invoice.createdAt.toISOString(),
-    pdfUrl: invoice.pdfUrl ?? null,
+    // Field name kept for API compatibility; it now carries the paid-receipt key only.
+    pdfUrl: resolveReceiptPdfKey(invoice),
   };
 }

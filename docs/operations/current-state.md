@@ -1,5 +1,22 @@
 # سواء — ملخص الإصدارات والتشغيل
 
+## توحيد نشر الاستيج — 11 أكتوبر 2026
+
+دُمج [PR #205](https://github.com/tariiq222/sawaa/pull/205) إلى `develop` عند `2fe5bddec4bfea84c8af7dc38ccb68150a517dea`. الآلية الوحيدة المعتمدة: بناء الصور في GitHub ثم تثبيت بصمات التطبيقات الثلاثة واستدعاء webhook محدد لها والتحقق من التشغيل؛ انظر [سياسة النشر](deployment-policy.md#fixed-staging-publication-path--owner-approved-2026-10-11).
+
+رصد مستقل 10:03 UTC أثبت جاهزية النشر `dep_umLIEZq-0hC9q6hT` وSHA الفعلي وبصمات الصور، مع بقاء حاويات خدمات البيانات والإنتاج وسجل الترحيلات كما كانت. لكن فحص workflow تعثر بسبب افتراض أن OpenShip يملأ `commitSha` للنشر من صور جاهزة؛ دُمج تصحيح المرجع الثابت في PR #206 عند `64b50bf30215e11940962a8477e5241a7ce6bbeb`؛ النشر التالي تعثر في التحقق لأن صحة الموقع كانت `starting` بعد إعلان OpenShip الجاهزية، ويُضاف انتظار محدود لصحة الحاويات داخل نفس الآلية. [سجل الرصد وحدوده](deployments/2026-10-11-staging-unified.md). لا يُعد هذا الرصد قبولًا يدويًا من المالك، ولا نجاحًا نهائيًا للـworkflow.
+
+## رصد الإنتاج — 10 أكتوبر 2026
+
+رصد 20:21:22 UTC: دُمج [PR #193](https://github.com/tariiq222/sawaa/pull/193) إلى `main` عند `512b7c85d1c412aa16b9bdc33d81d8573854b894`، وشجرته مطابقة لـ develop `7f15f659c` الذي يعمل على الاستيج (`dep_QrwQ32sVfC3VWFrL`). المرشح هو `b738b4da1` المقبول من المالك مضافًا إليه ملفا CI فقط (`build-images.yml` و`compose.images.yml`). نجحت `gate` و`critical-real-e2e` على رأس PR قبل الدمج. الإصدار `v2026.10.10.1`.
+
+- النشر `dep_6WwSoqpt_PJmgQMy` جاهز، وست خدمات healthy بنفس معرّف النشر. API واللوحة والموقع و`files.sawaa.sa` أعادت HTTP 200 عبر HTTPS. [إيصال النشر](deployments/2026-10-10-production-dep_6WwSoqpt_PJmgQMy.json).
+- نسخة كاملة قبل النشر في `/var/backups/sawaa/pre-production-20261010T201426Z/` (PostgreSQL والأدوار وRedis وMinIO مع SHA256SUMS). استعادة `db.dump` في حاوية بلا شبكة طابقت الأرقام: 117 ترحيلة، 2215 عميلًا، 5256 حجزًا، 166 دفعة. البيانات والأسرار خارج Git.
+- بعد النشر: 119 ترحيلة مكتملة وصفر فاشلة (أضيفت `add_mobile_phone_entry` و`add_client_phone_challenge`، إضافيتان فقط)، والأعداد الأربعة مطابقة للنسخة، وصفر أخطاء في سجل backend بعد التشغيل.
+- لم تُنشأ حجوزات أو مدفوعات إنتاج للاختبار. لم يُبنَ أو يُرفع تطبيق جوال؛ الدخول بالجوال يحتاج إصدارًا جديدًا من التطبيق.
+- الرجوع بالكود إلى `7d2d970265c39bb90cb22a5776f6a7da54488658` (`dep_etBeXI59_J480t7W`) مع إبقاء البيانات الحالية؛ لا يلزم إرجاع القاعدة لأن الترحيلتين إضافيتان.
+- سجل Docker ما زال يُظهر أخطاء BuildKit `only one connection allowed` أثناء البناء على الخادم، دون أن تُفشل هذا النشر. الانتقال لبناء الصور على GitHub (PR #194) بدأ ولم يُفعَّل للتشغيل بعد؛ `build-images` على `main` يحتاج متغيري المستودع `PRODUCTION_WEBSITE_API_URL` و`PRODUCTION_DEFAULT_ORG_ID`.
+
 ## رصد الاستيج — 6 أكتوبر 2026
 
 رصد 10:41:53 UTC: دُمج [PR #161](https://github.com/tariiq222/sawaa/pull/161) إلى develop عند `0675723c66204b881f873b90ed8b91759d0b8d90`، ونجحت بوابتا [CI 37448577849](https://github.com/tariiq222/sawaa/actions/runs/37448577849). النشر `dep_vnqKJvA7qnW54-O_` جاهز وست خدمات healthy بنفس معرّف النشر؛ API واللوحة والموقع أعادت HTTP 200. [إيصال النشر](deployments/2026-10-06-staging-dep_vnqKJvA7qnW54-O_.json). تطابقت بصمتا ملفات الحجوزات المترجمة مع البناء المحلي، ووجد وسم الدفع بالمركز في حزم اللوحة المنشورة.

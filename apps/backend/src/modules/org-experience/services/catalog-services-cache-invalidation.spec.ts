@@ -14,7 +14,7 @@ function fixture() {
     employee:{findFirst:jest.fn().mockResolvedValue(employee),findUnique:jest.fn().mockResolvedValue(employee),create:jest.fn().mockResolvedValue(employee),update:jest.fn().mockResolvedValue(employee)},
     service:{findFirst:jest.fn().mockResolvedValue({id:'service'})},
     branch:{findFirst:jest.fn().mockResolvedValue({id:'branch'})},
-    employeeService:{findUnique:jest.fn().mockResolvedValue({id:'link'}),create:jest.fn(),update:jest.fn(),delete:jest.fn(),deleteMany:jest.fn(),createMany:jest.fn()},
+    employeeService:{findUnique:jest.fn().mockResolvedValue({id:'link'}),findMany:jest.fn().mockResolvedValue([{id:'link'}]),create:jest.fn(),update:jest.fn(),delete:jest.fn(),deleteMany:jest.fn(),createMany:jest.fn()},
     employeeBranch:{findFirst:jest.fn().mockResolvedValue({id:'branch-link'}),create:jest.fn(),delete:jest.fn(),deleteMany:jest.fn(),createMany:jest.fn()},
     employeeServiceOption:{deleteMany:jest.fn()},serviceDurationOption:{deleteMany:jest.fn()},
   };

@@ -54,6 +54,7 @@ export function useRateBooking() {
     mutationFn: ({ id, score, comment, isPublic }) =>
       clientBookingsService.rate(id, { score, comment, isPublic }),
     onSuccess: (_data, vars) => {
+      void invalidateClientBookingResources(qc);
       qc.invalidateQueries({ queryKey: clientBookingsKeys.detail(vars.id) });
     },
     onError: (_error, vars) => {

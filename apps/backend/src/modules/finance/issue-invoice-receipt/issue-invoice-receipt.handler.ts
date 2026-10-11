@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Invoice } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
@@ -9,18 +10,31 @@ import type { PaymentCompletedPayload } from '../events/payment-completed.event'
 import { InvoicePdfRendererService } from './invoice-pdf-renderer.service';
 import { InvoiceReceiptIssuedEvent } from './invoice-receipt-issued.event';
 import { buildInvoicePdfData } from './build-invoice-pdf-data';
+import { resolveReceiptPdfKey } from './invoice-pdf-key.helper';
 
 const BUCKET = 'finance-invoices';
 
+export interface IssueReceiptOptions {
+  /** When false the receipt is stored but no delivery event is queued. */
+  deliver?: boolean;
+  /** Carried on the delivery event; defaults to DEFAULT_ORG_ID. */
+  organizationId?: string;
+}
+
 /**
  * Subscribes to `finance.payment.completed`. When the related invoice has
- * reached PAID status and no PDF has been generated yet, renders the receipt
- * PDF, uploads it to MinIO, atomically persists the storage key and an outbox event for
- * `finance.invoice.receipt.issued` so downstream channels (email/SMS/push)
- * can deliver it to the client.
+ * reached PAID status and no receipt has been issued yet, renders the receipt
+ * PDF (listing every COMPLETED payment), uploads it to MinIO under
+ * `receipts/<invoiceId>/<paymentId>-<uuid>.pdf` (attempt-specific, so a
+ * concurrent loser can never overwrite the winner's object), and atomically records the key
+ * (`receiptPdfKey`, `receiptIssuedAt`, `receiptPaymentId`, plus the legacy
+ * `pdfUrl`/`pdfGeneratedAt` for mixed-version safety) together with an
+ * outbox event for `finance.invoice.receipt.issued`.
  *
- * Idempotency: the handler short-circuits when the invoice is missing, not
- * yet PAID, or already has a `pdfUrl`. Safe for at-least-once delivery.
+ * Idempotency: one receipt per invoice, guarded by `receiptIssuedAt: null` in
+ * the update. A legacy `pdfUrl` never blocks issuance. The outbox event is
+ * staged only by the caller that wins the guarded update. Safe for
+ * at-least-once delivery.
  */
 @Injectable()
 export class IssueInvoiceReceiptHandler {
@@ -45,6 +59,15 @@ export class IssueInvoiceReceiptHandler {
 
   async handle(envelope: DomainEventEnvelope<PaymentCompletedPayload>): Promise<void> {
     const { invoiceId, paymentId, organizationId } = envelope.payload;
+    await this.issue(invoiceId, paymentId, { organizationId });
+  }
+
+  async issue(
+    invoiceId: string,
+    paymentId: string,
+    options: IssueReceiptOptions = {},
+  ): Promise<void> {
+    const deliver = options.deliver !== false;
 
     const invoice = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
@@ -60,8 +83,28 @@ export class IssueInvoiceReceiptHandler {
       );
       return;
     }
-    if (invoice.pdfUrl) {
-      this.logger.log(`Receipt: invoice ${invoiceId} already has PDF — skipping`);
+    if (invoice.receiptIssuedAt) {
+      this.logger.log(`Receipt: invoice ${invoiceId} already has a receipt — skipping`);
+      return;
+    }
+
+    // A valid legacy receipt (pdfUrl generated at/after paidAt) is already the
+    // receipt: a replayed or delayed event must not issue and email a second one.
+    if (resolveReceiptPdfKey(invoice)) {
+      this.logger.log(`Receipt: invoice ${invoiceId} already has a legacy receipt — skipping`);
+      return;
+    }
+
+    // Owner rule: an invoice containing a "previous receipt" payment gets no receipt.
+    const previousReceipt = await this.cls.run(async () => {
+      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+      return this.prisma.payment.findFirst({
+        where: { invoiceId: invoice.id, receiptRecordedBy: { not: null } },
+        select: { id: true },
+      });
+    });
+    if (previousReceipt) {
+      this.logger.log(`Receipt: invoice ${invoiceId} has a previous-receipt payment — skipping`);
       return;
     }
 
@@ -73,45 +116,131 @@ export class IssueInvoiceReceiptHandler {
         select: { lateEntryRecordedAt: true },
       });
     }) : null;
-    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, paymentId);
+    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, 'receipt');
     const pdfBuffer = await this.renderer.render(data);
 
-    const key = `invoices/${invoice.id}/${Date.now()}.pdf`;
+    // Attempt-specific key: only the winner's key is ever persisted, and a loser
+    // deletes only its own object.
+    const key = `receipts/${invoice.id}/${paymentId}-${randomUUID()}.pdf`;
     // Perform the upload for its side effect, but DISCARD the raw public URL it
-    // returns. We persist the storage KEY (bucket = 'finance-invoices') on
-    // `invoice.pdfUrl` instead, so read endpoints/email can mint short-lived
-    // presigned URLs and no raw, un-presigned object URL ever leaks (S2.3a).
+    // returns. We persist the storage KEY (bucket = 'finance-invoices') instead,
+    // so read endpoints/email can mint short-lived presigned URLs and no raw,
+    // un-presigned object URL ever leaks (S2.3a).
     await this.storage.uploadFile(BUCKET, key, pdfBuffer, 'application/pdf');
 
     const issued = new InvoiceReceiptIssuedEvent({
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
       clientId: invoice.clientId,
-      // Carries the storage KEY (not a URL); the email handler presigns it.
+      // Carries the receipt storage KEY (not a URL); field name kept for
+      // in-flight event compatibility. The email handler presigns it.
       pdfUrl: key,
-      organizationId: organizationId ?? DEFAULT_ORG_ID,
+      organizationId: options.organizationId ?? DEFAULT_ORG_ID,
     });
-    await this.cls.run(async () => {
+    let won: boolean;
+    try {
+      won = await this.commitReceipt(invoice, key, paymentId, issued, deliver, booking);
+    } catch (err) {
+      // The upload is already in storage; if the transaction did not commit our
+      // key, nothing references it and a retry will upload under a new key.
+      await this.discardUploadUnlessCommitted(invoice.id, key);
+      throw err;
+    }
+    if (!won) {
+      this.logger.log(`Receipt: invoice ${invoiceId} was receipted concurrently — discarding ${key}`);
+      await this.discardLostUpload(key);
+    }
+  }
+
+  private async commitReceipt(
+    invoice: Invoice,
+    key: string,
+    paymentId: string,
+    issued: InvoiceReceiptIssuedEvent,
+    deliver: boolean,
+    booking: { lateEntryRecordedAt: Date | null } | null,
+  ): Promise<boolean> {
+    return this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      await this.rlsTransaction.withTransaction(async (tx) => {
-        // Commit the PDF and its delivery intent together. The guarded write
-        // also prevents concurrent payment events from issuing two receipts.
+      return this.rlsTransaction.withTransaction(async (tx) => {
+        // Commit the receipt and its delivery intent together. The guarded
+        // write also prevents concurrent payment events from issuing two.
+        const issuedAt = new Date();
         const { count } = await tx.invoice.updateMany({
-          where: { id: invoice.id, status: 'PAID', pdfUrl: null },
-          data: { pdfUrl: key, pdfGeneratedAt: new Date() },
-        });
-        if (count === 0 || booking?.lateEntryRecordedAt) return;
-        await tx.outboxEvent.create({
+          where: {
+            id: invoice.id,
+            status: 'PAID',
+            receiptIssuedAt: null,
+            // An old-version worker may have committed a legacy receipt (pdfUrl +
+            // pdfGeneratedAt >= paidAt) since our read; never overwrite it.
+            ...(invoice.paidAt
+              ? {
+                  OR: [
+                    { pdfUrl: null },
+                    { pdfGeneratedAt: null },
+                    { pdfGeneratedAt: { lt: invoice.paidAt } },
+                  ],
+                }
+              : { pdfUrl: null }),
+          },
           data: {
-            id: issued.eventId,
-            aggregateId: invoice.id,
-            eventType: issued.eventName,
-            status: 'PENDING_V2',
-            deliveryLane: 'PENDING_V2',
-            payload: issued.toEnvelope() as unknown as Prisma.InputJsonValue,
+            receiptPdfKey: key,
+            receiptIssuedAt: issuedAt,
+            receiptPaymentId: paymentId,
+            // Dual-write the legacy columns (pdfUrl = bare key, pdfGeneratedAt =
+            // same instant, which is >= paidAt) so older app versions (rollback
+            // or a rolling deploy) still find the receipt. resolveReceiptPdfKey
+            // prefers receiptPdfKey, so new readers are unaffected.
+            pdfUrl: key,
+            pdfGeneratedAt: issuedAt,
           },
         });
+        if (count === 0) return false;
+        if (deliver && !booking?.lateEntryRecordedAt) {
+          await tx.outboxEvent.create({
+            data: {
+              id: issued.eventId,
+              aggregateId: invoice.id,
+              eventType: issued.eventName,
+              status: 'PENDING_V2',
+              deliveryLane: 'PENDING_V2',
+              payload: issued.toEnvelope() as unknown as Prisma.InputJsonValue,
+            },
+          });
+        }
+        return true;
       });
     });
+  }
+
+  /**
+   * After a failed transaction, delete our upload unless a re-read shows the
+   * commit actually landed (ambiguous failure). If the re-read itself fails we
+   * keep the object: an orphan is cheaper than deleting a committed receipt.
+   */
+  private async discardUploadUnlessCommitted(invoiceId: string, key: string): Promise<void> {
+    try {
+      const current = await this.cls.run(async () => {
+        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+        return this.prisma.invoice.findUnique({
+          where: { id: invoiceId },
+          select: { receiptPdfKey: true },
+        });
+      });
+      if (current?.receiptPdfKey === key) return;
+    } catch (readErr) {
+      this.logger.warn(`Receipt: could not verify commit of ${key}: ${(readErr as Error).message}`);
+      return;
+    }
+    await this.discardLostUpload(key);
+  }
+
+  /** Best-effort cleanup of an upload whose guarded update lost the race. */
+  private async discardLostUpload(key: string): Promise<void> {
+    try {
+      await this.storage.deleteFile(BUCKET, key);
+    } catch (err) {
+      this.logger.warn(`Receipt: could not delete orphan ${key}: ${(err as Error).message}`);
+    }
   }
 }

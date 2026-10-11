@@ -10,6 +10,11 @@ function createMetricsMock() {
   };
 }
 
+/** $executeRaw statements that touch OutboxEvent (the cron-leader release also uses $executeRaw). */
+function outboxExecuteRawCalls(executeRaw: jest.Mock) {
+  return executeRaw.mock.calls.filter((c) => (c[0] as string[]).join('?').includes('"OutboxEvent"'));
+}
+
 describe('OutboxPublisherCron', () => {
   it('publishes pending outbox events and stamps publishedAt', async () => {
     const rows = [
@@ -40,7 +45,7 @@ describe('OutboxPublisherCron', () => {
     expect(eventBus.publish).toHaveBeenCalledWith('bookings.booking.created', rows[0].payload);
     expect(eventBus.publish).toHaveBeenCalledWith('bookings.booking.created', rows[1].payload);
 
-    expect(prisma.$executeRaw).toHaveBeenCalled();
+    expect(outboxExecuteRawCalls(prisma.$executeRaw as jest.Mock)).toHaveLength(0);
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['evt-1', 'evt-2'] } },
       data: { status: 'PUBLISHED', publishedAt: expect.any(Date), lockedUntil: null },
@@ -81,6 +86,49 @@ describe('OutboxPublisherCron', () => {
     const update = (prisma.outboxEvent.update as jest.Mock).mock.calls[0][0];
     expect(update.data).toEqual(expect.objectContaining({ attemptCount: 1 }));
     expect(update.data.status).toBeUndefined();
+  });
+
+  it('claims rows and sets the lease in one atomic statement (no gap between lock and lease)', async () => {
+    const rows = [
+      { id: 'evt-1', eventType: 'bookings.booking.created', attemptCount: 0, createdAt: new Date(1), payload: { eventId: 'e1' } },
+    ];
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValueOnce([{ acquired: true }]).mockResolvedValueOnce(rows),
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      outboxEvent: { updateMany: jest.fn().mockResolvedValue({ count: 1 }), update: jest.fn() },
+    };
+    const cron = new OutboxPublisherCron(
+      prisma as never,
+      { publish: jest.fn().mockResolvedValue(undefined) } as never,
+      createMetricsMock() as never,
+    );
+    await cron.execute();
+
+    // Call 0 is the cron-leader lease; call 1 is the outbox claim.
+    const claimSql = ((prisma.$queryRaw as jest.Mock).mock.calls[1][0] as string[]).join('?');
+    expect(claimSql).toMatch(/UPDATE "OutboxEvent"/);
+    expect(claimSql).toMatch(/SET "lockedUntil"/);
+    expect(claimSql).toMatch(/FOR UPDATE SKIP LOCKED/);
+    expect(claimSql).toMatch(/RETURNING/);
+    // The lease must NOT be applied by a separate statement after the select,
+    // otherwise the row lock is released in the gap and two publishers can
+    // claim the same rows.
+    expect(outboxExecuteRawCalls(prisma.$executeRaw as jest.Mock)).toHaveLength(0);
+  });
+
+  it('publishes claimed rows in createdAt order even though RETURNING order is unspecified', async () => {
+    const rows = [
+      { id: 'evt-late', eventType: 'a.b', attemptCount: 0, createdAt: new Date(2000), payload: { n: 2 } },
+      { id: 'evt-early', eventType: 'a.b', attemptCount: 0, createdAt: new Date(1000), payload: { n: 1 } },
+    ];
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValueOnce([{ acquired: true }]).mockResolvedValueOnce(rows),
+      $executeRaw: jest.fn(),
+      outboxEvent: { updateMany: jest.fn().mockResolvedValue({ count: 2 }), update: jest.fn() },
+    };
+    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+    await new OutboxPublisherCron(prisma as never, eventBus as never, createMetricsMock() as never).execute();
+    expect(eventBus.publish.mock.calls.map((c) => (c[1] as { n: number }).n)).toEqual([1, 2]);
   });
 
   it('is a no-op when no pending events exist', async () => {
@@ -134,7 +182,7 @@ describe('OutboxPublisherCron', () => {
     const cron = new OutboxPublisherCron(prisma as never, eventBus as never, metrics as never);
     await cron.execute();
 
-    expect(prisma.$executeRaw).toHaveBeenCalled();
+    expect(outboxExecuteRawCalls(prisma.$executeRaw as jest.Mock)).toHaveLength(0);
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['evt-ok'] } },
       data: { status: 'PUBLISHED', publishedAt: expect.any(Date), lockedUntil: null },

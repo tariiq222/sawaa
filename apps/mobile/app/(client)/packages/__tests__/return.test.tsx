@@ -168,6 +168,25 @@ it('keeps an unconfirmed native purchase recoverable', async () => {
   expect(mockClearAttemptKey).not.toHaveBeenCalled();
 });
 
+it('clears a native purchase once the server reports it as terminal and not paid', async () => {
+  mockParams = { ...target, origin: 'native' };
+  mockPurchase.data = { id: 'purchase-1', packageId: 'package-1', branchId: 'branch-1', packageFamilyId: 'family-1', status: 'REFUNDED' };
+  mockPurchase.dataUpdatedAt = 1;
+  const screen = render(<PackagePaymentReturnScreen />);
+  expect(screen.getByText('packages.paymentFailed')).toBeTruthy();
+  await waitFor(() => expect(mockClearPending).toHaveBeenCalledTimes(1));
+  // The attempt key stays so a retry resumes the same purchase.
+  expect(mockClearAttemptKey).not.toHaveBeenCalled();
+});
+
+it('keeps a native purchase when the status read failed without server data', () => {
+  mockParams = { ...target, origin: 'native' };
+  mockPurchase.data = undefined;
+  mockPurchase.isError = true;
+  render(<PackagePaymentReturnScreen />);
+  expect(mockClearPending).not.toHaveBeenCalled();
+});
+
 it('does not clear an attempt for route targets that disagree with authenticated purchase', () => {
   mockPurchase.data = { id: 'purchase-1', packageId: 'other-package', branchId: 'branch-1', packageFamilyId: 'family-1', status: 'ACTIVE' };
   render(<PackagePaymentReturnScreen />);

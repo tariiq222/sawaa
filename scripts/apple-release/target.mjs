@@ -9,7 +9,7 @@ export function releaseTarget(branch) {
     apiUrl: staging ? 'https://staging.sawaa.sa/api/v1' : 'https://api.sawaa.sa/api/v1',
     projectId: staging ? 'proj_7M0RNj59nQnafh1m' : 'proj_tsxe0sAW3u2AMSGO',
     readinessUrl: staging ? 'https://staging.sawaa.sa/api/v1/health/ready' : 'https://api.sawaa.sa/api/v1/health/ready',
-    websiteUrl: staging ? 'https://staging.sawaa.sa/' : 'https://www.sawaa.sa/',
+    websiteUrl: staging ? 'https://staging.sawaa.sa/' : 'https://sawaa.sa/',
     dashboardUrl: staging ? null : 'https://admin.sawaa.sa/',
   };
 }

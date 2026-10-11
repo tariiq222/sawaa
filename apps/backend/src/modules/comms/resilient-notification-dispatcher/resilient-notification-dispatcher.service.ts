@@ -264,14 +264,17 @@ export class ResilientNotificationDispatcher {
             }),
           ),
         );
+        // A fulfilled no-provider result is a skip, not a successful send.
+        // Preserve partial success without replaying tokens already delivered.
+        if (results.some((r) => r.status === 'fulfilled' && r.value.sent)) break;
         const failures = results.filter((r) => r.status === 'rejected');
-        if (failures.length > 0 && failures.length === results.length) {
+        if (failures.length > 0) {
           const errors = failures.map((r) =>
             r.status === 'rejected' ? String(r.reason?.message ?? r.reason) : '',
           );
           throw new Error(`All PUSH notifications failed: ${errors.join('; ')}`);
         }
-        break;
+        return { skipped: 'No FCM provider configured' };
       }
       default: {
         const exhaustiveCheck: never = channel;

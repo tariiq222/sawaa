@@ -19,6 +19,25 @@ export function goBackOrHome(router: Router, fallback: Href = '/(guest)/home'): 
   router.replace(fallback);
 }
 
+/** The slice of React Navigation stack state `openOrReturnTo` reads. */
+type StackState = { index: number; routes: readonly { name: string }[] } | undefined;
+
+/**
+ * Opens a sibling screen, or pops back to it when it is the screen right below
+ * this one. Two screens that link to each other (the package catalog and the
+ * package balance) would otherwise stack copies on every tap, and the back
+ * button would walk through each copy before leaving the section.
+ */
+export function openOrReturnTo(router: Router, state: StackState, routeName: string, href: Href): void {
+  const previous = state && state.index > 0 ? state.routes[state.index - 1] : undefined;
+  if (previous?.name === routeName) {
+    router.back();
+    return;
+  }
+
+  router.push(href);
+}
+
 /** Query params exactly as expo-router hands them to a screen or layout. */
 export type RouteParams = Record<string, string | string[] | undefined>;
 

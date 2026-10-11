@@ -34,6 +34,14 @@ describe('SendInvoiceReceiptHandler', () => {
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
 
+  it('returns early without emailing when the invoice was already sent', async () => {
+    prisma.invoice.findUnique.mockResolvedValue({bookingId: null, sentToClientAt: new Date()});
+    await handler.handle({payload: {invoiceId: 'i', clientId: 'c', pdfUrl: 'key', invoiceNumber: 1}} as never);
+    expect(prisma.client.findUnique).not.toHaveBeenCalled();
+    expect(emailFactory.resolve).not.toHaveBeenCalled();
+    expect(prisma.invoice.update).not.toHaveBeenCalled();
+  });
+
   it('skips when client has no email' , async () => {
     prisma.client.findUnique.mockResolvedValue({ email: null, firstName: 'X' });
     await handler.handle({ payload: { invoiceId: 'inv-1', clientId: 'c1', pdfUrl: 'u', invoiceNumber: 1, organizationId: 'o' } } as any);

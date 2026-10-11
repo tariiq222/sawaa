@@ -1,4 +1,5 @@
 import axios, {
+  CanceledError,
   type AxiosError,
   type InternalAxiosRequestConfig,
 } from 'axios';
@@ -16,6 +17,9 @@ import {
 } from './native-session-state';
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
+// Bare auth calls bypass the `api` instance, so they need their own bound;
+// every 401 waiter shares the refresh promise and would otherwise hang with it.
+const REQUEST_TIMEOUT_MS = 15000;
 
 let refreshAccessTokenPromise: { epoch: number; promise: Promise<string | null> } | null = null;
 
@@ -33,6 +37,7 @@ function refreshAccessToken(): Promise<string | null> {
         const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
           `${API_URL}/mobile/auth/refresh`,
           { refreshToken },
+          { timeout: REQUEST_TIMEOUT_MS },
         );
 
         if (!data?.accessToken || !data.refreshToken) {
@@ -49,9 +54,11 @@ function refreshAccessToken(): Promise<string | null> {
           // to storage. A subsequent login clears the logout fence, so it is
           // never revoked by a stale refresh from the prior session.
           if (shouldRevokeStaleRefresh(epoch)) {
-            await axios.post(`${API_URL}/mobile/auth/logout`, {
-              refreshToken: data.refreshToken,
-            });
+            await axios.post(
+              `${API_URL}/mobile/auth/logout`,
+              { refreshToken: data.refreshToken },
+              { timeout: REQUEST_TIMEOUT_MS },
+            );
           }
           return null;
         }
@@ -79,7 +86,7 @@ function refreshAccessToken(): Promise<string | null> {
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -107,7 +114,15 @@ api.interceptors.request.use(
 
 // Response interceptor: handle token refresh and errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A response that arrives after logout/login belongs to the previous user;
+    // never hand it to callers that would cache it for the new session.
+    const requestEpoch = (response.config as InternalAxiosRequestConfig & { _sessionEpoch?: number })._sessionEpoch;
+    if (requestEpoch !== undefined && !isSessionCurrent(requestEpoch)) {
+      return Promise.reject(new CanceledError('Session changed before the response arrived'));
+    }
+    return response;
+  },
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;

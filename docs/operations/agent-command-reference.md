@@ -25,6 +25,7 @@ pnpm db:reset             # migrate + seed
 pnpm openapi:sync         # backend exports openapi.json + dashboard regenerates client
 
 pnpm e2e:dashboard        # dashboard Playwright flows
+pnpm test:premerge        # fresh isolated local Playwright + persisted booking journey
 ```
 
 ### Running a single test

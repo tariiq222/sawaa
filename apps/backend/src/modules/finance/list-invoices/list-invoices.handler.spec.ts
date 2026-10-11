@@ -16,7 +16,8 @@ const mockInvoices = [
     issuedAt: new Date('2026-05-01'),
     paidAt: new Date('2026-05-02'),
     sentToClientAt: null,
-    pdfUrl: 'finance/invoices/inv-1.pdf',
+    pdfUrl: 'statements/legacy.pdf',
+    receiptPdfKey: 'receipts/inv-1/pay-1.pdf',
     createdAt: new Date('2026-05-01'),
   },
   {
@@ -33,7 +34,8 @@ const mockInvoices = [
     issuedAt: null,
     paidAt: null,
     sentToClientAt: null,
-    pdfUrl: null,
+    pdfUrl: 'statements/inv-2.pdf',
+    receiptPdfKey: null,
     createdAt: new Date('2026-05-03'),
   },
 ];
