@@ -66,3 +66,5 @@
 ## Live verification correction
 
 The first scoped image deployment became ready, but the workflow verifier rejected OpenShip’s intentionally absent commit metadata for fully image-backed snapshots. Add a staging-only null-metadata regression, retain exact frozen ref/digest/live-health SHA proof and production’s existing commit binding. Correct the historical website image override without a container action. Publish the correction and dated initial evidence in one reviewed PR, then prove green automatic and unchanged-source manual publication. Final workflow receipts remain the authoritative successful-publication evidence.
+
+2026-10-11 runtime correction: OpenShip ready preceded website Docker health. Retain strict source/digest/infrastructure validation, wait only for application starting within a fixed bound, then prove automatic and unchanged-source manual publication.
