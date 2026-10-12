@@ -11,21 +11,21 @@ it('sends the selected offer and family identity with the same idempotency key',
   const input = { packageId: 'offer-9', packageFamilyId: 'family-1', branchId: 'branch-1', idempotencyKey: 'attempt-1' }
   await families.initPackagePurchase(input)
   const [url, options] = vi.mocked(fetch).mock.calls[0]!
-  expect(url).toBe('http://api.test/api/v1/public/payments/package-purchases/init')
+  expect(url).toBe('http://api.test/api/v1/client/package-purchases/init')
   expect(options?.credentials).toBe('include')
   expect(JSON.parse(String(options?.body))).toEqual(input)
 })
 it('reads own balances without a caller-supplied client identity', async () => {
   await families.listMyPackagePurchases()
   const [url, options] = vi.mocked(fetch).mock.calls[0]!
-  expect(url).toBe('http://api.test/api/v1/public/me/packages/purchases')
+  expect(url).toBe('http://api.test/api/v1/client/packages/purchases')
   expect(options?.credentials).toBe('include')
 })
 it('submits the exact credit and time without inventing a price or client identity', async () => {
   const input = { creditId: 'credit-1', branchId: 'branch-1', scheduledAt: '2026-12-31T09:00:00Z' }
   await families.bookMyPackageCredit(input)
   const [url, options] = vi.mocked(fetch).mock.calls[0]!
-  expect(url).toBe('http://api.test/api/v1/public/me/packages/book')
+  expect(url).toBe('http://api.test/api/v1/client/packages/book')
   expect(JSON.parse(String(options?.body))).toEqual(input)
   expect(options?.credentials).toBe('include')
 })

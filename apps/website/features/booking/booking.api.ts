@@ -11,7 +11,7 @@ export interface AuthedBookingPayload {
   serviceId: string;
   employeeId: string;
   branchId: string;
-  startsAt: string;
+  scheduledAt: string;
   /** Specific duration/price option chosen for the service */
   durationOptionId?: string;
   /** Delivery channel (IN_PERSON or ONLINE) */
@@ -135,7 +135,7 @@ export async function createBooking(payload: AuthedBookingPayload): Promise<Auth
   // booking-options; omit it so the backend @IsUUID validation is not tripped.
   const body = { ...payload };
   if (!body.durationOptionId) delete body.durationOptionId;
-  const json = await publicFetch<unknown>('/public/bookings', {
+  const json = await publicFetch<unknown>('/client/bookings', {
     method: 'POST',
     credentials: 'include',
     body: JSON.stringify(body),
@@ -149,7 +149,7 @@ export async function createBooking(payload: AuthedBookingPayload): Promise<Auth
  * `invoiceId` (not a bookingId).
  */
 export async function initPayment(invoiceId: string): Promise<{ paymentId: string; redirectUrl: string }> {
-  const json = await publicFetch<unknown>('/public/payments/init', {
+  const json = await publicFetch<unknown>('/client/payments/init', {
     method: 'POST',
     credentials: 'include',
     body: JSON.stringify({ invoiceId }),

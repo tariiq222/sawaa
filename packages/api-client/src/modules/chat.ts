@@ -37,13 +37,13 @@ export async function getCurrentGuestChatConversation(): Promise<ChatConversatio
 }
 
 export async function getCurrentClientChatConversation(): Promise<ChatConversationDetail> {
-  const result = await chatRequest<ChatConversationDetail>('/public/me/chat/conversations/current')
+  const result = await chatRequest<ChatConversationDetail>('/client/chat/conversations/current')
   return toConversationDetail(result)
 }
 
 export async function getClientChatConversation(conversationId: string): Promise<ClientChatConversationDetail> {
   const result = await chatRequest<ClientChatConversationDetail>(
-    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}`,
+    `/client/chat/conversations/${encodeURIComponent(conversationId)}`,
   )
   return {
     id: result.id,
@@ -60,7 +60,7 @@ export async function listClientChatConversations(
   requestOptions?: Pick<RequestInit, 'signal'>,
 ): Promise<ClientChatConversationPage> {
   const result = await chatRequest<ClientChatConversationPage>(
-    `/public/me/chat/conversations${messageQuery(query)}`,
+    `/client/chat/conversations${messageQuery(query)}`,
     requestOptions,
   )
   return toClientChatConversationPage(result)
@@ -70,7 +70,7 @@ export async function claimGuestChatConversation(
   conversationId: string,
 ): Promise<ClaimedChatConversation> {
   const result = await chatMutation<ClaimedChatConversation>(
-    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/claim`,
+    `/client/chat/conversations/${encodeURIComponent(conversationId)}/claim`,
     {},
   )
   return {
@@ -95,7 +95,7 @@ export async function sendClientChatMessage(
   payload: SendChatMessageRequest,
 ): Promise<ChatMessage> {
   const result = await chatMutation<ChatMessage>(
-    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
+    `/client/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
     payload,
   )
   return toChatMessage(result)
@@ -117,7 +117,7 @@ export async function retryClientChatMessage(
   messageId: string,
 ): Promise<ChatMessage> {
   const result = await chatMutation<ChatMessage>(
-    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/retry`,
+    `/client/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/retry`,
     {},
   )
   return toChatMessage(result)
@@ -141,7 +141,7 @@ export async function listClientChatMessages(
   requestOptions?: Pick<RequestInit, 'signal'>,
 ): Promise<ChatMessagePage> {
   const result = await chatRequest<ChatMessagePage>(
-    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/messages${messageQuery(query)}`,
+    `/client/chat/conversations/${encodeURIComponent(conversationId)}/messages${messageQuery(query)}`,
     requestOptions,
   )
   return toChatMessagePage(result)
@@ -162,7 +162,7 @@ export async function requestClientChatHandoff(
   conversationId: string,
 ): Promise<ChatConversationDetail> {
   const result = await chatMutation<ChatConversationDetail>(
-    `/public/me/chat/conversations/${encodeURIComponent(conversationId)}/handoff`,
+    `/client/chat/conversations/${encodeURIComponent(conversationId)}/handoff`,
     {},
   )
   return toConversationDetail(result)
@@ -195,7 +195,7 @@ async function mutateOperation(
   expectedVersion: number,
 ): Promise<ChatOperation> {
   const result = await chatMutation<ChatOperation>(
-    `/public/me/chat/operations/${encodeURIComponent(operationId)}/${action}`,
+    `/client/chat/operations/${encodeURIComponent(operationId)}/${action}`,
     { expectedVersion },
   )
   return toChatOperation(result)

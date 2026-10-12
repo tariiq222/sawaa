@@ -206,7 +206,7 @@ describe('chat routes and browser credentials', () => {
   it('uses the real guest and authenticated conversation/message routes', async () => {
     vi.mocked(fetch).mockImplementation(async (url) => {
       const path = String(url)
-      if (path.includes('/public/me/chat/conversations?')) {
+      if (path.includes('/client/chat/conversations?')) {
         return wrapped({ data: [], meta: { limit: 5, nextCursor: null, hasMore: false } })
       }
       if (path.includes('/messages')) {
@@ -235,16 +235,16 @@ describe('chat routes and browser credentials', () => {
       'http://api.test/api/v1/public/branding',
       'http://api.test/api/v1/public/chat/conversations',
       'http://api.test/api/v1/public/chat/conversations/current',
-      'http://api.test/api/v1/public/me/chat/conversations/current',
-      'http://api.test/api/v1/public/me/chat/conversations/conversation%2Fselected',
-      'http://api.test/api/v1/public/me/chat/conversations?cursor=conversation%2F1&limit=5',
-      'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/claim',
+      'http://api.test/api/v1/client/chat/conversations/current',
+      'http://api.test/api/v1/client/chat/conversations/conversation%2Fselected',
+      'http://api.test/api/v1/client/chat/conversations?cursor=conversation%2F1&limit=5',
+      'http://api.test/api/v1/client/chat/conversations/conversation%2F1/claim',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages',
-      'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages',
+      'http://api.test/api/v1/client/chat/conversations/conversation%2F1/messages',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages?cursor=message%2F1&limit=5',
-      'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages?cursor=message%2F1&limit=5',
+      'http://api.test/api/v1/client/chat/conversations/conversation%2F1/messages?cursor=message%2F1&limit=5',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/messages/message%2F1/retry',
-      'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/messages/message%2F1/retry',
+      'http://api.test/api/v1/client/chat/conversations/conversation%2F1/messages/message%2F1/retry',
     ])
     expect(vi.mocked(fetch).mock.calls.every(([, init]) => init?.credentials === 'include')).toBe(true)
 
@@ -285,10 +285,10 @@ describe('chat routes and browser credentials', () => {
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
       'http://api.test/api/v1/public/branding',
       'http://api.test/api/v1/public/chat/conversations/conversation%2F1/handoff',
-      'http://api.test/api/v1/public/me/chat/conversations/conversation%2F1/handoff',
-      'http://api.test/api/v1/public/me/chat/operations/operation%2F1/acknowledge',
-      'http://api.test/api/v1/public/me/chat/operations/operation%2F1/confirm',
-      'http://api.test/api/v1/public/me/chat/operations/operation%2F1/decline',
+      'http://api.test/api/v1/client/chat/conversations/conversation%2F1/handoff',
+      'http://api.test/api/v1/client/chat/operations/operation%2F1/acknowledge',
+      'http://api.test/api/v1/client/chat/operations/operation%2F1/confirm',
+      'http://api.test/api/v1/client/chat/operations/operation%2F1/decline',
     ])
 
     const mutationCalls = vi.mocked(fetch).mock.calls.slice(1)

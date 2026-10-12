@@ -29,7 +29,7 @@ export async function getMyBookingInvoice(
   cookieHeader: string,
 ): Promise<InvoiceDetail> {
   const res = await fetch(
-    `${getApiBase()}/public/me/bookings/${encodeURIComponent(bookingId)}/invoice`,
+    `${getApiBase()}/client/bookings/${encodeURIComponent(bookingId)}/invoice`,
     {
       cache: 'no-store',
       headers: { cookie: cookieHeader },

@@ -107,8 +107,18 @@ export interface ClientRegisterPayload {
   name?: string;
 }
 
+export type ClientCancellationReason =
+  | 'CLIENT_REQUESTED'
+  | 'EMPLOYEE_UNAVAILABLE'
+  | 'NO_SHOW'
+  | 'SYSTEM_EXPIRED'
+  | 'OTHER';
+
 export interface CancelMyBookingPayload {
-  reason?: string;
+  /** CancellationReason enum; the backend defaults to CLIENT_REQUESTED. */
+  reason?: ClientCancellationReason;
+  /** Free-text note shown to staff. */
+  notes?: string;
 }
 
 export interface RescheduleMyBookingPayload {

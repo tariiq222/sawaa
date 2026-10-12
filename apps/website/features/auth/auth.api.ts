@@ -62,7 +62,7 @@ export async function clientRegisterApi(
 export async function getMeApi(callerSignal?: AbortSignal): Promise<ClientProfile> {
   ensureInitialised()
   return withAuthDeadline(
-    (signal) => apiRequest<ClientProfile>('/public/me', {
+    (signal) => apiRequest<ClientProfile>('/client/profile', {
       credentials: 'include',
       signal,
     }),
@@ -81,7 +81,7 @@ export async function getMyBookingsApi(
 
 export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem & { cancellationRefund?: PersistedCancellationRefund }> {
   ensureInitialised()
-  return apiRequest<ClientBookingItem & { cancellationRefund?: PersistedCancellationRefund }>(`/public/me/bookings/${encodeURIComponent(bookingId)}`, {
+  return apiRequest<ClientBookingItem & { cancellationRefund?: PersistedCancellationRefund }>(`/client/bookings/${encodeURIComponent(bookingId)}`, {
     credentials: 'include',
   })
 }
@@ -93,12 +93,12 @@ export async function getMyCancellationPreviewApi(bookingId: string) {
 
 export async function cancelMyBookingApi(
   bookingId: string,
-  reason?: string,
+  notes?: string,
   quote?: CancellationQuoteInput,
 ): Promise<Omit<ClientCancellationResult, 'booking'>> {
   ensureInitialised()
   if (!quote) throw new Error('Cancellation preview consent is required')
-  const result = await cancelMyBooking(bookingId, { reason, ...quote })
+  const result = await cancelMyBooking(bookingId, { notes, ...quote })
   return { status: result.status, requiresApproval: result.requiresApproval, ...(result.refund ? { refund: result.refund } : {}) }
 }
 

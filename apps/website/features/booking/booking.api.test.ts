@@ -144,20 +144,20 @@ describe('booking.api', () => {
   });
 
   describe('createBooking', () => {
-    it('POSTs to /public/bookings with credentials: include', async () => {
+    it('POSTs to /client/bookings with credentials: include', async () => {
       queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'bk1', invoiceId: 'inv1' } }));
       const result = await createBooking({
         serviceId: 'svc1',
         employeeId: 'emp1',
         branchId: 'br1',
-        startsAt: '2026-07-01T10:00:00.000Z',
+        scheduledAt: '2026-07-01T10:00:00.000Z',
         durationOptionId: 'opt1',
         deliveryType: 'ONLINE',
       });
       expect(result).toEqual({ id: 'bk1', invoiceId: 'inv1' });
       const [url, init] = fetchMock.mock.calls[1];
-      expect(url).toBe('http://api.local/api/v1/public/bookings');
+      expect(url).toBe('http://api.local/api/v1/client/bookings');
       expect(init.method).toBe('POST');
       expect(init.credentials).toBe('include');
       expect(init.headers.get('X-CSRF-Token')).toBe(CSRF_TOKEN);
@@ -166,7 +166,7 @@ describe('booking.api', () => {
         serviceId: 'svc1',
         employeeId: 'emp1',
         branchId: 'br1',
-        startsAt: '2026-07-01T10:00:00.000Z',
+        scheduledAt: '2026-07-01T10:00:00.000Z',
         durationOptionId: 'opt1',
         deliveryType: 'ONLINE',
       });
@@ -179,7 +179,7 @@ describe('booking.api', () => {
         serviceId: 'svc1',
         employeeId: 'emp1',
         branchId: 'br1',
-        startsAt: '2026-07-01T10:00:00.000Z',
+        scheduledAt: '2026-07-01T10:00:00.000Z',
         durationOptionId: '',
       });
       const body = JSON.parse(fetchMock.mock.calls[1][1].body as string);
@@ -196,7 +196,7 @@ describe('booking.api', () => {
         serviceId: 'svc1',
         employeeId: 'emp1',
         branchId: 'br1',
-        startsAt: '2026-07-01T10:00:00.000Z',
+        scheduledAt: '2026-07-01T10:00:00.000Z',
         deliveryType: 'ONLINE',
         payAtClinic: true,
       });
@@ -207,7 +207,7 @@ describe('booking.api', () => {
   });
 
   describe('initPayment', () => {
-    it('POSTs the invoiceId to /public/payments/init with credentials', async () => {
+    it('POSTs the invoiceId to /client/payments/init with credentials', async () => {
       queueCsrfBootstrap();
       fetchMock.mockResolvedValueOnce(
         jsonResponse({ data: { paymentId: 'pay1', redirectUrl: 'https://moyasar/pay1' } }),
@@ -215,7 +215,7 @@ describe('booking.api', () => {
       const result = await initPayment('inv1');
       expect(result).toEqual({ paymentId: 'pay1', redirectUrl: 'https://moyasar/pay1' });
       const [url, init] = fetchMock.mock.calls[1];
-      expect(url).toBe('http://api.local/api/v1/public/payments/init');
+      expect(url).toBe('http://api.local/api/v1/client/payments/init');
       expect(init.method).toBe('POST');
       expect(init.credentials).toBe('include');
       expect(init.headers.get('X-CSRF-Token')).toBe(CSRF_TOKEN);
