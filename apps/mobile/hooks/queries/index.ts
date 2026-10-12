@@ -40,6 +40,7 @@ export {
 export { useBookingCancellationPreview } from './useBookingCancellationPreview';
 
 export { usePublicBranches, publicBranchKeys } from './usePublicBranches';
+export { usePublicBranch } from './usePublicBranch';
 export { useBookingOptions, bookingOptionKeys } from './useBookingOptions';
 export { useAvailableDays, availableDaysKeys } from './useAvailableDays';
 export { invalidateClientBookingResources } from './invalidateClientBookingResources';
