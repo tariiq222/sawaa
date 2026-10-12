@@ -9,7 +9,7 @@ import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
 import { usePaymentMethods } from '@/features/payment/use-payment-methods';
 import { paymentFailureMessage } from '@/features/payment/payment-error';
-import { paymentStatusKey, PAYMENT_STATUS_TOKEN, isInvoicePayable } from '@/features/account/status-labels';
+import { paymentStatusKey, PAYMENT_STATUS_TOKEN, isBookingPayable, isBookingVoided } from '@/features/account/status-labels';
 import { AccountLoadError } from '@/features/account/load-error';
 import { halalasToSar } from '@/lib/money';
 import { t } from '@/features/locale/dictionary';
@@ -29,10 +29,6 @@ const TAB_KEYS = {
   past: 'account.past',
   cancelled: 'account.cancelled',
 } as const;
-
-function isCancelled(b: ClientBookingItem): boolean {
-  return b.status === 'CANCELLED' || b.status === 'CANCEL_REQUESTED';
-}
 
 export function ClientBookingsList({ locale }: ClientBookingsListProps) {
   const router = useRouter();
@@ -227,11 +223,12 @@ function BookingCard({
   const branchLabel = localizedName(locale, booking.branchName, booking.branchNameAr);
   const payKey = paymentStatusKey(booking.paymentStatus);
   const payColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
-  const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus) && !isCancelled(booking);
+  const payable = isBookingPayable(booking);
+  const showPayPill = !isBookingVoided(booking.status) || ['COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED'].includes(booking.paymentStatus ?? '');
   // Never offer a checkout the backend will reject (online payment disabled in
   // the dashboard, or Moyasar unconfigured): the client gets a note instead.
   const { data: paymentMethods, isLoading: paymentMethodsLoading } = usePaymentMethods();
-  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const canPayOnline = payable && paymentMethods?.moyasarEnabled === true;
   const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
 
   async function handlePayNow(e: React.MouseEvent) {
@@ -278,7 +275,7 @@ function BookingCard({
           </h3>
           <div className="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
             <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? booking.status} />
-            <StatusPill color={payColor} label={tt(payKey)} />
+            {showPayPill && <StatusPill color={payColor} label={tt(payKey)} />}
           </div>
         </div>
         <p className="text-sm text-[var(--sw-body)] mt-1 truncate">

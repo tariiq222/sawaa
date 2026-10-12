@@ -205,4 +205,31 @@ describe('ClientBookingsList', () => {
     await screen.findByText('جلسة إرشاد أسري');
     expect(screen.queryByRole('button', { name: /ادفع الآن/ })).toBeNull();
   });
+
+  it('hides pay now and the unpaid badge for a cancelled unpaid booking', async () => {
+    getBookingsMock.mockResolvedValue({
+      items: [booking({ status: 'CANCELLED', paymentStatus: null, invoiceStatus: 'ISSUED', invoiceId: 'inv_c' })],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+    });
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
+
+    await screen.findByText('جلسة إرشاد أسري');
+    expect(screen.queryByRole('button', { name: 'ادفع الآن' })).toBeNull();
+    expect(screen.queryByText('غير مدفوع')).toBeNull();
+  });
+
+  it('still shows pay now for a confirmed unpaid booking', async () => {
+    getBookingsMock.mockResolvedValue({
+      items: [booking({ status: 'CONFIRMED', paymentStatus: null, invoiceStatus: 'ISSUED', invoiceId: 'inv_u' })],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+    });
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
+
+    expect(await screen.findByRole('button', { name: 'ادفع الآن' })).toBeTruthy();
+    expect(screen.getByText('غير مدفوع')).toBeTruthy();
+  });
 });

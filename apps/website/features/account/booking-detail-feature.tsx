@@ -28,7 +28,7 @@ import { riyadhWallTimeToUtcIso } from '@/features/booking/booking-timezone';
 import {
   paymentStatusKey,
   PAYMENT_STATUS_TOKEN,
-  isInvoicePayable,
+  isBookingPayable,
 } from './status-labels';
 import {
   Calendar,
@@ -146,8 +146,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
 
   const payPillKey = paymentStatusKey(booking.paymentStatus);
   const payPillColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
-  const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus);
-  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const payable = isBookingPayable({ ...booking, status: displayStatus });
+  const canPayOnline = payable && paymentMethods?.moyasarEnabled === true;
   const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
   const canJoin =
     booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && ['CONFIRMED', 'DEPOSIT_PAID'].includes(displayStatus);
