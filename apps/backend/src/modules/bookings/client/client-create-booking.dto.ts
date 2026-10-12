@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingType, DeliveryType } from '@prisma/client';
@@ -32,7 +32,7 @@ export class ClientCreateBookingDto {
   @IsOptional() @IsUUID() durationOptionId?: string;
 
   @ApiPropertyOptional({ description: 'Booking type (legacy; prefer deliveryType)', enum: BookingType, enumName: 'BookingType' })
-  @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
+  @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsIn([...Object.values(BookingType), 'ONLINE']) bookingType?: BookingType | 'ONLINE';
 
   @ApiPropertyOptional({ description: 'Session delivery channel. Omitted defaults to IN_PERSON.', enum: DeliveryType, enumName: 'DeliveryType' })
   @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;

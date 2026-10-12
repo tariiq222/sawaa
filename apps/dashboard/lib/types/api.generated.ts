@@ -17891,7 +17891,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Invoice found */
+            /** @description Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -18032,7 +18032,14 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items: Record<string, never>[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
             };
             /** @description Validation failed */
             400: {
@@ -18617,7 +18624,14 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items: Record<string, never>[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
             };
             /** @description Validation failed */
             400: {
@@ -19180,13 +19194,10 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data?: Record<string, never>[];
-                        meta?: {
-                            limit?: number;
-                            page?: number;
-                            total?: number;
-                            totalPages?: number;
-                        };
+                        items: Record<string, never>[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
                     };
                 };
             };

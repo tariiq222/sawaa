@@ -4,6 +4,8 @@ import { join } from 'path';
 import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { RequestMethod } from '@nestjs/common';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
+import { IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
+import { ClientApiModule } from './client-api.module';
 
 /** Route map from docs/architecture/client-api-unification.md §4.2. */
 const TARGET: string[] = [
@@ -126,6 +128,33 @@ describe('client surface routes', () => {
       }
     },
   );
+
+  it('every *.controller.ts file is registered in ClientApiModule', () => {
+    const registered = (Reflect.getMetadata('controllers', ClientApiModule) ?? []) as ControllerClass[];
+    expect(registered.length).toBeGreaterThan(0);
+    for (const ctrl of controllers) expect(registered).toContain(ctrl);
+    for (const ctrl of registered) expect(controllers).toContain(ctrl);
+  });
+
+  it.each(controllers.map((c) => [c.name, c] as const))('%s is marked public for the staff JwtGuard', (_name, ctrl) => {
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, ctrl)).toBe(true);
+  });
+
+  it('every non-GET route carries throttler metadata', () => {
+    const missing: string[] = [];
+    for (const ctrl of controllers) {
+      for (const name of Object.getOwnPropertyNames(ctrl.prototype)) {
+        const handler = (ctrl.prototype as Record<string, unknown>)[name];
+        if (typeof handler !== 'function') continue;
+        const method = Reflect.getMetadata(METHOD_METADATA, handler) as RequestMethod | undefined;
+        if (method === undefined || method === RequestMethod.GET) continue;
+        const limit = Reflect.getMetadata('THROTTLER:LIMITdefault', handler);
+        const ttl = Reflect.getMetadata('THROTTLER:TTLdefault', handler);
+        if (typeof limit !== 'number' || typeof ttl !== 'number') missing.push(`${ctrl.name}.${name}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
 
   it('exposes exactly the target route map', () => {
     const actual = controllers.flatMap(routesOf).sort();

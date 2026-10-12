@@ -56,7 +56,7 @@ describe('ClientPaymentsController', () => {
 
   it('GET / maps pageSize to limit and returns only allow-listed fields', async () => {
     listPayments.execute.mockResolvedValue({
-      total: 1, page: 2, limit: 5,
+      meta: { total: 1, page: 2, limit: 5, totalPages: 1 },
       items: [{
         id: 'p1', number: 'PAY-1', invoiceId: 'i1', amount: 100, currency: 'SAR', method: 'CARD', status: 'COMPLETED',
         createdAt: 'c', processedAt: null, collectionDate: null, gatewayRef: 'secret', clientName: 'PII',
@@ -65,6 +65,9 @@ describe('ClientPaymentsController', () => {
     });
     const res = await request(app.getHttpServer()).get('/client/payments?page=2&pageSize=5').expect(200);
     expect(listPayments.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 2, limit: 5 });
+    expect(res.body).toMatchObject({ total: 1, page: 2, pageSize: 5 });
+    expect(res.body).not.toHaveProperty('meta');
+    expect(res.body).not.toHaveProperty('limit');
     expect(res.body.items[0]).toEqual({
       id: 'p1', number: 'PAY-1', invoiceId: 'i1', amount: 100, currency: 'SAR', method: 'CARD', status: 'COMPLETED',
       createdAt: 'c', processedAt: null, collectionDate: null, invoice: { bookingId: 'b1', total: 100 },

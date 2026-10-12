@@ -17,7 +17,7 @@ describe('notification API content normalization', () => {
     get.mockResolvedValueOnce({ data: { items: [{ ...base, title: 'تم تأكيد الموعد', body: 'موعدك غداً' }], meta } });
     const result = await notificationsService.getAll({ page: 1, perPage: 20 });
     expect(get).toHaveBeenCalledWith('/client/notifications', { params: { page: 1, pageSize: 20 } });
-    expect(result.meta).toEqual(meta);
+    expect(result.meta).toEqual({ total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false });
     expect(result.items[0]).toMatchObject({
       ...base, userId: 'client-1', titleAr: 'تم تأكيد الموعد', titleEn: 'تم تأكيد الموعد',
       bodyAr: 'موعدك غداً', bodyEn: 'موعدك غداً',

@@ -9,7 +9,9 @@ import { ListClientUpcomingBookingsHandler } from '../../modules/bookings/client
 import { GetClientPortalSummaryHandler } from '../../modules/bookings/client/get-client-portal-summary.handler';
 import { ListNotificationsHandler } from '../../modules/comms/notifications/list-notifications.handler';
 import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
-import { GetClientHandler } from '../../modules/people/clients/get-client.handler';
+import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler';
+import { CLIENT_PAGE_SCHEMA, toClientPage } from './client-page';
+import { projectClientPayment } from './client-payment.projection';
 
 /** List handlers answer `{ items, meta }`; the home payload exposes plain arrays. */
 function rowsOf(result: unknown): unknown[] {
@@ -36,7 +38,7 @@ export class ClientPortalController {
     private readonly summaryHandler: GetClientPortalSummaryHandler,
     private readonly listNotifications: ListNotificationsHandler,
     private readonly listPayments: ListPaymentsHandler,
-    private readonly getClient: GetClientHandler,
+    private readonly getMe: GetMeHandler,
   ) {}
 
   @Get('home')
@@ -59,13 +61,13 @@ export class ClientPortalController {
       this.upcomingHandler.execute({ clientId: session.id, now, page: 1, limit: 5 }),
       this.listNotifications.execute({ recipientId: session.id, unreadOnly: true, page: 1, limit: 5 }),
       this.listPayments.execute({ clientId: session.id, page: 1, limit: 3 }),
-      this.getClient.execute({ clientId: session.id }),
+      this.getMe.execute(session.id),
     ]);
     return {
       profile,
       upcomingBookings: rowsOf(upcomingResult),
       unreadNotifications: rowsOf(notificationsResult),
-      recentPayments: rowsOf(paymentsResult),
+      recentPayments: (paymentsResult.items ?? []).map(projectClientPayment),
     };
   }
 
@@ -90,15 +92,10 @@ export class ClientPortalController {
   @ApiOperation({ summary: 'List upcoming bookings for the authenticated client' })
   @ApiOkResponse({
     description: 'Paginated list of upcoming bookings (PENDING, CONFIRMED or DEPOSIT_PAID), nearest first.',
-    schema: {
-      type: 'object',
-      properties: {
-        data: { type: 'array', items: { type: 'object' } },
-        meta: { type: 'object', properties: { total: { type: 'number' }, page: { type: 'number' }, limit: { type: 'number' }, totalPages: { type: 'number' } } },
-      },
-    },
+    schema: CLIENT_PAGE_SCHEMA,
   })
-  upcoming(@ClientSession() session: ClientSession, @Query() q: ClientUpcomingQuery) {
-    return this.upcomingHandler.execute({ clientId: session.id, page: q.page, limit: q.pageSize });
+  async upcoming(@ClientSession() session: ClientSession, @Query() q: ClientUpcomingQuery) {
+    const result = await this.upcomingHandler.execute({ clientId: session.id, page: q.page, limit: q.pageSize });
+    return toClientPage(result.data, result.meta.total, result.meta.page, result.meta.limit);
   }
 }

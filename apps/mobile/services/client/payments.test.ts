@@ -147,8 +147,21 @@ describe('invoices and refunds (unified client API)', () => {
   });
 
   it('maps list limit to pageSize', async () => {
-    get.mockResolvedValueOnce({ data: { items: [], meta: {} } });
+    get.mockResolvedValueOnce({ data: { items: [], total: 0, page: 1, pageSize: 10 } });
     await clientPaymentsService.list({ page: 1, limit: 10 });
     expect(get).toHaveBeenCalledWith('/client/payments', { params: { page: 1, pageSize: 10 } });
+  });
+
+  it('reads the canonical { items, total, page, pageSize } envelope into meta', async () => {
+    get.mockResolvedValueOnce({ data: { items: [{ id: 'p1' }], total: 25, page: 2, pageSize: 10 } });
+    const r = await clientPaymentsService.list({ page: 2, limit: 10 });
+    expect(r.items).toEqual([{ id: 'p1' }]);
+    expect(r.meta).toEqual({ total: 25, page: 2, perPage: 10, totalPages: 3, hasNextPage: true, hasPreviousPage: true });
+  });
+
+  it('still accepts the legacy { items, meta } envelope', async () => {
+    get.mockResolvedValueOnce({ data: { items: [], meta: { total: 5, page: 1, limit: 5, totalPages: 1 } } });
+    const r = await clientPaymentsService.list();
+    expect(r.meta).toMatchObject({ total: 5, page: 1, perPage: 5, totalPages: 1, hasNextPage: false });
   });
 });

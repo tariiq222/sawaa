@@ -1,11 +1,14 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
+import { CLIENT_PAGE_SCHEMA, toClientPage } from './client-page';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../common/swagger';
 import { ClientThrottle } from '../../common/throttle/client-throttle';
+import { toBoolean } from '../../modules/comms/notifications/list-notifications.dto';
 import { ListNotificationsHandler } from '../../modules/comms/notifications/list-notifications.handler';
 import { MarkReadHandler } from '../../modules/comms/notifications/mark-read.handler';
 import { MarkReadDto } from '../../modules/comms/notifications/mark-read.dto';
@@ -16,7 +19,7 @@ import { RegisterFcmTokenDto } from '../../modules/comms/fcm-tokens/register-fcm
 
 export class ListClientNotificationsQuery {
   @ApiPropertyOptional({ description: 'Return only unread notifications', example: true })
-  @IsOptional() @Type(() => Boolean) @IsBoolean() unreadOnly?: boolean;
+  @IsOptional() @Transform(toBoolean) @IsBoolean() unreadOnly?: boolean;
 
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
@@ -46,14 +49,15 @@ export class ClientNotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'List notifications for the current client' })
-  @ApiOkResponse({ description: 'Paginated notification list' })
-  list(@ClientSession() session: ClientSession, @Query() q: ListClientNotificationsQuery) {
-    return this.listNotifications.execute({
+  @ApiOkResponse({ description: 'Paginated notification list', schema: CLIENT_PAGE_SCHEMA })
+  async list(@ClientSession() session: ClientSession, @Query() q: ListClientNotificationsQuery) {
+    const result = await this.listNotifications.execute({
       recipientId: session.id,
       unreadOnly: q.unreadOnly,
       page: q.page ?? 1,
       limit: q.pageSize ?? 20,
     });
+    return toClientPage(result.items, result.meta.total, result.meta.page, result.meta.limit);
   }
 
   @Get('unread-count')

@@ -16530,7 +16530,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Invoice details",
+                  "description": "Invoice details; `hasReceipt` replaces the receipt storage key",
                   "type": "object"
                 }
               }
@@ -17820,6 +17820,7 @@
             "required": false,
             "schema": {
               "example": 20,
+              "maximum": 100,
               "type": "number"
             }
           }
@@ -17937,7 +17938,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Invoice found"
+            "description": "Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned."
           },
           "400": {
             "content": {
@@ -18120,6 +18121,39 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
             "description": "Paginated notification list"
           },
           "400": {
@@ -18852,12 +18886,46 @@
             "required": false,
             "schema": {
               "example": 20,
+              "maximum": 100,
               "type": "number"
             }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
             "description": "Paginated payment list for the current client"
           },
           "400": {
@@ -19631,30 +19699,31 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "data": {
+                    "items": {
                       "items": {
                         "type": "object"
                       },
                       "type": "array"
                     },
-                    "meta": {
-                      "properties": {
-                        "limit": {
-                          "type": "number"
-                        },
-                        "page": {
-                          "type": "number"
-                        },
-                        "total": {
-                          "type": "number"
-                        },
-                        "totalPages": {
-                          "type": "number"
-                        }
-                      },
-                      "type": "object"
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
                     }
                   },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
                   "type": "object"
                 }
               }

@@ -53,9 +53,17 @@ describe('ClientInvoicesController', () => {
   });
 
   it('GET /:id returns the invoice scoped to the client', async () => {
-    getInvoice.execute.mockResolvedValue({ id: ID });
-    await request(app.getHttpServer()).get(`/client/invoices/${ID}`).expect(200);
+    getInvoice.execute.mockResolvedValue({ id: ID, pdfUrl: 'receipts/inv.pdf' });
+    const res = await request(app.getHttpServer()).get(`/client/invoices/${ID}`).expect(200);
     expect(getInvoice.execute).toHaveBeenCalledWith(ID, 'client-1');
+    expect(res.body).toEqual({ id: ID, hasReceipt: true });
+    expect(res.body).not.toHaveProperty('pdfUrl');
+  });
+
+  it('GET /:id reports hasReceipt=false when no receipt key exists', async () => {
+    getInvoice.execute.mockResolvedValue({ id: ID, pdfUrl: null });
+    const res = await request(app.getHttpServer()).get(`/client/invoices/${ID}`).expect(200);
+    expect(res.body).toEqual({ id: ID, hasReceipt: false });
   });
 
   it('GET /:id passes a 404 through', async () => {

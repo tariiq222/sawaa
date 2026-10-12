@@ -16,6 +16,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
+import { CLIENT_PAGE_SCHEMA, toClientPage } from './client-page';
+import { projectClientPayment } from './client-payment.projection';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../common/swagger';
 import { ClientThrottle } from '../../common/throttle/client-throttle';
@@ -54,32 +56,14 @@ export class ClientPaymentsController {
 
   @Get()
   @ApiOperation({ summary: 'List the authenticated client\'s payments' })
-  @ApiOkResponse({ description: 'Paginated payment list for the current client' })
+  @ApiOkResponse({ description: 'Paginated payment list for the current client', schema: CLIENT_PAGE_SCHEMA })
   async list(@ClientSession() session: ClientSession, @Query() q: ClientListQueryDto) {
     const result = await this.listPayments.execute({
       clientId: session.id,
       page: q.page ?? 1,
       limit: q.pageSize ?? 20,
     });
-    // Explicit allow-list (docs/architecture/client-api-unification.md §3.3): the
-    // dashboard handler returns staff-shaped rows (client PII, gatewayRef,
-    // receipt/audit/lease fields). Only what client apps consume leaves here.
-    return {
-      ...result,
-      items: result.items.map((p) => ({
-        id: p.id,
-        number: p.number,
-        invoiceId: p.invoiceId,
-        amount: p.amount,
-        currency: p.currency,
-        method: p.method,
-        status: p.status,
-        createdAt: p.createdAt,
-        processedAt: p.processedAt,
-        collectionDate: p.collectionDate,
-        invoice: p.invoice ? { bookingId: p.invoice.bookingId, total: p.invoice.total } : null,
-      })),
-    };
+    return toClientPage(result.items.map(projectClientPayment), result.meta.total, result.meta.page, result.meta.limit);
   }
 
   @ClientThrottle('payment')

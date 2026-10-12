@@ -10,6 +10,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
+import { toClientInvoice } from './client-invoice.projection';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
@@ -220,9 +221,9 @@ export class ClientBookingsController {
   @Get(':id/invoice')
   @ApiOperation({ summary: 'Get the invoice for a booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Invoice details' } })
+  @ApiOkResponse({ schema: { type: 'object', description: 'Invoice details; `hasReceipt` replaces the receipt storage key' } })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  invoice(@ClientSession() session: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
-    return this.bookingInvoice.execute(id, session.id);
+  async invoice(@ClientSession() session: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
+    return toClientInvoice(await this.bookingInvoice.execute(id, session.id));
   }
 }

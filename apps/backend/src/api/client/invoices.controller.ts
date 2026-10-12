@@ -1,6 +1,7 @@
 import { Controller, Get, NotFoundException, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
+import { toClientInvoice } from './client-invoice.projection';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
 import { MinioService } from '../../infrastructure/storage/minio.service';
@@ -46,11 +47,11 @@ export class ClientInvoicesController {
   @Get(':id')
   @ApiOperation({ summary: 'Get an invoice by id (client-scoped)' })
   @ApiParam({ name: 'id', description: 'Invoice UUID', format: 'uuid' })
-  @ApiOkResponse({ description: 'Invoice found' })
+  @ApiOkResponse({ description: 'Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned.' })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
-  get(@Param('id', ParseUUIDPipe) id: string, @ClientSession() session: ClientSession) {
+  async get(@Param('id', ParseUUIDPipe) id: string, @ClientSession() session: ClientSession) {
     // Ownership is part of the query: a foreign id is a 404, never a 403.
-    return this.getPublicInvoice.execute(id, session.id);
+    return toClientInvoice(await this.getPublicInvoice.execute(id, session.id));
   }
 
   @Get(':id/pdf')

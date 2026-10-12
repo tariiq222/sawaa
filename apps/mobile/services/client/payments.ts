@@ -1,6 +1,7 @@
 import api from '../api';
 import type { NativePaymentCapabilities, NativePaymentInitResponse, NativePaymentReconcileResponse, ClientBankTransferSettings } from '@sawaa/shared';
 import type { Payment } from '@/types/models';
+import { readListEnvelope, type ListMeta } from './list-envelope';
 
 export interface ReceiptUploadAsset {
   uri: string;
@@ -64,6 +65,8 @@ export interface ClientInvoice {
   status: string;
   total?: number | string;
   currency?: string;
+  /** True when a receipt exists; fetch it with `getMyInvoicePdfUrl`. */
+  hasReceipt?: boolean;
   payments?: ClientInvoicePayment[];
 }
 
@@ -81,14 +84,7 @@ export interface ClientBankTransferUploadResponse {
 
 export interface PaymentsListResponse {
   items: Payment[];
-  meta: {
-    total: number;
-    page: number;
-    perPage: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
+  meta: ListMeta;
 }
 
 export interface ClientInvoiceListItem {
@@ -151,13 +147,13 @@ export const clientPaymentsService = {
     return response.data;
   },
 
-  async list(params?: { page?: number; limit?: number }) {
+  async list(params?: { page?: number; limit?: number }): Promise<PaymentsListResponse> {
     // Public contract uses `pageSize`; screens keep passing `limit`.
-    const response = await api.get<PaymentsListResponse>(
+    const response = await api.get<unknown>(
       '/client/payments',
       { params: params ? { page: params.page, pageSize: params.limit } : undefined },
     );
-    return response.data;
+    return readListEnvelope<Payment>(response.data, params?.limit);
   },
 
   async getInvoice(id: string) {

@@ -82,6 +82,13 @@ describe('clientPortalService.getUpcoming', () => {
     );
   });
 
+  it('reads the canonical { items, total, page, pageSize } envelope', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [{ id: 'b1' }], total: 21, page: 2, pageSize: 10 } });
+    const r = await clientPortalService.getUpcoming(2, 10);
+    expect(r.data).toEqual([{ id: 'b1' }]);
+    expect(r.meta).toEqual({ total: 21, page: 2, limit: 10, totalPages: 3 });
+  });
+
   it('rejects when backend errors out', async () => {
     mockedApi.get.mockRejectedValueOnce(new Error('500 boom'));
     await expect(clientPortalService.getUpcoming(1, 10)).rejects.toThrow(/500/);

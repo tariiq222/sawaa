@@ -134,8 +134,8 @@ describe('ClientBookingsController', () => {
 
   it('reads the booking invoice', async () => {
     const { c, m } = makeBookings();
-    m.bookingInvoice.execute.mockResolvedValue({ id: 'inv' });
-    await expect(c.invoice(session, ID)).resolves.toEqual({ id: 'inv' });
+    m.bookingInvoice.execute.mockResolvedValue({ id: 'inv', pdfUrl: 'receipts/inv.pdf' });
+    await expect(c.invoice(session, ID)).resolves.toEqual({ id: 'inv', hasReceipt: true });
     expect(m.bookingInvoice.execute).toHaveBeenCalledWith(ID, 'client-1');
   });
 });
