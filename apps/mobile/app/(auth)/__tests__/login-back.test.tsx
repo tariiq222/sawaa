@@ -1,7 +1,6 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { NavigatorScreenParams } from '@react-navigation/native';
 
 let mockCanGoBack = true;
 let mockParams: Record<string, string> = {};
@@ -83,12 +82,6 @@ jest.mock('@/services/phone-entry', () => ({
 }));
 
 import LoginScreen from '../login';
-import { getStateFromPath } from 'expo-router/build/fork/getStateFromPath';
-
-type HomeRouteParams = {
-  '(client)': NavigatorScreenParams<{ '(tabs)': NavigatorScreenParams<{ home: undefined }> }>;
-  '(guest)': NavigatorScreenParams<{ home: undefined }>;
-};
 
 function mount() {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: 0 } } });
@@ -123,35 +116,21 @@ describe('login screen escape routes', () => {
     expect(mockBack).not.toHaveBeenCalled();
   });
 
-  it('lets a guest continue browsing without signing in', () => {
+  it('shows the email-entry link but no guest, review or staff link when opened without a booking', () => {
     const { screen } = mount();
 
-    fireEvent.press(screen.getByText('auth.login.continueAsGuest'));
+    expect(screen.queryByText('auth.review.link')).toBeNull();
 
-    // Both homes share /home: resolve the consumer's actual destination using
-    // Expo's group-aware matcher, so a bare path cannot silently select client.
-    const state = getStateFromPath<HomeRouteParams>(mockReplace.mock.calls[0][0], {
-      screens: {
-        '(client)': { path: '(client)', screens: { '(tabs)': { path: '(tabs)', screens: { home: 'home' } } } },
-        '(guest)': { path: '(guest)', screens: { home: 'home' } },
-      },
-    });
-    expect(state?.routes[0].name).toBe('(guest)');
-    expect(state?.routes[0].state?.routes[0].name).toBe('home');
-  });
-
-  it('shows the guest, email-entry and staff links when opened without a booking', () => {
-    const { screen } = mount();
-
-    expect(screen.getByText('auth.login.continueAsGuest')).toBeTruthy();
+    expect(screen.queryByText('auth.login.continueAsGuest')).toBeNull();
     expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
     expect(screen.queryByText('auth.phoneEntry.staffLoginLink')).toBeNull();
   });
 
-  it('hides continue as guest but keeps the alternative entry links when opened from a booking', () => {
+  it('keeps the alternative entry links when opened from a booking', () => {
     mockParams = { booking: 'booking-token' };
     const { screen } = mount();
 
+    expect(screen.queryByText('auth.review.link')).toBeNull();
     expect(screen.queryByText('auth.login.continueAsGuest')).toBeNull();
     expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
     expect(screen.queryByText('auth.phoneEntry.staffLoginLink')).toBeNull();

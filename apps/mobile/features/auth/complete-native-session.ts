@@ -9,6 +9,8 @@ import type { NativeSession } from '@/services/email-entry';
 
 type CompletionContext = {
   dispatch: AppDispatch; replace: Router['replace'];
+  /** Pops the guest booking screens that were stacked under login. */
+  dismissAll?: Router['dismissAll'];
   booking?: string | string[]; redirect?: string | string[];
   isFlowCurrent?: () => boolean;
   onReady?: () => void;
@@ -35,6 +37,8 @@ export async function completeNativeSession(result: VerifiedMobileOtpResponse, c
   const booking = kind === 'client' ? decodeBookingReturn(Array.isArray(context.booking) ? context.booking[0] : context.booking) : null;
   if (booking) {
     const { amount, ...selection } = booking;
+    // Guest public-booking screens sit under login; clear them so Back from the client confirm never shows the guest one.
+    context.dismissAll?.();
     context.replace({ pathname: '/(client)/booking/confirm', params: { ...selection, chargedPrice: amount } });
     return;
   }

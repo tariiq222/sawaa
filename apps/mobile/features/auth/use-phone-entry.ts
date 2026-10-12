@@ -83,7 +83,7 @@ export function usePhoneEntry(context: Context) {
     current: () => boolean, epoch: number,
   ) => {
     const verified = await promoteEmailSession(result, epoch, current, value => { ownedSessionEpoch.current = value; });
-    await completeNativeSession(verified, { dispatch: appDispatch, replace: router.replace, ...context, isFlowCurrent: current, onReady: () => { ownedSessionEpoch.current = null; } });
+    await completeNativeSession(verified, { dispatch: appDispatch, replace: router.replace, dismissAll: router.dismissAll, ...context, isFlowCurrent: current, onReady: () => { ownedSessionEpoch.current = null; } });
     if (current()) dispatch({ type: 'restart' });
   };
   const request = () => {

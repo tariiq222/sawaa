@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AuthFormScaffold } from '@/components/features/auth/AuthFormScaffold';
 import { AppButton } from '@/components/ui/AppButton';
+import { InlineAlert } from '@/components/ui/InlineAlert';
 import { useTheme } from '@/theme/useTheme';
 import { ThemedText } from '@/theme/components/ThemedText';
 import { usePhoneEntry } from '@/features/auth/use-phone-entry';
@@ -41,9 +42,7 @@ export default function LoginScreen() {
       <ThemedText accessibilityRole="alert">{t('auth.phoneEntry.unavailable')}</ThemedText>
       <AppButton label={t('auth.phoneEntry.changePhone')} variant="ghost" onPress={flow.changePhone} />
     </>}
-    {flow.error && <ThemedText accessibilityRole="alert" color={theme.colors.error}>{t(`auth.phoneEntry.${flow.error}`)}</ThemedText>}
-    {flow.retrySeconds > 0 && state.step === 'code' && <ThemedText>{t('auth.otp.resendIn', { seconds: flow.retrySeconds })}</ThemedText>}
-    {booking ? null : <AppButton label={t('auth.login.continueAsGuest')} variant="secondary"
-      onPress={() => { flow.restart(); router.replace('/(guest)/home'); }} />}
+    {flow.error && <InlineAlert message={t(`auth.phoneEntry.${flow.error}`)} />}
+    {flow.retrySeconds > 0 && state.step === 'code' && <ThemedText variant="caption" color={theme.colors.textSecondary} style={{ textAlign: 'center' }}>{t('auth.otp.resendIn', { seconds: flow.retrySeconds })}</ThemedText>}
   </AuthFormScaffold>;
 }

@@ -19,6 +19,12 @@ jest.mock('@/components/features/settings/SettingsScaffold', () => ({
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left', alignStart: 'flex-start', writingDirection: 'ltr' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: { colors: { error: '#B3261E', primary: '#098a7d', textMuted: '#999' } }, isRTL: false, language: 'en' }) }));
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+jest.mock('@/hooks/use-redux', () => ({
+  useAppSelector: (select: (state: unknown) => unknown) => select({ auth: { user: { id: 'client-1' } } }),
+}));
 jest.mock('@/services/api', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
 jest.mock('@/services/client-email', () => ({
   clientEmailError: jest.requireActual('@/services/client-email').clientEmailError,
@@ -35,7 +41,7 @@ jest.mock('@/hooks/queries', () => ({
 }));
 
 import EmailVerifyScreen from '../(client)/email-verify';
-import { isClientEmailPromptSnoozed, resetClientEmailPromptStateForTests } from '@/features/auth/client-email-prompt';
+import { isClientEmailPromptSnoozed, resetClientEmailSnoozeForTests } from '@/features/auth/client-email-snooze';
 
 const challenge = { challengeId: 'ch', maskedEmail: 'a***@example.test', expiresIn: 300 as const, retryAfterSeconds: 60 as const };
 function mount() {
@@ -46,7 +52,7 @@ function mount() {
 beforeAll(() => { notifyManager.setNotifyFunction(callback => { act(callback); }); });
 afterAll(() => { notifyManager.setNotifyFunction(callback => callback()); });
 beforeEach(() => {
-  jest.clearAllMocks(); mockParams = {}; resetClientEmailPromptStateForTests();
+  jest.clearAllMocks(); mockParams = {}; resetClientEmailSnoozeForTests();
   mockStatusData.data = { status: 'unverified', email: null, pendingEmail: null, prompt: true };
   mockRequest.mockResolvedValue(challenge);
   mockVerify.mockResolvedValue({ status: 'verified', email: 'a@example.test', pendingEmail: null, prompt: false });
@@ -78,13 +84,19 @@ it('declines the prompt through the API and leaves the screen', async () => {
   await waitFor(() => expect(mockDecline).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
 });
-it('later snoozes the prompt for this app session without calling the server', () => {
+it('later snoozes the prompt for this user without calling the server', async () => {
   mockParams = { mode: 'prompt' };
   const { ui } = mount();
   fireEvent.press(ui.getByText('profile.email.later'));
   expect(mockBack).toHaveBeenCalledTimes(1);
   expect(mockDecline).not.toHaveBeenCalled();
-  expect(isClientEmailPromptSnoozed()).toBe(true);
+  await waitFor(async () => expect(await isClientEmailPromptSnoozed('client-1')).toBe(true));
+});
+it('treats an unknown mode as manage mode', () => {
+  mockParams = { mode: 'something-else' };
+  const { ui } = mount();
+  expect(ui.queryByText('profile.email.decline')).toBeNull();
+  expect(ui.queryByText('profile.email.later')).toBeNull();
 });
 it('confirms the code with the in-memory challenge and announces success', async () => {
   const { ui } = mount();

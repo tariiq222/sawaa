@@ -25,7 +25,7 @@ export function usePasswordLogin(context: { booking?: string; redirect?: string 
     busy.current = true; setPending(true); const current = capture();
     try {
       const result = await loginWithPassword(identifier, password, epoch => { ownedEpoch.current = epoch; });
-      await completeNativeSession(result, { dispatch, replace: router.replace, ...context, isFlowCurrent: current, onReady: () => { ownedEpoch.current = null; } });
+      await completeNativeSession(result, { dispatch, replace: router.replace, dismissAll: router.dismissAll, ...context, isFlowCurrent: current, onReady: () => { ownedEpoch.current = null; } });
       return 'complete';
     } catch (error) {
       if (!current() || error instanceof SessionSupersededError || (ownedEpoch.current !== null && !isSessionCurrent(ownedEpoch.current))) return 'cancelled';
