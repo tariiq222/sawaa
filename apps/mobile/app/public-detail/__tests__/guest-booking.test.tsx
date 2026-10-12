@@ -1,6 +1,5 @@
 import React from 'react';
 import { fireEvent, render, within } from '@testing-library/react-native';
-import { decodeRedirect } from '@/lib/navigation';
 
 const mockTherapistsRetry = jest.fn();
 let mockTherapistsError = false;
@@ -32,6 +31,8 @@ jest.mock('@/hooks/use-redux', () => ({
   useAppSelector: (selector: (state: unknown) => unknown) => selector({ auth: { token: mockSignedIn ? 'token' : null } }),
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
+jest.mock('@/services/client/packages', () => ({ getPendingPackagePurchase: jest.fn().mockResolvedValue(null) }));
+jest.mock('@/components/ui/Skeleton', () => ({ Skeleton: () => null }));
 jest.mock('@/theme/sawaa', () => ({
   ...jest.requireActual('@/theme/sawaa/tokens'),
   AquaBackground: ({ children }: { children: React.ReactNode }) => children,
@@ -48,7 +49,8 @@ jest.mock('@/hooks/queries', () => ({
   useTherapists: () => ({ isError: mockTherapistsError, refetch: mockTherapistsRetry, data: [{ id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }], isLoading: false }),
   useTherapist: () => ({ isError: mockTherapistError, refetch: mockTherapistRetry, data: mockTherapistError ? undefined : { id: 'employee-1', nameAr: 'مختصة', nameEn: 'Specialist', serviceIds: ['service-1'], isBookable: true }, isLoading: false }),
   usePackageFamily: () => ({ data: mockKind === 'package' ? { id: mockId, nameAr: 'باقة', nameEn: 'Package', options: [], ...mockPackageExtra } : null, isLoading: false }),
-  useGroupSession: () => ({ data: mockKind === 'program' ? { id: mockId, nameAr: 'برنامج', nameEn: 'Program', price: 10000 } : null, isLoading: false }),
+  useGroupSession: () => ({ data: mockKind === 'program' ? { id: mockId, nameAr: 'برنامج', nameEn: 'Program', price: 10000, daysCount: 0, hoursPerDay: 0, isFull: false, spotsLeft: 3 } : null, isLoading: false }),
+  useBranding: () => ({ data: { contactPhone: null } }),
 }));
 
 import PublicDetailScreen from '../[kind]/[id]';
@@ -79,7 +81,7 @@ describe('public appointment discovery', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Specialist' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
-      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
+      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42', steps: '3' },
     });
   });
 
@@ -94,7 +96,7 @@ describe('public appointment discovery', () => {
     fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
-      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
+      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42', steps: '3' },
     });
   });
 
@@ -105,7 +107,7 @@ describe('public appointment discovery', () => {
     fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
-      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
+      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42', steps: '3' },
     });
   });
 
@@ -128,7 +130,7 @@ describe('public appointment discovery', () => {
     fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
-      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42' },
+      params: { serviceId: 'service-1', employeeId: 'employee-1', clinicId: 'clinic-42', steps: '3' },
     });
   });
 
@@ -143,7 +145,7 @@ describe('public appointment discovery', () => {
     fireEvent.press(screen.getByRole('button', { name: 'employeeProfile.bookAppointment' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/public-booking/[serviceId]',
-      params: { serviceId: 'service-1', employeeId: 'employee-1' },
+      params: { serviceId: 'service-1', employeeId: 'employee-1', steps: '3' },
     });
   });
 
@@ -155,31 +157,57 @@ describe('public appointment discovery', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['package', 'package-1', '/(client)/packages/package-1'],
-    ['program', 'program-1', '/(client)/groups/program-1'],
-  ])('returns to the chosen %s after signing in', (kind, id, destination) => {
-    mockKind = kind;
-    mockId = id;
+  it('opens the shared package details step and continues a guest to the public confirm step', () => {
+    mockKind = 'package';
+    mockId = 'package-1';
+    mockPackageExtra = { options: [{ id: 'opt', nameAr: 'خيار', nameEn: 'Option', price: { finalPrice: 36000 } }] };
     const screen = render(<PublicDetailScreen />);
-    fireEvent.press(screen.getByRole('button', { name: 'auth.login' }));
+    expect(screen.getByText('packages.details')).toBeTruthy();
+    expect(screen.queryByText('guest.signInToBuyPackage')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'common.continue' }));
     expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/(auth)/login',
-      params: { redirect: destination },
+      pathname: '/public-packages/confirm',
+      params: { familyId: 'package-1', optionId: 'opt' },
     });
-    expect(decodeRedirect(mockPush.mock.calls[0][0].params.redirect)).toBe(destination);
+  });
+
+  it('lets a guest pick between several package options', () => {
+    mockKind = 'package';
+    mockId = 'package-1';
+    mockPackageExtra = { options: [
+      { id: 'opt-a', nameAr: 'أ', nameEn: 'Option A', price: { finalPrice: 36000 } },
+      { id: 'opt-b', nameAr: 'ب', nameEn: 'Option B', price: { finalPrice: 50000 } },
+    ] };
+    const screen = render(<PublicDetailScreen />);
+    fireEvent.press(screen.getByRole('button', { name: 'Option B' }));
+    fireEvent.press(screen.getByRole('button', { name: 'common.continue' }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/public-packages/confirm',
+      params: { familyId: 'package-1', optionId: 'opt-b' },
+    });
+  });
+
+  it('opens the shared group details step and continues a guest to the public confirm step', () => {
+    mockKind = 'program';
+    mockId = 'program-1';
+    const screen = render(<PublicDetailScreen />);
+    expect(screen.getByText('groups.title')).toBeTruthy();
+    expect(screen.queryByText('guest.signInToJoinProgram')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'common.continue' }));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/public-groups/confirm', params: { id: 'program-1' } });
   });
 
   it.each([
-    [0, 'Option · 360.00 SAR', false],
-    [0.15, 'Option · 414.00 SAR', true],
-  ])('shows package option prices with VAT rate %s', (vatRate, priceLine, showsNote) => {
+    [0, /360/, false],
+    [0.15, /414/, true],
+  ])('shows package option prices with VAT rate %s', (vatRate, price, showsNote) => {
     mockKind = 'package';
     mockId = 'package-1';
     mockPackageExtra = { vatRate, options: [{ id: 'opt', nameAr: 'خيار', nameEn: 'Option', price: { finalPrice: 36000 } }] };
     const screen = render(<PublicDetailScreen />);
-    expect(screen.getByText(priceLine)).toBeTruthy();
-    expect(Boolean(screen.queryByText('packages.vatIncluded'))).toBe(showsNote);
+    expect(screen.getByText('Option')).toBeTruthy();
+    expect(screen.getByText(price)).toBeTruthy();
+    expect(Boolean(screen.queryByText(/packages.vatIncluded/))).toBe(showsNote);
   });
 });
 

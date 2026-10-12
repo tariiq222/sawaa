@@ -15,13 +15,15 @@ app/
 │   ├── booking/           # Schedule, confirm, invoice, payment callbacks
 │   ├── clinic/            # Clinic info and branches
 │   ├── employee/          # Employee profile as seen by clients
-│   ├── groups/            # Group-session discovery and enrollment
-│   ├── packages/          # Package purchase, balance, and booking
+│   ├── packages/          # Package purchase (details → confirm; branch resolved silently), balance, and booking
+│   ├── groups/            # Group-session discovery, details → confirm enrollment
 │   ├── rate/              # Rating flow
 │   ├── therapists.tsx     # Therapist directory
 │   ├── chat.tsx           # Client chat surface
 │   ├── settings*.tsx      # Profile, language, theme, notifications
 │   └── video-call.tsx     # Client Zoom join
+├── branch/[id].tsx        # Public branch page (address, hours, call, maps)
+├── public-detail/, public-packages/, public-groups/, public-booking/  # Guest routes re-exporting the shared step screens
 └── (employee)/            # Employee-facing flows
     ├── (tabs)/            # today, calendar, clients, profile
     ├── appointment/       # Manage appointment

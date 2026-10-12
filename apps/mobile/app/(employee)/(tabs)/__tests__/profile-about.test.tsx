@@ -82,11 +82,11 @@ beforeEach(() => {
  mockApplication.nativeApplicationVersion = null; mockApplication.nativeBuildVersion = null;
  delete mockConstants.nativeApplicationVersion; delete mockConstants.nativeBuildVersion; delete mockConstants.expoConfig;
 });
-it.each(['ar', 'en'])('shows native version/build and localized About in %s', async locale => {
+it.each(['ar', 'en'])('shows the native version (no build number) and localized About in %s', async locale => {
  mockApplication.nativeApplicationVersion = '2.3.4'; mockApplication.nativeBuildVersion = '42';
  await act(async () => { await i18n.changeLanguage(locale); });
  const view = render(<ProfileScreen />);
- expect(view.getByText('2.3.4')).toBeTruthy(); expect(view.getByText('42')).toBeTruthy();
+ expect(view.getByText('2.3.4')).toBeTruthy(); expect(view.queryByText('42')).toBeNull();
  expect(view.getByText(i18n.t('settings.about'))).toBeTruthy();
  expect(view.getByText(i18n.t('settings.version'))).toBeTruthy();
  expect(view.queryByText(/1\.0\.0/)).toBeNull();
@@ -95,11 +95,11 @@ it('uses Expo config when native metadata is absent', async () => {
  mockConstants.expoConfig = { version: '2.4.0', ios: { buildNumber: '43' } };
  await act(async () => { await i18n.changeLanguage('en'); });
  const view = render(<ProfileScreen />);
- expect(view.getByText('2.4.0')).toBeTruthy(); expect(view.getByText('43')).toBeTruthy();
+ expect(view.getByText('2.4.0')).toBeTruthy(); expect(view.queryByText('43')).toBeNull();
  expect(view.queryByText(/1\.0\.0/)).toBeNull();
 });
 it('shows unknown values when metadata is absent', async () => {
  await act(async () => { await i18n.changeLanguage('en'); });
  const view = render(<ProfileScreen />);
- expect(view.getAllByText('—')).toHaveLength(2); expect(view.queryByText(/1\.0\.0/)).toBeNull();
+ expect(view.getAllByText('—')).toHaveLength(1); expect(view.queryByText(/1\.0\.0/)).toBeNull();
 });
