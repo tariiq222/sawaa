@@ -1171,6 +1171,13 @@
     "invalidPhoto": "Choose a JPG, PNG or WebP image up to 1 MB.",
     "photoError": "Could not update your photo. Try again.",
     "publicLanguages": "Languages: {{languages}}",
-    "publicExperience": "Years of experience: {{years}}"
+    "publicExperience": "Years of experience: {{years}}",
+    "change": "Change",
+    "verified": "Verified",
+    "notAdded": "Not added",
+    "contactUpdated": "Updated",
+    "unsavedChanges": "You have unsaved changes",
+    "changeEmailTitle": "Change email address",
+    "changePhoneTitle": "Change phone number"
   }
 }

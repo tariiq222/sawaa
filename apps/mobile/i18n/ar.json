@@ -1171,6 +1171,13 @@
     "invalidPhoto": "اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 1 ميجابايت.",
     "photoError": "تعذر تحديث الصورة. حاول مرة أخرى.",
     "publicLanguages": "اللغات: {{languages}}",
-    "publicExperience": "سنوات الخبرة: {{years}}"
+    "publicExperience": "سنوات الخبرة: {{years}}",
+    "change": "تغيير",
+    "verified": "مؤكد",
+    "notAdded": "غير مضاف",
+    "contactUpdated": "تم التحديث",
+    "unsavedChanges": "لديك تغييرات غير محفوظة",
+    "changeEmailTitle": "تغيير البريد الإلكتروني",
+    "changePhoneTitle": "تغيير رقم الجوال"
   }
 }
