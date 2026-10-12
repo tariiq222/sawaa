@@ -9,8 +9,10 @@ export interface PortalBookingRow {
   startTime: string;   // HH:MM (Riyadh wall-clock)
   endTime: string;     // HH:MM (Riyadh wall-clock)
   status: string;
-  type: string;        // 'in_person' | 'online' | ...
+  type: string;        // booking kind: 'in_person' (individual) | ...
+  deliveryType?: string | null; // 'in_person' | 'online'
   zoomJoinUrl: string | null;
+  zoomMeetingStatus?: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
   scheduledAt?: string | null;
   endsAt?: string | null;
   employee: {

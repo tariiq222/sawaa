@@ -50,3 +50,8 @@ b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobil
 b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:69
 b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:79
 b7bbcd40f06a8122efc3ea4fc3e48a26fa1117fe:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:85
+
+# Same public deterministic test password, two new lines added by the staff
+# password-login commit in the same mocked spec. Exact fingerprints only.
+89bfa73f22c36442d8b6779f74a3256100acc73e:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:207
+89bfa73f22c36442d8b6779f74a3256100acc73e:apps/backend/src/modules/identity/mobile-password-login/mobile-password-login.handler.spec.ts:generic-api-key:216

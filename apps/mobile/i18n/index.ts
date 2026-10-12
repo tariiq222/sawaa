@@ -1,3 +1,9 @@
+// Hermes has no Intl.PluralRules; without this polyfill i18next falls back to a
+// one/other rule and Arabic dual/few/many forms never resolve.
+import '@formatjs/intl-pluralrules/polyfill-force.js';
+import '@formatjs/intl-pluralrules/locale-data/ar.js';
+import '@formatjs/intl-pluralrules/locale-data/en.js';
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 

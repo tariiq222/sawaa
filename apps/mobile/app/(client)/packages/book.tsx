@@ -106,7 +106,7 @@ export default function PackageBookScreen() {
   return (
     <AquaBackground>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + sawaaSpacing.lg, paddingBottom: insets.bottom + sawaaSpacing.lg }]}>
-        <ScreenHeader title={t('packages.bookTitle')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
+        <ScreenHeader title={t('packages.bookTitle')} onBack={() => goBackOrHome(router, '/(client)/packages/purchases')} />
         <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.bookSubtitle')}</Text>
         {!params.employeeId || !params.serviceId ? (
           <Text style={[styles.warning, { fontFamily: f400, textAlign: dir.textAlign }]}>{t('packages.locked.support')}</Text>

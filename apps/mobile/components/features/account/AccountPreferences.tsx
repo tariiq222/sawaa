@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bell, Languages, Moon } from 'lucide-react-native';
 
 import { MenuGroup, type MenuEntry } from '@/components/ui/MenuGroup';
-import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { GlassSwitch } from '@/components/ui/GlassSwitch';
 import { AppButton } from '@/components/ui/AppButton';
 import { ThemedText } from '@/theme/components/ThemedText';
@@ -18,11 +17,11 @@ import { useUpdateClientProfile } from '@/hooks/queries/useClientProfile';
 import { usePushPreference } from '@/hooks/queries/usePushPreference';
 
 /**
- * Inline preferences shared by the client and employee account tabs: language,
- * appearance and (for clients) push notifications. There is no separate
- * settings page; each control changes in place.
+ * Inline preferences shared by the client, employee and guest account tabs:
+ * language, appearance and (for clients) push notifications. There is no
+ * separate settings page; each control changes in place.
  */
-export function AccountPreferences({ role }: { role: 'client' | 'employee' }) {
+export function AccountPreferences({ role }: { role: 'client' | 'employee' | 'guest' }) {
   const { t, i18n } = useTranslation();
   const { theme, language, scheme, setThemeMode } = useTheme();
   const isClient = role === 'client';
@@ -55,6 +54,13 @@ export function AccountPreferences({ role }: { role: 'client' | 'employee' }) {
 
   const entries: MenuEntry[] = [
     {
+      key: 'language',
+      icon: Languages,
+      label: t('settings.english'),
+      description: t('settings.language'),
+      trailing: <GlassSwitch value={language === 'en'} onValueChange={(v) => { void handleLanguageSelect(v ? 'en' : 'ar'); }} accessibilityLabel={t('settings.english')} />,
+    },
+    {
       key: 'dark-mode',
       icon: Moon,
       label: t('settings.darkMode'),
@@ -86,28 +92,10 @@ export function AccountPreferences({ role }: { role: 'client' | 'employee' }) {
   ) : null;
 
   return (
-    <View style={styles.wrap}>
-      <MenuGroup
-        title={t('profile.preferences')}
-        entries={[{ key: 'language', icon: Languages, label: t('settings.language') }]}
-        footer={(
-          <View style={styles.segment}>
-            <GlassSegmented
-              options={[{ value: 'ar', label: t('settings.arabic') }, { value: 'en', label: t('settings.english') }]}
-              value={language === 'en' ? 'en' : 'ar'}
-              onChange={handleLanguageSelect}
-              size="sm"
-            />
-          </View>
-        )}
-      />
-      <MenuGroup entries={entries} footer={pushStatus} />
-    </View>
+    <MenuGroup title={t('profile.preferences')} entries={entries} footer={pushStatus} />
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: sawaaSpacing.md },
-  segment: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: sawaaSpacing.md },
   status: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: sawaaSpacing.md, gap: sawaaSpacing.sm },
 });

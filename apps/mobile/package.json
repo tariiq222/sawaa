@@ -15,6 +15,10 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|@formatjs))",
+      "/node_modules/react-native-reanimated/plugin/"
+    ],
     "collectCoverageFrom": [
       "app/**/*.{ts,tsx}",
       "components/**/*.{ts,tsx}",
@@ -48,6 +52,7 @@
     "@expo-google-fonts/ibm-plex-sans-arabic": "^0.4.2",
     "@expo/metro-runtime": "~55.0.6",
     "@expo/vector-icons": "^15.0.2",
+    "@formatjs/intl-pluralrules": "6.2.4",
     "@hookform/resolvers": "^5.2.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-firebase/app": "26.4.0",

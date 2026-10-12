@@ -21,16 +21,7 @@ import { createAppointmentsStyles } from '@/components/features/appointments/app
 
 type TabKey = 'upcoming' | 'past' | 'cancelled';
 
-const TABS: { key: TabKey; ar: string; en: string }[] = [
-  { key: 'upcoming', ar: 'قادمة', en: 'Upcoming' },
-  { key: 'past', ar: 'منتهية', en: 'Completed' },
-  { key: 'cancelled', ar: 'الإلغاءات', en: 'Cancellations' },
-];
-
-export function getAppointmentTabLabel(tab: TabKey, isRTL: boolean): string {
-  const option = TABS.find((candidate) => candidate.key === tab);
-  return option ? (isRTL ? option.ar : option.en) : '';
-}
+const TAB_KEYS: TabKey[] = ['upcoming', 'past', 'cancelled'];
 
 export default function AppointmentsScreen() {
   const colors = useSawaaColors();
@@ -82,12 +73,12 @@ export default function AppointmentsScreen() {
         {t('appointments.title')}
       </Text>
       <View style={[styles.tabs, { flexDirection: dir.row }]}>
-        {TABS.map((tabItem) => (
+        {TAB_KEYS.map((key) => (
           <Chip
-            key={tabItem.key}
-            label={getAppointmentTabLabel(tabItem.key, dir.isRTL)}
-            selected={tab === tabItem.key}
-            onPress={() => { setTab(tabItem.key); setPage(1); }}
+            key={key}
+            label={t(`appointments.${key}`)}
+            selected={tab === key}
+            onPress={() => { setTab(key); setPage(1); }}
           />
         ))}
       </View>
@@ -121,9 +112,11 @@ export default function AppointmentsScreen() {
         icon="calendar-outline"
         title={emptyTitle}
         description={t('appointments.noAppointmentsHint')}
+        actionLabel={t('appointments.bookNew')}
+        onAction={() => router.push('/(client)/clinics')}
       />
     );
-  }, [styles, emptyTitle, isError, isLoading, refetch, t]);
+  }, [styles, emptyTitle, isError, isLoading, refetch, router, t]);
 
   return (
     <AquaBackground>

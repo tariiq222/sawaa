@@ -10,6 +10,7 @@ import { DirectorySearch } from '@/components/features/directory/DirectorySearch
 import { useClinics } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import type { ClinicEntry } from '@/lib/clinics';
+import { goBackOrHome } from '@/lib/navigation';
 import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
 import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
@@ -66,7 +67,7 @@ export default function ClinicsScreen() {
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <ScreenHeader title={t('clinics.title')} onBack={() => router.back()} />
+            <ScreenHeader title={t('clinics.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
             <DirectorySearch
               value={query}
               onChangeText={setQuery}

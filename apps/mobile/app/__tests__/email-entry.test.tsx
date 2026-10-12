@@ -9,8 +9,6 @@ import { clearSessionAtEpoch, persistSessionTokensAtEpoch } from '@/services/nat
 import { authService } from '@/services/auth';
 import EmailEntryScreen from '../(auth)/email-entry';
 import RegisterScreen from '../(auth)/register';
-const mockLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: '***12' });
-jest.mock('@/hooks/queries', () => ({ useRequestLoginOtp: () => ({ mutateAsync: mockLoginOtp, isPending: false }) }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), impactAsync: jest.fn(), NotificationFeedbackType: { Success: 'success', Error: 'error' }, ImpactFeedbackStyle: { Light: 'light' } }));
 const mockPush = jest.fn(); const mockReplace = jest.fn(); const mockBack = jest.fn(); let mockEpoch = 1;
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: mockBack, push: mockPush }), useLocalSearchParams: () => mockParams, useFocusEffect: jest.fn(), Redirect: ({ href }: { href: unknown }) => { mockRedirectHref = href; return null; } }));
@@ -30,6 +28,7 @@ const api = jest.mocked(emailEntryService);
 const challenge = { challengeId: 'c', maskedEmail: 'a***@example.test', expiresIn: 300 as const, retryAfterSeconds: 60 as const };
 function mount(component: React.ReactElement = <EmailEntryScreen />) { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: 0 } } })}>{component}</QueryClientProvider>); }
 async function enterCode(ui: ReturnType<typeof mount>) {
+  fireEvent.press(ui.getByText('auth.loginWithOtp'));
   fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'a@example.test');
   fireEvent.press(ui.getByText('auth.emailEntry.sendEmail'));
   await waitFor(() => expect(ui.getByLabelText('auth.emailEntry.code')).toBeTruthy());
@@ -54,9 +53,18 @@ it.each(['register', 'verify_phone'] as const)('keeps %s proof in the screen, wi
 });
 it('does not claim delivery after provider failure', async () => {
   api.request.mockRejectedValueOnce({ response: { status: 503, data: { code: 'delivery_unavailable' } } });
-  const ui = mount(); fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'a@example.test'); fireEvent.press(ui.getByText('auth.emailEntry.sendEmail'));
+  const ui = mount(); fireEvent.press(ui.getByText('auth.loginWithOtp'));
+  fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'a@example.test'); fireEvent.press(ui.getByText('auth.emailEntry.sendEmail'));
   await waitFor(() => expect(ui.getByText('auth.emailEntry.deliveryUnavailable')).toBeTruthy());
   expect(ui.queryByLabelText('auth.emailEntry.code')).toBeNull();
+});
+it('edits the email from the code step with a pencil, not from the email step', async () => {
+  const ui = mount();
+  expect(ui.queryByLabelText('auth.emailEntry.editEmail')).toBeNull();
+  await enterCode(ui);
+  fireEvent.press(ui.getByLabelText('auth.emailEntry.editEmail'));
+  expect(ui.queryByLabelText('auth.emailEntry.code')).toBeNull();
+  expect(ui.getByLabelText('auth.register.email').props.value).toBe('a@example.test');
 });
 it('offers recovery when identity is unavailable', async () => {
   api.verify.mockResolvedValue({ next: 'unavailable' }); const ui = mount(); await enterCode(ui);
@@ -68,7 +76,7 @@ it('offers recovery when identity is unavailable', async () => {
 it('never persists a late authenticated response after restart and a newer session', async () => {
   let resolve!: (value: Awaited<ReturnType<typeof emailEntryService.verify>>) => void; api.verify.mockReturnValueOnce(new Promise(r => { resolve = r; }));
   const ui = mount(); await enterCode(ui); fireEvent.changeText(ui.getByLabelText('auth.emailEntry.code'), '123456'); fireEvent.press(ui.getByText('auth.otp.submit'));
-  await waitFor(() => expect(api.verify).toHaveBeenCalled()); fireEvent.press(ui.getByText('auth.emailEntry.restart')); mockEpoch++;
+  await waitFor(() => expect(api.verify).toHaveBeenCalled()); fireEvent.press(ui.getByLabelText('auth.emailEntry.editEmail')); mockEpoch++;
   await act(async () => { resolve({ next: 'authenticated', sessionKind: 'client', tokens: { accessToken: 'late', refreshToken: 'late' } }); });
   expect(persistSessionTokensAtEpoch).not.toHaveBeenCalled(); expect(mockReplace).not.toHaveBeenCalled();
 });
@@ -135,7 +143,7 @@ it('fences its own incomplete session when cancelled during profile loading', as
   api.verify.mockResolvedValue({ next: 'authenticated', sessionKind: 'client', tokens: { accessToken: 'a', refreshToken: 'r' } });
   const ui = mount(); await enterCode(ui); fireEvent.changeText(ui.getByLabelText('auth.emailEntry.code'), '123456'); fireEvent.press(ui.getByText('auth.otp.submit'));
   await waitFor(() => expect(authService.getProfile).toHaveBeenCalled());
-  fireEvent.press(ui.getByText('auth.emailEntry.restart'));
+  fireEvent.press(ui.getByLabelText('auth.emailEntry.editEmail'));
   expect(clearSessionAtEpoch).toHaveBeenCalledWith(3);
   await act(async () => { resolve({ success: true, data: { id: 'u', role: 'CLIENT', email: '', name: '', firstName: '', lastName: '', phone: null, gender: null, avatarUrl: null, isActive: true, isSuperAdmin: false, permissions: [] } }); });
   expect(mockReplace).not.toHaveBeenCalled();
@@ -256,4 +264,27 @@ it.each(['123', '12345', '123456', '12a4'])('rejects invalid recovery code %s be
 it('limits the recovery code field to the four-digit public OTP contract', () => {
   const ui = mount(<ResetPasswordScreen />);
   expect(ui.getByLabelText('auth.resetPassword.codeLabel').props.maxLength).toBe(4);
+});
+it('signs in with email and password from the email screen without requesting a code', async () => {
+  const post = jest.mocked(jest.requireMock('@/services/api').default.post);
+  post.mockResolvedValueOnce({ data: { sessionKind: 'client', tokens: { accessToken: 'a', refreshToken: 'r' } } });
+  const ui = mount();
+  // Password is the default mode: no toggle needed before typing.
+  expect(ui.getByText('auth.loginWithOtp')).toBeTruthy();
+  fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'Apple@Review.test');
+  fireEvent.changeText(ui.getByLabelText('auth.password'), 'secret-pass');
+  fireEvent.press(ui.getByText('auth.loginNow'));
+  await waitFor(() => expect(post).toHaveBeenCalledWith('/mobile/auth/password-login', { email: 'apple@review.test', password: 'secret-pass' }));
+  expect(api.request).not.toHaveBeenCalled();
+  fireEvent.press(ui.getByText('auth.loginWithOtp'));
+  expect(ui.getByText('auth.emailEntry.sendEmail')).toBeTruthy();
+});
+it('shows a credentials error when password sign-in fails', async () => {
+  const post = jest.mocked(jest.requireMock('@/services/api').default.post);
+  post.mockRejectedValueOnce({ response: { status: 401 } });
+  const ui = mount();
+  fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'a@example.test');
+  fireEvent.changeText(ui.getByLabelText('auth.password'), 'wrong');
+  fireEvent.press(ui.getByText('auth.loginNow'));
+  await waitFor(() => expect(ui.getByText('auth.loginError')).toBeTruthy());
 });

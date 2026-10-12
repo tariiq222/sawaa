@@ -12,7 +12,6 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Glass } from '@/theme/components/Glass';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Pill } from '@/components/ui/Pill';
 import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
@@ -144,24 +143,21 @@ export default function NotificationsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.teal[600]} />}
       >
-        <ScreenHeader title={t('notifications.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/account')} />
+        <ScreenHeader title={t('notifications.title')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
 
-        {!loading && !loadError ? (
+        {!loading && !loadError && unreadCount > 0 ? (
           <View style={[styles.summaryRow, { flexDirection: dir.row }]}>
-            <Pill label={t('notifications.newCount', { count: unreadCount })} tone={unreadCount > 0 ? 'brand' : 'muted'} />
-            {unreadCount > 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('notifications.markAllRead')}
-                onPress={markAllAsRead}
-                hitSlop={8}
-                style={styles.markAll}
-              >
-                <Text style={[styles.markAllText, { fontFamily: f700 }, localizedText]}>
-                  {t('notifications.markAllRead')}
-                </Text>
-              </Pressable>
-            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('notifications.markAllRead')}
+              onPress={markAllAsRead}
+              hitSlop={8}
+              style={styles.markAll}
+            >
+              <Text style={[styles.markAllText, { fontFamily: f700 }, localizedText]}>
+                {t('notifications.markAllRead')}
+              </Text>
+            </Pressable>
           </View>
         ) : null}
 
@@ -171,7 +167,7 @@ export default function NotificationsScreen() {
           options={FILTERS.map((f) => ({
             value: f.key,
             label: t(f.label),
-            badge: String(f.key === 'unread' ? unreadCount : notifications.length),
+            badge: f.key === 'unread' ? String(unreadCount) : undefined,
           }))}
           value={active}
           onChange={setActive}
@@ -235,7 +231,7 @@ export default function NotificationsScreen() {
         {loadError ? (
           <View style={styles.paginationStatus}>
             <Text accessibilityRole="alert" style={[styles.paginationError, { fontFamily: f400, color: theme.colors.error }, localizedText]}>{t('notifications.loadError')}</Text>
-            <AppButton label={t('common.retry')} variant="ghost" size="sm" onPress={loadMore} disabled={loadingMore} loading={loadingMore} />
+            <AppButton label={t('common.retry')} variant="ghost" size="sm" onPress={refresh} disabled={refreshing} loading={refreshing} />
           </View>
         ) : null}
         {hasMore && !loadError ? (
@@ -249,7 +245,7 @@ export default function NotificationsScreen() {
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
   scroll: { paddingHorizontal: 16, gap: 12 },
-  summaryRow: { flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  summaryRow: { flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
   markAll: { minHeight: 44, justifyContent: 'center' },
   markAllText: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, color: colors.teal[700] },
   card: { padding: 16 },

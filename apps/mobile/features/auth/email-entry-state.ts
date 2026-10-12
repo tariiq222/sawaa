@@ -11,6 +11,7 @@ export const initialEmailEntryState = (email = ''): EmailEntryState => ({
 });
 export type EmailEntryAction =
   | { type: 'restart' }
+  | { type: 'editEmail' }
   | { type: 'email' | 'code'; value: string }
   | { type: 'emailChallenge'; result: EmailChallenge; now: number }
   | { type: 'phoneChallenge'; result: PhoneChallenge; now: number }
@@ -19,6 +20,7 @@ export type EmailEntryAction =
 export function emailEntryReducer(state: EmailEntryState, action: EmailEntryAction): EmailEntryState {
   switch (action.type) {
     case 'restart': return initialEmailEntryState();
+    case 'editEmail': return initialEmailEntryState(state.email);
     case 'email': return { ...state, email: action.value };
     case 'code': return { ...state, code: action.value.replace(/[^0-9]/g, '').slice(0, 6) };
     case 'retry': return { ...state, retryAt: action.retryAt };

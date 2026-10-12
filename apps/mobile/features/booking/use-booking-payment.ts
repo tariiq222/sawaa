@@ -53,6 +53,8 @@ export interface BookingPaymentInput {
   deliveryType?: DeliveryType;
   amount?: string;
   currency?: string;
+  /** Route param carried so a return to the time step keeps its step count. */
+  steps?: string;
 }
 
 /**
@@ -235,6 +237,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
           method: selected === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
           fromBookingConfirm: 'true',
           ...(input.clinicId ? { clinicId: input.clinicId } : {}),
+          ...(input.steps ? { steps: input.steps } : {}),
         },
       });
       return null;
@@ -245,7 +248,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
       inFlight.current = false;
       setSubmitting(false);
     }
-  }, [canStart, availableMethods, userId, draft, ownerScope, input.deliveryType, input.clinicId, router, queryClient, total, t]);
+  }, [canStart, availableMethods, userId, draft, ownerScope, input.deliveryType, input.clinicId, input.steps, router, queryClient, total, t]);
 
   const pay = useCallback((selected: BookingPaymentMethod = method, bound?: Pick<PendingBookingCheckout, 'bookingId' | 'invoiceId'>) => start(selected, false, bound), [start, method]);
   const prepareApplePay = useCallback(() => start('apple_pay', true), [start]);
@@ -254,6 +257,7 @@ export function useBookingPayment(input: BookingPaymentInput, enabled = true) {
     router.replace({ pathname: '/(client)/booking/[serviceId]', params: {
       serviceId: input.serviceId, employeeId: input.employeeId, branchId: input.branchId,
       ...(input.clinicId ? { clinicId: input.clinicId } : {}),
+      ...(input.steps ? { steps: input.steps } : {}),
     } });
   };
 

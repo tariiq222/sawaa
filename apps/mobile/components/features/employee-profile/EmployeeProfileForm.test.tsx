@@ -1,24 +1,43 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { EmployeeProfileForm } from './EmployeeProfileForm';
+import { EmployeeProfileForm, EmployeeProfileSaveBar, useEmployeeProfileDraft } from './EmployeeProfileForm';
+import type { EmployeeProfileUpdate } from '@/services/employee/profile';
 import { EmployeeContactEditor } from './EmployeeContactEditor';
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', language: 'ar', isRTL: true }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => jest.requireActual('@/hooks/useDir').buildDirState('ar') }));
+function Harness({ onSave }: { onSave: (data: EmployeeProfileUpdate) => Promise<unknown> }) {
+  const draft = useEmployeeProfileDraft(profile, onSave);
+  return <><EmployeeProfileForm draft={draft} saving={false} /><EmployeeProfileSaveBar draft={draft} saving={false} /></>;
+}
 const profile = { id: 'e', name: 'Nora', bioAr: 'نبذة قديمة', bioEn: null, experience: 4, languages: ['العربية'], avatarUrl: null, email: 'old@example.com', phone: '+966501234567' };
 
 it('saves only biography, years and spoken languages', async () => {
   const save = jest.fn().mockResolvedValue(undefined);
-  const view = render(<EmployeeProfileForm profile={profile} onSave={save} saving={false} />);
+  const view = render(<Harness onSave={save} />);
   fireEvent.changeText(view.getByLabelText('employeeSelfProfile.bioAr'), 'نبذة جديدة');
   fireEvent.changeText(view.getByLabelText('employeeSelfProfile.experience'), '7');
   fireEvent.changeText(view.getByLabelText('employeeSelfProfile.languages'), 'العربية، English');
   fireEvent.press(view.getByText('common.save'));
   await waitFor(() => expect(save).toHaveBeenCalledWith({ bioAr: 'نبذة جديدة', bioEn: '', experience: 7, languages: ['العربية', 'English'] }));
 });
+it('shows the save bar only while the form differs from the loaded profile', async () => {
+  const save = jest.fn().mockResolvedValue(undefined);
+  const view = render(<Harness onSave={save} />);
+  expect(view.queryByText('common.save')).toBeNull();
+  fireEvent.changeText(view.getByLabelText('employeeSelfProfile.experience'), '7');
+  expect(view.getByText('common.save')).toBeTruthy();
+  fireEvent.changeText(view.getByLabelText('employeeSelfProfile.experience'), '4');
+  expect(view.queryByText('common.save')).toBeNull();
+  fireEvent.changeText(view.getByLabelText('employeeSelfProfile.experience'), '8');
+  fireEvent.press(view.getByText('common.save'));
+  await waitFor(() => expect(view.getByText('employeeSelfProfile.saved')).toBeTruthy());
+  expect(view.queryByText('common.save')).toBeNull();
+});
 it('rejects invalid years without submitting and preserves a failed save draft', async () => {
   const save = jest.fn().mockRejectedValue(new Error());
-  const view = render(<EmployeeProfileForm profile={profile} onSave={save} saving={false} />);
+  const view = render(<Harness onSave={save} />);
   fireEvent.changeText(view.getByLabelText('employeeSelfProfile.experience'), '-1');
   fireEvent.press(view.getByText('common.save'));
   await waitFor(() => expect(view.getByText('employeeSelfProfile.invalidProfile')).toBeTruthy());

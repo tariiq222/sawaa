@@ -16,6 +16,7 @@ import { useClinics, usePublicCatalog, useServicePriceFloors, useTherapists } fr
 import { bookingStep, stepsAfterSkip } from '@/features/booking/booking-entry';
 import { applyTherapistFilters, type TherapistChip } from '@/features/therapists/therapistsFilter';
 import type { PublicEmployeeItem } from '@/services/client/employees';
+import { goBackOrHome } from '@/lib/navigation';
 import { getFontName } from '@/theme/fonts';
 import { AquaBackground } from '@/theme/sawaa';
 import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
@@ -147,10 +148,10 @@ export default function TherapistsListScreen() {
         <BookingStepHeader
           {...bookingStep('therapist', steps)}
           title={t('booking.chooseTherapist')}
-          onBack={() => router.back()}
+          onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')}
         />
       ) : (
-        <ScreenHeader title={screenTitle} onBack={() => router.back()} />
+        <ScreenHeader title={screenTitle} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
       )}
       {serviceName ? (
         <View style={styles.serviceContext}>

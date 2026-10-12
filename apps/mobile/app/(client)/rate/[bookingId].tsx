@@ -61,7 +61,6 @@ export default function RateScreen() {
         id: bookingId,
         score: rating,
         comment: comment || undefined,
-        isPublic: true,
       },
       {
         onSuccess: () => {
@@ -96,7 +95,7 @@ export default function RateScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenHeader title={t('appointments.rateScreenTitle')} onBack={() => goBackOrHome(router, '/(client)/(tabs)/home')} />
+        <ScreenHeader title={t('appointments.rateScreenTitle')} onBack={() => goBackOrHome(router, bookingId ? `/(client)/appointment/${bookingId}` : '/(client)/(tabs)/home')} />
 
         {/* Therapist — real booking data, or a retryable load error */}
         {isLoading ? (
@@ -180,6 +179,9 @@ export default function RateScreen() {
               ]}
             />
           </Glass>
+          <Text style={[styles.publicNote, { color: colors.ink[500], fontFamily: f400, textAlign: dir.textAlign }]}>
+            {t('appointments.ratePublicNote')}
+          </Text>
         </View>
       </ScrollView>
 
@@ -204,6 +206,7 @@ const styles = StyleSheet.create({
   ratingLabel: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, textAlign: 'center' },
   notes: { gap: sawaaSpacing.sm },
   notesLabel: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  publicNote: { fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
   noteCard: { padding: sawaaSpacing.lg },
   noteInput: { fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight, minHeight: 80, textAlignVertical: 'top' },
 });

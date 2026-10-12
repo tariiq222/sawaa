@@ -23,7 +23,7 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.re
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: (select: (s: unknown) => unknown) => select({ auth: { user: { id: 'c1', firstName: 'نورة', lastName: 'ا', email: 'n@example.com', phone: '+966500000001', avatarUrl: null } } }) }));
 jest.mock('@/services/auth', () => ({ authService: { logout: () => mockLogout() } }));
-jest.mock('@/hooks/queries', () => ({ useSummary: () => mockSummary, useBranding: () => ({ data: { contactPhone: mockContactPhone } }) }));
+jest.mock('@/hooks/queries', () => ({ useSummary: () => mockSummary, useBranding: () => ({ data: { contactPhone: mockContactPhone } }), usePublicBranches: () => ({ data: [] }), usePublicBranch: () => ({ data: undefined }) }));
 jest.mock('@/hooks/queries/usePushPreference', () => ({ usePushPreference: () => ({ query: { data: { enabled: false, permitted: true }, isPending: false, isError: false, refetch: jest.fn() }, mutation: { mutateAsync: mockMutatePush, isPending: false } }) }));
 jest.mock('@/hooks/queries/useClientProfile', () => ({ useUpdateClientProfile: () => ({ mutateAsync: jest.fn().mockResolvedValue(undefined) }) }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));

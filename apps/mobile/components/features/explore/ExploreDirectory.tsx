@@ -1,29 +1,24 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { DirectorySearch } from '@/components/features/directory/DirectorySearch';
+import { ExploreCenter, ExploreBranches } from '@/components/features/explore/ExploreExtras';
+import { EXPLORE_KINDS, ExploreResults } from '@/components/features/explore/ExploreResults';
+import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { sawaaRadius, sawaaType } from '@/theme/sawaa/tokens';
-import { AppIcon } from '@/components/ui/AppIcon';
-import { BackButton } from '@/components/ui/BackButton';
+import { LocalizedHorizontalScroll } from '@/components/ui/LocalizedHorizontalScroll';
 import { useClinics, useGroupSessions, usePackageFamilies, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
+import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
-import { buildExploreResults, filterExploreResults, type ExploreFilter } from '@/lib/explore-directory';
-import { Glass } from '@/theme/components/Glass';
+import { buildExploreResults, filterExploreResults, type ExploreFilter, type ExploreResult } from '@/lib/explore-directory';
 import { useAppSelector } from '@/hooks/use-redux';
 
-const CATEGORIES: Array<{ id: Exclude<ExploreFilter, 'all'>; labelKey: string }> = [
-  { id: 'clinic', labelKey: 'clinics.title' },
-  { id: 'service', labelKey: 'guest.services' },
-  { id: 'therapist', labelKey: 'guest.therapists' },
-  { id: 'package', labelKey: 'guest.packages' },
-  { id: 'program', labelKey: 'guest.programs' },
-];
+const kindFromParam = (value: string | undefined): ExploreFilter | null =>
+  EXPLORE_KINDS.find((kind) => kind.id === value)?.id ?? null;
 
 export function ExploreDirectory() {
   const colors = useSawaaColors();
@@ -37,10 +32,13 @@ export function ExploreDirectory() {
   const therapists = useTherapists();
   const packages = usePackageFamilies();
   const programs = useGroupSessions();
-  const [filter, setFilter] = useState<ExploreFilter | null>(null);
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const paramFilter = kindFromParam(params?.filter);
+  const [filter, setFilter] = useState<ExploreFilter>(paramFilter ?? 'all');
   const [search, setSearch] = useState('');
+  // Tabs stay mounted, so follow a new `filter` param after the first render too.
+  useEffect(() => { if (paramFilter) setFilter(paramFilter); }, [paramFilter]);
   const font = getFontName(dir.locale, '400');
-  const bold = getFontName(dir.locale, '700');
   const queries = [clinics, catalog, therapists, packages, programs];
   const loading = queries.some((query) => query.isLoading);
   const failed = queries.some((query) => query.isError);
@@ -54,15 +52,15 @@ export function ExploreDirectory() {
       programs: programs.data ?? [],
       locale: dir.locale,
     });
-    return filterExploreResults(all, filter ?? 'all', search);
+    return filterExploreResults(all, filter, search);
   }, [catalog.data, clinics.data, dir.locale, filter, packages.data, programs.data, search, therapists.data]);
-  const isCategoryHome = filter === null && search.trim().length === 0;
-  const ForwardIcon = dir.isRTL ? ChevronLeft : ChevronRight;
+  const searching = search.trim().length > 0;
+  const overview = filter === 'all' && !searching;
   const retry = () => {
     void Promise.all(queries.filter((query) => query.isError).map((query) => query.refetch()));
   };
 
-  const openResult = (result: (typeof results)[number]) => {
+  const openResult = (result: ExploreResult) => {
     if (signedIn) {
       router.push(result.route);
       return;
@@ -93,90 +91,43 @@ export function ExploreDirectory() {
     <View style={styles.directory}>
       <DirectorySearch value={search} onChangeText={setSearch} placeholder={t('explore.searchPlaceholder')} accessibilityLabel={t('common.search')} testID="explore-search" />
 
-      {filter !== null ? (
-        <BackButton onPress={() => { setFilter(null); setSearch(''); }} style={{ alignSelf: dir.alignStart }} />
-      ) : null}
+      <LocalizedHorizontalScroll dir={dir} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <Chip label={t('explore.all')} selected={filter === 'all'} onPress={() => setFilter('all')} />
+        {EXPLORE_KINDS.map((kind) => (
+          <Chip key={kind.id} label={t(kind.labelKey)} selected={filter === kind.id} onPress={() => setFilter(kind.id)} />
+        ))}
+      </LocalizedHorizontalScroll>
 
-      {isCategoryHome ? (
-        <View style={styles.categories}>
-          {CATEGORIES.map((category) => (
-            <Glass
-              key={category.id}
-              variant="strong"
-              radius={sawaaRadius.lg}
-              interactive
-              accessibilityRole="button"
-              accessibilityLabel={t(category.labelKey)}
-              onPress={() => setFilter(category.id)}
-              style={styles.category}
-            >
-              <View style={[styles.categoryRow, { flexDirection: dir.row }]}>
-                <Text style={[styles.categoryText, { fontFamily: bold, textAlign: dir.textAlign, flex: 1 }]}>{t(category.labelKey)}</Text>
-                <AppIcon
-                  sf={dir.isRTL ? 'chevron.left' : 'chevron.right'}
-                  fallback={ForwardIcon}
-                  size={18}
-                  color={colors.ink[500]}
-                />
-              </View>
-            </Glass>
-          ))}
-        </View>
-      ) : null}
-
-      {!isCategoryHome && loading ? (
+      {loading ? (
         <View style={[styles.state, { flexDirection: dir.row }]}>
           <ActivityIndicator color={colors.teal[700]} />
           <Text style={[styles.stateText, { fontFamily: font }]}>{t('common.loading')}</Text>
         </View>
       ) : null}
-      {!isCategoryHome && failed ? (
+      {failed ? (
         <EmptyState icon="cloud-offline-outline" tone="danger" title={t('guest.loadError')} actionLabel={t('common.retry')} onAction={retry} />
       ) : null}
-      {!isCategoryHome && !loading && !failed && results.length === 0 ? (
+      {!loading && !failed && results.length === 0 ? (
         <Text style={[styles.stateText, styles.empty, { fontFamily: font }]}>{t('common.noResults')}</Text>
       ) : null}
-      {!isCategoryHome ? (
-        <View style={styles.results}>
-          {results.map((result) => (
-            <Glass
-              key={`${result.kind}-${result.id}`}
-              variant="strong"
-              radius={sawaaRadius.lg}
-              interactive
-              onPress={() => openResult(result)}
-              accessibilityRole="button"
-              accessibilityLabel={result.detail && result.detail !== result.title ? `${result.title}, ${result.detail}` : result.title}
-              testID={`explore-result-${result.kind}-${result.id}`}
-              style={styles.result}
-            >
-              <Text style={[styles.resultTitle, { fontFamily: bold, textAlign: dir.textAlign }]}>{result.title}</Text>
-              {result.detail && result.detail !== result.title ? (
-                <Text style={[styles.resultDetail, { fontFamily: font, textAlign: dir.textAlign }]}>{result.detail}</Text>
-              ) : null}
-            </Glass>
-          ))}
-        </View>
-      ) : null}
+      <ExploreResults
+        results={results}
+        filter={filter}
+        searching={searching}
+        onOpen={openResult}
+        onSelectKind={setFilter}
+      />
+
+      {overview ? <ExploreBranches /> : null}
+      {overview ? <ExploreCenter /> : null}
     </View>
   );
 }
 
 const createStyles = (colors: ReturnType<typeof useSawaaColors>) => StyleSheet.create({
-  directory: { gap: 14 },
-  search: { minHeight: 50, borderRadius: 16, paddingHorizontal: 16, color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
-  categories: { gap: 10 },
-  category: { minHeight: 64, paddingHorizontal: 16, justifyContent: 'center' },
-  categoryRow: { alignItems: 'center', gap: 12 },
-  categoryText: { color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
+  directory: { gap: sawaaSpacing.lg },
+  chips: { gap: 8, paddingVertical: 2 },
   state: { alignItems: 'center', justifyContent: 'center', gap: 10, padding: 16 },
   stateText: { color: colors.ink[500], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
-  errorState: { alignItems: 'center', gap: 10, padding: 14, borderRadius: 16, backgroundColor: colors.glass.opaqueBg },
-  retry: { minHeight: 40, paddingHorizontal: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.teal[700] },
-  retryText: { color: colors.glass.opaqueBg, fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
   empty: { textAlign: 'center', padding: 18 },
-  results: { gap: 10 },
-  result: { minHeight: 68, justifyContent: 'center', gap: 4, padding: 15 },
-  resultTitle: { color: colors.ink[900], fontSize: sawaaType.body.fontSize, lineHeight: sawaaType.body.lineHeight },
-  resultDetail: { color: colors.ink[500], fontSize: sawaaType.bodySm.fontSize, lineHeight: sawaaType.bodySm.lineHeight },
 });

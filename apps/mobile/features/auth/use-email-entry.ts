@@ -41,6 +41,8 @@ export function useEmailEntry(context: Context) {
     invalidate(); dispatch({ type: 'restart' }); setPending(false); setError('');
   }, [invalidate]));
   const restart = () => { invalidate(); dispatch({ type: 'restart' }); setPending(false); setError(''); };
+  // Back to the email field with the typed address kept, so a typo can be fixed.
+  const editEmail = () => { invalidate(); dispatch({ type: 'editEmail' }); setPending(false); setError(''); };
   const exit = () => { restart(); if (context.onExit) context.onExit(); else router.back(); };
   const usePhone = () => {
     restart();
@@ -74,7 +76,7 @@ export function useEmailEntry(context: Context) {
       dispatch({ type: 'verified', result, now: Date.now() }); return;
     }
     const verified = await promoteEmailSession(result, epoch, current, value => { ownedSessionEpoch.current = value; });
-    await completeNativeSession(verified, { dispatch: appDispatch, replace: router.replace, ...context, isFlowCurrent: current, onReady: () => { ownedSessionEpoch.current = null; } });
+    await completeNativeSession(verified, { dispatch: appDispatch, replace: router.replace, dismissAll: router.dismissAll, ...context, isFlowCurrent: current, onReady: () => { ownedSessionEpoch.current = null; } });
     if (current()) dispatch({ type: 'restart' });
   };
   const requestEmail = () => {
@@ -116,7 +118,7 @@ export function useEmailEntry(context: Context) {
       if (current() && isSessionCurrent(epoch)) dispatch({ type: 'phoneChallenge', result, now: Date.now() });
     });
   };
-  return { state, pending, error, requestEmail, verify, requestPhone, resend, restart, exit, usePhone,
+  return { state, pending, error, requestEmail, verify, requestPhone, resend, restart, editEmail, exit, usePhone,
     setEmail: (value: string) => { invalidate(); dispatch({ type: 'email', value }); setError(''); },
     setCode: (value: string) => dispatch({ type: 'code', value }),
     retrySeconds: Math.max(0, Math.ceil((state.retryAt - now) / 1000)),

@@ -36,6 +36,8 @@ async function main() {
         id: data.clientId, email: data.email, passwordHash,
         name: 'حساب مراجعة تجريبي', firstName: 'حساب مراجعة', lastName: 'تجريبي',
         accountType: 'FULL', claimedAt: new Date(), isActive: true,
+        // Password sign-in requires a verified email; the .invalid address is synthetic.
+        emailVerified: new Date(),
         phone: null, userId: null,
       }, select: { id: true } });
       return { status: 'created', clientId: client.id };

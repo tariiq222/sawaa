@@ -57,3 +57,13 @@ it('rejects a staff profile for an explicit client response', async () => {
   await expect(completeNativeSession({ ...session, sessionEpoch: 3 }, { dispatch, replace })).rejects.toThrow();
   expect(dispatch).not.toHaveBeenCalled(); expect(replace).not.toHaveBeenCalled();
 });
+
+it('dismisses stacked guest booking screens before replacing login with the client confirm', async () => {
+  jest.mocked(authService.getProfile).mockResolvedValueOnce({ success: true, data: { role: 'CLIENT' } } as Awaited<ReturnType<typeof authService.getProfile>>);
+  const calls: string[] = [];
+  const dismissAll = jest.fn(() => { calls.push('dismissAll'); });
+  const replace = jest.fn(() => { calls.push('replace'); });
+  const booking = JSON.stringify({ serviceId: 's', employeeId: 'e', branchId: 'b', deliveryType: 'online', scheduledAt: '2026-10-01T10:00:00.000Z', amount: '100', currency: 'SAR' });
+  await completeNativeSession({ ...session, sessionEpoch: 3 }, { dispatch: jest.fn(), replace, dismissAll, booking });
+  expect(calls).toEqual(['dismissAll', 'replace']);
+});

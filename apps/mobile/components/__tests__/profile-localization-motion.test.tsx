@@ -18,7 +18,7 @@ jest.mock('@/hooks/useA11y', () => ({ useReduceMotion: () => mockReduced }));
 jest.mock('@/hooks/use-redux', () => ({ useAppSelector: () => ({ id: 'client', firstName: 'Test', lastName: 'User', email: 'test@example.com', emailVerified: true }), useAppDispatch: () => jest.fn() }));
 jest.mock('@/stores/slices/auth-slice', () => ({ logout: jest.fn(), setUser: jest.fn() }));
 jest.mock('@/services/auth', () => ({ authService: { getProfile: jest.fn(), logout: jest.fn() } }));
-jest.mock('@/hooks/queries', () => ({ useBranding: () => ({ data: {} }), useSummary: () => ({ data: { totalBookings: 2, lastVisit: '2026-10-07T09:00:00Z', outstandingBalance: 5000 }, refetch: jest.fn() }) }));
+jest.mock('@/hooks/queries', () => ({ useBranding: () => ({ data: {} }), usePublicBranches: () => ({ data: [] }), usePublicBranch: () => ({ data: undefined }), useSummary: () => ({ data: { totalBookings: 2, lastVisit: '2026-10-07T09:00:00Z', outstandingBalance: 5000 }, refetch: jest.fn() }) }));
 jest.mock('@/components/features/auth/UnverifiedEmailBanner', () => ({ UnverifiedEmailBanner: () => null }));
 jest.mock('@/hooks/use-notifications', () => ({ useNotifications: () => ({ notifications: [{ id: 'n1', titleAr: 'تذكير', titleEn: 'Reminder', bodyAr: 'تفاصيل', bodyEn: 'Details', createdAt: '2026-10-07T09:00:00Z', type: 'booking_reminder', isRead: false }], unreadCount: 1, loading: false, refreshing: false, refresh: jest.fn(), loadMore: jest.fn(), hasMore: false, loadingMore: false, loadError: false, markAsRead: jest.fn(), markAllAsRead: jest.fn() }) }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -29,19 +29,19 @@ import ClientProfile from '../../app/(client)/(tabs)/account';
 import EmployeeProfile from '../../app/(employee)/(tabs)/profile';
 import Notifications from '../../app/(client)/notifications';
 
-it.each([['ar', 'جلسات', 'آخر زيارة', 'مبلغ مستحق'], ['en', 'Sessions', 'Last visit', 'Outstanding']])('translates client summary labels in %s', async (locale, sessions, lastVisit, outstanding) => {
+it.each([['ar', 'جلسات', 'آخر موعد', 'مبلغ مستحق'], ['en', 'Sessions', 'Last visit', 'Outstanding']])('translates client summary labels in %s', async (locale, sessions, lastVisit, outstanding) => {
   await act(async () => { await i18n.changeLanguage(locale); });
   const screen = render(<ClientProfile />);
   for (const label of [sessions, lastVisit, outstanding]) expect(screen.getByText(label)).toBeTruthy();
 });
-it.each([['ar', 'عن التطبيق', 'الإصدار', 'رقم البناء'], ['en', 'About', 'Version', 'Build']])('uses the installed employee app version/build and translated About section in %s', async (locale, about, version, build) => {
+it.each([['ar', 'عن التطبيق', 'الإصدار', 'رقم البناء'], ['en', 'About', 'Version', 'Build']])('uses the installed employee app version (no build number) and translated About section in %s', async (locale, about, version, build) => {
   await act(async () => { await i18n.changeLanguage(locale); });
   const screen = render(<EmployeeProfile />);
   expect(screen.getByText('9.7.3')).toBeTruthy();
-  expect(screen.getByText('42')).toBeTruthy();
+  expect(screen.queryByText('42')).toBeNull();
   expect(screen.getByText(about)).toBeTruthy();
   expect(screen.getByText(version)).toBeTruthy();
-  expect(screen.getByText(build)).toBeTruthy();
+  expect(screen.queryByText(build)).toBeNull();
   expect(screen.queryByText(/1\.0\.0/)).toBeNull();
 });
 it.each([['client profile', ClientProfile], ['employee profile', EmployeeProfile], ['notifications', Notifications]] as const)('%s omits all entering callbacks for reduced motion', (_name, Component) => {

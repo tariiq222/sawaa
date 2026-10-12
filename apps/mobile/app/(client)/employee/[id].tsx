@@ -21,7 +21,7 @@ export default function EmployeeProfileScreen() {
     const bookingClinicId = clinicId ?? selectedClinic?.id;
     router.push({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}), ...(steps ? { steps } : {}) },
+      params: { serviceId: selectedServiceId, employeeId, ...(bookingClinicId ? { clinicId: bookingClinicId } : {}), steps: steps ?? '3' },
     });
   };
 

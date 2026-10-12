@@ -8,6 +8,10 @@ describe('email entry state', () => {
     expect(verified.flowExpiresAt).toBe(601000);
     expect(emailEntryReducer(verified, { type: 'restart' })).toEqual(initialEmailEntryState());
   });
+  it('returns to the email step keeping only the typed address when editing', () => {
+    const sent = emailEntryReducer(initialEmailEntryState('a@example.test'), { type: 'emailChallenge', result: { challengeId: 'c1', maskedEmail: 'a***@example.test', expiresIn: 300, retryAfterSeconds: 60 }, now: 0 });
+    expect(emailEntryReducer(sent, { type: 'editEmail' })).toEqual(initialEmailEntryState('a@example.test'));
+  });
   it('replaces rotated phone proof and uses server expiry', () => {
     const proven = emailEntryReducer(initialEmailEntryState(), { type: 'verified', result: { next: 'verify_phone', email: 'a@example.test', continuationToken: 'secret', expiresIn: 600 }, now: 0 });
     const state = emailEntryReducer(proven, { type: 'phoneChallenge', result: { phoneChallengeId: 'p2', continuationToken: 'rotated', maskedPhone: '***12', expiresIn: 120, retryAfterSeconds: 60 }, now: 2000 });

@@ -8,7 +8,7 @@ import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';
 import type { AvatarUpload } from '@/services/employee/profile';
 
-export function EmployeeAvatarEditor({ uri, upload, remove, busy }: { uri: string | null; upload: (image: AvatarUpload) => Promise<unknown>; remove: () => Promise<unknown>; busy: boolean }) {
+export function EmployeeAvatarEditor({ uri, name, upload, remove, busy }: { uri: string | null; name?: string; upload: (image: AvatarUpload) => Promise<unknown>; remove: () => Promise<unknown>; busy: boolean }) {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [error, setError] = useState('');
@@ -34,11 +34,16 @@ export function EmployeeAvatarEditor({ uri, upload, remove, busy }: { uri: strin
     try { await remove(); } catch { setError('employeeSelfProfile.photoError'); }
   };
   return <View style={styles.form}>
-    <View style={styles.photo}><Thumb uri={uri} width={96} height={96} radius={48} accessibilityLabel={t('employeeSelfProfile.photo')} /></View>
-    <AppButton label={t('employeeSelfProfile.changePhoto')} onPress={choose} loading={busy || picking} variant="secondary" />
-    {uri ? <AppButton label={t('employeeSelfProfile.removePhoto')} onPress={clear} disabled={busy || picking} variant="ghost" /> : null}
-    <ThemedText variant="caption">{t('employeeSelfProfile.photoHint')}</ThemedText>
-    {error ? <ThemedText accessibilityRole="alert" color={theme.colors.error}>{t(error)}</ThemedText> : null}
+    <Thumb uri={uri} width={96} height={96} radius={48} accessibilityLabel={t('employeeSelfProfile.photo')} />
+    {name ? <ThemedText variant="subheading" style={styles.name}>{name}</ThemedText> : null}
+    <View style={styles.actions}>
+      <AppButton label={t('employeeSelfProfile.changePhoto')} onPress={choose} loading={busy || picking} variant="secondary" size="sm" />
+      {uri ? <AppButton label={t('employeeSelfProfile.removePhoto')} onPress={clear} disabled={busy || picking} variant="ghost" size="sm" /> : null}
+    </View>
+    {error ? <View style={styles.error}>
+      <ThemedText accessibilityRole="alert" color={theme.colors.error} style={styles.name}>{t(error)}</ThemedText>
+      <ThemedText variant="caption" style={styles.name}>{t('employeeSelfProfile.photoHint')}</ThemedText>
+    </View> : null}
   </View>;
 }
-const styles = StyleSheet.create({ form: { gap: 12 }, photo: { alignItems: 'center' } });
+const styles = StyleSheet.create({ form: { alignItems: 'center', gap: 12 }, name: { textAlign: 'center' }, actions: { alignItems: 'center', gap: 4 }, error: { gap: 4, alignSelf: 'stretch' } });

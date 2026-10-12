@@ -16,7 +16,7 @@ interface FeaturedClinicsProps { dir: DirState; f600: string; f700: string }
 
 const PHOTO_W = 224;
 
-/** Horizontal row of clinic photos with name and a short real description (or counts). */
+/** Horizontal slider of every clinic: photo, name and a short real description (or the therapist count); a tap opens the clinic. */
 export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
   const colors = useSawaaColors();
   const router = useRouter();
@@ -24,14 +24,14 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
   const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const [failedImages, setFailedImages] = React.useState<Record<string, string>>({});
   const clinicsQuery = useClinics();
-  const clinics = (clinicsQuery.data ?? []).slice(0, 6);
+  const clinics = clinicsQuery.data ?? [];
   if (clinics.length === 0) return null;
   return (
     <LocalizedHorizontalScroll dir={dir} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.list, { flexDirection: dir.row }]}>
       {clinics.map((clinic) => {
         const name = dir.isRTL ? clinic.nameAr : clinic.nameEn ?? clinic.nameAr;
         const description = (dir.isRTL ? clinic.descriptionAr : clinic.descriptionEn ?? clinic.descriptionAr)?.trim();
-        const meta = description || `${t('clinics.therapistsCount', { count: clinic.therapistCount })} · ${t('clinics.servicesCount', { count: clinic.serviceCount })}`;
+        const meta = description || t('clinics.therapistsCount', { count: clinic.therapistCount });
         const photo = clinic.imageUrl && failedImages[clinic.id] !== clinic.imageUrl ? clinic.imageUrl : null;
         return (
           <Pressable

@@ -34,3 +34,10 @@ it('keeps client full contact behavior and detail fallback', async () => {
   fireEvent.press(screen.getByRole('button', { name: 'groups.contactUs' }));
   expect(open).toHaveBeenCalledTimes(1); dial.mockRestore();
 });
+it('labels the open-details button as view details for an open session', () => {
+  const open = jest.fn();
+  const screen = render(<GroupCard group={{ ...group, isFull: false, spotsLeft: 3 }} onOpen={open} />);
+  expect(screen.queryByText('groups.register')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'guest.viewDetails' }));
+  expect(open).toHaveBeenCalledTimes(1);
+});

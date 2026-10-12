@@ -26,31 +26,32 @@ describe('ListClientUpcomingBookingsHandler', () => {
     expect(result.meta).toEqual({ total: 1, page: 1, limit: 10, totalPages: 1 });
   });
 
-  it('emits a client-scoped future-only lifecycle predicate for both rows and count', async () => {
+  it('emits a client-scoped not-yet-ended lifecycle predicate for both rows and count', async () => {
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.count.mockResolvedValue(0);
     await handler.execute({ clientId: 'client-1', now });
-    const where = { clientId: 'client-1', scheduledAt: { gt: now }, endsAt: { gt: now }, status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] } };
+    const where = { clientId: 'client-1', endsAt: { gt: now }, status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] } };
     expect(prisma.booking.findMany).toHaveBeenCalledWith({ where, orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }], skip: 0, take: 10 });
     expect(prisma.booking.count).toHaveBeenCalledWith({ where });
   });
 
-  it('selects the nearest legitimate future booking before pagination, rejecting ended and terminal rows', async () => {
+  it('selects the in-progress booking first, then future ones, before pagination, rejecting ended and terminal rows', async () => {
     const rows = [
-      row('ended', '2026-10-09T11:00:00Z'), row('starts-now', '2026-10-09T12:00:00Z'),
+      row('ended', '2026-10-09T10:00:00Z'), row('in-progress', '2026-10-09T11:30:00Z'), row('starts-now', '2026-10-09T12:00:00Z'),
       ...[BookingStatus.COMPLETED, BookingStatus.CANCELLED, BookingStatus.CANCEL_REQUESTED, BookingStatus.EXPIRED, BookingStatus.NO_SHOW].map((status) => row(status, '2026-10-09T12:01:00Z', status)),
       row('other-client', '2026-10-09T12:02:00Z', BookingStatus.CONFIRMED, 'client-2'),
       row('later', '2026-10-09T14:00:00Z'), row('nearest', '2026-10-09T13:00:00Z', BookingStatus.DEPOSIT_PAID),
     ];
-    type Query = { where: { clientId: string; scheduledAt: { gt?: Date; gte?: Date }; endsAt?: { gt: Date }; status: { in: BookingStatus[] } }; skip: number; take: number };
+    type Query = { where: { clientId: string; endsAt?: { gt: Date }; status: { in: BookingStatus[] } }; skip: number; take: number };
     const matches = (query: Query) => rows.filter((booking) => booking.clientId === query.where.clientId && query.where.status.in.includes(booking.status)
-      && (query.where.scheduledAt.gt ? booking.scheduledAt > query.where.scheduledAt.gt : booking.scheduledAt >= query.where.scheduledAt.gte!)
       && (!query.where.endsAt || booking.endsAt! > query.where.endsAt.gt));
     prisma.booking.findMany.mockImplementation((query: Query) => Promise.resolve(matches(query).sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime()).slice(query.skip, query.skip + query.take)));
     prisma.booking.count.mockImplementation((query: Query) => Promise.resolve(matches(query).length));
     const result = await handler.execute({ clientId: 'client-1', now, limit: 1 });
-    expect(result.data.map((booking) => booking.id)).toEqual(['nearest']);
-    expect(result.meta.total).toBe(2);
+    expect(result.data.map((booking) => booking.id)).toEqual(['in-progress']);
+    expect(result.meta.total).toBe(4);
+    const second = await handler.execute({ clientId: 'client-1', now, limit: 2, page: 2 });
+    expect(second.data.map((booking) => booking.id)).toEqual(['nearest', 'later']);
   });
 
   it('applies page and limit and preserves an empty result', async () => {

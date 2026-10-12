@@ -22,7 +22,10 @@ export interface PublicEmployeeItem {
   ratingAverage?: number | null;
   ratingCount?: number;
   minServicePrice: number | null;
+  /** Has an active availability rule for today's weekday (not a free-slot check). */
   isAvailableToday: boolean;
+  /** Weekdays (0=Sun..6=Sat) with an active availability rule. */
+  availableDaysOfWeek?: number[];
 }
 
 export interface AvailableDay {

@@ -62,9 +62,9 @@ describe('notifications screen escape route', () => {
   });
 });
 
-it('returns a cold link to the client account tab', () => {
+it('returns a cold link to the client home tab', () => {
  jest.clearAllMocks(); mockHistory = false; const view = render(<NotificationsScreen />);
  fireEvent.press(view.getByLabelText('a11y.buttonBack'));
- expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/account');
+ expect(mockReplace).toHaveBeenCalledWith('/(client)/(tabs)/home');
  expect(mockBack).not.toHaveBeenCalled();
 });
