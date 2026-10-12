@@ -45,14 +45,14 @@ export class MobileClientAuthController {
   @HttpCode(200)
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: 'Log in a customer with email or phone and password' })
+  @ApiOperation({ summary: 'Log in a customer or practitioner with email or phone and password' })
   @ApiOkResponse({
-    description: 'Customer authenticated, native client tokens issued',
+    description: 'Authenticated; native client tokens or practitioner staff tokens issued',
     schema: {
       type: 'object',
       required: ['sessionKind', 'tokens'],
       properties: {
-        sessionKind: { type: 'string', enum: ['client'] },
+        sessionKind: { type: 'string', enum: ['client', 'staff'] },
         tokens: {
           type: 'object', required: ['accessToken', 'refreshToken'],
           properties: { accessToken: { type: 'string' }, refreshToken: { type: 'string' } },

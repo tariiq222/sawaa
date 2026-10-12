@@ -38585,7 +38585,8 @@
                   "properties": {
                     "sessionKind": {
                       "enum": [
-                        "client"
+                        "client",
+                        "staff"
                       ],
                       "type": "string"
                     },
@@ -38613,7 +38614,7 @@
                 }
               }
             },
-            "description": "Customer authenticated, native client tokens issued"
+            "description": "Authenticated; native client tokens or practitioner staff tokens issued"
           },
           "400": {
             "content": {
@@ -38656,7 +38657,7 @@
             "description": "Unhandled server error"
           }
         },
-        "summary": "Log in a customer with email or phone and password",
+        "summary": "Log in a customer or practitioner with email or phone and password",
         "tags": [
           "Mobile Client / Identity"
         ]

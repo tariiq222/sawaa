@@ -6,9 +6,16 @@ import { normalizeIdentifier } from '../shared/identifier-detector';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { countClientPasswordAttempt, DUMMY_PASSWORD_HASH } from '../shared/password-login-security';
+import { RefreshTokenSource, type User } from '@prisma/client';
+import { TokenService } from '../shared/token.service';
+import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+
+const STAFF_LOCKOUT_MINUTES = 15;
+const STAFF_MAX_FAILED_ATTEMPTS = 5;
 
 export interface MobilePasswordLoginResult {
-  sessionKind: 'client';
+  sessionKind: 'client' | 'staff';
   tokens: { accessToken: string; refreshToken: string };
 }
 
@@ -19,6 +26,8 @@ export class MobilePasswordLoginHandler {
     private readonly login: ClientLoginHandler,
     private readonly redis: RedisService,
     private readonly passwords: PasswordService,
+    private readonly staffTokens: TokenService,
+    private readonly settings: PlatformSettingsService,
   ) {}
 
   private async rejectCredentials(password: string): Promise<never> {
@@ -43,6 +52,11 @@ export class MobilePasswordLoginHandler {
     const users = await this.prisma.user.findMany({ where: contact });
     if (users.length > 1) return this.rejectCredentials(dto.password);
     const matchedUser = users[0];
+    if (matchedUser && matchedUser.role !== 'CLIENT') {
+      const staffTokens = await this.staffLogin(matchedUser.id, contact, channel, dto.password);
+      await Promise.all([redisClient.del(identifierKey), redisClient.del(ipKey)]);
+      return { sessionKind: 'staff', tokens: staffTokens };
+    }
     const clients = await this.prisma.client.findMany({
       where: { OR: [contact, ...(matchedUser ? [{ userId: matchedUser.id }] : [])] },
     });
@@ -87,6 +101,55 @@ export class MobilePasswordLoginHandler {
       // Shared login already performed its comparison (or rejected a limit).
       if (error instanceof UnauthorizedException) throw new UnauthorizedException('Invalid credentials');
       throw error;
+    }
+  }
+
+  /** Same router rule as mobile OTP entry: staff only when linked to an active Employee and not a Client. */
+  private async staffLogin(
+    userId: string,
+    contact: Record<string, unknown>,
+    channel: 'EMAIL' | 'SMS',
+    password: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { customRole: { include: { permissions: true } } },
+    });
+    if (!user) return this.rejectCredentials(password);
+    // Same rule as the OTP routers: a staff identity must not collide with any
+    // live Client on either contact channel or via the user link.
+    const clients = await this.prisma.client.findMany({ where: {
+      deletedAt: null,
+      OR: [contact, { email: { equals: user.email, mode: 'insensitive' } }, ...(user.phone ? [{ phone: user.phone }] : []), { userId: user.id }],
+    } });
+    const contactVerified = channel === 'EMAIL' ? user.emailVerifiedAt : user.phoneVerifiedAt;
+    const eligible = user.isActive && clients.length === 0 && !!contactVerified &&
+      !!user.passwordHash && !(user.lockedUntil && user.lockedUntil > new Date()) &&
+      await isMobileStaffEligible(this.prisma, this.settings, user);
+    if (!eligible) return this.rejectCredentials(password);
+
+    if (!await this.passwords.verify(password, user.passwordHash ?? DUMMY_PASSWORD_HASH)) {
+      await this.recordStaffFailure(user);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (user.failedLoginAttempts > 0 || user.lockedUntil !== null) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+    }
+    return this.staffTokens.issueTokenPair(user, { isSuperAdmin: user.isSuperAdmin }, undefined, RefreshTokenSource.MOBILE);
+  }
+
+  // Same lockout semantics as the dashboard LoginHandler (atomic increment, 5 strikes, 15 minutes).
+  private async recordStaffFailure(user: Pick<User, 'id'>): Promise<void> {
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
+    });
+    if (updated.failedLoginAttempts >= STAFF_MAX_FAILED_ATTEMPTS) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: new Date(Date.now() + STAFF_LOCKOUT_MINUTES * 60 * 1000) },
+      });
     }
   }
 }
