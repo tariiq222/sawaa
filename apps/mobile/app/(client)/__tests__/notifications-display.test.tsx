@@ -21,10 +21,11 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => jest.re
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').Pressable }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn() }), useFocusEffect: jest.fn() }));
 const mockLoadMore = jest.fn();
+const mockRefresh = jest.fn();
 const mockMarkAllRead = jest.fn();
 let mockState = {
   notifications: [] as Notification[], unreadCount: 0, loading: false, refreshing: false,
-  refresh: jest.fn(), loadMore: mockLoadMore, hasMore: false, loadingMore: false,
+  refresh: mockRefresh, loadMore: mockLoadMore, hasMore: false, loadingMore: false,
   loadError: false, markAsRead: jest.fn(), markAllAsRead: mockMarkAllRead,
 };
 jest.mock('@/hooks/use-notifications', () => ({ useNotifications: () => mockState }));
@@ -85,16 +86,17 @@ it('shows a recoverable load error without claiming that the inbox is empty', as
   expect(screen.queryByText(ar.notifications.noNotifications)).toBeNull();
   expect(screen.queryByText('لا توجد إشعارات لعرضها')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: ar.common.retry }));
-  expect(mockLoadMore).toHaveBeenCalledTimes(1);
+  expect(mockRefresh).toHaveBeenCalled();
+  expect(mockLoadMore).not.toHaveBeenCalled();
 });
 
-it.each([
-  [0, 'لا إشعارات جديدة'], [1, 'إشعار جديد واحد'], [2, 'إشعاران جديدان'],
-  [3, '3 إشعارات جديدة'], [11, '11 إشعارًا جديدًا'], [100, '100 إشعار جديد'],
-])('uses the Arabic unread count form for %s', async (count, label) => {
-  mockState.unreadCount = count as number;
+it('shows the unread count once, on the unread filter only', async () => {
+  mockState.unreadCount = 3;
+  mockState.notifications = [notification, { ...notification, id: 'n2' }];
   await renderScreen();
-  expect(screen.getByText(label as string)).toBeTruthy();
+  expect(screen.queryByText('3 إشعارات جديدة')).toBeNull();
+  expect(screen.getAllByText('3')).toHaveLength(1);
+  expect(screen.queryByText('2')).toBeNull();
 });
 
 it('distinguishes an empty unread filter from an empty inbox', async () => {
