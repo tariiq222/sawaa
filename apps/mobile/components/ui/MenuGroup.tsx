@@ -39,9 +39,9 @@ export function MenuGroup({ title, entries, footer }: { title?: string; entries:
     <View style={styles.section}>
       {title ? <SectionHeader title={title} /> : null}
       <Glass variant="strong" radius={sawaaRadius.lg} padding={0}>
-        {entries.map((entry, index) => (
-          <View key={entry.key} style={index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.ink[400] } : undefined}>
-            <MenuRow {...entry} />
+        {entries.map(({ key, ...row }, index) => (
+          <View key={key} style={index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.ink[400] } : undefined}>
+            <MenuRow {...row} />
           </View>
         ))}
         {footer}
@@ -50,7 +50,7 @@ export function MenuGroup({ title, entries, footer }: { title?: string; entries:
   );
 }
 
-function MenuRow({ icon: Icon, label, description, value, valueDirection = 'auto', onPress, trailing, danger, disabled, busy }: MenuEntry) {
+function MenuRow({ icon: Icon, label, description, value, valueDirection = 'auto', onPress, trailing, danger, disabled, busy }: Omit<MenuEntry, 'key'>) {
   const colors = useSawaaColors();
   const dir = useDir();
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
