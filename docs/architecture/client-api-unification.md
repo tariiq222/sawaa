@@ -290,3 +290,24 @@ Impact extent, by system:
 - **Mobile**: 18 source files, 7 tests, one store release; old builds keep working only because legacy prefixes keep legacy shapes.
 - **Dashboard**: no code change; reception sees unified cancellation behaviour; regenerated OpenAPI types change names for client routes the dashboard does not call.
 - **Operations**: one new Prometheus counter, no new env vars, normal develop → staging → acceptance path per phase; the alias period spans at least one app release cycle.
+
+---
+
+## 9. Implementation status (2026-10-12, branch `task/client-api-unification`)
+
+| Commit | Phase | Verified by |
+|---|---|---|
+| `bd8f32e4f` | 0 — guardrails, CSRF by transport, channel claim, throttle profiles | tsc, eslint, 9310 backend tests, OpenAPI zero diff |
+| `3a5d4b3d0` | 1 — one handler per client use case, unified cancellation, `Setting` split (+ migration) | tsc, eslint, 9412 backend tests, 2393 dashboard tests, parity spec |
+| `b56852a92` | 2 — `/api/v1/client/*` (54 operations), legacy prefixes as aliases | Nest boot (snapshot run), 3792 tests, surface spec |
+| `8966dc6fc` | 3 — website on `/client` | api-client 146 tests, website typecheck |
+| `d1d7079f5` | 4 — mobile on `/client` | mobile typecheck, 1825 tests |
+| `fa85f3b3c` | review fixes, canonical envelopes | 1487 backend tests, 1829 mobile tests |
+
+Still owed before «انشر» (owner-visible checklist):
+1. Live smoke with local infra up: `scripts/dev/client-api-live-smoke.sh` (boots the branch build on port 5201; needs `pnpm docker:up`).
+2. End-to-end on web and simulator: login → book → pay (Moyasar sandbox, both channels) → cancel (early and late) → rate → account closure on web.
+3. Apply `20261013000000_expand_setting_permission_subjects` **before** the new image starts; a pending migration blocks publication until separately authorised.
+4. Publish via `git push origin task/client-api-unification:refs/heads/publish/client-api-unification` and a merge-commit PR into `develop`; staging through `build-images.yml` only.
+5. Sunset (Phase 5) only when `sawaa_client_api_legacy_prefix_requests_total` stays at zero for a month after the app release.
+Known unrelated: 5 website test files fail on a clean checkout with a localStorage "reading 'clear'" environment error.
