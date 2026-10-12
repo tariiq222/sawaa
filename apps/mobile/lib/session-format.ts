@@ -8,8 +8,9 @@ function parse(iso: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function localeOf(isRTL: boolean): string {
-  return isRTL ? 'ar-SA' : 'en-US';
+/** The -u-ca-gregory tag forces Gregorian dates; Hermes can ignore the `calendar` option. */
+export function localeOf(isRTL: boolean): string {
+  return isRTL ? 'ar-SA-u-ca-gregory' : 'en-US';
 }
 
 /** Arabic uses the Gregorian calendar (ar-SA defaults to Umm al-Qura). */

@@ -49,6 +49,9 @@ importers:
       '@expo/vector-icons':
         specifier: ^15.0.2
         version: 15.1.1(expo-font@55.0.8)(react-native@0.83.10(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
+      '@formatjs/intl-pluralrules':
+        specifier: 6.2.4
+        version: 6.2.4
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.7.1(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(react-hook-form@7.85.0(react@19.2.0))(zod@3.25.76)
@@ -1309,6 +1312,18 @@ packages:
 
   '@firebase/webchannel-wrapper@1.0.6':
     resolution: {integrity: sha512-Vr/Mqu79dMwGRAyGbJ4uN4+BtXB3/mRTdzetD1daWNeG8QaWuzhhbG77GltO5c0yYmYls8i250iX73624GJd7Q==}
+
+  '@formatjs/ecma402-abstract@3.1.2':
+    resolution: {integrity: sha512-ApPcse35dtr+snmBbDtnBkc9bvAZCxr9DDzgUR3nXiHZgpwU+85g1Mz0KRqjh7kIgJ6rgIQLQVqYx56rf58XZg==}
+
+  '@formatjs/fast-memoize@3.1.1':
+    resolution: {integrity: sha512-CbNbf+tlJn1baRnPkNePnBqTLxGliG6DDgNa/UtV66abwIjwsliPMOt0172tzxABYzSuxZBZfcp//qI8AvBWPg==}
+
+  '@formatjs/intl-localematcher@0.8.2':
+    resolution: {integrity: sha512-q05KMYGJLyqFNFtIb8NhWLF5X3aK/k0wYt7dnRFuy6aLQL+vUwQ1cg5cO4qawEiINybeCPXAWlprY2mSBjSXAQ==}
+
+  '@formatjs/intl-pluralrules@6.2.4':
+    resolution: {integrity: sha512-biG3Y/cd867OUZn6i0akstBJJ5S6n7/aYS3bnZAxjmQxPrThmFSDDKDT/TvklbqueRW8chWPLHyQUQ1t8yVEVQ==}
 
   '@grpc/grpc-js@1.14.5':
     resolution: {integrity: sha512-7VZM+SVdEcUUqSQeNI3zM8Qs/BhQKZndPo2h5VkYkAM8Iz0wJIa8mKV5ekQGqG8UUsnkQ0NMxIxwkIHYvj0qOw==}
@@ -7442,6 +7457,24 @@ snapshots:
       tslib: 2.8.1
 
   '@firebase/webchannel-wrapper@1.0.6': {}
+
+  '@formatjs/ecma402-abstract@3.1.2':
+    dependencies:
+      '@formatjs/fast-memoize': 3.1.1
+      '@formatjs/intl-localematcher': 0.8.2
+      decimal.js: 10.6.0
+
+  '@formatjs/fast-memoize@3.1.1': {}
+
+  '@formatjs/intl-localematcher@0.8.2':
+    dependencies:
+      '@formatjs/fast-memoize': 3.1.1
+
+  '@formatjs/intl-pluralrules@6.2.4':
+    dependencies:
+      '@formatjs/ecma402-abstract': 3.1.2
+      '@formatjs/intl-localematcher': 0.8.2
+      decimal.js: 10.6.0
 
   '@grpc/grpc-js@1.14.5':
     dependencies:
