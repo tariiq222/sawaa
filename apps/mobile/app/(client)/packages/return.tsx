@@ -129,6 +129,18 @@ export default function PackagePaymentReturnScreen() {
 
   const canRetryPayment = Boolean(targetMatches && params.clientId && params.packageId && params.branchId && params.clientId === userId);
 
+  // False once the screen is blurred or unmounted: a retry that resolves later
+  // must not navigate the user away from wherever they went.
+  const isActiveRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      isActiveRef.current = true;
+      return () => {
+        isActiveRef.current = false;
+      };
+    }, []),
+  );
+
   const tryAgain = useCallback(async () => {
     if (!canRetryPayment || !params.clientId || !params.packageId || !params.branchId || tryingAgainRef.current) return;
     tryingAgainRef.current = true;
@@ -140,12 +152,12 @@ export default function PackagePaymentReturnScreen() {
         familyId: params.familyId ?? '',
         branchId: params.branchId,
       });
-      if (userRef.current !== params.clientId) return;
+      if (!isActiveRef.current || userRef.current !== params.clientId) return;
       router.replace({ pathname: '/(client)/payments/native-checkout', params: {
         purchaseId: result.purchaseId, invoiceId: result.invoiceId,
       } });
     } catch (error) {
-      Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
+      if (isActiveRef.current) Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
     } finally {
       tryingAgainRef.current = false;
       setTryingAgain(false);

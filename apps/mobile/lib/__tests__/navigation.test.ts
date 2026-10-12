@@ -51,6 +51,19 @@ describe('decodeRedirect', () => {
     expect(decodeRedirect('/register')).toBeNull();
   });
 
+  it('rejects the email-entry and staff-login screens', () => {
+    expect(decodeRedirect('/(auth)/email-entry')).toBeNull();
+    expect(decodeRedirect('/email-entry?x=1')).toBeNull();
+    expect(decodeRedirect('/(auth)/staff-login')).toBeNull();
+  });
+
+  it('still accepts a normal booking route with a query', () => {
+    expect(decodeRedirect('/(client)/booking/confirm?serviceId=s-1')).toEqual({
+      pathname: '/(client)/booking/confirm',
+      params: { serviceId: 's-1' },
+    });
+  });
+
   it('uses the first value when the param arrives repeated', () => {
     expect(decodeRedirect(['/(client)/(tabs)/home', '/(client)/notifications']))
       .toBe('/(client)/(tabs)/home');

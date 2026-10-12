@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { Alert, AppState, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -40,6 +40,17 @@ export default function PackageFamilyDetailScreen() {
   const query = usePackageFamily(id);
   const userRef = useRef(user?.id);
   userRef.current = user?.id;
+  // False once the screen is blurred or unmounted, so work that resolves later
+  // never navigates the user away from wherever they went.
+  const isActiveRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      isActiveRef.current = true;
+      return () => {
+        isActiveRef.current = false;
+      };
+    }, []),
+  );
   const initPurchase = useInitPackagePurchase();
   const [selectedId, setSelectedId] = useState<string>();
   const branchQuery = usePublicBranches();
@@ -77,7 +88,7 @@ export default function PackageFamilyDetailScreen() {
     if (!user?.id) return;
     const pending = await getPendingPackagePurchase(user.id);
     // Ignore a previous account's asynchronous recovery read.
-    if (checkoutInFlight.current || userRef.current !== user?.id) return;
+    if (checkoutInFlight.current || !isActiveRef.current || userRef.current !== user?.id) return;
     if (pending && pending.clientId === user?.id && pending.packageId === option?.id) {
       if (pending.invoiceId) {
         if (recoveredNativePurchases.has(pending.purchaseId)) return;
@@ -113,13 +124,13 @@ export default function PackageFamilyDetailScreen() {
     try {
       const target = { clientId: user.id, packageId: option.id, familyId, branchId };
       const result = await runPackageCheckout(initPurchase.mutateAsync, target);
-      if (userRef.current !== target.clientId) return;
+      if (!isActiveRef.current || userRef.current !== target.clientId) return;
       router.replace({
         pathname: '/(client)/payments/native-checkout',
         params: { purchaseId: result.purchaseId, invoiceId: result.invoiceId },
       });
     } catch (error) {
-      Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
+      if (isActiveRef.current) Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
     } finally {
       checkoutInFlight.current = false;
     }
