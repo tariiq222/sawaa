@@ -66,47 +66,44 @@ jest.mock('@/hooks/useDir', () => ({
   useDir: () => ({ locale: 'ar', isRTL: true, row: 'row-reverse', textAlign: 'right', alignStart: 'flex-end', writingDirection: 'rtl' }),
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
-jest.mock('@/hooks/queries', () => ({
-  useRequestLoginOtp: () => ({ mutateAsync: mockOtp, isPending: false }),
-}));
 
-jest.mock('../email-entry', () => ({ __esModule: true, default: () => null }));
-
-
-const mockOtp = jest.fn(); const mockDispatch = jest.fn(); let mockEpoch = 1;
+const mockDispatch = jest.fn(); let mockEpoch = 1;
 jest.mock('@/hooks/use-redux', () => ({ useAppDispatch: () => mockDispatch }));
 jest.mock('@/services/password-login', () => ({ loginWithPassword: jest.fn() }));
 jest.mock('@/services/auth', () => ({ authService: { getProfile: jest.fn().mockResolvedValue({ success: true, data: { id: 'client', role: 'CLIENT' } }) }, SessionSupersededError: class extends Error {} }));
 jest.mock('@/services/native-session-state', () => ({ isSessionCurrent: (epoch: number) => epoch === mockEpoch, fenceSession: () => ++mockEpoch, clearSessionAtEpoch: jest.fn().mockResolvedValue(true) }));
-import StaffLoginScreen from '../staff-login';
+import LiveEmailEntry from '../email-entry';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { notifyManager } from '@tanstack/react-query';
+const EmailEntryScreen = () => <QueryClientProvider client={new QueryClient()}><LiveEmailEntry /></QueryClientProvider>;
+beforeAll(() => { notifyManager.setNotifyFunction(callback => { act(callback); }); });
+afterAll(() => { notifyManager.setNotifyFunction(callback => callback()); });
 import { loginWithPassword } from '@/services/password-login';
 import { authService } from '@/services/auth';
 const login = jest.mocked(loginWithPassword);
 const session = { sessionEpoch: 1, sessionKind: 'client' as const, tokens: { accessToken: 'a', refreshToken: 'r' } };
 beforeEach(() => { jest.clearAllMocks(); mockParams = {}; mockEpoch = 1; login.mockImplementation(async (_id, _pw, start) => { start?.(1); return session; }); });
 function fill(ui: ReturnType<typeof render>) {
-  fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), 'sara@example.test');
+  fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'sara@example.test');
   fireEvent.changeText(ui.getByLabelText('auth.password'), 'Secret1');
 }
-it('defaults to masked password with a visibility control and retains identifier across modes', () => {
-  const ui = render(<StaffLoginScreen />); fill(ui);
+it('defaults to masked password with a visibility control and clears the password when switching modes', async () => {
+  const ui = render(<EmailEntryScreen />); fill(ui);
   expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(true);
-  expect(ui.queryByText('auth.showPassword')).toBeNull();
-  expect(ui.queryByText('auth.hidePassword')).toBeNull();
   fireEvent.press(ui.getByRole('button', { name: 'common.showPassword' }));
   expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(false);
   expect(ui.getByLabelText('auth.password').props.value).toBe('Secret1');
   fireEvent.press(ui.getByRole('button', { name: 'common.hidePassword' }));
   expect(ui.getByLabelText('auth.password').props.secureTextEntry).toBe(true);
   fireEvent.press(ui.getByText('auth.loginWithOtp'));
+  await act(async () => undefined); // AppButton releases its press lock on a microtask
   expect(ui.queryByLabelText('auth.password')).toBeNull();
-  expect(ui.getByLabelText('auth.login.identifier').props.value).toBe('sara@example.test');
   fireEvent.press(ui.getByText('auth.loginWithPassword'));
   expect(ui.getByLabelText('auth.password').props.value).toBe('');
 });
 it('validates empty password and shows a generic failure for rejected credentials', async () => {
-  const ui = render(<StaffLoginScreen />);
-  fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), 'sara@example.test');
+  const ui = render(<EmailEntryScreen />);
+  fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'sara@example.test');
   await act(async () => { fireEvent.press(ui.getByText('auth.loginNow')); });
   expect(ui.getByText('auth.passwordRequired')).toBeTruthy(); expect(login).not.toHaveBeenCalled();
   fill(ui); login.mockRejectedValueOnce(new Error('private backend details'));
@@ -116,42 +113,43 @@ it('validates empty password and shows a generic failure for rejected credential
 });
 it('completes a password login directly into booking continuation', async () => {
   mockParams = { booking: JSON.stringify({ clinicId: 'c', serviceId: 's', employeeId: 'e', branchId: 'b', deliveryType: 'in_person', scheduledAt: '2026-10-08T10:00:00.000Z', amount: '45000', currency: 'SAR' }) };
-  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  const ui = render(<EmailEntryScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
   await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(client)/booking/confirm', params: { clinicId: 'c', serviceId: 's', employeeId: 'e', branchId: 'b', deliveryType: 'in_person', scheduledAt: '2026-10-08T10:00:00.000Z', chargedPrice: '45000', currency: 'SAR' } }));
-  expect(mockDispatch).toHaveBeenCalled(); expect(mockOtp).not.toHaveBeenCalled();
+  expect(mockDispatch).toHaveBeenCalled();
+});
+it('routes a staff password session to the employee home', async () => {
+  login.mockImplementationOnce(async (_id, _pw, start) => { start?.(1); return { ...session, sessionKind: 'staff' as const }; });
+  jest.mocked(authService.getProfile).mockResolvedValueOnce({ success: true, data: { id: 'staff', role: 'EMPLOYEE' } } as Awaited<ReturnType<typeof authService.getProfile>>);
+  const ui = render(<EmailEntryScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(employee)/(tabs)/today'));
+  expect(authService.getProfile).toHaveBeenCalledWith('staff');
 });
 it.each(['switch', 'back', 'unmount'])('suppresses a late password response after %s', async action => {
   let resolve!: (value: typeof session) => void;
   login.mockImplementationOnce((_id, _pw, start) => { start?.(1); return new Promise(r => { resolve = r; }); });
-  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  const ui = render(<EmailEntryScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
   if (action === 'switch') fireEvent.press(ui.getByText('auth.loginWithOtp'));
-  else if (action === 'back') fireEvent.press(ui.getByLabelText('a11y.buttonBack'));
+  else if (action === 'back') { fireEvent.press(ui.getByLabelText('a11y.buttonBack')); expect(mockBack).toHaveBeenCalled(); ui.unmount(); }
   else ui.unmount();
   await act(async () => resolve(session));
   expect(authService.getProfile).not.toHaveBeenCalled(); expect(mockDispatch).not.toHaveBeenCalled(); expect(mockReplace).not.toHaveBeenCalled();
 });
-it('prefills recovery from the identifier while preserving continuation', () => {
-  mockParams = { redirect: '/(client)/(tabs)/appointments' };
-  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.forgotPassword.linkLabel'));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/forgot-password', params: { identifier: 'sara@example.test', redirect: '/(client)/(tabs)/appointments' } });
-});
-
 it('suppresses profile completion when switching modes after tokens arrive', async () => {
   let resolve!: (value: Awaited<ReturnType<typeof authService.getProfile>>) => void;
   jest.mocked(authService.getProfile).mockReturnValueOnce(new Promise(r => { resolve = r; }));
-  const ui = render(<StaffLoginScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
+  const ui = render(<EmailEntryScreen />); fill(ui); fireEvent.press(ui.getByText('auth.loginNow'));
   await waitFor(() => expect(authService.getProfile).toHaveBeenCalled());
   fireEvent.press(ui.getByText('auth.loginWithOtp'));
   await act(async () => resolve({ success: true, data: { id: 'client', role: 'CLIENT' } } as Awaited<ReturnType<typeof authService.getProfile>>));
   expect(mockDispatch).not.toHaveBeenCalled(); expect(mockReplace).not.toHaveBeenCalled();
 });
-it('suppresses a phone OTP navigation after switching modes', async () => {
-  let resolve!: (value: { maskedIdentifier: string }) => void;
-  mockOtp.mockReturnValueOnce(new Promise(r => { resolve = r; }));
-  const ui = render(<StaffLoginScreen />);
-  fireEvent.changeText(ui.getByLabelText('auth.login.identifier'), '0501234567');
-  fireEvent.press(ui.getByText('auth.loginWithOtp')); fireEvent.press(ui.getByText('auth.login.sendCode'));
-  fireEvent.press(ui.getByText('auth.loginWithPassword'));
-  await act(async () => resolve({ maskedIdentifier: '***67' }));
-  expect(mockPush).not.toHaveBeenCalled(); expect(mockDispatch).not.toHaveBeenCalled();
+
+it('opens forgot-password with the typed email and the booking continuation', async () => {
+  mockParams = { booking: 'svc-1' };
+  const ui = render(<EmailEntryScreen />);
+  fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'sara@example.test');
+  fireEvent.press(ui.getByText('auth.forgotPassword.linkLabel'));
+  await act(async () => undefined);
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/forgot-password', params: { booking: 'svc-1', identifier: 'sara@example.test' } });
+  expect(login).not.toHaveBeenCalled();
 });

@@ -9,8 +9,6 @@ import { clearSessionAtEpoch, persistSessionTokensAtEpoch } from '@/services/nat
 import { authService } from '@/services/auth';
 import EmailEntryScreen from '../(auth)/email-entry';
 import RegisterScreen from '../(auth)/register';
-const mockLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: '***12' });
-jest.mock('@/hooks/queries', () => ({ useRequestLoginOtp: () => ({ mutateAsync: mockLoginOtp, isPending: false }) }));
 jest.mock('expo-haptics', () => ({ notificationAsync: jest.fn(), impactAsync: jest.fn(), NotificationFeedbackType: { Success: 'success', Error: 'error' }, ImpactFeedbackStyle: { Light: 'light' } }));
 const mockPush = jest.fn(); const mockReplace = jest.fn(); const mockBack = jest.fn(); let mockEpoch = 1;
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: mockBack, push: mockPush }), useLocalSearchParams: () => mockParams, useFocusEffect: jest.fn(), Redirect: ({ href }: { href: unknown }) => { mockRedirectHref = href; return null; } }));
@@ -28,9 +26,9 @@ let mockParams: Record<string, string> = { redirect: '/(client)/(tabs)/appointme
 let mockRedirectHref: unknown = null;
 const api = jest.mocked(emailEntryService);
 const challenge = { challengeId: 'c', maskedEmail: 'a***@example.test', expiresIn: 300 as const, retryAfterSeconds: 60 as const };
-  fireEvent.press(ui.getByText('auth.loginWithOtp'));
 function mount(component: React.ReactElement = <EmailEntryScreen />) { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: 0 } } })}>{component}</QueryClientProvider>); }
 async function enterCode(ui: ReturnType<typeof mount>) {
+  fireEvent.press(ui.getByText('auth.loginWithOtp'));
   fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'a@example.test');
   fireEvent.press(ui.getByText('auth.emailEntry.sendEmail'));
   await waitFor(() => expect(ui.getByLabelText('auth.emailEntry.code')).toBeTruthy());
@@ -58,6 +56,8 @@ it('does not claim delivery after provider failure', async () => {
   const ui = mount(); fireEvent.press(ui.getByText('auth.loginWithOtp'));
   fireEvent.changeText(ui.getByLabelText('auth.register.email'), 'a@example.test'); fireEvent.press(ui.getByText('auth.emailEntry.sendEmail'));
   await waitFor(() => expect(ui.getByText('auth.emailEntry.deliveryUnavailable')).toBeTruthy());
+  expect(ui.queryByLabelText('auth.emailEntry.code')).toBeNull();
+});
 it('edits the email from the code step with a pencil, not from the email step', async () => {
   const ui = mount();
   expect(ui.queryByLabelText('auth.emailEntry.editEmail')).toBeNull();
@@ -65,8 +65,6 @@ it('edits the email from the code step with a pencil, not from the email step', 
   fireEvent.press(ui.getByLabelText('auth.emailEntry.editEmail'));
   expect(ui.queryByLabelText('auth.emailEntry.code')).toBeNull();
   expect(ui.getByLabelText('auth.register.email').props.value).toBe('a@example.test');
-});
-  expect(ui.queryByLabelText('auth.emailEntry.code')).toBeNull();
 });
 it('offers recovery when identity is unavailable', async () => {
   api.verify.mockResolvedValue({ next: 'unavailable' }); const ui = mount(); await enterCode(ui);
@@ -265,6 +263,8 @@ it.each(['123', '12345', '123456', '12a4'])('rejects invalid recovery code %s be
 });
 it('limits the recovery code field to the four-digit public OTP contract', () => {
   const ui = mount(<ResetPasswordScreen />);
+  expect(ui.getByLabelText('auth.resetPassword.codeLabel').props.maxLength).toBe(4);
+});
 it('signs in with email and password from the email screen without requesting a code', async () => {
   const post = jest.mocked(jest.requireMock('@/services/api').default.post);
   post.mockResolvedValueOnce({ data: { sessionKind: 'client', tokens: { accessToken: 'a', refreshToken: 'r' } } });
@@ -287,6 +287,4 @@ it('shows a credentials error when password sign-in fails', async () => {
   fireEvent.changeText(ui.getByLabelText('auth.password'), 'wrong');
   fireEvent.press(ui.getByText('auth.loginNow'));
   await waitFor(() => expect(ui.getByText('auth.loginError')).toBeTruthy());
-});
-  expect(ui.getByLabelText('auth.resetPassword.codeLabel').props.maxLength).toBe(4);
 });

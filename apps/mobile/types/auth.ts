@@ -86,32 +86,6 @@ export interface AuthState {
   isLoading: boolean;
 }
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginWithOtpRequest {
-  email: string;
-}
-
-/** Backend expects field named "code", not "otp" */
-export interface VerifyOtpRequest {
-  email: string;
-  code: string;
-}
-
-/**
- * Mobile wraps the canonical auth payload in the legacy `{success, data}`
- * envelope its callers (login screen, otp-verify, register) expect. The
- * backend returns the unwrapped shape, so services/auth.ts re-wraps it
- * before resolving to this interface.
- */
-export interface AuthResponse {
-  success: boolean;
-  data: CanonicalAuthResponse | undefined;
-}
-
 /** Which mobile app flow the user belongs to */
 export type MobileRole = 'client' | 'employee';
 

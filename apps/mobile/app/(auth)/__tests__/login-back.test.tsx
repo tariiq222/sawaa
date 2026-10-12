@@ -67,9 +67,6 @@ jest.mock('@/hooks/useDir', () => ({
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', language: 'ar' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
-jest.mock('@/hooks/queries', () => ({
-  useRequestLoginOtp: () => ({ mutateAsync: jest.fn(), isPending: false }),
-}));
 jest.mock('../email-entry', () => ({ __esModule: true, default: () => null }));
 
 const mockDispatch = jest.fn(); let mockEpoch = 1;
@@ -130,9 +127,9 @@ describe('login screen escape routes', () => {
     mockParams = { booking: 'booking-token' };
     const { screen } = mount();
 
-    expect(screen.queryByText('auth.review.link')).toBeNull();
     expect(screen.queryByText('auth.login.continueAsGuest')).toBeNull();
     expect(screen.getByText('auth.phoneEntry.emailLoginLink')).toBeTruthy();
     expect(screen.queryByText('auth.phoneEntry.staffLoginLink')).toBeNull();
+    expect(screen.queryByText('auth.review.link')).toBeNull();
   });
 });

@@ -9,55 +9,6 @@
       "level": "error"
     },
     {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 18,
-      "rule": "legacy-themed-import",
-      "detail": "Themed*",
-      "level": "warning"
-    },
-    {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 181,
-      "rule": "no-hex-color",
-      "detail": "#0037B0",
-      "level": "error"
-    },
-    {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 181,
-      "rule": "no-hex-color",
-      "detail": "#1D4ED8",
-      "level": "error"
-    },
-    {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 19,
-      "rule": "legacy-themed-import",
-      "detail": "Themed*",
-      "level": "warning"
-    },
-    {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 211,
-      "rule": "no-hex-color",
-      "detail": "#1D4ED8",
-      "level": "error"
-    },
-    {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 240,
-      "rule": "no-hex-color",
-      "detail": "#1D4ED866",
-      "level": "error"
-    },
-    {
-      "file": "app/(auth)/otp-verify.tsx",
-      "line": 276,
-      "rule": "no-hex-color",
-      "detail": "#1D4ED8",
-      "level": "error"
-    },
-    {
       "file": "app/(auth)/register.tsx",
       "line": 347,
       "rule": "no-hex-color",

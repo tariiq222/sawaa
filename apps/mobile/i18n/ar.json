@@ -22,7 +22,7 @@
     "register.emailError": "البريد الإلكتروني غير صالح",
     "login.title": "تسجيل الدخول",
     "login.identifier": "البريد الإلكتروني أو رقم الجوال",
-    "login.identifierPlaceholder": "example@email.com أو 05xxxxxxxx",
+    "login.identifierPlaceholder": "05xxxxxxxx / example@email.com",
     "login.submit": "الدخول",
     "login.submitting": "جارٍ تسجيل الدخول...",
     "login.welcome": "مرحبًا بك",

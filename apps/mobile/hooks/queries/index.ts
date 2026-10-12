@@ -21,7 +21,7 @@ export { useCatalogDepartments, usePublicCatalog, catalogKeys } from './useCatal
 export { useBranding, brandingKeys } from './useBranding';
 export { useHome, useSummary, useUpcoming, portalKeys } from './usePortal';
 export { useMobileHomeCards, mobileHomeCardsQueryKey } from './useMobileHomeCards';
-export { useRegister, useRequestLoginOtp, useVerifyOtp, useRequestEmailVerification } from './useMobileAuth';
+export { useRequestEmailVerification } from './useMobileAuth';
 export { useMe } from './useMe';
 export { useBankTransferSettings, bankTransferSettingsKeys } from './useBankTransferSettings';
 export { useClientInvoice, clientInvoiceKeys } from './useClientInvoice';

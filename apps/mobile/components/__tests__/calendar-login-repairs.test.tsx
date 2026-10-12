@@ -1,18 +1,15 @@
-jest.mock('@/features/auth/use-password-login', () => ({ usePasswordLogin: () => ({ pending: false, cancel: jest.fn(), capture: () => () => true, submit: jest.fn() }) }));
 import React from 'react';
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/theme/tokens').buildTheme(), scheme: 'light', isRTL: mockLocale === 'ar', language: mockLocale }) }));
-import { StyleSheet, Text as MockText } from 'react-native';
+import { Text as MockText } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import en from '../../i18n/en.json';
 import ar from '../../i18n/ar.json';
 
 let mockLocale: 'en' | 'ar' = 'en';
-let mockLoginBooking: string | undefined;
-let mockLoginRedirect: string | undefined;
 const mockPush = jest.fn();
 const mockRefetch = jest.fn();
 const mockBookings = jest.fn();
-jest.mock('expo-router', () => ({ router: { push: (route: string) => mockPush(route) }, useRouter: () => ({ push: mockPush }), useLocalSearchParams: () => ({ booking: mockLoginBooking, redirect: mockLoginRedirect }) }));
+jest.mock('expo-router', () => ({ router: { push: (route: string) => mockPush(route) }, useRouter: () => ({ push: mockPush }), }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key.split('.').reduce<unknown>((value, part) =>
     (value as Record<string, unknown>)?.[part], mockLocale === 'ar' ? require('../../i18n/ar.json') : require('../../i18n/en.json')) ?? key }),
@@ -38,19 +35,14 @@ jest.mock('@/theme/sawaa', () => ({
 jest.mock('@/components/ui/StatusPill', () => ({ StatusPill: () => null }));
 jest.mock('@/components/ui/Skeleton', () => ({ Skeleton: () => <MockText>Loading skeleton</MockText> }));
 jest.mock('@/hooks/queries/useEmployeeDayBookings', () => ({ useEmployeeDayBookings: (date: string) => mockBookings(date) }));
-jest.mock('@/hooks/queries', () => ({ useRequestLoginOtp: () => ({ isPending: false }) }));
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light' } }));
 
 import { shiftDateKey } from '../../lib/employee-schedule';
 import CalendarScreen from '../../app/(employee)/(tabs)/calendar';
-jest.mock('../../app/(auth)/email-entry', () => ({ __esModule: true, default: () => null }));
-import StaffLoginScreen from '../../app/(auth)/staff-login';
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockLocale = 'en';
-  mockLoginBooking = undefined;
-  mockLoginRedirect = undefined;
   mockBookings.mockReturnValue({ data: [], isLoading: false, isError: false, refetch: mockRefetch });
 });
 
@@ -115,47 +107,5 @@ describe('calendar query states', () => {
     const screen = render(<CalendarScreen />);
     expect(screen.getByText(en.common.error)).toBeTruthy();
     expect(screen.queryByText('Stale Client')).toBeNull();
-  });
-});
-
-describe('staff login navigation copy and touch targets', () => {
-  it.each(['en', 'ar'] as const)('localizes forgot password and preserves navigation (%s)', (locale) => {
-    mockLocale = locale;
-    const copy = locale === 'ar' ? ar : en;
-    const screen = render(<StaffLoginScreen />);
-    fireEvent.press(screen.getByText(copy.auth.forgotPassword.linkLabel));
-    expect(mockPush).toHaveBeenCalledWith('/(auth)/forgot-password');
-  });
-
-  it('carries booking and redirect context through forgot-password and registration', () => {
-    mockLoginBooking = '{"serviceId":"service-1"}';
-    mockLoginRedirect = '/(client)/booking/confirm?serviceId=service-1';
-    const screen = render(<StaffLoginScreen />);
-
-    fireEvent.press(screen.getByText(en.auth.forgotPassword.linkLabel));
-    expect(mockPush).toHaveBeenLastCalledWith({
-      pathname: '/(auth)/forgot-password',
-      params: { booking: mockLoginBooking, redirect: mockLoginRedirect },
-    });
-    mockPush.mockClear();
-
-    fireEvent.press(screen.getByRole('link', { name: en.auth.createAccount }));
-    expect(mockPush).toHaveBeenLastCalledWith({
-      pathname: '/(auth)/register',
-      params: { booking: mockLoginBooking, redirect: mockLoginRedirect },
-    });
-  });
-
-  it('provides at least 44-point targets for both navigation links', () => {
-    const screen = render(<StaffLoginScreen />);
-    const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(2);
-    for (const link of links) {
-      const style = StyleSheet.flatten(link.props.style);
-      expect(style.minHeight).toBeGreaterThanOrEqual(44);
-      expect(style.minWidth).toBeGreaterThanOrEqual(44);
-    }
-    fireEvent.press(screen.getByRole('link', { name: en.auth.createAccount }));
-    expect(mockPush).toHaveBeenCalledWith('/(auth)/register');
   });
 });

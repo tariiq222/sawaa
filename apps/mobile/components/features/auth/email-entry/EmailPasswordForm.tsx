@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppButton } from '@/components/ui/AppButton';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { useDir } from '@/hooks/useDir';
 import { usePasswordLogin } from '@/features/auth/use-password-login';
 import { InlineAlert } from '@/components/ui/InlineAlert';
+import { authContinuationParams } from '@/features/booking/guest-booking-flow';
 
 /** Email + password sign-in for any account with a password; the backend decides the session kind. */
 export function EmailPasswordForm({ email, setEmail, booking, redirect }: {
   email: string; setEmail: (value: string) => void; booking?: string; redirect?: string;
 }) {
-  const { t } = useTranslation(); const dir = useDir();
+  const { t } = useTranslation(); const dir = useDir(); const router = useRouter();
   const login = usePasswordLogin({ booking, redirect });
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -36,5 +38,8 @@ export function EmailPasswordForm({ email, setEmail, booking, redirect }: {
       inputStyle={{ writingDirection: 'ltr', textAlign: 'left' }} />
     {error ? <InlineAlert message={error} /> : null}
     <AppButton loading={login.pending} label={t('auth.loginNow')} onPress={() => { void submit(); }} disabled={login.pending} />
+    <AppButton label={t('auth.forgotPassword.linkLabel')} variant="ghost" size="sm" disabled={login.pending}
+      onPress={() => { login.cancel(); router.push({ pathname: '/(auth)/forgot-password', params: {
+        ...authContinuationParams(booking, redirect), ...(email.trim() ? { identifier: email.trim() } : {}) } }); }} />
   </>;
 }

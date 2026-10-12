@@ -40,10 +40,16 @@ it.each([[' Sara@Example.test ', { email: 'sara@example.test', password: 'Secret
   expect(nativeSessionState.isSessionCurrent(result.sessionEpoch)).toBe(true);
   expect(mockSetSecureItem.mock.calls).toEqual([['accessToken', 'access'], ['refreshToken', 'refresh']]);
 });
-it.each([null, {}, { ...response, sessionKind: 'staff' }, { ...response, tokens: { accessToken: 1, refreshToken: 'r' } }])('rejects invalid or staff response %p before storage', async data => {
+it.each([null, {}, { ...response, sessionKind: 'admin' }, { ...response, sessionKind: undefined }, { ...response, tokens: { accessToken: 1, refreshToken: 'r' } }])('rejects invalid response %p before storage', async data => {
   mockedApi.post.mockResolvedValueOnce({ data });
   await expect(loginWithPassword('a@b.test', 'Secret1')).rejects.toThrow();
   expect(mockSetSecureItem).not.toHaveBeenCalled();
+});
+it('accepts a staff session from the same endpoint and stores its tokens', async () => {
+  mockedApi.post.mockResolvedValueOnce({ data: { ...response, sessionKind: 'staff' } });
+  const result = await loginWithPassword('staff@b.test', 'Secret1');
+  expect(result.sessionKind).toBe('staff');
+  expect(mockSetSecureItem.mock.calls).toEqual([['accessToken', 'access'], ['refreshToken', 'refresh']]);
 });
 it('fences a late response after a newer login', async () => {
   let resolve!: (value: unknown) => void;
