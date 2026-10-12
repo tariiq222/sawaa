@@ -327,3 +327,10 @@ Not yet exercised live: booking creation, Moyasar payment init/webhook (sandbox)
 - **Website (Next dev server from this branch):** cookie login via `/public/auth/login`, account page reads `/client/profile`, `/client/bookings`, `/client/invoices` with CORS preflights; profile name update → `PATCH /client/profile` 200 with the double-submit CSRF token; verified email badge and phone rendered from the unified profile.
 - Test data: one synthetic client (`smoke.client@sawaa-test.local`) and one cancelled booking (#9007) remain in the local dev database; credentials live only in the git-ignored `apps/backend/.local-smoke-client.json`.
 - Still not exercised live: Moyasar card payment (sandbox), native pay, rating, account closure, package purchase. The website home page 500s locally because employee image URLs in the dev data point at `host.docker.internal`, unrelated to this branch.
+
+### 9.3 Follow-up fixes verified on the simulator (2026-10-12)
+
+- Success screen without an invoice (pay at center): cancelled booking → «لم يتم تأكيد الموعد»; confirmed booking → «تم تأكيد موعدك»; unreadable id (404) → «جاري تأكيد الموعد» with «تحقق مرة أخرى», never a false confirmation.
+- Post-login redirect: `sawa://staff-login?redirect=/(auth)/email-entry` followed by a password login lands on the client home, not on the email-entry screen.
+- Package purchase leave-before-response: not reproducible by hand (the local native init answers in ~400 ms with a Moyasar credential error); covered by the unit test that unmounts before the promise resolves.
+- Website: pay-now hidden for cancelled bookings (unit-tested; not re-checked in the browser).
