@@ -57,12 +57,12 @@ describe('Explore directory results', () => {
 
     expect(results.find((entry) => entry.id === 'service-1')).toMatchObject({
       kind: 'service',
-      route: { pathname: '/(client)/therapists', params: { clinicId: 'clinic-1', serviceId: 'service-1' } },
+      route: { pathname: '/(client)/therapists', params: { clinicId: 'clinic-1', serviceId: 'service-1', steps: '3' } },
     });
     expect(results.find((entry) => entry.id === 'service-2')?.route).toEqual({
-      pathname: '/(client)/therapists', params: { serviceId: 'service-2' },
+      pathname: '/(client)/therapists', params: { serviceId: 'service-2', steps: '3' },
     });
-    expect(results.find((entry) => entry.id === 'orphan')?.route).toEqual({ pathname: '/(client)/therapists', params: { serviceId: 'orphan' } });
+    expect(results.find((entry) => entry.id === 'orphan')?.route).toEqual({ pathname: '/(client)/therapists', params: { serviceId: 'orphan', steps: '3' } });
     expect(results.some((entry) => ['hidden', 'direct-hidden', 'unbookable', 'broken-category'].includes(entry.id))).toBe(false);
   });
 

@@ -49,7 +49,7 @@ export default function GroupsScreen() {
         <EmptyState
           icon="cloud-offline-outline"
           tone="danger"
-          title={t('groups.bookError')}
+          title={t('groups.loadError')}
           actionLabel={t('common.retry')}
           onAction={() => { void groupsQuery.refetch(); }}
         />

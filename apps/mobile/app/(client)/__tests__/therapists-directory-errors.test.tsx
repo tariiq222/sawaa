@@ -121,14 +121,14 @@ describe('therapist directory query failures', () => {
     expect(screen.getByText('Busy therapist')).toBeTruthy();
   });
 
-  it('shows availability today and the lowest price only where the directory has them', () => {
+  it('shows the lowest price only where the directory has it, and no availability badge', () => {
     mockTherapists.data = [
       { id: 'a', slug: 'a', nameEn: 'Available therapist', serviceIds: [], isAvailableToday: true, minServicePrice: 20000 },
       { id: 'b', slug: 'b', nameEn: 'Busy therapist', serviceIds: [], isAvailableToday: false, minServicePrice: null },
     ];
     const screen = renderScreen();
-    expect(screen.getAllByText('Available today')).toHaveLength(1);
-    expect(screen.getAllByText(/^From /)).toHaveLength(1);
+    expect(screen.queryByText('Receiving today')).toBeNull();
+    expect(screen.getAllByText(/^Starting from /)).toHaveLength(1);
   });
 });
 

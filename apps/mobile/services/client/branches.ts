@@ -18,8 +18,8 @@ export interface PublicBranchDetail extends PublicBranchSummary {
   businessHours: Array<{
     dayOfWeek: number;
     isOpen: boolean;
-    openTime: string | null;
-    closeTime: string | null;
+    startTime: string | null;
+    endTime: string | null;
   }>;
 }
 

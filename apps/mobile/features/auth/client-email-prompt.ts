@@ -1,26 +1,14 @@
 /**
- * In-memory, per-app-session state for the one-time client email prompt.
- * "Later" snoozes the prompt until the app restarts; nothing is persisted and
- * the server is never told. An auth continuation (booking/redirect carried
- * through login) suppresses the prompt so it never steals that navigation.
+ * In-memory state for the one-time client email prompt. An auth continuation
+ * (booking/redirect carried through login) suppresses the prompt so it never
+ * steals that navigation. The "later" snooze lives in client-email-snooze.ts.
  */
-let snoozedForSession = false;
-
-export function snoozeClientEmailPromptForSession(): void {
-  snoozedForSession = true;
-}
-
-export function isClientEmailPromptSnoozed(): boolean {
-  return snoozedForSession;
-}
+let continuationDepth = 0;
 
 /** Test seam: reset module state between cases. */
 export function resetClientEmailPromptStateForTests(): void {
-  snoozedForSession = false;
   continuationDepth = 0;
 }
-
-let continuationDepth = 0;
 
 export function beginAuthContinuation(): void {
   continuationDepth += 1;

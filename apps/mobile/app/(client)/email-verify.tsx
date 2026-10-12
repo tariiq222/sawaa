@@ -15,7 +15,8 @@ import {
   useVerifyClientEmail,
 } from '@/hooks/queries';
 import { clientEmailError } from '@/services/client-email';
-import { snoozeClientEmailPromptForSession } from '@/features/auth/client-email-prompt';
+import { useAppSelector } from '@/hooks/use-redux';
+import { snoozeClientEmailPrompt } from '@/features/auth/client-email-snooze';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -27,7 +28,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export default function EmailVerifyScreen() {
   const { mode } = useLocalSearchParams<{ mode?: 'prompt' | 'manage' }>();
-  const isPrompt = mode !== 'manage';
+  const isPrompt = mode === 'prompt';
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const { t } = useTranslation();
   const { theme } = useTheme();
   const dir = useDir();
@@ -107,7 +109,7 @@ export default function EmailVerifyScreen() {
     } catch (failure) { applyError(failure); }
   };
   const later = () => {
-    snoozeClientEmailPromptForSession();
+    if (userId) void snoozeClientEmailPrompt(userId);
     leave();
   };
   const title = step === 'code' ? t('profile.email.codeTitle')

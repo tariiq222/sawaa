@@ -3430,7 +3430,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log in a customer with email or phone and password */
+        /** Log in a customer or practitioner with email or phone and password */
         post: operations["MobileClientAuthController_loginWithPassword_v1"];
         delete?: never;
         options?: never;
@@ -32463,7 +32463,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Customer authenticated, native client tokens issued */
+            /** @description Authenticated; native client tokens or practitioner staff tokens issued */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -32471,7 +32471,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        sessionKind: "client";
+                        sessionKind: "client" | "staff";
                         tokens: {
                             accessToken: string;
                             refreshToken: string;

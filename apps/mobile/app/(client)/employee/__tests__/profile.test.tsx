@@ -79,8 +79,10 @@ describe('EmployeeProfileScreen', () => {
     mockEmployee.experience = 8;
     const screen = render(<EmployeeProfileScreen />);
     fireEvent.press(screen.getByText('employeeProfile.about'));
-    expect(screen.getByText('employeeSelfProfile.publicLanguages')).toBeTruthy();
-    expect(screen.getByText('employeeSelfProfile.publicExperience')).toBeTruthy();
+    expect(screen.getByText('employeeProfile.languagesLabel')).toBeTruthy();
+    expect(screen.getByText(/العربية.*English/)).toBeTruthy();
+    expect(screen.getByText('employeeProfile.experienceLabel')).toBeTruthy();
+    expect(screen.getByText('employeeProfile.experienceYears')).toBeTruthy();
   });
 
   it('retries employee errors and hides a stale profile booking action', () => {
@@ -115,7 +117,7 @@ describe('EmployeeProfileScreen', () => {
     fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
+      params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1', steps: '3' },
     });
   });
 
@@ -139,7 +141,7 @@ describe('EmployeeProfileScreen', () => {
     fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: 'service-b', employeeId: 'employee-uuid' },
+      params: { serviceId: 'service-b', employeeId: 'employee-uuid', steps: '3' },
     });
   });
 
@@ -158,7 +160,7 @@ describe('EmployeeProfileScreen', () => {
     fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
+      params: { serviceId: 'service-b', employeeId: 'employee-uuid', clinicId: 'clinic-1', steps: '3' },
     });
   });
 
@@ -170,7 +172,7 @@ describe('EmployeeProfileScreen', () => {
     fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: 'direct-service', employeeId: 'employee-uuid', clinicId: 'direct-clinic' },
+      params: { serviceId: 'direct-service', employeeId: 'employee-uuid', clinicId: 'direct-clinic', steps: '3' },
     });
   });
 
@@ -201,7 +203,7 @@ describe('EmployeeProfileScreen', () => {
     fireEvent.press(screen.getByText('employeeProfile.bookAppointment'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(client)/booking/[serviceId]',
-      params: { serviceId: 'service-a', employeeId: 'employee-uuid', clinicId: 'clinic-1' },
+      params: { serviceId: 'service-a', employeeId: 'employee-uuid', clinicId: 'clinic-1', steps: '3' },
     });
   });
 

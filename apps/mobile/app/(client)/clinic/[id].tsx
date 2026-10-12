@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,6 @@ import { getCategoryBookingServices } from '@sawaa/shared/catalog';
 import { ClinicProfileHeader } from '@/components/features/directory/ClinicProfileHeader';
 import { ServiceRow } from '@/components/features/directory/ServiceRow';
 import { TherapistCard } from '@/components/features/directory/TherapistCard';
-import { bookingStepPath } from '@/features/booking/guest-booking-flow';
 import { clinicBookingEntry } from '@/features/booking/booking-entry';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FloatingCta } from '@/components/ui/FloatingCta';
@@ -19,6 +18,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppSelector } from '@/hooks/use-redux';
 import { useClinics, usePublicCatalog, useTherapists } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
+import { goBackOrHome } from '@/lib/navigation';
 import { getFontName } from '@/theme/fonts';
 import { AquaBackground, sawaaRadius } from '@/theme/sawaa';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
@@ -40,6 +40,8 @@ export default function ClinicDetailScreen() {
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
   const [tab, setTab] = useState<ClinicTab | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const tabsY = useRef(0);
 
   // The clinic directory is derived from the public catalog + bookable
   // therapists; this route renders one entry of that same list.
@@ -104,21 +106,16 @@ export default function ClinicDetailScreen() {
   };
 
   const entry = clinic ? clinicBookingEntry(clinic) : null;
+  // The floating CTA makes the same choice as the tabs: it never starts a
+  // different flow, so step counts match tapping a row.
   const startBooking = () => {
     if (!clinic || !entry || entry.kind === 'misconfigured') return;
-    if (entry.kind === 'service') {
-      router.push({ pathname: bookingStepPath('service', signedIn), params: { clinicId: clinic.id, steps: String(entry.steps) } });
+    if (entry.kind === 'service' && services.length === 1) {
+      openTherapists(services[0].id);
       return;
     }
-    router.push({
-      pathname: signedIn ? '/(client)/therapists' : '/public-list/[kind]',
-      params: {
-        ...(!signedIn ? { kind: 'therapists' } : {}),
-        clinicId: clinic.id,
-        serviceId: entry.serviceId,
-        steps: String(entry.steps),
-      },
-    });
+    setTab(entry.kind === 'service' ? 'services' : 'therapists');
+    scrollRef.current?.scrollTo({ y: tabsY.current, animated: true });
   };
 
   const renderTab = () => {
@@ -165,7 +162,7 @@ export default function ClinicDetailScreen() {
                 compact
                 onPress={() => router.push({
                   pathname: signedIn ? '/(client)/booking/[serviceId]' : '/public-booking/[serviceId]',
-                  params: { serviceId: entry.serviceId, employeeId: therapist.id, clinicId: clinic.id, steps: '2' },
+                  params: { serviceId: entry.serviceId, employeeId: therapist.id, clinicId: clinic.id, steps: '3' },
                 })}
                 onViewProfile={openProfile}
               />
@@ -211,7 +208,9 @@ export default function ClinicDetailScreen() {
     return (
       <>
         <ClinicProfileHeader clinic={clinic} placeholderIcon={Building2} />
-        <GlassSegmented options={tabs} value={activeTab} onChange={setTab} />
+        <View onLayout={(event) => { tabsY.current = event.nativeEvent.layout.y; }}>
+          <GlassSegmented options={tabs} value={activeTab} onChange={setTab} />
+        </View>
         {renderTab()}
       </>
     );
@@ -220,10 +219,11 @@ export default function ClinicDetailScreen() {
   return (
     <AquaBackground>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 180 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('clinics.profileTitle')} onBack={() => router.back()} />
+        <ScreenHeader title={t('clinics.profileTitle')} onBack={() => goBackOrHome(router, signedIn ? '/(client)/clinics' : '/public-list/clinics')} />
         {renderBody()}
       </ScrollView>
 

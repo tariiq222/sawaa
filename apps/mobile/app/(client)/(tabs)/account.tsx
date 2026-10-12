@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Phone, Ticket } from 'lucide-react-native';
+import { Ticket } from 'lucide-react-native';
 
 import { AccountScaffold } from '@/components/features/account/AccountScaffold';
 import { AccountHeaderCard, type AccountStat } from '@/components/features/account/AccountHeaderCard';
 import { AccountPreferences } from '@/components/features/account/AccountPreferences';
+import { CenterSupportSection } from '@/components/features/account/CenterSupportSection';
 import { SignOutRow } from '@/components/features/account/SignOutRow';
 import { AboutSection } from '@/components/features/settings/AboutSection';
-import { MenuGroup, type MenuEntry } from '@/components/ui/MenuGroup';
+import { MenuGroup } from '@/components/ui/MenuGroup';
 import { useDir } from '@/hooks/useDir';
 import { useAppSelector } from '@/hooks/use-redux';
-import { useBranding, useSummary } from '@/hooks/queries';
+import { useSummary } from '@/hooks/queries';
 import { formatCurrencyAmount } from '@/lib/currency-display';
 
 function formatLastVisit(iso: string | null, isRTL: boolean): string {
@@ -32,7 +32,6 @@ export default function AccountTabScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const summaryQuery = useSummary();
   const summary = summaryQuery.data ?? null;
-  const contactPhone = useBranding().data?.contactPhone ?? null;
   const [refreshing, setRefreshing] = useState(false);
 
   // Never fall back to the stored email: legacy client emails are often
@@ -50,16 +49,6 @@ export default function AccountTabScreen() {
     // outstandingBalance is integer halalas.
     { key: 'outstanding', value: summary ? formatCurrencyAmount(summary.outstandingBalance, 'SAR', dir.isRTL) : '—', label: t('profile.outstanding'), direction: 'ltr' },
   ];
-
-  const support: MenuEntry[] = contactPhone ? [{
-    key: 'crisis',
-    icon: Phone,
-    label: t('profile.crisisSupport.title'),
-    description: t('profile.crisisSupport.subtitle'),
-    value: contactPhone,
-    valueDirection: 'ltr',
-    onPress: () => { void Linking.openURL(`tel:${contactPhone}`); },
-  }] : [];
 
   return (
     <AccountScaffold title={t('profile.title')} refreshing={refreshing} onRefresh={() => { void onRefresh(); }}>
@@ -81,7 +70,7 @@ export default function AccountTabScreen() {
         onPress: () => router.push('/(client)/packages/purchases'),
       }]} />
       <AccountPreferences role="client" />
-      {support.length ? <MenuGroup title={t('profile.support')} entries={support} /> : null}
+      <CenterSupportSection />
       <AboutSection />
       <SignOutRow />
     </AccountScaffold>

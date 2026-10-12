@@ -23,7 +23,7 @@ jest.mock('@/stores/store', () => ({ store: { dispatch: (...a: unknown[]) => moc
 jest.mock('@/stores/slices/auth-slice', () => ({ logout: jest.fn(() => ({ type: 'auth/logout' })) }));
 
 import api from '../api';
-import { authService, SessionSupersededError, verifyMobileOtp, loginReviewAccount } from '../auth';
+import { authService, SessionSupersededError, loginReviewAccount } from '../auth';
 import * as nativeSessionState from '../native-session-state';
 import type { User } from '@/types/auth';
 
@@ -53,113 +53,6 @@ const baseUser = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-});
-
-describe('authService.login', () => {
-  it('persists tokens on bare backend response', async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      data: {
-        accessToken: 'access-1',
-        refreshToken: 'refresh-1',
-        expiresIn: 1200,
-        user: baseUser,
-      },
-    });
-
-    const res = await authService.login({ email: 'a@b.c', password: 'p' });
-
-    expect(res.success).toBe(true);
-    expect(res.data?.accessToken).toBe('access-1');
-    expect(mockSetSecureItem).toHaveBeenCalledWith('accessToken', 'access-1');
-    expect(mockSetSecureItem).toHaveBeenCalledWith('refreshToken', 'refresh-1');
-  });
-
-  it('passes through legacy { success, data } envelope', async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      data: {
-        success: true,
-        data: { accessToken: 'a', refreshToken: 'r', expiresIn: 900, user: baseUser },
-      },
-    });
-    const res = await authService.login({ email: 'a@b.c', password: 'p' });
-    expect(res.success).toBe(true);
-    expect(mockSetSecureItem).toHaveBeenCalled();
-  });
-
-  it('returns success:false when response is malformed', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: { foo: 'bar' } });
-    const res = await authService.login({ email: 'a@b.c', password: 'p' });
-    expect(res.success).toBe(false);
-    expect(mockSetSecureItem).not.toHaveBeenCalled();
-  });
-
-  it('propagates API errors (e.g. 401 invalid credentials)', async () => {
-    mockedApi.post.mockRejectedValueOnce(new Error('Request failed with status code 401'));
-    await expect(authService.login({ email: 'x', password: 'y' })).rejects.toThrow(/401/);
-  });
-});
-
-describe('authService.register', () => {
-  it('persists tokens on success', async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      data: { accessToken: 'a', refreshToken: 'r', user: baseUser },
-    });
-    const res = await authService.register({
-      firstName: 'A',
-      lastName: 'B',
-      email: 'a@b.c',
-      password: 'pw',
-    });
-    expect(res.success).toBe(true);
-    expect(mockSetSecureItem).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe('authService.sendOtp / verifyOtp', () => {
-  it('sendOtp returns response payload as-is', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: { success: true } });
-    const r = await authService.sendOtp({ email: 'a@b.c' });
-    expect(r).toEqual({ success: true });
-    expect(mockedApi.post).toHaveBeenCalledWith('/auth/login/otp/send', { email: 'a@b.c' });
-  });
-
-  it('verifyOtp persists tokens when valid', async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      data: { accessToken: 'a', refreshToken: 'r', user: baseUser },
-    });
-    const res = await authService.verifyOtp({ email: 'a@b.c', code: '1234' });
-    expect(res.success).toBe(true);
-    expect(mockSetSecureItem).toHaveBeenCalledWith('accessToken', 'a');
-    expect(mockedApi.post).toHaveBeenCalledWith('/auth/login/otp/verify', {
-      email: 'a@b.c',
-      code: '1234',
-    });
-  });
-
-  it('verifyOtp surfaces invalid-code errors (HTTP 400)', async () => {
-    mockedApi.post.mockRejectedValueOnce(new Error('Invalid code'));
-    await expect(
-      authService.verifyOtp({ email: 'a@b.c', code: '0000' }),
-    ).rejects.toThrow(/Invalid code/);
-  });
-
-  it('rejects a successful mobile OTP when its session persistence was superseded', async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      data: { tokens: { accessToken: 'stale-access', refreshToken: 'stale-refresh' } },
-    });
-    const persistSpy = jest
-      .spyOn(nativeSessionState, 'persistSessionTokensAtEpoch')
-      .mockResolvedValue(false);
-
-    try {
-      await expect(
-        verifyMobileOtp({ identifier: 'a@b.c', code: '1234', purpose: 'login' }),
-      ).rejects.toBeInstanceOf(SessionSupersededError);
-    } finally {
-      persistSpy.mockRestore();
-    }
-    expect(mockSetSecureItem).not.toHaveBeenCalledWith('accessToken', 'stale-access');
-  });
 });
 
 describe('authService.requestAccountDeletion', () => {

@@ -11,13 +11,10 @@ import { DirectoryCard } from './DirectoryCard';
 /** Localised display fields of a practitioner, shared by list, clinic and search surfaces. */
 export function therapistDisplay(item: PublicEmployeeItem, isRTL: boolean, unknownName: string) {
   const name = (isRTL ? item.nameAr : item.nameEn) ?? item.nameEn ?? item.nameAr ?? unknownName;
-  const specialty = (isRTL ? item.specialtyAr : item.specialty) ?? item.specialty ?? item.specialtyAr ?? null;
-  const descriptions = [specialty, item.title]
-    .map((value) => value?.trim().replace(/\s+/g, ' ') ?? '')
-    .filter(Boolean);
-  const subtitle = descriptions
-    .filter((value, index) => descriptions.findIndex((other) => other.toLowerCase() === value.toLowerCase()) === index)
-    .join(' · ') || null;
+  const clean = (value: string | null | undefined) => value?.trim().replace(/\s+/g, ' ') || null;
+  const specialty = clean((isRTL ? item.specialtyAr : item.specialty) ?? item.specialty ?? item.specialtyAr);
+  // One line under the name: the job title; the specialty is detailed in the profile's About tab.
+  const subtitle = clean(item.title) ?? specialty;
   return { name, specialty, subtitle };
 }
 
@@ -51,7 +48,7 @@ export function TherapistCard({ item, onPress, servicePrice, onViewProfile, comp
       title={name}
       subtitle={subtitle}
       imageUri={item.publicImageUrl}
-      pills={!compact && item.isAvailableToday ? [{ label: t('therapists.availableToday') }] : []}
+      pills={[]}
       meta={hasPrice
         ? { icon: Banknote, text: t('therapists.fromPrice', { price: formatCurrencyAmount(price as number, currency, dir.isRTL) }) }
         : null}

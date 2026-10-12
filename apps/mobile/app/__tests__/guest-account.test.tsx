@@ -13,26 +13,29 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({ useSawaaColors: () => require
 jest.mock('@/components/ui/AppIcon', () => ({ AppIcon: () => null }));
 
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));
+jest.mock('@/components/features/account/AccountPreferences', () => ({ AccountPreferences: () => null }));
+jest.mock('@/components/features/account/CenterSupportSection', () => ({ CenterSupportSection: () => null }));
+jest.mock('@/components/features/settings/AboutSection', () => ({ AboutSection: () => null }));
 
 import GuestAccountScreen from '../(guest)/guest-account';
 import GuestAppointmentsScreen from '../(guest)/appointments';
 
-it('keeps the guest in account until they explicitly ask to sign in for appointments', () => {
+it('keeps the guest in account until they explicitly ask to sign in', () => {
   mockPush.mockClear();
   const screen = render(<GuestAccountScreen />);
-  expect(screen.getByText('guest.accountIntro')).toBeTruthy();
-  expect(screen.getByText('guest.accountAppointmentsHint')).toBeTruthy();
+  expect(screen.getByText('guest.welcomeTitle')).toBeTruthy();
+  expect(screen.getByText('guest.benefitBook')).toBeTruthy();
   expect(screen.queryByText('profile.signOut')).toBeNull();
   expect(screen.queryByText('profile.edit')).toBeNull();
   expect(mockPush).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByRole('button', { name: 'guest.signInForAppointments' }));
-  expect(mockPush).toHaveBeenCalledWith('/(auth)/login');
+  fireEvent.press(screen.getByRole('button', { name: 'guest.signInOrRegister' }));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/login', params: { redirect: '/(client)/(tabs)/account' } });
 });
 
 it('uses the same sign-in destination from guest appointments', () => {
  mockPush.mockClear(); const view = render(<GuestAppointmentsScreen />);
- expect(view.getByText('guest.accountAppointmentsHint')).toBeTruthy();
+ expect(view.getByText('guest.appointmentsTitle')).toBeTruthy();
  fireEvent.press(view.getByRole('button', { name: 'guest.signInForAppointments' }));
  expect(mockPush).toHaveBeenCalledTimes(1);
- expect(mockPush).toHaveBeenCalledWith('/(auth)/login');
+ expect(mockPush).toHaveBeenCalledWith({ pathname: '/(auth)/login', params: { redirect: '/(client)/(tabs)/appointments' } });
 });

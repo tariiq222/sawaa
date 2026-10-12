@@ -89,7 +89,7 @@ export function GroupCard({ group, onOpen, contactPhone, publicPreview = false }
       {publicPreview ? <AppButton variant="secondary" label={t('guest.viewDetails')} onPress={onOpen} /> : isFull ? (
         <AppButton variant="secondary" label={t('groups.contactUs')} onPress={onContact} />
       ) : (
-        <PrimaryButton label={t('groups.register')} onPress={onOpen} fontFamily={getFontName(dir.locale, '700')} />
+        <PrimaryButton label={t('guest.viewDetails')} onPress={onOpen} fontFamily={getFontName(dir.locale, '700')} />
       )}
     </Glass>
   );

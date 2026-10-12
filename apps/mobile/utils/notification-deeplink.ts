@@ -2,7 +2,8 @@ import type { Href } from 'expo-router';
 import type { Notification, NotificationMetadata } from '@/types/models';
 
 /**
- * Notification types whose natural in-app home is the appointments tab.
+ * Notification types (booking and payment) whose natural in-app home is the
+ * appointments tab.
  * Mirrors the backend notification type list.
  */
 const BOOKING_ROUTE_TYPES = new Set<string>([
@@ -20,6 +21,11 @@ const BOOKING_ROUTE_TYPES = new Set<string>([
   'cancellation_requested',
   'no_show_review',
   'client_arrived',
+  'payment_received',
+  'payment_completed',
+  'payment_failed',
+  'payment_reminder',
+  'receipt_rejected',
 ]);
 
 /**
@@ -53,10 +59,10 @@ export function resolveNotificationHref(notification: Notification): Href | null
     return appointmentHref(meta.bookingId);
   }
 
-  // The client chat tab was retired; conversation notices land on the
-  // notifications list rather than an unregistered route.
+  // The client chat tab was retired and this resolver is used from the
+  // notifications list itself, so a conversation notice has nowhere to go.
   if (typeof meta.conversationId === 'string' && meta.conversationId.length > 0) {
-    return '/(client)/notifications' as Href;
+    return null;
   }
 
   return BOOKING_ROUTE_TYPES.has(notification.type)

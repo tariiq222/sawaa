@@ -36,10 +36,15 @@ describe('resolveNotificationHref', () => {
     expect(resolveNotificationHref(notification({ type: 'booking_confirmed' }))).toBe('/(client)/(tabs)/appointments');
   });
 
-  it('opens the notifications list for a conversation-scoped notification', () => {
-    expect(resolveNotificationHref(notification({ metadata: { conversationId: 'c-2' } }))).toBe(
-      '/(client)/notifications',
-    );
+  it('does not re-open the notifications list for a conversation-scoped notification', () => {
+    expect(resolveNotificationHref(notification({ metadata: { conversationId: 'c-2' } }))).toBeNull();
+  });
+
+  it('opens the related appointment for a payment notification with a booking id', () => {
+    expect(resolveNotificationHref(notification({ type: 'payment_failed', metadata: { bookingId: 'b-3' } }))).toEqual({
+      pathname: '/(client)/appointment/[id]',
+      params: { id: 'b-3' },
+    });
   });
 
   it('ignores empty or non-string metadata ids instead of inventing a route', () => {
@@ -63,12 +68,17 @@ describe('resolveNotificationHref', () => {
     'cancellation_requested',
     'no_show_review',
     'client_arrived',
+    'payment_received',
+    'payment_completed',
+    'payment_failed',
+    'payment_reminder',
+    'receipt_rejected',
   ] as const)('falls back to the appointments tab for %s without metadata', (type) => {
     expect(resolveNotificationHref(notification({ type }))).toBe('/(client)/(tabs)/appointments');
   });
 
   it('leaves the user on the list for types with no actionable target', () => {
-    for (const type of ['new_rating', 'payment_received', 'receipt_rejected', 'system_alert', 'reminder'] as const) {
+    for (const type of ['new_rating', 'system_alert', 'reminder'] as const) {
       expect(resolveNotificationHref(notification({ type }))).toBeNull();
     }
   });

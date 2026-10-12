@@ -1,21 +1,24 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CalendarPlus } from 'lucide-react-native';
+import { BadgeCheck, Briefcase, CalendarPlus, Languages } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/components/ui/ErrorState';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { GlassSegmented } from '@/components/ui/GlassSegmented';
+import { InfoRows, type InfoRow } from '@/components/ui/InfoRows';
+import { Glass } from '@/theme/components/Glass';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useDir } from '@/hooks/useDir';
+import { formatCurrencyAmount } from '@/lib/currency-display';
 import { getProfileBookingGroups, getProfileBookingServices } from '@/lib/clinic-profile';
 import type { PublicCatalogRaw, PublicService } from '@/services/client/catalog';
 import type { PublicEmployeeItem } from '@/services/client/employees';
 import { getFontName } from '@/theme/fonts';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
-import { getSawaaRoles, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
+import { getSawaaRoles, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/useTheme';
 
@@ -24,6 +27,7 @@ import { ServiceRow } from './ServiceRow';
 import { therapistDisplay } from './TherapistCard';
 
 type ProfileTab = 'about' | 'services';
+
 
 interface TherapistProfileViewProps {
   employee: PublicEmployeeItem | undefined;
@@ -154,7 +158,16 @@ export function TherapistProfileView({
 
   const hint = !employee?.isBookable
     ? t('employeeProfile.unavailable')
-    : needsChoice ? t('employeeProfile.selectBookingOption') : bookable ? t('employeeProfile.priceAtNextStep') : null;
+    : needsChoice ? t('employeeProfile.selectBookingOption') : null;
+
+  const aboutRows: InfoRow[] = [];
+  if (employee) {
+    if (display?.specialty) aboutRows.push({ icon: BadgeCheck, label: t('employeeProfile.specialtyLabel'), value: display.specialty });
+    if (typeof employee.experience === 'number' && employee.experience > 0) {
+      aboutRows.push({ icon: Briefcase, label: t('employeeProfile.experienceLabel'), value: t('employeeProfile.experienceYears', { count: employee.experience }) });
+    }
+    if ((employee.languages?.length ?? 0) > 0) aboutRows.push({ icon: Languages, label: t('employeeProfile.languagesLabel'), value: (employee.languages ?? []).join(dir.isRTL ? '، ' : ', ') });
+  }
 
   const onCta = () => {
     if (!bookable || !employee) return;
@@ -175,7 +188,7 @@ export function TherapistProfileView({
               name={display.name}
               lines={[display.subtitle, clinicNames.join(' · ')].filter((line): line is string => Boolean(line))}
               imageUri={employee.publicImageUrl}
-              pills={employee.isAvailableToday ? [{ label: t('therapists.availableToday') }] : []}
+              pills={employee.minServicePrice ? [{ label: t('therapists.fromPrice', { price: formatCurrencyAmount(employee.minServicePrice, 'SAR', dir.isRTL) }) }] : []}
               rating={rating}
             />
             <GlassSegmented
@@ -187,16 +200,13 @@ export function TherapistProfileView({
               onChange={setTab}
             />
             {catalogError ? <ErrorState onRetry={onRetryCatalog} /> : activeTab === 'about' ? (
-              <View>
-                <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
-                  {bio ?? t('employeeProfile.noBio')}
-                </Text>
-                {(employee.languages?.length ?? 0) > 0 ? <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
-                  {t('employeeSelfProfile.publicLanguages', { languages: employee.languages?.join('، ') })}
-                </Text> : null}
-                {typeof employee.experience === 'number' && employee.experience > 0 ? <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
-                  {t('employeeSelfProfile.publicExperience', { years: employee.experience })}
-                </Text> : null}
+              <View style={styles.aboutTab}>
+                <Glass variant="strong" radius={sawaaRadius.lg} style={styles.aboutCard}>
+                  <Text style={[styles.about, { color: colors.ink[700], fontFamily: f400, textAlign: dir.textAlign }]}>
+                    {bio ?? t('employeeProfile.noBio')}
+                  </Text>
+                </Glass>
+                {aboutRows.length > 0 ? <InfoRows rows={aboutRows} /> : null}
               </View>
             ) : servicesTab}
           </>
@@ -223,6 +233,8 @@ export function TherapistProfileView({
 }
 
 const styles = StyleSheet.create({
+  aboutTab: { gap: sawaaSpacing.md },
+  aboutCard: { padding: sawaaSpacing.lg },
   root: { flex: 1 },
   scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.xl },
   section: { gap: sawaaSpacing.xl },

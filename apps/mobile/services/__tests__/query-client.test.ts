@@ -44,3 +44,8 @@ it('stays silent for requests cancelled after a session change', async () => {
   await failQuery(Object.assign(new Error('Session changed'), { isAxiosError: true, code: 'ERR_CANCELED' }));
   expect(alertSpy).not.toHaveBeenCalled();
 });
+
+it('stays silent for a mutation whose screen shows its own inline error', async () => {
+  await queryClient.getMutationCache().build(queryClient, { mutationFn: () => Promise.reject(axiosError({ status: 503 })), meta: { silentError: true } }).execute(undefined).catch(() => {});
+  expect(alertSpy).not.toHaveBeenCalled();
+});

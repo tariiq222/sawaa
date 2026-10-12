@@ -3,6 +3,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LabeledInput } from '@/components/ui/LabeledInput';
 import { AppButton } from '@/components/ui/AppButton';
+import { CheckboxRow } from '@/components/ui/CheckboxRow';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -27,9 +28,7 @@ export function PhoneForm({ registration, submit, disabled, pending = false }: {
     </>}
     <LabeledInput label={t('auth.register.phone')} value={phone} onChangeText={setPhone} error={phoneError} keyboardType="phone-pad" dir={dir} inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }} />
     {registration && <>
-      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent, disabled }} disabled={disabled} onPress={() => setConsent(v => !v)} style={{ minHeight: 48, justifyContent: 'center' }}>
-        <Text style={style}>{consent ? '☑ ' : '☐ '}{t('auth.emailEntry.consent')}</Text>
-      </Pressable>
+      <CheckboxRow label={t('auth.emailEntry.consent')} checked={consent} onChange={setConsent} disabled={disabled} />
       <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(PRIVACY_POLICY_URL).catch(() => setPrivacyError(true)); }} style={{ minHeight: 44, justifyContent: 'center' }}>
         <Text style={{ ...style, color: colors.teal[700] }}>{t('settings.privacyPolicy')}</Text>
       </Pressable>

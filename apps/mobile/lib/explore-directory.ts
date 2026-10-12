@@ -71,7 +71,7 @@ export function buildExploreResults(data: ExploreData): ExploreResult[] {
       title,
       detail: clinic ? localized(clinic.nameAr, clinic.nameEn, locale) : category ? localized(category.nameAr, category.nameEn, locale) : '',
       searchText: `${service.nameAr} ${service.nameEn ?? ''} ${category?.nameAr ?? ''} ${category?.nameEn ?? ''}`.toLocaleLowerCase(),
-      route: { pathname: '/(client)/therapists', params: { ...(clinic ? { clinicId: clinic.id } : {}), serviceId: service.id } },
+      route: { pathname: '/(client)/therapists', params: { ...(clinic ? { clinicId: clinic.id } : {}), serviceId: service.id, steps: '3' } },
     });
   }
 
@@ -84,7 +84,7 @@ export function buildExploreResults(data: ExploreData): ExploreResult[] {
       title,
       detail: specialty,
       searchText: `${therapist.nameAr ?? ''} ${therapist.nameEn ?? ''} ${therapist.specialtyAr ?? ''} ${therapist.specialty ?? ''}`.toLocaleLowerCase(),
-      route: { pathname: '/(client)/employee/[id]', params: { id: therapist.slug ?? therapist.id } },
+      route: { pathname: '/(client)/employee/[id]', params: { id: therapist.slug ?? therapist.id, steps: '3' } },
     });
   }
 

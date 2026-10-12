@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Linking } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { AuthFormScaffold } from '@/components/features/auth/AuthFormScaffold';
 import { AppButton } from '@/components/ui/AppButton';
@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { authService } from '@/services/auth';
 import { useDir } from '@/hooks/useDir';
+import { useBranding } from '@/hooks/queries';
 import { getFontName } from '@/theme/fonts';
 
 export default function SuspendedScreen() {
@@ -18,6 +19,7 @@ export default function SuspendedScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const dir = useDir();
+  const contactPhone = useBranding().data?.contactPhone ?? null;
   const f400 = getFontName(dir.locale, '400');
   const f700 = getFontName(dir.locale, '700');
 
@@ -39,6 +41,8 @@ export default function SuspendedScreen() {
           {t('suspended.message')}
         </Text>
         <View style={styles.actions}>
+          {contactPhone ? <AppButton variant="secondary" label={t('suspended.contactAdmin')}
+            onPress={() => void Linking.openURL(`tel:${contactPhone}`)} /> : null}
           <PrimaryButton label={t('auth.logout')} onPress={handleLogout} fontFamily={f700} />
           <AppButton variant="secondary" label={t('suspended.continueAsGuest')}
             onPress={() => router.replace('/(guest)/home')} />

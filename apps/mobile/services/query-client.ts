@@ -46,7 +46,8 @@ export const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       if (isSilent(error)) return;
-      if (mutation.options.onError) return;
+      // Screens that show their own inline error opt out with meta.silentError.
+      if (mutation.options.onError || mutation.meta?.silentError === true) return;
       Alert.alert(...errorAlert(error, 'request'));
     },
   }),

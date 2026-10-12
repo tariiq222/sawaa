@@ -11,11 +11,16 @@ import { HomeSectionState } from './HomeSectionState';
 import { Glass } from '@/theme/components/Glass';
 import { sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
+import { useAppSelector } from '@/hooks/use-redux';
 import { getAssessmentServices } from '@/lib/assessment-services';
+
+const HOME_ASSESSMENT_LIMIT = 3;
 
 export function HomeAssessmentServices() {
   const catalog = usePublicCatalog();
-  const services = getAssessmentServices(catalog.data);
+  const allServices = getAssessmentServices(catalog.data);
+  const services = allServices.slice(0, HOME_ASSESSMENT_LIMIT);
+  const signedIn = useAppSelector((state) => Boolean(state.auth.token));
   const router = useRouter();
   const { t } = useTranslation();
   const dir = useDir();
@@ -23,8 +28,14 @@ export function HomeAssessmentServices() {
   const regular = getFontName(dir.locale, '400');
   const Arrow = dir.isRTL ? ChevronLeft : ChevronRight;
   return (
-    <HomeSectionState loading={catalog.isLoading} error={catalog.isError} hasData={services.length > 0} onRetry={() => { void catalog.refetch(); }}><View style={styles.section}>
-      <SectionHeader title={t('home.assessmentServices')} />
+    <HomeSectionState loading={catalog.isLoading} error={catalog.isError} hasData={allServices.length > 0} onRetry={() => { void catalog.refetch(); }}><View style={styles.section}>
+      <SectionHeader
+        title={t('home.assessmentServices')}
+        {...(allServices.length > HOME_ASSESSMENT_LIMIT ? {
+          actionLabel: t('home.seeAllCount', { count: allServices.length }),
+          onActionPress: () => router.push({ pathname: signedIn ? '/(client)/(tabs)/explore' : '/explore', params: { filter: 'service' } }),
+        } : {})}
+      />
       {services.map((service) => (
         <Glass key={service.id} variant="strong" radius={sawaaRadius.lg} padding={sawaaSpacing.lg} interactive
           accessibilityLabel={dir.isRTL ? service.nameAr : service.nameEn ?? service.nameAr}

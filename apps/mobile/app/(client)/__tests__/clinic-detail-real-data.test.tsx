@@ -291,7 +291,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
       fireEvent.press(view.getByText('Sara'));
       expect(mockPush).toHaveBeenCalledWith({
         pathname: '/(client)/booking/[serviceId]',
-        params: { serviceId: 'direct-1', employeeId: 'employee-1', clinicId: 'clinic-1', steps: '2' },
+        params: { serviceId: 'direct-1', employeeId: 'employee-1', clinicId: 'clinic-1', steps: '3' },
       });
     });
 
@@ -302,7 +302,7 @@ describe('clinic detail renders catalog data, not placeholders', () => {
       fireEvent.press(view.getByText('Sara'));
       expect(mockPush).toHaveBeenCalledWith({
         pathname: '/public-booking/[serviceId]',
-        params: { serviceId: 'direct-1', employeeId: 'employee-1', clinicId: 'clinic-1', steps: '2' },
+        params: { serviceId: 'direct-1', employeeId: 'employee-1', clinicId: 'clinic-1', steps: '3' },
       });
     });
 
@@ -333,33 +333,63 @@ describe('clinic detail renders catalog data, not placeholders', () => {
   describe('booking button', () => {
     const t = i18n.getFixedT('en');
 
-    it('starts a SERVICES clinic at the service step', async () => {
+    const cta = (view: Awaited<ReturnType<typeof renderIn>>) => fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
+
+    it('brings a SERVICES clinic back to its services tab instead of starting a separate flow', async () => {
       const view = await renderIn('en');
-      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
-      expect(mockPush).toHaveBeenCalledWith({
-        pathname: '/(client)/booking/service',
-        params: { clinicId: 'clinic-1', steps: '4' },
-      });
+      fireEvent.press(view.getByText(t('employeeProfile.about')));
+      expect(view.queryByText('Counseling session')).toBeNull();
+      cta(view);
+      expect(view.getByText('Counseling session')).toBeTruthy();
+      expect(view.getByText('Other service')).toBeTruthy();
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
-    it('sends a guest to the public service step', async () => {
+    it('does the same for a guest', async () => {
       mockAuthToken = null;
       const view = await renderIn('en');
-      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
+      fireEvent.press(view.getByText(t('employeeProfile.about')));
+      cta(view);
+      expect(view.getByText('Counseling session')).toBeTruthy();
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('goes straight to the therapist list for a SERVICES clinic with one service, like tapping its row', async () => {
+      mockClinics.data = [{ ...clinic, serviceIds: ['s1'], serviceCount: 1 }];
+      const view = await renderIn('en');
+      cta(view);
+      expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith({
-        pathname: '/public-booking/service',
-        params: { clinicId: 'clinic-1', steps: '4' },
+        pathname: '/(client)/therapists',
+        params: { clinicId: 'clinic-1', serviceId: 's1', steps: '4' },
+      });
+      mockPush.mockClear();
+      fireEvent.press(view.getByText('Counseling session'));
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(client)/therapists',
+        params: { clinicId: 'clinic-1', serviceId: 's1', steps: '4' },
       });
     });
 
-    it('skips to the therapist list with the hidden service for a DIRECT clinic', async () => {
+    it('sends a guest with one service to the public therapist list', async () => {
+      mockAuthToken = null;
+      mockClinics.data = [{ ...clinic, serviceIds: ['s1'], serviceCount: 1 }];
+      const view = await renderIn('en');
+      cta(view);
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/public-list/[kind]',
+        params: { kind: 'therapists', clinicId: 'clinic-1', serviceId: 's1', steps: '4' },
+      });
+    });
+
+    it('switches a DIRECT clinic to its specialists tab without pushing a route', async () => {
       mockClinics.data = [{ ...clinic, bookingMode: 'DIRECT', directServiceId: 'direct-1' }];
       const view = await renderIn('en');
-      fireEvent.press(view.getByText(t('employeeProfile.bookAppointment')));
-      expect(mockPush).toHaveBeenCalledWith({
-        pathname: '/(client)/therapists',
-        params: { clinicId: 'clinic-1', serviceId: 'direct-1', steps: '3' },
-      });
+      fireEvent.press(view.getByText(t('employeeProfile.about')));
+      expect(view.queryByText('Sara')).toBeNull();
+      cta(view);
+      expect(view.getByText('Sara')).toBeTruthy();
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it('does not navigate and explains a DIRECT clinic without its internal service', async () => {

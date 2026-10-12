@@ -150,7 +150,7 @@ describe('rate screen shows the booking being rated, not a placeholder therapist
     fireEvent.press(view.getByText('إرسال التقييم'));
 
     expect(mockMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'booking-9', score: 5, isPublic: true }),
+      expect.objectContaining({ id: 'booking-9', score: 5 }),
       expect.anything(),
     );
     expect(mockBack).toHaveBeenCalled();

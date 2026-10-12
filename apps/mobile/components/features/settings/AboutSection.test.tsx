@@ -15,6 +15,7 @@ it.each(['ar', 'en'] as const)('displays real native metadata in %s', locale => 
   mockLocale = locale;
   const view = render(<DirContext.Provider value={buildDirState(locale)}><AboutSection /></DirContext.Provider>);
   expect(view.getByText('3.0.0')).toBeTruthy();
-  expect(view.getByText('77')).toBeTruthy();
+  expect(view.queryByText('77')).toBeNull();
+  expect(view.queryByText(locale === 'ar' ? 'رقم البناء' : 'Build number')).toBeNull();
   expect(view.getByRole('header')).toHaveTextContent(locale === 'ar' ? 'حول التطبيق' : 'About');
 });

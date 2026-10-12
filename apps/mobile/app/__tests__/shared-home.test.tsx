@@ -43,11 +43,12 @@ jest.mock('@/hooks/queries', () => ({
   useTherapists: () => ({ data: [], refetch: jest.fn() }),
   usePublicCatalog: () => ({ data: { services: [] }, refetch: jest.fn() }),
   useClinics: () => ({ data: [], refetch: jest.fn() }),
+  usePackagePurchases: () => ({ data: [], refetch: jest.fn() }),
   useGroupSessions: () => ({ data: [], refetch: jest.fn() }),
+  usePackageFamilies: () => ({ data: [], refetch: jest.fn() }),
   useClientEmailStatus: () => ({ data: undefined }),
 }));
 jest.mock('@/components/features/home/HomeAssessmentServices', () => ({ HomeAssessmentServices: () => null }));
-jest.mock('@/components/features/home/HomeDiscoveryCards', () => ({ HomeDiscoveryCards: () => null }));
 jest.mock('@/components/features/home/HomeTopBar', () => ({ HomeTopBar: () => null }));
 jest.mock('@/components/features/home/HomeCardsCarousel', () => ({ HomeCardsCarousel: ({ signedIn }: { signedIn: boolean }) => {
   const { Text } = require('react-native');
@@ -63,7 +64,7 @@ jest.mock('@/components/features/home/HomeSectionHeading', () => ({ HomeSectionH
 import HomeScreen from '../(client)/(tabs)/home';
 
 function booking(id: string, scheduledAt: string, status = 'CONFIRMED') {
-  return { id, scheduledAt, date: '2026-10-09', startTime: '16:00', endTime: '17:00', status, type: 'in_person', employee: null, service: null, zoomJoinUrl: null };
+  return { id, scheduledAt, endsAt: new Date(Date.parse(scheduledAt) + 3_600_000).toISOString(), date: '2026-10-09', startTime: '16:00', endTime: '17:00', status, type: 'in_person', employee: null, service: null, zoomJoinUrl: null };
 }
 
 describe('shared home', () => {
@@ -95,7 +96,7 @@ describe('shared home', () => {
     mockHome.mockReturnValue({ data: { upcomingBookings: [booking('fixture-booking', '2026-10-09T13:00:00Z')], unreadNotifications: [] }, isLoading: false, refetch: jest.fn() });
     const screen = render(<HomeScreen />);
     expect(mockHome).toHaveBeenCalledWith(true);
-    expect(screen.getByText('4:00 PM')).toBeTruthy();
+    expect(screen.getByText(/4:00 PM/)).toBeTruthy();
     expect(screen.getByText('balance')).toBeTruthy();
     expect(screen.queryByText('auth.login')).toBeNull();
     expect(screen.getByText('cards-client')).toBeTruthy();
@@ -131,21 +132,26 @@ describe('shared home', () => {
       booking('nearest', '2026-10-09T13:00:00Z', 'deposit_paid'),
     ] }, isLoading: false, refetch: jest.fn() });
     const screen = render(<HomeScreen />);
-    expect(screen.getByText('4:00 PM')).toBeTruthy();
+    expect(screen.getByText(/4:00 PM/)).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: /home.upcomingAppointment:/ }));
     expect(mockPush).toHaveBeenCalledWith('/(client)/appointment/nearest');
   });
 
-  it('advances the card when the appointment starts without waiting for a network response', () => {
+  it('flips the card to live when the appointment starts and to the next one when it ends, without waiting for a network response', () => {
     mockSignedIn = true;
     const refetch = jest.fn();
-    mockHome.mockReturnValue({ data: { upcomingBookings: [booking('first', '2026-10-09T12:00:01Z'), booking('second', '2026-10-09T13:00:00Z')] }, isLoading: false, refetch });
+    mockHome.mockReturnValue({ data: { upcomingBookings: [booking('first', '2026-10-09T12:00:01Z'), booking('second', '2026-10-09T14:00:00Z')] }, isLoading: false, refetch });
     const screen = render(<HomeScreen />);
+    expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
     act(() => { jest.advanceTimersByTime(1001); });
-    expect(screen.getByText('4:00 PM')).toBeTruthy();
+    expect(screen.getByText('home.liveLabel')).toBeTruthy();
+    expect(refetch).toHaveBeenCalled();
+    fireEvent.press(screen.getByRole('button', { name: /home.liveLabel:/ }));
+    expect(mockPush).toHaveBeenCalledWith('/(client)/appointment/first');
+    act(() => { jest.advanceTimersByTime(3_600_000); });
+    expect(screen.getByText('home.upcomingAppointment')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: /home.upcomingAppointment:/ }));
     expect(mockPush).toHaveBeenCalledWith('/(client)/appointment/second');
-    expect(refetch).toHaveBeenCalled();
   });
 
   it('preserves a book-now empty state when no valid future appointment remains', () => {
@@ -154,7 +160,7 @@ describe('shared home', () => {
     const screen = render(<HomeScreen />);
     expect(screen.getByText('home.noUpcoming')).toBeTruthy();
     fireEvent.press(screen.getByText('home.bookNow'));
-    expect(mockPush).toHaveBeenCalledWith('/(client)/therapists');
+    expect(mockPush).toHaveBeenCalledWith('/(client)/clinics');
   });
 
   it('re-evaluates cached appointments and refreshes when the home tab regains focus', () => {
@@ -164,7 +170,9 @@ describe('shared home', () => {
     const screen = render(<HomeScreen />);
     refetch.mockClear();
     act(() => { jest.setSystemTime(new Date('2026-10-09T12:45:00Z')); mockFocusCallback(); });
-    expect(screen.getByText('4:00 PM')).toBeTruthy();
+    // The 12:30 session is still running (ends 13:30), so it stays on the card as live.
+    expect(screen.getByText('home.liveLabel')).toBeTruthy();
+    expect(screen.getByText(/3:30 PM/)).toBeTruthy();
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

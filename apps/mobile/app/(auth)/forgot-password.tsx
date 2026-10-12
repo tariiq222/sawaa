@@ -70,7 +70,7 @@ export default function ForgotPasswordScreen() {
           }}
           placeholder={t('auth.login.identifierPlaceholder')}
           error={error}
-          keyboardType="email-address" inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }}
+          keyboardType="default" inputStyle={{ textAlign: 'left', writingDirection: 'ltr' }}
           autoCapitalize="none"
           dir={dir}
         />

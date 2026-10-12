@@ -27,7 +27,6 @@ export class ListClientUpcomingBookingsHandler {
     const now = cmd.now ?? new Date();
     const where = {
       clientId: cmd.clientId,
-      scheduledAt: { gt: now },
       endsAt: { gt: now },
       status: { in: UPCOMING_STATUSES },
     };

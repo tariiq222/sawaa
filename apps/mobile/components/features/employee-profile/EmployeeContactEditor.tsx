@@ -12,9 +12,9 @@ import type { ContactChallenge, ContactRequest, ContactVerification } from '@/se
 import { profileError } from './profile-error';
 
 type Pending = ContactChallenge & { expiresAt: number; retryAt: number };
-export function EmployeeContactEditor({ channel, currentValue, request, verify, busy }: {
+export function EmployeeContactEditor({ channel, currentValue, request, verify, busy, onVerified }: {
   channel: 'EMAIL' | 'SMS'; currentValue: string | null; request: (input: ContactRequest) => Promise<ContactChallenge>;
-  verify: (input: ContactVerification) => Promise<unknown>; busy: boolean;
+  verify: (input: ContactVerification) => Promise<unknown>; busy: boolean; onVerified?: () => void;
 }) {
   const { t } = useTranslation();
   const dir = useDir();
@@ -23,7 +23,6 @@ export function EmployeeContactEditor({ channel, currentValue, request, verify, 
   const [code, setCode] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { setValue(currentValue ?? ''); setPending(null); setCode(''); }, [currentValue]);
   useEffect(() => {
@@ -32,7 +31,7 @@ export function EmployeeContactEditor({ channel, currentValue, request, verify, 
     return () => clearInterval(timer);
   }, [pending]);
   const send = async () => {
-    setError(''); setSaved(false);
+    setError('');
     if (channel === 'EMAIL' ? !z.string().email().safeParse(value.trim()).success : !hasPhoneFormat(value.trim())) { setError('employeeSelfProfile.invalidContact'); return; }
     try {
       const result = await request({ channel, identifier: value.trim() });
@@ -44,7 +43,7 @@ export function EmployeeContactEditor({ channel, currentValue, request, verify, 
   const confirm = async () => {
     if (!pending || !/^\d{6}$/.test(code)) { setError('employeeSelfProfile.invalidCode'); return; }
     setError('');
-    try { await verify({ challengeId: pending.challengeId, code }); setPending(null); setCode(''); setSaved(true); }
+    try { await verify({ challengeId: pending.challengeId, code }); setPending(null); setCode(''); onVerified?.(); }
     catch (e) { setError(profileError(e, 'employeeSelfProfile.contactError')); }
   };
   const retryAfter = pending ? Math.max(0, Math.ceil((pending.retryAt - now) / 1000)) : 0;
@@ -63,7 +62,6 @@ export function EmployeeContactEditor({ channel, currentValue, request, verify, 
       <AppButton label={t('employeeSelfProfile.changeTarget')} onPress={() => { setPending(null); setCode(''); setError(''); }} variant="ghost" disabled={busy} />
     </> : <AppButton label={t('employeeSelfProfile.sendCode')} onPress={send} loading={busy} disabled={!value.trim() || value.trim() === (currentValue ?? '')} variant="secondary" />}
     {error ? <ThemedText accessibilityRole="alert" color={theme.colors.error}>{t(error)}</ThemedText> : null}
-    {saved ? <ThemedText accessibilityLiveRegion="polite">{t('employeeSelfProfile.contactSaved')}</ThemedText> : null}
   </View>;
 }
 const styles = StyleSheet.create({ form: { gap: 12 } });

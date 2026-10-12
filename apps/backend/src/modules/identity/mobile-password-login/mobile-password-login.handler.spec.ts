@@ -19,6 +19,9 @@ describe('MobilePasswordLoginHandler', () => {
   let passwordHash: string;
   let counters: Map<string, number>;
   let issueTokenPair: jest.Mock;
+  let employees: any[];
+  let staffIssue: jest.Mock;
+  let twoFactorRequired: boolean;
 
   beforeAll(async () => { passwordHash = await hash('CorrectPass123', 4); });
   beforeEach(() => {
@@ -42,9 +45,20 @@ describe('MobilePasswordLoginHandler', () => {
       user: {
         findMany: async ({ where }: any) => users.filter(row => matches(row, where)),
         findUnique: async ({ where }: any) => users.find(row => matches(row, where)) ?? null,
+        update: async ({ where, data, select }: any) => {
+          const row = users.find(row => row.id === where.id);
+          for (const [key, value] of Object.entries(data) as [string, any][]) {
+            row[key] = value && typeof value === 'object' && 'increment' in value ? (row[key] ?? 0) + value.increment : value;
+          }
+          return select ? { failedLoginAttempts: row.failedLoginAttempts } : row;
+        },
       },
+      employee: { findFirst: async ({ where }: any) => employees.find(row => matches(row, where)) ?? null },
     };
     counters = new Map();
+    employees = [];
+    twoFactorRequired = false;
+    staffIssue = jest.fn().mockResolvedValue({ accessToken: 'staff-access', refreshToken: 'staff-refresh' });
     const redisClient = {
       multi: () => {
         let counterKey = '';
@@ -63,7 +77,8 @@ describe('MobilePasswordLoginHandler', () => {
     const login = new ClientLoginHandler(prisma as any, { getClient: () => redisClient } as any,
       new PasswordService(), { issueTokenPair } as any);
     handler = new MobilePasswordLoginHandler(prisma as any, login,
-      { getClient: () => redisClient } as any, new PasswordService());
+      { getClient: () => redisClient } as any, new PasswordService(),
+      { issueTokenPair: staffIssue } as any, { get: async () => twoFactorRequired } as any);
   });
 
   it('counts unknown mobile accounts before eligibility rejection', async () => {
@@ -179,5 +194,48 @@ describe('MobilePasswordLoginHandler', () => {
   it.each([{ password: 'CorrectPass123' }, { email: 'client@example.com', phone: '+966501234567', password: 'CorrectPass123' }])('rejects invalid identifier shape', async (dto) => {
     await expect(handler.execute(dto)).rejects.toThrow(BadRequestException);
     expect(issueTokenPair).not.toHaveBeenCalled();
+  });
+
+  describe('staff accounts', () => {
+    beforeEach(() => {
+      clients = [];
+      users = [{ id: 'staff-1', email: 'staff@example.com', phone: '+966502222222', role: 'ADMIN', isSuperAdmin: false,
+        isActive: true, emailVerifiedAt: verified, phoneVerifiedAt: verified, passwordHash,
+        failedLoginAttempts: 0, lockedUntil: null, tokenVersion: 1, customRoleId: null, customRole: null }];
+      employees = [{ userId: 'staff-1', isActive: true }];
+    });
+    const login = (password = 'CorrectPass123') => handler.execute({ email: 'staff@example.com', password }, '1.2.3.4');
+
+    it('issues staff tokens for a linked active employee with a verified contact', async () => {
+      expect(await login()).toEqual({ sessionKind: 'staff', tokens: { accessToken: 'staff-access', refreshToken: 'staff-refresh' } });
+      expect(staffIssue).toHaveBeenCalledWith(expect.objectContaining({ id: 'staff-1' }), { isSuperAdmin: false }, undefined, 'MOBILE');
+      expect(issueTokenPair).not.toHaveBeenCalled();
+    });
+
+    it('signs in by verified phone', async () => {
+      expect((await handler.execute({ phone: '0502222222', password: 'CorrectPass123' })).sessionKind).toBe('staff');
+    });
+
+    it.each([
+      ['no employee', () => { employees = []; }],
+      ['inactive employee', () => { employees[0].isActive = false; }],
+      ['client sharing the contact', () => { clients = [{ id: 'c', userId: null, email: 'staff@example.com', isActive: true, deletedAt: null }]; }],
+      ['client linked to the user', () => { clients = [{ id: 'c', userId: 'staff-1', email: 'other@example.com', isActive: true, deletedAt: null }]; }],
+      ['wrong password', () => { /* password supplied below */ }],
+      ['unverified email', () => { users[0].emailVerifiedAt = null; }],
+      ['inactive user', () => { users[0].isActive = false; }],
+      ['locked user', () => { users[0].lockedUntil = new Date(Date.now() + 60_000); }],
+      ['super-admin with two-factor required', () => { users[0].isSuperAdmin = true; twoFactorRequired = true; }],
+    ] as const)('rejects staff: %s', async (name, arrange) => {
+      arrange();
+      await expect(login(name === 'wrong password' ? 'WrongPass123' : 'CorrectPass123'))
+        .rejects.toThrow(new UnauthorizedException('Invalid credentials'));
+      expect(staffIssue).not.toHaveBeenCalled();
+    });
+
+    it('locks the staff user after repeated wrong passwords', async () => {
+      for (let i = 0; i < 5; i++) await expect(login('WrongPass123')).rejects.toThrow('Invalid credentials');
+      expect(users[0].lockedUntil.getTime()).toBeGreaterThan(Date.now());
+    });
   });
 });

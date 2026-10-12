@@ -92,6 +92,7 @@ jest.mock('@/hooks/queries', () => ({
   usePublicCatalog: () => ({ data: mockCatalog, isLoading: false, isError: mockCatalogError, refetch: jest.fn() }),
   useClinics: () => ({ data: mockClinics }),
   useTherapists: () => ({ data: mockTherapists }),
+  usePackagePurchases: () => ({ data: undefined }),
   useBankTransferSettings: () => ({ data: undefined, refetch: jest.fn() }),
   usePublicPaymentMethods: () => ({ data: mockPaymentMethods, isLoading: mockMethodsLoading, isError: mockMethodsError, refetch: mockRetryMethods }),
 }));

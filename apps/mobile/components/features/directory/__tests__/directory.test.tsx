@@ -35,12 +35,13 @@ const clinic: ClinicEntry = {
 };
 
 describe('TherapistCard', () => {
-  it('shows only real fields: name, specialty with title, availability today and the lowest price', () => {
+  it('shows only real fields: name, specialty with title and the lowest price (no availability badge)', () => {
     const onPress = jest.fn();
     const screen = render(<TherapistCard item={therapist} onPress={onPress} />);
     expect(screen.getByText('سارة')).toBeTruthy();
-    expect(screen.getByText('إرشاد أسري · أخصائية إرشاد')).toBeTruthy();
-    expect(screen.getByText('therapists.availableToday')).toBeTruthy();
+    expect(screen.getByText('أخصائية إرشاد')).toBeTruthy();
+    expect(screen.queryByText(/إرشاد أسري ·/)).toBeNull();
+    expect(screen.queryByText('therapists.receivesToday')).toBeNull();
     expect(screen.getByText(/therapists\.fromPrice .+/)).toBeTruthy();
     fireEvent.press(screen.getByRole('button'));
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -48,13 +49,13 @@ describe('TherapistCard', () => {
 
   it('omits availability and price when the directory has none, and never shows a zero price', () => {
     const screen = render(<TherapistCard item={{ ...therapist, isAvailableToday: false, minServicePrice: 0 }} onPress={jest.fn()} />);
-    expect(screen.queryByText('therapists.availableToday')).toBeNull();
+    expect(screen.queryByText('therapists.receivesToday')).toBeNull();
     expect(screen.queryByText(/therapists\.fromPrice/)).toBeNull();
   });
 
   it('compact mode hides price and availability', () => {
     const screen = render(<TherapistCard item={therapist} compact onPress={jest.fn()} />);
-    expect(screen.queryByText('therapists.availableToday')).toBeNull();
+    expect(screen.queryByText('therapists.receivesToday')).toBeNull();
     expect(screen.queryByText(/therapists\.fromPrice/)).toBeNull();
   });
 
@@ -84,8 +85,8 @@ describe('ClinicCard and filterClinics', () => {
 
 it.each([
   { rtl: true, specialtyAr: 'إرشاد أسري', title: '  إرشاد   أسري  ', expected: 'إرشاد أسري' },
-  { rtl: false, specialtyAr: null, title: ' family counselling ', expected: 'Family counselling' },
+  { rtl: false, specialtyAr: null, title: ' family counselling ', expected: 'family counselling' },
   { rtl: true, specialtyAr: '  ', title: 'أخصائية إرشاد', expected: 'أخصائية إرشاد' },
-])('does not repeat equivalent or blank practitioner descriptions: $expected', ({ rtl, specialtyAr, title, expected }) => {
+])('uses the job title as the one-line description, falling back to the specialty: $expected', ({ rtl, specialtyAr, title, expected }) => {
   expect(therapistDisplay({ ...therapist, specialtyAr, title }, rtl, 'unknown').subtitle).toBe(expected);
 });

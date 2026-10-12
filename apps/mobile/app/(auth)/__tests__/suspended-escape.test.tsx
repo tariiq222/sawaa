@@ -12,13 +12,16 @@ jest.mock('@/theme/sawaa/useSawaaColors', () => ({
   useSawaaColors: () => jest.requireActual('@/theme/sawaa/tokens').getSawaaColors('light'),
 }));
 jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light', language: 'ar', isRTL: true }) }));
+let mockContactPhone: string | null = '0500000000';
+jest.mock('@/hooks/queries', () => ({ useBranding: () => ({ data: { contactPhone: mockContactPhone } }) }));
+const mockOpenURL = jest.spyOn(require('react-native').Linking, 'openURL').mockResolvedValue(true);
 const mockLogout = jest.fn();
 jest.mock('@/services/auth', () => ({ authService: { logout: () => mockLogout() } }));
 
 import SuspendedScreen from '../suspended';
 
 describe('suspended screen escape route', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => { jest.clearAllMocks(); mockContactPhone = '0500000000'; });
 
   it('labels the logout action honestly and returns to login', async () => {
     const screen = render(<SuspendedScreen />);
@@ -34,5 +37,20 @@ describe('suspended screen escape route', () => {
 
     expect(mockReplace).toHaveBeenCalledWith('/(guest)/home');
     expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it('dials the centre phone from the contact action', () => {
+    const screen = render(<SuspendedScreen />);
+
+    fireEvent.press(screen.getByLabelText('suspended.contactAdmin'));
+
+    expect(mockOpenURL).toHaveBeenCalledWith('tel:0500000000');
+  });
+
+  it('hides the contact action when the centre has no phone', () => {
+    mockContactPhone = null;
+    const screen = render(<SuspendedScreen />);
+
+    expect(screen.queryByLabelText('suspended.contactAdmin')).toBeNull();
   });
 });
