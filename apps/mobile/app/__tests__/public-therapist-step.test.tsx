@@ -128,8 +128,8 @@ describe('guest therapist step', () => {
   it('shows the per-service price instead of minServicePrice', () => {
     mockFloors = { e1: { price: 30000, currency: 'SAR' } };
     const screen = render(<PublicListScreen />);
-    expect(screen.getAllByText(/^From /)).toHaveLength(1);
-    expect(screen.getByText(/^From 300/)).toBeTruthy();
+    expect(screen.getAllByText(/^Starting from /)).toHaveLength(1);
+    expect(screen.getByText(/^Starting from 300/)).toBeTruthy();
   });
 
   it('renders the step header when steps is present', () => {

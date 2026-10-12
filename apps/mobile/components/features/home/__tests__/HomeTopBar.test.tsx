@@ -20,7 +20,19 @@ jest.mock('@/theme/ThemeProvider', () => ({
 }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
 jest.mock('@/theme/components/Glass', () => ({
-  Glass: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Glass: ({ children, onPress, accessibilityLabel, accessibilityRole }: {
+    children: React.ReactNode;
+    onPress?: () => void;
+    accessibilityLabel?: string;
+    accessibilityRole?: 'button';
+  }) => {
+    const { Pressable } = jest.requireActual('react-native');
+    return (
+      <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel} accessibilityRole={accessibilityRole}>
+        {children}
+      </Pressable>
+    );
+  },
 }));
 
 // Deliberately NOT mocking react-i18next: these labels must come from the real

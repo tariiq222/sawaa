@@ -28,4 +28,20 @@ describe('FeaturedClinics', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Anxiety Clinic' }));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/public-clinic/[id]', params: { id: 'clinic-42' } });
   });
+
+  it('shows only the therapist count when the clinic has no description', () => {
+    const screen = render(<FeaturedClinics dir={{ isRTL: false, row: 'row', textAlign: 'left' } as never} f600="System" f700="System" />);
+    expect(screen.getByText('clinics.therapistsCount')).toBeTruthy();
+    expect(screen.queryByText(/clinics.servicesCount/)).toBeNull();
+  });
+
+  it('shows every clinic, not only the first six', () => {
+    const base = mockClinics.data[0];
+    const original = mockClinics.data;
+    mockClinics.data = Array.from({ length: 8 }, (_, i) => ({ ...base, id: `clinic-${i}`, nameEn: `Clinic ${i}` }));
+    try {
+      const screen = render(<FeaturedClinics dir={{ isRTL: false, row: 'row', textAlign: 'left' } as never} f600="System" f700="System" />);
+      expect(screen.getAllByRole('button')).toHaveLength(8);
+    } finally { mockClinics.data = original; }
+  });
 });
