@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { EmployeeContactRow } from './EmployeeContactRow';
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -16,11 +16,13 @@ it('shows the value and status, opens the sheet from the row and closes it after
   fireEvent.press(view.getByText('employeeSelfProfile.change'));
   expect(view.getByText('employeeSelfProfile.contactHint')).toBeTruthy();
   fireEvent.changeText(view.getByLabelText('settings.email'), 'new@example.com');
-  fireEvent.press(view.getByText('employeeSelfProfile.sendCode'));
-  await waitFor(() => expect(view.getByLabelText('employeeSelfProfile.code')).toBeTruthy());
+  // Flush the resolved request/verify promises inside act so the assertions do not
+  // depend on waitFor's 1s budget, which CI exceeded under load.
+  await act(async () => { fireEvent.press(view.getByText('employeeSelfProfile.sendCode')); });
+  expect(view.getByLabelText('employeeSelfProfile.code')).toBeTruthy();
   fireEvent.changeText(view.getByLabelText('employeeSelfProfile.code'), '123456');
-  fireEvent.press(view.getByText('employeeSelfProfile.confirmContact'));
-  await waitFor(() => expect(view.queryByText('employeeSelfProfile.contactHint')).toBeNull());
+  await act(async () => { fireEvent.press(view.getByText('employeeSelfProfile.confirmContact')); });
+  expect(view.queryByText('employeeSelfProfile.contactHint')).toBeNull();
   expect(verify).toHaveBeenCalledWith({ challengeId: 'challenge', code: '123456' });
   expect(view.getByText('employeeSelfProfile.contactUpdated')).toBeTruthy();
 });
