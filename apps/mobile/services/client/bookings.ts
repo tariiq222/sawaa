@@ -3,11 +3,17 @@ import type { CancellationQuoteInput, CancellationRefund, PersistedCancellationR
 export type { CancellationPreview, CancellationQuoteInput, CancellationRefund, PersistedCancellationRefund } from '../../../../packages/api-client/src/types/cancellation';
 import api from '../api';
 import type { BookingStatus, BookingType, DeliveryType, LegacyBookingType } from '@/types/booking-enums';
-import { listLegacyTab, rejectsUnknownTab, type BookingListParams } from './booking-tab';
-
-export { bookingTabForStatus } from './booking-tab';
 
 export type { BookingStatus, BookingType, DeliveryType };
+
+export type BookingTab = 'upcoming' | 'past' | 'cancelled';
+
+export interface BookingListParams {
+  tab?: BookingTab;
+  status?: string | string[];
+  page?: number;
+  limit?: number;
+}
 
 export interface ClientBookingRow {
   id: string;
@@ -270,15 +276,7 @@ export const clientBookingsService = {
           ...(limit !== undefined ? { pageSize: limit } : {}),
           ...(params.status !== undefined ? { status: upperStatus(params.status) } : {}),
         };
-    let response;
-    try {
-      response = await api.get<unknown>('/client/bookings', { params: outgoing });
-    } catch (error) {
-      if (params?.tab && rejectsUnknownTab(error)) {
-        return listLegacyTab(params, params.tab, (legacyParams) => clientBookingsService.list(legacyParams));
-      }
-      throw error;
-    }
+    const response = await api.get<unknown>('/client/bookings', { params: outgoing });
     const body = asRecord(response.data) ?? {};
     const items = Array.isArray(body.items) ? body.items.map(normalizeClientBooking) : [];
     // Unified envelope is `{ items, total, page, pageSize }`; rebuild the

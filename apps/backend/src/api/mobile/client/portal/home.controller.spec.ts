@@ -6,7 +6,6 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { formatTimeOfDay } from '../../../../../../mobile/lib/session-format';
 import { MobileClientHomeController } from './home.controller';
 import { ListClientUpcomingBookingsHandler } from '../../../../modules/bookings/client/list-client-upcoming-bookings.handler';
-import { ListBookingsHandler } from '../../../../modules/bookings/list-bookings/list-bookings.handler';
 import { ListNotificationsHandler } from '../../../../modules/comms/notifications/list-notifications.handler';
 import { ListPaymentsHandler } from '../../../../modules/finance/list-payments/list-payments.handler';
 import { GetClientHandler } from '../../../../modules/people/clients/get-client.handler';
@@ -26,7 +25,6 @@ describe('MobileClientHomeController (e2e)', () => {
       controllers: [MobileClientHomeController],
       providers: [
         { provide: ListClientUpcomingBookingsHandler, useValue: mockUpcoming },
-        { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: ListNotificationsHandler, useValue: mockListNotifications },
         { provide: ListPaymentsHandler, useValue: mockListPayments },
         { provide: GetClientHandler, useValue: mockGetClient },
