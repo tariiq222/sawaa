@@ -33,7 +33,7 @@ const buildPrisma = () => ({
 describe('ClientTokenService.issueTokenPair', () => {
   it('returns accessToken + rawRefresh + TTL metadata', async () => {
     const svc = new ClientTokenService(buildJwt() as never, buildConfig() as never, buildPrisma() as never);
-    const pair = await svc.issueTokenPair(mockClient);
+    const pair = await svc.issueTokenPair(mockClient, { channel: 'web' });
 
     expect(pair.accessToken).toBe('signed.access.token');
     expect(typeof pair.rawRefresh).toBe('string');
@@ -45,7 +45,7 @@ describe('ClientTokenService.issueTokenPair', () => {
   it('signs JWT without legacy organizationId claim', async () => {
     const jwt = buildJwt();
     const svc = new ClientTokenService(jwt as never, buildConfig() as never, buildPrisma() as never);
-    await svc.issueTokenPair(mockClient);
+    await svc.issueTokenPair(mockClient, { channel: 'web' });
 
     expect(jwt.sign).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -60,19 +60,26 @@ describe('ClientTokenService.issueTokenPair', () => {
     );
   });
 
+  it.each(['web', 'mobile'] as const)('stamps the %s channel claim into the signed payload', async (channel) => {
+    const jwt = buildJwt();
+    const svc = new ClientTokenService(jwt as never, buildConfig() as never, buildPrisma() as never);
+    await svc.issueTokenPair(mockClient, { channel });
+    expect(jwt.sign.mock.calls[0][0]).toMatchObject({ channel });
+  });
+
   it('puts only a verified email in the token claim', async () => {
     const jwt = buildJwt();
     const svc = new ClientTokenService(jwt as never, buildConfig() as never, buildPrisma() as never);
-    await svc.issueTokenPair(mockClient);
+    await svc.issueTokenPair(mockClient, { channel: 'web' });
     expect(jwt.sign.mock.calls[0][0]).toMatchObject({ email: '' });
-    await svc.issueTokenPair({ ...mockClient, emailVerified: new Date() });
+    await svc.issueTokenPair({ ...mockClient, emailVerified: new Date() }, { channel: 'web' });
     expect(jwt.sign.mock.calls[1][0]).toMatchObject({ email: 'walk-in@clinic.sa' });
   });
 
   it('persists refresh token row keyed by clientId only', async () => {
     const prisma = buildPrisma();
     const svc = new ClientTokenService(buildJwt() as never, buildConfig() as never, prisma as never);
-    await svc.issueTokenPair(mockClient);
+    await svc.issueTokenPair(mockClient, { channel: 'web' });
 
     expect(prisma.clientRefreshToken.create).toHaveBeenCalledWith(
       expect.objectContaining({

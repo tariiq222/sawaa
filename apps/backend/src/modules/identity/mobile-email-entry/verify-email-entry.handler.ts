@@ -32,7 +32,7 @@ export class VerifyEmailEntryHandler {
       const client = candidate.kind === 'clientOnly'
         ? await tx.client.update({ where: { id: candidate.client.id }, data: { lastLoginAt: new Date() } })
         : candidate.client;
-      const pair = await this.clientTokens.issueTokenPair(client, tx);
+      const pair = await this.clientTokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated', sessionKind: 'client', tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };
     }).catch(translateConflict);
     if (!result) throw invalidCode();

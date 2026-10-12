@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsUUID, IsString, IsOptional } from 'class-validator';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
@@ -29,6 +30,7 @@ export class PublicRefundsController {
   constructor(private readonly requestRefundHandler: RequestRefundHandler) {}
 
   @UseGuards(ClientSessionGuard)
+  @ClientThrottle('money')
   @Post('request')
   @ApiOperation({ summary: 'Request a refund for an invoice (requires client auth)' })
   async requestRefund(

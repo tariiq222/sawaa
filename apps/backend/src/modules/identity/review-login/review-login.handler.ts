@@ -24,7 +24,7 @@ export class ReviewLoginHandler {
       throw new UnauthorizedException('Invalid credentials');
     }
     // Reuse hashed-password checks, Redis limits, lockouts and tokenVersion.
-    const result = await this.login.execute({ email, password: dto.password }, ip);
+    const result = await this.login.execute({ email, password: dto.password }, ip, undefined, undefined, 'mobile');
     if (result.clientId !== id) throw new UnauthorizedException('Invalid credentials');
     return {
       sessionKind: 'client' as const,

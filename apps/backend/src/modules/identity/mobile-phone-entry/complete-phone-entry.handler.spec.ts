@@ -14,7 +14,7 @@ describe('CompletePhoneEntryHandler', () => {
     expect(f.tx.client.create.mock.calls[0][0].data).toMatchObject({ firstName: 'First', lastName: 'Last', name: 'First Last', pendingEmail: 'test@example.test', accountType: 'FULL', source: 'ONLINE' });
     expect(f.tx.client.create.mock.calls[0][0].data).not.toHaveProperty('email');
     expect(f.tx.user.create).not.toHaveBeenCalled();
-    expect(f.tokens.issueTokenPair.mock.calls[0][1]).toBe(f.tx);
+    expect(f.tokens.issueTokenPair.mock.calls[0][2]).toBe(f.tx);
   });
   it.each(['client', 'user'] as const)('rechecks racing %s ownership', async kind => {
     const f = fixture(); f.tx[kind].findFirst.mockResolvedValue({ id: 'other' });

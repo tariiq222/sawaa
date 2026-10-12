@@ -249,7 +249,7 @@ describe('native session handlers', () => {
     });
     expect(tokens.issueTokenPair).not.toHaveBeenCalled();
     expect(clientTokens.issueTokenPair).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'client-1', tokenVersion: 3 }), tx,
+      expect.objectContaining({ id: 'client-1', tokenVersion: 3 }), { channel: 'mobile' }, tx,
     );
   });
 

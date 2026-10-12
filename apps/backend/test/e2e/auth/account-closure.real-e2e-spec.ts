@@ -93,8 +93,8 @@ describeRealE2e('Client account closure — real Postgres e2e', () => {
     const invoiceBefore = await prisma.invoice.findUnique({ where: { id: invoiceId } });
     const paymentBefore = await prisma.payment.findUnique({ where: { id: paymentId } });
 
-    const firstDevice = await clientTokens.issueTokenPair(client);
-    const secondDevice = await clientTokens.issueTokenPair(client);
+    const firstDevice = await clientTokens.issueTokenPair(client, { channel: 'web' });
+    const secondDevice = await clientTokens.issueTokenPair(client, { channel: 'web' });
     await prisma.fcmToken.createMany({ data: [
       { clientId, token: `closure-${suffix}-device-a`, platform: 'android' },
       { clientId, token: `closure-${suffix}-device-b`, platform: 'android' },

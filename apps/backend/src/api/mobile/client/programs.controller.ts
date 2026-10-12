@@ -1,27 +1,25 @@
-import { Controller, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Controller, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { ClientThrottle } from '../../../common/throttle/client-throttle';
 import {
-  ApiBearerAuth,
   ApiCreatedResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { EnrollInProgramHandler } from '../../../modules/bookings/enroll-in-program/enroll-in-program.handler';
 
 @ApiTags('Mobile Client / Programs')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@Public()
-@UseGuards(ClientSessionGuard)
+@ClientRoute()
 @Controller('mobile/client/programs')
 export class MobileClientProgramsController {
   constructor(private readonly enrollInProgram: EnrollInProgramHandler) {}
 
+  @ClientThrottle('money')
   @Post(':id/enroll')
   @ApiOperation({ summary: 'Enroll the authenticated client in a public program' })
   @ApiParam({ name: 'id', description: 'Public program UUID', format: 'uuid' })

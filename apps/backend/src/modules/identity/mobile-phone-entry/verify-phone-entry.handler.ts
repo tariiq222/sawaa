@@ -65,7 +65,7 @@ export class VerifyPhoneEntryHandler {
       if (unavailable || !candidate) return { next: 'unavailable' as const };
       const firstClaim = candidate.lastLoginAt === null && candidate.accountType === 'WALK_IN';
       const client = await tx.client.update({ where: { id: candidate.id }, data: { phoneVerified: candidate.phoneVerified ?? now, lastLoginAt: now } });
-      const pair = await this.tokens.issueTokenPair(client, tx);
+      const pair = await this.tokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated' as const, sessionKind: 'client' as const,
         tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh },
         emailPrompt: candidate.emailVerified === null && !!candidate.email?.trim() && candidate.emailPromptResolvedAt === null,

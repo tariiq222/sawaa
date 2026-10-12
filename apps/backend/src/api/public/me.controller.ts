@@ -1,9 +1,9 @@
 import { ClientCancellationPreviewHandler } from '../../modules/bookings/client/client-cancellation-preview.handler';
+import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { ClientCancellationPreviewDto, CancellationRefundSummaryDto, PersistedCancellationRefundDto } from '../../modules/bookings/client/client-cancellation-preview.dto';
-import { Controller, Get, Patch, Query, Param, Body, UseGuards, ParseUUIDPipe, ParseEnumPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiOkResponse, ApiResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
+import { Controller, Get, Patch, Query, Param, Body, ParseUUIDPipe, ParseEnumPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiOkResponse, ApiResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
-import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler';
 import { UpdateClientProfileHandler } from '../../modules/identity/client-auth/update-client-profile.handler';
@@ -16,14 +16,12 @@ import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/cl
 import { ClientRescheduleBookingDto } from '../../modules/bookings/client/client-reschedule-booking.dto';
 import { GetClientBookingHandler } from '../../modules/bookings/client/get-client-booking.handler';
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
-import { Public } from '../../common/guards/jwt.guard';
+import { ClientRoute } from '../../common/auth/client-route.decorator';
 
 @ApiExtraModels(CancellationRefundSummaryDto, PersistedCancellationRefundDto)
 @ApiTags('Public / Me')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('public/me')
 export class PublicMeController {
   constructor(
@@ -45,6 +43,7 @@ export class PublicMeController {
     return this.getMe.execute(session.id);
   }
 
+  @ClientThrottle('write')
   @Patch()
   @ApiOperation({ summary: 'Update authenticated client profile' })
   @ApiOkResponse({ schema: { type: 'object', description: 'Updated client profile' } })
@@ -127,6 +126,7 @@ export class PublicMeController {
     return this.cancellationPreview.execute(id, session.id);
   }
 
+  @ClientThrottle('write')
   @Patch('bookings/:id/cancel')
   @ApiOperation({ summary: 'Cancel a client booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
@@ -153,6 +153,7 @@ export class PublicMeController {
     return this.getBookingInvoice.execute(id, session.id);
   }
 
+  @ClientThrottle('write')
   @Patch('bookings/:id/reschedule')
   @ApiOperation({ summary: 'Reschedule a client booking' })
   @ApiParam({ name: 'id', format: 'uuid' })

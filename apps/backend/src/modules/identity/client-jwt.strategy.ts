@@ -6,16 +6,8 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { SINGLE_TENANT_CONTEXT_ID, TENANT_CLS_KEY } from '../../common/constants';
 import { PrismaService } from '../../infrastructure/database';
-
-export interface ClientJwtPayload {
-  sub: string;
-  email: string;
-  namespace: 'client';
-  jti: string;
-  /** @deprecated Legacy claim; accepted but ignored for internal context. */
-  organizationId?: string;
-  tokenVersion: number;
-}
+import type { ClientChannel } from '../../common/auth/client-channel';
+import type { ClientJwtPayload } from './shared/client-token.service';
 
 @Injectable()
 export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') {
@@ -65,11 +57,16 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
       isSuperAdmin: false,
     });
 
+    // Tokens issued before the channel claim fall back to the transport they
+    // arrived on: the cookie is the website, the Authorization header is the app.
+    const channel: ClientChannel = payload.channel ?? (req?.cookies?.client_access_token ? 'web' : 'mobile');
+
     return {
       id: client.id,
       email: client.email,
       phone: client.phone,
       organizationId: SINGLE_TENANT_CONTEXT_ID,
+      channel,
     };
   }
 }

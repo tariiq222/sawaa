@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import type { ClientChannel } from '../../../common/auth/client-channel';
 
 export interface ClientTokenPair {
   accessToken: string;
@@ -18,7 +19,11 @@ export interface ClientJwtPayload {
   email: string;
   namespace: 'client';
   jti: string;
+  /** @deprecated Legacy claim; accepted but ignored for internal context. */
+  organizationId?: string;
   tokenVersion: number;
+  /** Absent on tokens issued before the channel claim existed. */
+  channel?: ClientChannel;
 }
 
 function parseTtlMs(ttl: string): number {
@@ -50,6 +55,7 @@ export class ClientTokenService {
       emailVerified: Date | null;
       tokenVersion?: number;
     },
+    options: { channel: ClientChannel },
     transaction?: Prisma.TransactionClient,
   ): Promise<ClientTokenPair> {
     const jti = randomUUID();
@@ -61,6 +67,7 @@ export class ClientTokenService {
       namespace: 'client',
       jti,
       tokenVersion: client.tokenVersion ?? 0,
+      channel: options.channel,
     };
 
     const accessTtl = (this.config.get<string>('JWT_CLIENT_ACCESS_TTL') ?? '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`;

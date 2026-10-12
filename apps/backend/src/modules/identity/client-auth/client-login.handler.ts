@@ -3,6 +3,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
+import type { ClientChannel } from '../../../common/auth/client-channel';
 import { ClientLoginDto } from './client-login.dto';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
 
@@ -21,7 +22,7 @@ export class ClientLoginHandler {
     private readonly clientTokens: ClientTokenService,
   ) {}
 
-  async execute(dto: ClientLoginDto, ip = 'unknown', expectedClientId?: string, admittedAttempt?: ClientPasswordAttempt) {
+  async execute(dto: ClientLoginDto, ip = 'unknown', expectedClientId?: string, admittedAttempt?: ClientPasswordAttempt, channel: ClientChannel = 'web') {
     // Exactly one identifier. This is a request-shape error (no account
     // lookup has happened yet), so a descriptive message leaks nothing.
     if ((dto.email && dto.phone) || (!dto.email && !dto.phone)) {
@@ -100,7 +101,7 @@ export class ClientLoginHandler {
       email: client.email,
       emailVerified: client.emailVerified,
       tokenVersion: client.tokenVersion,
-    });
+    }, { channel });
 
     this.logger.log(`Client login: ${client.id} (${maskIdentifier(identifier)})`);
 

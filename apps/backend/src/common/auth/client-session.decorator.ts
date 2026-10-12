@@ -1,9 +1,11 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import type { ClientChannel } from './client-channel';
 
 export interface ClientSession {
   id: string;
   email: string | null;
   phone: string | null;
+  channel: ClientChannel;
 }
 
 export const ClientSession = createParamDecorator(

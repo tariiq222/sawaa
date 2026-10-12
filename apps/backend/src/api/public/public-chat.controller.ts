@@ -4,6 +4,7 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
+import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { toChatConversationResponse } from '../../modules/comms/chat/guest/chat-conversation.response';
 import { CreateGuestConversationDto } from '../../modules/comms/chat/guest/create-guest-conversation.dto';
 import { CreateGuestConversationHandler } from '../../modules/comms/chat/guest/create-conversation.handler';
@@ -54,6 +55,7 @@ export class PublicChatController {
   }
 
   @Public()
+  @ClientThrottle('read')
   @Get('conversations/current')
   @ApiOperation({ summary: 'Get the current guest chat conversation' })
   @ApiOkResponse({ description: 'Current conversation for the supplied guest cookie' })
@@ -66,6 +68,7 @@ export class PublicChatController {
   }
 
   @Public()
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/messages')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a message as a guest chat owner' })
@@ -88,6 +91,7 @@ export class PublicChatController {
   }
 
   @Public()
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/messages/:messageId/retry')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retry an unanswered administrative assistant message as a guest owner' })
@@ -107,6 +111,7 @@ export class PublicChatController {
   }
 
   @Public()
+  @ClientThrottle('read')
   @Get('conversations/:conversationId/messages')
   @Header('Cache-Control', 'no-store, max-age=0')
   @ApiOperation({ summary: 'List messages as a guest chat owner' })
@@ -127,6 +132,7 @@ export class PublicChatController {
   }
 
   @Public()
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/handoff')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request reception handoff as a guest chat owner' })

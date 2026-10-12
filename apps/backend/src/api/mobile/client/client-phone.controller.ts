@@ -1,10 +1,9 @@
-import { ArgumentsHost, Body, Controller, Catch, ExceptionFilter, Header, HttpCode, HttpException, Post, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ArgumentsHost, Body, Controller, Catch, ExceptionFilter, Header, HttpCode, HttpException, Post, UseFilters } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { ApiStandardResponses } from '../../../common/swagger';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { RequestClientPhoneHandler } from '../../../modules/identity/client-phone/request-client-phone.handler';
 import { VerifyClientPhoneHandler } from '../../../modules/identity/client-phone/verify-client-phone.handler';
@@ -37,10 +36,8 @@ export class ClientPhoneValidationFilter implements ExceptionFilter {
 
 @UseFilters(new ClientPhoneValidationFilter())
 @ApiTags('Mobile Client / Profile')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/profile/phone')
 export class MobileClientPhoneController {
   constructor(

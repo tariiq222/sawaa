@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Body, Query, UseGuards, Param, ParseUUIDPipe } from '@nestjs/common';
+import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiOkResponse, ApiCreatedResponse, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
@@ -35,7 +36,7 @@ export class PublicBookingsController {
   @Public()
   @ApiBearerAuth()
   @UseGuards(ClientSessionGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ClientThrottle('money')
   @Post()
   @ApiOperation({ summary: 'Create a booking (requires a logged-in client session)' })
   @ApiCreatedResponse({
@@ -114,7 +115,7 @@ export class PublicProgramsController {
   @Public()
   @ApiBearerAuth()
   @UseGuards(ClientSessionGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ClientThrottle('money')
   @Post(':id/enroll')
   @ApiOperation({ summary: 'Self-enroll into a public program' })
   @ApiParam({ name: 'id', format: 'uuid' })

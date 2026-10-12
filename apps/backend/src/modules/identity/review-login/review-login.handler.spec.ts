@@ -37,7 +37,7 @@ describe('review account password boundary', () => {
     await expect(handler.execute({ email, password }, '127.0.0.1')).resolves.toEqual({
       sessionKind: 'client', tokens: { accessToken: 'client-access', refreshToken: 'client-refresh' },
     });
-    expect(issue).toHaveBeenCalledWith({ id, email, tokenVersion: 3 });
+    expect(issue).toHaveBeenCalledWith({ id, email, tokenVersion: 3 }, { channel: 'mobile' });
   });
   it('fails closed when no review account is configured', async () => {
     config.set('MOBILE_REVIEW_CLIENT_ID', '');

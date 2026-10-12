@@ -1,4 +1,5 @@
 import { ClientCancelBookingDto } from '../../../modules/bookings/client/client-cancel-booking.dto';
+import { ClientThrottle } from '../../../common/throttle/client-throttle';
 import { PickType } from '@nestjs/swagger';
 import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
 import { ClientCancellationPreviewDto, PersistedCancellationRefundDto, CancellationRefundSummaryDto } from '../../../modules/bookings/client/client-cancellation-preview.dto';
@@ -12,19 +13,17 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation,
+  ApiTags, ApiOperation,
   ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
@@ -110,10 +109,8 @@ export class MobileListBookingsDto {
 
 @ApiExtraModels(PersistedCancellationRefundDto, CancellationRefundSummaryDto)
 @ApiTags('Mobile Client / Bookings')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@Public()
-@UseGuards(ClientSessionGuard)
+@ClientRoute()
 @Controller('mobile/client/bookings')
 export class MobileClientBookingsController {
   constructor(
@@ -131,6 +128,7 @@ export class MobileClientBookingsController {
     private readonly cancellationOutcome: ClientCancellationOutcomeHandler,
   ) {}
 
+  @ClientThrottle('money')
   @Post()
   @ApiOperation({ summary: 'Create a booking' })
   @ApiCreatedResponse({
@@ -200,6 +198,7 @@ export class MobileClientBookingsController {
     return this.cancellationPreview.execute(id, user.id, 'MOBILE');
   }
 
+  @ClientThrottle('write')
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
@@ -236,6 +235,7 @@ export class MobileClientBookingsController {
     return { joinUrl: updated.zoomJoinUrl, scheduledAt: updated.scheduledAt };
   }
 
+  @ClientThrottle('write')
   @Post(':id/rate')
   @ApiOperation({ summary: 'Submit a rating for a completed booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
@@ -257,6 +257,7 @@ export class MobileClientBookingsController {
     });
   }
 
+  @ClientThrottle('write')
   @Patch(':id/reschedule')
   @ApiOperation({ summary: 'Reschedule a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })

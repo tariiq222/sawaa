@@ -63,7 +63,7 @@ export class ClientRefreshHandler {
       email: client.email,
       emailVerified: client.emailVerified,
       tokenVersion: client.tokenVersion,
-    });
+    }, { channel: 'web' });
 
     return {
       clientId,

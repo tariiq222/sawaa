@@ -72,7 +72,7 @@ describeReal('Mobile client phone change — code to the new number', () => {
     const phone = number();
     const client = await prisma.client.create({ data: { name: 'Synthetic phone change', phone, phoneVerified: new Date(), accountType: 'FULL' } });
     clients.add(client.id);
-    const pair = await clientTokens.issueTokenPair(client);
+    const pair = await clientTokens.issueTokenPair(client, { channel: 'mobile' });
     return { client, phone, accessToken: pair.accessToken, refreshToken: pair.rawRefresh };
   }
   async function phoneEntry(phone: string) {

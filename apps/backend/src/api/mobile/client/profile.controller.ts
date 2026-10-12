@@ -1,17 +1,17 @@
-import { Controller, Delete, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Patch, Body } from '@nestjs/common';
+import { ClientThrottle } from '../../../common/throttle/client-throttle';
 import { Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsOptional, IsString, ValidateIf } from 'class-validator';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse,
+  ApiTags, ApiOperation, ApiOkResponse,
 } from '@nestjs/swagger';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { ClientResponseDto } from '../../dashboard/dto/people-response.dto';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
 import { UpdateClientProfileHandler } from '../../../modules/identity/client-auth/update-client-profile.handler';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { withProvenEmailOnly } from '../../../modules/people/clients/client.serializer';
 import { RequestAccountDeletionHandler } from '../../../modules/identity/request-account-deletion/request-account-deletion.handler';
 
@@ -42,10 +42,8 @@ export class MobileUpdateProfileBody {
 }
 
 @ApiTags('Mobile Client / Profile')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/profile')
 export class MobileClientProfileController {
   constructor(
@@ -61,6 +59,7 @@ export class MobileClientProfileController {
     return withProvenEmailOnly(await this.getClient.execute({ clientId: user.id }));
   }
 
+  @ClientThrottle('write')
   @Patch()
   @ApiOperation({ summary: "Update the authenticated client's profile" })
   @ApiOkResponse({ type: ClientResponseDto, description: 'Updated client profile' })
@@ -71,6 +70,7 @@ export class MobileClientProfileController {
     return withProvenEmailOnly(await this.updateClientProfile.execute(user.id, body));
   }
 
+  @ClientThrottle('write')
   @Delete()
   @ApiOperation({ summary: "Close the authenticated client's login immediately" })
   @ApiOkResponse({

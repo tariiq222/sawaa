@@ -41,7 +41,10 @@ async function bootstrap(): Promise<void> {
   // public with session cookie). Dashboard/admin and mobile API clients use
   // bearer auth, while provider webhooks authenticate by signature.
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (shouldBypassCsrf(req.path)) {
+    if (shouldBypassCsrf({
+      path: req.path,
+      hasClientSessionCookie: Boolean(req.cookies?.client_access_token),
+    })) {
       return next();
     }
     return csrfMiddleware(req, res, next);

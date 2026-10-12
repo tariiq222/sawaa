@@ -86,7 +86,7 @@ describe.each(['HOSTED','NATIVE'] as const)('Mobile package purchase init HTTP c
     app = module.createNestApplication();
     app.use(cookieParser());
     app.use((req: Request, res: Response, next: NextFunction) =>
-      shouldBypassCsrf(req.path) ? next() : csrfMiddleware(req, res, next));
+      shouldBypassCsrf({ path: req.path, hasClientSessionCookie: Boolean(req.cookies?.client_access_token) }) ? next() : csrfMiddleware(req, res, next));
     configureHttpContract(app, 'production');
     await app.init();
   });

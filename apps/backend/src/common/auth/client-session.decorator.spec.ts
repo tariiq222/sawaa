@@ -27,6 +27,7 @@ describe('ClientSession', () => {
       id: 'c-1',
       email: 'client@example.com',
       phone: null,
+      channel: 'web',
     };
     expect(factory(undefined, executionContextWithRequest({ user: session }))).toBe(
       session,
@@ -40,7 +41,7 @@ describe('ClientSession', () => {
   });
 
   it('preserves nullable contact fields as-is', () => {
-    const session: ClientSession = { id: 'c-2', email: null, phone: null };
+    const session: ClientSession = { id: 'c-2', email: null, phone: null, channel: 'mobile' };
     const result = factory(
       undefined,
       executionContextWithRequest({ user: session }),

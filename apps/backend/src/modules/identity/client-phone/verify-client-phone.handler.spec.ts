@@ -40,7 +40,7 @@ describe('VerifyClientPhoneHandler', () => {
         .toEqual({ phone: NEW_PHONE, tokens: { accessToken: 'new-access', refreshToken: 'new-refresh' } });
       expect(f.tx.client.update).toHaveBeenCalledWith({ where: { id: 'client-1' }, data: { phone: NEW_PHONE, phoneVerified: expect.any(Date), tokenVersion: { increment: 1 } } });
       expect(f.tx.clientRefreshToken.updateMany).toHaveBeenCalledWith({ where: { clientId: 'client-1', revokedAt: null }, data: { revokedAt: expect.any(Date) } });
-      expect(f.tokens.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'client-1', tokenVersion: 4 }), f.tx);
+      expect(f.tokens.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'client-1', tokenVersion: 4 }), { channel: 'mobile' }, f.tx);
       expect(log).toHaveBeenCalledWith({ event: 'client_phone.changed', clientId: 'client-1' });
       expect(JSON.stringify(log.mock.calls)).not.toContain('966');
     } finally { log.mockRestore(); }

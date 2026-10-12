@@ -51,7 +51,7 @@ export class VerifyClientPhoneHandler {
       // The number is the login identity: close every other session.
       await tx.clientRefreshToken.updateMany({ where: { clientId, revokedAt: null }, data: { revokedAt: now } });
       await tx.clientPhoneChallenge.updateMany({ where: { clientId, consumedAt: null }, data: { consumedAt: now } });
-      const pair = await this.tokens.issueTokenPair(updated, tx);
+      const pair = await this.tokens.issueTokenPair(updated, { channel: 'mobile' }, tx);
       return { phone, tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };
     }).catch(translateVerifyConflict);
 

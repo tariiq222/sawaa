@@ -34,7 +34,7 @@ export class CompletePhoneEntryHandler {
         consentedAt: now, consentVersion: PRIVACY_POLICY_VERSION,
         pendingEmail: email ?? null, lastLoginAt: now,
       } });
-      const pair = await this.tokens.issueTokenPair(client, tx);
+      const pair = await this.tokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated' as const, sessionKind: 'client' as const, emailPrompt: false,
         tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };
     }).catch(translateConflict);
