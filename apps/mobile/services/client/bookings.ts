@@ -93,6 +93,12 @@ function normalizeStatus(value: unknown): BookingStatus {
   return status as BookingStatus;
 }
 
+/** The unified client API sends UPPERCASE delivery types; the app models them lowercase. */
+function normalizeDeliveryType(value: unknown): DeliveryType | null | undefined {
+  const delivery = stringValue(value)?.toLowerCase();
+  return delivery === 'online' || delivery === 'in_person' ? delivery : (value === null ? null : undefined);
+}
+
 function normalizeScheduledAt(row: UnknownRecord): string {
   const direct = stringValue(row.scheduledAt);
   if (direct) return direct.startsWith('2999-') ? '' : direct;
@@ -128,6 +134,7 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     return {
       ...(raw as ClientBookingRow),
       status: normalizeStatus(row.status),
+      deliveryType: normalizeDeliveryType(row.deliveryType),
       ...(bookingType ? { bookingType: bookingType.toLowerCase() as LegacyBookingType } : {}),
       ...(type ? { type: type.toLowerCase() as LegacyBookingType } : {}),
       ...(typeof row.hasRated === 'boolean' ? { hasRated: row.hasRated } : {}),
@@ -175,7 +182,7 @@ export function normalizeClientBooking(raw: unknown): ClientBookingRow {
     bookingType: stringValue(row.bookingType)?.toLowerCase() as LegacyBookingType | undefined,
     type: stringValue(row.type)?.toLowerCase() as LegacyBookingType | undefined,
     hasRated: row.hasRated === true,
-    deliveryType: stringValue(row.deliveryType) as DeliveryType | null | undefined,
+    deliveryType: normalizeDeliveryType(row.deliveryType),
     employeeId: stringValue(row.employeeId) ?? stringValue(employee?.id) ?? '',
     employee: employee
       ? {
@@ -216,7 +223,7 @@ export interface BookingsListResponse {
   };
 }
 
-/** Matches backend MobileCreateBookingDto exactly. */
+/** Matches backend ClientCreateBookingDto (optional bookingType/couponCode are not sent by the app). */
 interface CreateBookingData {
   branchId: string;
   employeeId: string;
@@ -234,7 +241,7 @@ interface CreateBookingData {
 }
 
 /**
- * The backend `MobileListBookingsDto` validates `status` against the Prisma
+ * The backend `ClientListBookingsQuery` validates `status` against the Prisma
  * `BookingStatus` enum (UPPERCASE) and does NOT apply a class-transformer
  * `@Transform(toUpperCase)` like the dashboard DTO. So callers that pass the
  * canonical lowercase form (`'completed'`) would otherwise get a 400.
@@ -254,12 +261,18 @@ interface RateData {
 
 export const clientBookingsService = {
   async list(params?: BookingListParams): Promise<BookingsListResponse> {
-    const outgoing = params?.status !== undefined
-      ? { ...params, status: upperStatus(params.status) }
-      : params;
+    // The unified API paginates with `pageSize`; screens keep passing `limit`.
+    const { limit, ...rest } = params ?? {};
+    const outgoing = params === undefined
+      ? undefined
+      : {
+          ...rest,
+          ...(limit !== undefined ? { pageSize: limit } : {}),
+          ...(params.status !== undefined ? { status: upperStatus(params.status) } : {}),
+        };
     let response;
     try {
-      response = await api.get<unknown>('/mobile/client/bookings', { params: outgoing });
+      response = await api.get<unknown>('/client/bookings', { params: outgoing });
     } catch (error) {
       if (params?.tab && rejectsUnknownTab(error)) {
         return listLegacyTab(params, params.tab, (legacyParams) => clientBookingsService.list(legacyParams));
@@ -267,24 +280,29 @@ export const clientBookingsService = {
       throw error;
     }
     const body = asRecord(response.data) ?? {};
-    const meta = asRecord(body.meta) ?? {};
     const items = Array.isArray(body.items) ? body.items.map(normalizeClientBooking) : [];
-    const limit = numberValue(meta.limit) ?? numberValue(meta.perPage) ?? 10;
+    // Unified envelope is `{ items, total, page, pageSize }`; rebuild the
+    // `meta` block the screens consume. A legacy `meta` is still honoured.
+    const legacyMeta = asRecord(body.meta) ?? {};
+    const total = numberValue(body.total) ?? numberValue(legacyMeta.total) ?? items.length;
+    const page = numberValue(body.page) ?? numberValue(legacyMeta.page) ?? 1;
+    const pageSize = numberValue(body.pageSize) ?? numberValue(legacyMeta.limit) ?? numberValue(legacyMeta.perPage) ?? 10;
+    const totalPages = Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
     return {
       items,
       meta: {
-        total: numberValue(meta.total) ?? items.length,
-        page: numberValue(meta.page) ?? 1,
-        perPage: limit,
-        totalPages: numberValue(meta.totalPages) ?? 1,
-        hasNextPage: Boolean(meta.hasNextPage),
-        hasPreviousPage: Boolean(meta.hasPreviousPage),
+        total,
+        page,
+        perPage: pageSize,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
       },
     } satisfies BookingsListResponse;
   },
 
   async getById(id: string) {
-    const response = await api.get<unknown>(`/mobile/client/bookings/${id}`);
+    const response = await api.get<unknown>(`/client/bookings/${id}`);
     return {
       ...normalizeClientBooking(response.data),
       ratingSubmittedLocally: wasRatedInCurrentSession(id),
@@ -299,7 +317,7 @@ export const clientBookingsService = {
     const payload = data.deliveryType === undefined
       ? data
       : { ...data, deliveryType: data.deliveryType.toUpperCase() };
-    const response = await api.post<unknown>('/mobile/client/bookings', payload);
+    const response = await api.post<unknown>('/client/bookings', payload);
     return normalizeClientBooking(response.data);
   },
 
@@ -315,7 +333,7 @@ export const clientBookingsService = {
   },
   async reschedule(id: string, newScheduledAt: string) {
     const response = await api.patch<unknown>(
-      `/mobile/client/bookings/${id}/reschedule`,
+      `/client/bookings/${id}/reschedule`,
       { newScheduledAt },
     );
     return normalizeClientBooking(response.data);
@@ -324,7 +342,7 @@ export const clientBookingsService = {
   async rate(id: string, data: RateData) {
     try {
       const response = await api.post(
-        `/mobile/client/bookings/${id}/rate`,
+        `/client/bookings/${id}/rate`,
         data,
       );
       ratedBookingIdsThisSession.add(id);
@@ -343,7 +361,7 @@ export const clientBookingsService = {
 
   async getJoinUrl(id: string) {
     const response = await api.get<{ joinUrl: string; scheduledAt: string }>(
-      `/mobile/client/bookings/${id}/join`,
+      `/client/bookings/${id}/join`,
     );
     return response.data;
   },

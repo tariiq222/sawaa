@@ -15,7 +15,7 @@ export type ClientPhoneVerification = {
   };
 };
 
-const base = '/mobile/client/profile/phone';
+const base = '/client/profile/phone';
 
 // The challenge id, code and the returned tokens live in screen memory only;
 // they are never put in route params, storage or logs, and the mutations never

@@ -61,19 +61,19 @@ export interface PortalSummary {
 
 export const clientPortalService = {
   async getHome(): Promise<PortalHomeResponse> {
-    const res = await api.get<PortalHomeResponse>('/mobile/client/portal/home');
+    const res = await api.get<PortalHomeResponse>('/client/portal/home');
     return res.data;
   },
 
   async getSummary(): Promise<PortalSummary> {
-    const res = await api.get<PortalSummary>('/mobile/client/portal/summary');
+    const res = await api.get<PortalSummary>('/client/portal/summary');
     return res.data;
   },
 
   async getUpcoming(page = 1, limit = 10) {
     const res = await api.get<{ data: PortalBookingRow[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
-      '/mobile/client/portal/upcoming',
-      { params: { page, limit } },
+      '/client/portal/upcoming',
+      { params: { page, pageSize: limit } },
     );
     return res.data;
   },

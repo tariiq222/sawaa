@@ -127,7 +127,7 @@ export const programsService = {
   async enroll(id: string): Promise<EnrollInProgramResponse> {
     // Enrollment is authenticated mobile traffic. The public route is subject
     // to browser CSRF protection and rejects bearer-only native requests.
-    const response = await api.post<unknown>(`/mobile/client/programs/${encodeURIComponent(id)}/enroll`);
+    const response = await api.post<unknown>(`/client/programs/${encodeURIComponent(id)}/enroll`);
     return unwrap<EnrollInProgramResponse>(response.data);
   },
 };

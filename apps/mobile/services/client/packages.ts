@@ -146,24 +146,24 @@ export const clientPackagesService = {
 
   async initPurchase(input: InitPackagePurchaseInput): Promise<NativePackagePurchaseInitResponse> {
     const response = await api.post<NativePackagePurchaseInitResponse>(
-      '/mobile/client/payments/package-purchases/native/init',
+      '/client/package-purchases/native/init',
       input,
     );
     return response.data;
   },
 
   async listPurchases(): Promise<ClientPackagePurchaseRow[]> {
-    const response = await api.get<ClientPackagePurchaseRow[]>('/mobile/client/packages/purchases');
+    const response = await api.get<ClientPackagePurchaseRow[]>('/client/packages/purchases');
     return response.data;
   },
 
   async getPurchase(id: string): Promise<ClientPackagePurchaseRow> {
-    const response = await api.get<ClientPackagePurchaseRow>(`/mobile/client/packages/purchases/${id}`);
+    const response = await api.get<ClientPackagePurchaseRow>(`/client/packages/purchases/${id}`);
     return response.data;
   },
 
   async bookCredit(input: BookMyPackageCreditInput) {
-    const response = await api.post('/mobile/client/packages/book', input);
+    const response = await api.post('/client/packages/book', input);
     return response.data;
   },
 };

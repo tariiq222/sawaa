@@ -81,6 +81,6 @@ describe('programsService (mobile)', () => {
       status: 'AWAITING_PAYMENT',
       invoiceId: 'inv-1',
     });
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/programs/prog-1/enroll');
+    expect(mockedApi.post).toHaveBeenCalledWith('/client/programs/prog-1/enroll');
   });
 });

@@ -91,40 +91,78 @@ export interface PaymentsListResponse {
   };
 }
 
+export interface ClientInvoiceListItem {
+  id: string;
+  [key: string]: unknown;
+}
+
+export interface ClientInvoicesListResponse {
+  items: ClientInvoiceListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Outstanding balance across all invoices, integer halalas. */
+  outstandingBalance: number;
+}
+
+export interface ClientRefundRequestInput {
+  invoiceId: string;
+  reason?: string;
+}
+
+/** GET /client/invoices */
+export async function listMyInvoices(params?: { page?: number; pageSize?: number }): Promise<ClientInvoicesListResponse> {
+  const response = await api.get<ClientInvoicesListResponse>('/client/invoices', { params });
+  return response.data;
+}
+
+/** GET /client/invoices/:id/pdf: short-lived presigned receipt URL. */
+export async function getMyInvoicePdfUrl(id: string): Promise<{ url: string }> {
+  const response = await api.get<{ url: string }>(`/client/invoices/${encodeURIComponent(id)}/pdf`);
+  return response.data;
+}
+
+/** POST /client/refunds/request */
+export async function requestRefund(input: ClientRefundRequestInput): Promise<unknown> {
+  const response = await api.post<unknown>('/client/refunds/request', input);
+  return response.data;
+}
+
 export const clientPaymentsService = {
   async getNativeConfig(): Promise<NativePaymentCapabilities> {
-    const response = await api.get<NativePaymentCapabilities>('/mobile/client/payments/native/config');
+    const response = await api.get<NativePaymentCapabilities>('/client/payments/native/config');
     return response.data;
   },
 
   async initNativePayment(invoiceId: string, method: ClientPaymentInitMethod): Promise<NativePaymentInitResponse> {
-    const response = await api.post<NativePaymentInitResponse>('/mobile/client/payments/native/init', { invoiceId, method });
+    const response = await api.post<NativePaymentInitResponse>('/client/payments/native/init', { invoiceId, method });
     return response.data;
   },
 
   async reconcileNativePayment(paymentId: string): Promise<NativePaymentReconcileResponse> {
-    const response = await api.post<NativePaymentReconcileResponse>(`/mobile/client/payments/native/${paymentId}/reconcile`);
+    const response = await api.post<NativePaymentReconcileResponse>(`/client/payments/native/${paymentId}/reconcile`);
     return response.data;
   },
 
   async getBankTransferSettings(): Promise<ClientBankTransferSettings> {
     const response = await api.get<ClientBankTransferSettings>(
-      '/mobile/client/payments/bank-transfer/settings',
+      '/client/payments/bank-transfer/settings',
     );
     return response.data;
   },
 
   async list(params?: { page?: number; limit?: number }) {
+    // Public contract uses `pageSize`; screens keep passing `limit`.
     const response = await api.get<PaymentsListResponse>(
-      '/mobile/client/payments',
-      { params },
+      '/client/payments',
+      { params: params ? { page: params.page, pageSize: params.limit } : undefined },
     );
     return response.data;
   },
 
   async getInvoice(id: string) {
     const response = await api.get<ClientInvoice>(
-      `/mobile/client/payments/invoices/${id}`,
+      `/client/invoices/${id}`,
     );
     return response.data;
   },
@@ -134,7 +172,7 @@ export const clientPaymentsService = {
     method: ClientPaymentInitMethod,
   ): Promise<ClientPaymentInitResponse> {
     const response = await api.post<ClientPaymentInitResponse>(
-      '/mobile/client/payments/init',
+      '/client/payments/init',
       { invoiceId, method },
     );
     return response.data;
@@ -156,7 +194,7 @@ export const clientPaymentsService = {
     } as unknown as Blob);
 
     const response = await api.post<ClientBankTransferUploadResponse>(
-      '/mobile/client/payments/bank-transfer',
+      '/client/payments/bank-transfer',
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     );

@@ -58,13 +58,13 @@ function normalizeNotification(item: NotificationPayload): Notification {
   };
 }
 
-const BASE = '/mobile/client/notifications';
+const BASE = '/client/notifications';
 
 export const notificationsService = {
   async getAll(params?: NotificationParams): Promise<NotificationListResponse> {
     const { perPage, ...rest } = params ?? {};
     const response = await api.get<Omit<NotificationListResponse, 'items'> & { items: NotificationPayload[] }>(BASE, {
-      params: { ...rest, ...(perPage ? { limit: perPage } : {}) },
+      params: { ...rest, ...(perPage ? { pageSize: perPage } : {}) },
     });
     return { ...response.data, items: response.data.items.map(normalizeNotification) };
   },

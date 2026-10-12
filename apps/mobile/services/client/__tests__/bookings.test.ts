@@ -57,9 +57,9 @@ beforeEach(() => {
 
 describe('clientBookingsService.list', () => {
   it('passes the selected tab and next page to the server and retains pagination metadata', async () => {
-    mockedApi.get.mockResolvedValueOnce({ data: { items: [sampleRow], meta: { total: 51, page: 2, limit: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true } } });
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [sampleRow], total: 51, page: 2, pageSize: 50 } });
     const result = await clientBookingsService.list({ tab: 'upcoming', page: 2, limit: 50 });
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', { params: { tab: 'upcoming', page: 2, limit: 50 } });
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings', { params: { tab: 'upcoming', page: 2, pageSize: 50 } });
     expect(result.meta).toEqual({ total: 51, page: 2, perPage: 50, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
   });
 
@@ -85,9 +85,9 @@ describe('clientBookingsService.list', () => {
     const result = await clientBookingsService.list({ tab: 'past', page: 2, limit: 1 });
 
     expect(mockedApi.get.mock.calls.map(([, config]) => config.params)).toEqual([
-      { tab: 'past', page: 2, limit: 1 },
-      { page: 1, limit: 100 },
-      { page: 2, limit: 100 },
+      { tab: 'past', page: 2, pageSize: 1 },
+      { tab: undefined, page: 1, pageSize: 100 },
+      { tab: undefined, page: 2, pageSize: 100 },
     ]);
     expect(result.items.map((item) => item.id)).toEqual(['past-2']);
     expect(result.meta).toEqual({ total: 2, page: 2, perPage: 1, totalPages: 2, hasNextPage: false, hasPreviousPage: true });
@@ -110,7 +110,7 @@ describe('clientBookingsService.list', () => {
     expect(r.meta.perPage).toBe(20);
   });
 
-  it('GETs /mobile/client/bookings and UPPERCASES the status param (backend DTO has no Transform)', async () => {
+  it('GETs /client/bookings and UPPERCASES the status param (backend DTO has no Transform)', async () => {
     const payload: BookingsListResponse = {
       items: [sampleRow],
       meta: {
@@ -122,28 +122,28 @@ describe('clientBookingsService.list', () => {
         hasPreviousPage: false,
       },
     };
-    mockedApi.get.mockResolvedValueOnce({ data: payload });
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [sampleRow], total: 1, page: 1, pageSize: 10 } });
 
     const r = await clientBookingsService.list({ status: 'confirmed', page: 1, limit: 10 });
 
     expect(r).toEqual(payload);
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', {
-      params: { status: 'CONFIRMED', page: 1, limit: 10 },
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings', {
+      params: { status: 'CONFIRMED', page: 1, pageSize: 10 },
     });
   });
 
   it('uppercases lowercase `completed` (the records.tsx case that was 400-ing)', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { items: [], meta: {} } });
     await clientBookingsService.list({ status: 'completed', limit: 50 });
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', {
-      params: { status: 'COMPLETED', limit: 50 },
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings', {
+      params: { status: 'COMPLETED', pageSize: 50 },
     });
   });
 
   it('uppercases each entry when status is an array', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { items: [], meta: {} } });
     await clientBookingsService.list({ status: ['pending', 'confirmed'] });
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', {
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings', {
       params: { status: ['PENDING', 'CONFIRMED'] },
     });
   });
@@ -151,7 +151,7 @@ describe('clientBookingsService.list', () => {
   it('leaves params untouched when status is omitted', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { items: [], meta: {} } });
     await clientBookingsService.list({ page: 2 });
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', {
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings', {
       params: { page: 2 },
     });
   });
@@ -159,7 +159,7 @@ describe('clientBookingsService.list', () => {
   it('passes undefined params when none given', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { items: [], meta: {} } });
     await clientBookingsService.list();
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings', { params: undefined });
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings', { params: undefined });
   });
 
   it('rethrows on 500 server errors', async () => {
@@ -168,12 +168,26 @@ describe('clientBookingsService.list', () => {
   });
 });
 
+describe('unified client API compatibility', () => {
+  it('lowercases UPPERCASE status and deliveryType from the unified envelope', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { items: [{ ...sampleRow, status: 'CONFIRMED', deliveryType: 'ONLINE' }], total: 1, page: 1, pageSize: 20 } });
+    const r = await clientBookingsService.list({ tab: 'past' });
+    expect(r.items[0]).toMatchObject({ status: 'confirmed', deliveryType: 'online' });
+    expect(r.meta).toEqual({ total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false });
+  });
+
+  it('lowercases IN_PERSON delivery type on the detail response', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: { ...sampleRow, deliveryType: 'IN_PERSON' } });
+    expect((await clientBookingsService.getById('b1')).deliveryType).toBe('in_person');
+  });
+});
+
 describe('clientBookingsService.getById', () => {
   it('GETs the right detail URL', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: sampleRow });
     const r = await clientBookingsService.getById('b1');
     expect(r).toEqual({ ...sampleRow, ratingSubmittedLocally: false });
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1');
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings/b1');
   });
 
   it('preserves the backend booking type and server rating state in the detail response', async () => {
@@ -222,7 +236,7 @@ describe('clientBookingsService.getById', () => {
 });
 
 describe('clientBookingsService.create', () => {
-  it('POSTs only the MobileCreateBookingDto fields to /mobile/client/bookings', async () => {
+  it('POSTs only the MobileCreateBookingDto fields to /client/bookings', async () => {
     mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
     const dto = {
       branchId: 'br1',
@@ -233,7 +247,7 @@ describe('clientBookingsService.create', () => {
     };
     const r = await clientBookingsService.create(dto);
     expect(r).toEqual(sampleRow);
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
+    expect(mockedApi.post).toHaveBeenCalledWith('/client/bookings', dto);
     expect(mockedApi.post.mock.calls[0][1]).not.toHaveProperty('deliveryType');
   });
 
@@ -248,7 +262,7 @@ describe('clientBookingsService.create', () => {
       deliveryType: 'online',
     });
 
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', {
+    expect(mockedApi.post).toHaveBeenCalledWith('/client/bookings', {
       branchId: 'br1',
       employeeId: 'e1',
       serviceId: 's1',
@@ -286,12 +300,13 @@ describe('clientBookingsService.create', () => {
 
 describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => {
   it('cancel PATCHes the backend cancellation DTO with an enum reason and notes', async () => {
-    mockedApi.patch.mockResolvedValueOnce({ data: { ...sampleRow, status: 'cancelled' } });
+    mockedApi.patch.mockResolvedValueOnce({ data: { status: 'CANCELLED', booking: { ...sampleRow, status: 'CANCELLED' }, requiresApproval: false } });
     const r = await clientBookingsService.cancel('b1', 'changed plan');
     expect(r.status).toBe('cancelled');
+    expect(r.requiresApproval).toBe(false);
     expect(mockedApi.patch).toHaveBeenCalledWith(
-      '/mobile/client/bookings/b1/cancel',
-      { reason: 'CLIENT_REQUESTED', cancelNotes: 'changed plan' },
+      '/client/bookings/b1/cancel',
+      { reason: 'CLIENT_REQUESTED', notes: 'changed plan' },
     );
   });
 
@@ -299,7 +314,7 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     mockedApi.patch.mockResolvedValueOnce({ data: sampleRow });
     await clientBookingsService.reschedule('b1', '2026-05-02T11:00:00Z');
     expect(mockedApi.patch).toHaveBeenCalledWith(
-      '/mobile/client/bookings/b1/reschedule',
+      '/client/bookings/b1/reschedule',
       { newScheduledAt: '2026-05-02T11:00:00Z' },
     );
   });
@@ -308,7 +323,7 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     mockedApi.post.mockResolvedValueOnce({ data: { ok: true } });
     await clientBookingsService.rate('b1', { score: 5, comment: 'great', isPublic: true });
     expect(mockedApi.post).toHaveBeenCalledWith(
-      '/mobile/client/bookings/b1/rate',
+      '/client/bookings/b1/rate',
       { score: 5, comment: 'great', isPublic: true },
     );
   });
@@ -335,7 +350,7 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     });
     const r = await clientBookingsService.getJoinUrl('b1');
     expect(r.joinUrl).toBe('https://zoom/x');
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1/join');
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings/b1/join');
   });
 
   it('getJoinUrl rejects when booking is not joinable yet (400)', async () => {
@@ -350,10 +365,10 @@ it('loads cancellation preview and preserves immediate and persisted refund summ
   const preview = { policyEnabled: true, canCancel: true, acceptedRefundTerms: true, quoteToken: 'quote-1', refund };
   mockedApi.get.mockResolvedValueOnce({ data: preview });
   expect(await clientBookingsService.cancellationPreview('b1')).toEqual(preview);
-  expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/bookings/b1/cancellation-preview');
+  expect(mockedApi.get).toHaveBeenCalledWith('/client/bookings/b1/cancellation-preview');
   mockedApi.patch.mockResolvedValueOnce({ data: { status: 'CANCELLED', booking: { ...sampleRow, status: 'CANCELLED' }, requiresApproval: false, refund } });
   expect(await clientBookingsService.cancel('b1', 'changed plan', { acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })).toMatchObject({ status: 'cancelled', refund });
-  expect(mockedApi.patch).toHaveBeenCalledWith('/mobile/client/bookings/b1/cancel', expect.objectContaining({ acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' }));
+  expect(mockedApi.patch).toHaveBeenCalledWith('/client/bookings/b1/cancel', expect.objectContaining({ acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' }));
 });
 
 it('preserves settled cancellation refund evidence in a refreshed mapped detail', async () => {

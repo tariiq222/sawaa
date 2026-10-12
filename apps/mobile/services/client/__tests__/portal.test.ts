@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 describe('clientPortalService.getHome', () => {
-  it('returns the home payload from /mobile/client/portal/home', async () => {
+  it('returns the home payload from /client/portal/home', async () => {
     const payload: PortalHomeResponse = {
       profile: {
         id: 'u1',
@@ -35,7 +35,7 @@ describe('clientPortalService.getHome', () => {
     const r = await clientPortalService.getHome();
 
     expect(r).toEqual(payload);
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/portal/home');
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/portal/home');
   });
 
   it('propagates 401 from the home endpoint', async () => {
@@ -50,7 +50,7 @@ describe('clientPortalService.getSummary', () => {
     mockedApi.get.mockResolvedValueOnce({ data: summary });
     const r = await clientPortalService.getSummary();
     expect(r).toEqual(summary);
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/portal/summary');
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/portal/summary');
   });
 
   it('propagates 500 errors', async () => {
@@ -66,8 +66,8 @@ describe('clientPortalService.getUpcoming', () => {
     });
     await clientPortalService.getUpcoming();
     expect(mockedApi.get).toHaveBeenCalledWith(
-      '/mobile/client/portal/upcoming',
-      { params: { page: 1, limit: 10 } },
+      '/client/portal/upcoming',
+      { params: { page: 1, pageSize: 10 } },
     );
   });
 
@@ -77,8 +77,8 @@ describe('clientPortalService.getUpcoming', () => {
     });
     await clientPortalService.getUpcoming(3, 25);
     expect(mockedApi.get).toHaveBeenCalledWith(
-      '/mobile/client/portal/upcoming',
-      { params: { page: 3, limit: 25 } },
+      '/client/portal/upcoming',
+      { params: { page: 3, pageSize: 25 } },
     );
   });
 
