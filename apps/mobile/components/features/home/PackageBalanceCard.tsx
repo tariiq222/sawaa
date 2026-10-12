@@ -26,7 +26,7 @@ export function PackageBalanceCard() {
   const share = Math.max(0, Math.min(1, (summary?.remaining ?? 0) / (summary?.total || 1)));
   const count = summary ? t('home.packageBalanceCount', { remaining: summary.remaining, total: summary.total }) : '';
   return (
-    <HomeSectionState loading={query.isLoading} error={query.isError} hasData={Boolean(summary)} onRetry={() => { void query.refetch(); }}><Glass variant="strong" radius={sawaaRadius.lg} padding={16}
+    <HomeSectionState loading={query.isLoading} error={query.isError} hasData={Boolean(summary && summary.remaining > 0)} onRetry={() => { void query.refetch(); }}><Glass variant="strong" radius={sawaaRadius.lg} padding={16}
       onPress={() => router.push('/(client)/packages/purchases')}
       accessibilityRole="button" accessibilityLabel={`${t('home.packageBalance')}: ${count}`} interactive>
       <View style={[styles.row, { flexDirection: dir.row }]}>

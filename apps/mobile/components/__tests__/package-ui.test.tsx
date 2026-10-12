@@ -3,6 +3,7 @@ jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ theme: require('@/them
 import { StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import Detail from '../../app/(client)/packages/[id]';
+import Confirm from '../../app/(client)/packages/confirm';
 import Index from '../../app/(client)/packages/index';
 import Purchases from '../../app/(client)/packages/purchases';
 import Book from '../../app/(client)/packages/book';
@@ -17,7 +18,7 @@ const mockBack = jest.fn();
 const mockRefetch = jest.fn();
 let mockRTL = false;
 let mockQuery = { isLoading: false, isError: false, isFetching: false, data: undefined as unknown, refetch: mockRefetch };
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }), useLocalSearchParams: () => ({ id: 'family' }), useNavigation: () => ({ getState: () => undefined }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }), useLocalSearchParams: () => ({ id: 'family', familyId: 'family', optionId: 'opt', branchId: 'branch-1' }), useNavigation: () => ({ getState: () => undefined }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: mockRTL ? 'ar' : 'en', isRTL: mockRTL, row: mockRTL ? 'row-reverse' : 'row', textAlign: mockRTL ? 'right' : 'left' }) }));
@@ -139,7 +140,7 @@ it.each([true, false])('opens native checkout for standalone=%s and ignores dupl
   mockBranches = [{ id: 'branch-1', name: 'Branch' }];
   mockQuery.data = { ...vatFamily(), isStandalone };
   mockRunCheckout.mockResolvedValue({ purchaseId: 'purchase-1', invoiceId: 'invoice-1' });
-  await renderScreen(Detail);
+  await renderScreen(Confirm);
   await waitFor(() => expect(screen.getByRole('button', { name: 'packages.purchase' })).not.toBeDisabled());
   await act(async () => {
     fireEvent.press(screen.getByRole('button', { name: 'packages.purchase' }));
@@ -155,11 +156,11 @@ it('ignores an old account checkout completion after the account changes', async
   mockQuery.data = vatFamily();
   let finish!: (value: { purchaseId: string; invoiceId: string }) => void;
   mockRunCheckout.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
-  const view = render(<Detail />);
+  const view = render(<Confirm />);
   await waitFor(() => expect(screen.getByRole('button', { name: 'packages.purchase' })).not.toBeDisabled());
   fireEvent.press(screen.getByRole('button', { name: 'packages.purchase' }));
   mockUser = { id: 'other-client' };
-  view.rerender(<Detail />);
+  view.rerender(<Confirm />);
   await act(async () => { finish({ purchaseId: 'old-purchase', invoiceId: 'old-invoice' }); });
   expect(mockReplace).not.toHaveBeenCalled();
 });

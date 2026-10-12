@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { ClientPackageCredit } from '@sawaa/shared/types';
 
@@ -7,6 +7,8 @@ import type { DirState } from '@/hooks/useDir';
 import { sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
+import { SecondaryButton } from '@/components/ui/SecondaryButton';
+import { useBranding } from '@/hooks/queries/useBranding';
 import { creditLockReason, isCreditBookable } from '@/lib/package-utils';
 
 interface Props {
@@ -22,6 +24,7 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
   const sawaaColors = useSawaaColors();
   const styles = React.useMemo(() => createStyles(sawaaColors), [sawaaColors]);
   const { t } = useTranslation();
+  const contactPhone = useBranding().data?.contactPhone ?? null;
   const bookable = isCreditBookable(credit);
   const reason = creditLockReason(credit);
   const concrete = Boolean(credit.serviceId && credit.employeeId && credit.durationOptionId);
@@ -40,6 +43,9 @@ export function PackageCreditCard({ credit, dir, f400, f600, f700, onBook }: Pro
           {reason === 'depleted' ? t('packages.locked.depleted') : reason === 'unsupported' || !concrete ? t('packages.locked.support') : t('packages.locked.unavailable')}
         </Text>
       )}
+      {!canBook && reason !== 'depleted' && (reason === 'unsupported' || !concrete) && contactPhone ? (
+        <SecondaryButton label={t('packages.callCenter')} onPress={() => { void Linking.openURL(`tel:${contactPhone}`); }} style={{ alignSelf: dir.alignStart }} />
+      ) : null}
     </View>
   );
 }

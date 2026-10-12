@@ -17,6 +17,7 @@ import {
 import { Glass } from '@/theme/components/Glass';
 import { InfoRows } from '@/components/ui/InfoRows';
 import { BookingPaymentActions } from '@/components/features/booking/BookingPaymentActions';
+import { PackageCreditHint } from '@/components/features/booking/PackageCreditHint';
 import { useInlineApplePay } from '@/features/booking/use-inline-apple-pay';
 import { FloatingCta } from '@/components/ui/FloatingCta';
 import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
@@ -108,6 +109,7 @@ export default function BookingConfirmScreen() {
     deliveryType: selectedDeliveryType,
     amount: total == null ? undefined : String(total),
     currency: currency ?? service?.currency,
+    steps,
   }, signedIn && canReview);
 
   const apple = useInlineApplePay({ clientId,
@@ -194,6 +196,7 @@ export default function BookingConfirmScreen() {
             </Text>
           </View>
         ) : null}
+        {signedIn && canReview ? <PackageCreditHint /> : null}
         {signedIn && canReview ? <BookingPaymentActions payment={payment} apple={apple} /> : null}
       </ScrollView>
 

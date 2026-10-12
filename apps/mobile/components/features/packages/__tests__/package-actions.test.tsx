@@ -4,6 +4,7 @@ jest.mock('@/theme/useTheme', () => ({ useTheme: () => ({ scheme: 'light' }) }))
 jest.mock('@/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: 'light' }) }));
 jest.mock('@/hooks/useDir', () => ({ useDir: () => ({ locale: 'en', isRTL: false, row: 'row', textAlign: 'left' }) }));
 jest.mock('@/theme/fonts', () => ({ getFontName: () => 'System' }));
+jest.mock('@/hooks/queries/useBranding', () => ({ useBranding: () => ({ data: undefined }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('@/theme/components/Glass', () => ({ Glass: require('react-native').View }));

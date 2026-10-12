@@ -34,6 +34,11 @@ const backgroundExceptions = new Set([
   'public-booking/schedule.tsx',
   'public-booking/confirm.tsx',
   'public-clinic/[id].tsx',
+  // Package / group steps: the route files delegate to shared step components that paint AquaBackground.
+  '(client)/packages/[id].tsx',
+  '(client)/groups/[id].tsx',
+  'public-packages/confirm.tsx',
+  'public-groups/confirm.tsx',
 ]);
 
 function paintsSharedBackground(source: string): boolean {

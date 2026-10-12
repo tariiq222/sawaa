@@ -27,7 +27,7 @@ function single(value: string | string[] | undefined): string | undefined {
 }
 
 export default function NativeCheckout() {
-  const params = useLocalSearchParams<{ invoiceId?: string; bookingId?: string; purchaseId?: string; method?: string; fromBookingConfirm?: string; clinicId?: string }>();
+  const params = useLocalSearchParams<{ invoiceId?: string; bookingId?: string; purchaseId?: string; method?: string; fromBookingConfirm?: string; clinicId?: string; steps?: string }>();
   const invoiceId = single(params.invoiceId) ?? '';
   const bookingId = single(params.bookingId);
   const purchaseId = single(params.purchaseId);
@@ -103,6 +103,7 @@ export default function NativeCheckout() {
       router.replace({ pathname: '/(client)/booking/[serviceId]', params: {
         serviceId: booking.serviceId, employeeId: booking.employeeId, branchId: booking.branchId,
         ...(clinicId ? { clinicId } : {}),
+        ...(single(params.steps) ? { steps: single(params.steps) } : {}),
       } });
     } catch { if (owned()) setAvailabilityErrorScope(requestedScope); }
     finally { if (owned()) setAvailabilityRequestScope(null); }
