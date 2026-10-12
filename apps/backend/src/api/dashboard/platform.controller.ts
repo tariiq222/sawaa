@@ -68,7 +68,7 @@ export class DashboardPlatformController {
 
   @Post('integrations')
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Create or update a third-party integration' })
   @ApiOkResponse({ description: 'Integration upserted successfully' })
   upsertIntegrationEndpoint(@Body() body: UpsertIntegrationDto) {
@@ -76,7 +76,7 @@ export class DashboardPlatformController {
   }
 
   @Get('integrations')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'List all configured integrations' })
   @ApiOkResponse({ description: 'Array of integration records' })
   listIntegrationsEndpoint() {

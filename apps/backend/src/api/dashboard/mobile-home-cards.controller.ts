@@ -24,7 +24,7 @@ export class DashboardMobileHomeCardsController {
   ) {}
 
   @Get()
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @ApiOperation({ summary: 'List staff-managed mobile home cards' })
   @ApiOkResponse({ type: AdminMobileHomeCardDto, isArray: true })
   listEndpoint() {
@@ -32,7 +32,7 @@ export class DashboardMobileHomeCardsController {
   }
 
   @Post()
-  @CheckPermissions({ action: 'update', subject: 'Setting' })
+  @CheckPermissions({ action: 'update', subject: 'Content' })
   @ApiOperation({ summary: 'Create a draft mobile home card' })
   @ApiCreatedResponse({ type: AdminMobileHomeCardDto })
   createEndpoint(@Body() body: CreateMobileHomeCardDto) {
@@ -40,7 +40,7 @@ export class DashboardMobileHomeCardsController {
   }
 
   @Patch(':id')
-  @CheckPermissions({ action: 'update', subject: 'Setting' })
+  @CheckPermissions({ action: 'update', subject: 'Content' })
   @ApiOperation({ summary: 'Update a mobile home card with optimistic concurrency' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: AdminMobileHomeCardDto })
@@ -49,7 +49,7 @@ export class DashboardMobileHomeCardsController {
   }
 
   @Put('reorder')
-  @CheckPermissions({ action: 'update', subject: 'Setting' })
+  @CheckPermissions({ action: 'update', subject: 'Content' })
   @ApiOperation({ summary: 'Atomically reorder the full mobile home card list' })
   @ApiOkResponse({ type: AdminMobileHomeCardDto, isArray: true })
   reorderEndpoint(@Body() body: ReorderMobileHomeCardsDto) {

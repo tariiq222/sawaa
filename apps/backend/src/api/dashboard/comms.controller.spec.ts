@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import request from 'supertest';
 import { DashboardCommsController } from './comms.controller';
 import { ListNotificationsHandler } from '../../modules/comms/notifications/list-notifications.handler';
@@ -26,7 +27,7 @@ import { TestEmailConfigHandler } from '../../modules/comms/org-email-config/tes
 import { ListSmsDeliveriesHandler } from '../../modules/comms/list-sms-deliveries/list-sms-deliveries.handler';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
-import { CaslGuard } from '../../common/guards/casl.guard';
+import { CaslGuard, CHECK_PERMISSIONS_KEY } from '../../common/guards/casl.guard';
 import {
   DocumentBuilder,
   OpenAPIObject,
@@ -733,5 +734,32 @@ describe('notification own-record permission', () => {
   it('does not require booking update permission to mark the current inbox read', () => {
     expect(Reflect.getMetadata('requiredPermissions', DashboardCommsController.prototype.markReadEndpoint))
       .toEqual([{action:'read',subject:'Booking'}]);
+  });
+});
+
+describe('DashboardCommsController permission subjects (Setting split)', () => {
+  const reflector = new Reflector();
+  const proto = DashboardCommsController.prototype as unknown as Record<string, () => void>;
+  const subjectOf = (fn: string) =>
+    (reflector.get(CHECK_PERMISSIONS_KEY, proto[fn]) as Array<{ subject: string }>)[0].subject;
+
+  it.each([
+    ['getSmsConfigEndpoint', 'ProviderConfig'],
+    ['upsertSmsConfigEndpoint', 'ProviderConfig'],
+    ['testSmsConfigEndpoint', 'ProviderConfig'],
+    ['getEmailConfigEndpoint', 'ProviderConfig'],
+    ['upsertEmailConfigEndpoint', 'ProviderConfig'],
+    ['testEmailConfigEndpoint', 'ProviderConfig'],
+    ['listSmsDeliveriesEndpoint', 'PersonalData'],
+    ['listContactMessagesEndpoint', 'PersonalData'],
+    ['updateContactMessageStatusEndpoint', 'PersonalData'],
+    ['listDeliveryLogs', 'PersonalData'],
+    ['listEmailTemplatesEndpoint', 'Content'],
+    ['createEmailTemplateEndpoint', 'Content'],
+    ['getEmailTemplateEndpoint', 'Content'],
+    ['previewEmailTemplateEndpoint', 'Content'],
+    ['updateEmailTemplateEndpoint', 'Content'],
+  ])('%s requires %s', (fn, subject) => {
+    expect(subjectOf(fn)).toBe(subject);
   });
 });

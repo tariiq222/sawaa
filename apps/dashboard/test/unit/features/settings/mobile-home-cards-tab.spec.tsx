@@ -44,11 +44,11 @@ describe("MobileHomeCardsTab permissions", () => {
     canDo.mockImplementation((_module: string, action: string) => action === "read")
   })
 
-  it("keeps card management read-only without update Setting permission", () => {
+  it("keeps card management read-only without update Content permission", () => {
     render(<MobileHomeCardsTab />)
     expect(screen.getByRole("button", { name: "mobileHomeCards.add" })).toBeDisabled()
     expect(screen.getByText("mobileHomeCards.readOnly")).toBeInTheDocument()
-    expect(canDo).toHaveBeenCalledWith("setting", "update")
+    expect(canDo).toHaveBeenCalledWith("content", "update")
   })
 
   it("preserves new-card edits after a failed save", async () => {

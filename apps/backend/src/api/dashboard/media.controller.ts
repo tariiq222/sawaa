@@ -84,7 +84,7 @@ export class DashboardMediaController {
       },
     },
   })
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   uploadFileEndpoint(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: UploadFileDto,
@@ -122,7 +122,7 @@ export class DashboardMediaController {
       },
     },
   })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @ApiNotFoundResponse({ description: 'File not found' })
   getFileEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
@@ -130,7 +130,7 @@ export class DashboardMediaController {
     return this.getFile.execute(id);
   }
 
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a file by ID' })
@@ -168,7 +168,7 @@ export class DashboardMediaController {
       },
     },
   })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @ApiNotFoundResponse({ description: 'File not found' })
   presignedUrlEndpoint(
     @Param('id', ParseUUIDPipe) id: string,

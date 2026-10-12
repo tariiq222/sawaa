@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { MobileClientProfileController } from './profile.controller';
-import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
+import { GetMeHandler } from '../../../modules/identity/client-auth/get-me.handler';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { MobileUpdateProfileBody } from './profile.controller';
 import { UpdateClientHandler } from '../../../modules/people/clients/update-client.handler';
 import { UpdateClientProfileHandler } from '../../../modules/identity/client-auth/update-client-profile.handler';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
@@ -20,7 +23,7 @@ describe('MobileClientProfileController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileClientProfileController],
       providers: [
-        { provide: GetClientHandler, useValue: mockGetClient },
+        { provide: GetMeHandler, useValue: mockGetClient },
         { provide: UpdateClientHandler, useValue: mockUpdateClient },
         { provide: UpdateClientProfileHandler, useValue: mockUpdateClientProfile },
         { provide: RequestAccountDeletionHandler, useValue: mockRequestAccountDeletion },
@@ -66,20 +69,7 @@ describe('MobileClientProfileController (e2e)', () => {
         .expect(200);
 
       expect(res.body.name).toBe('Sara');
-      expect(mockGetClient.execute).toHaveBeenCalledWith({ clientId: 'client-1' });
-    });
-
-    it('never echoes an unverified stored email back to the client', async () => {
-      mockGetClient.execute.mockResolvedValue({ id: 'client-1', name: 'Sara', email: 'legacy@example.test', emailVerified: null });
-      const res = await request(app.getHttpServer()).get('/mobile/client/profile').expect(200);
-      expect(res.body.email).toBeNull();
-    });
-
-    it('returns a verified email unchanged', async () => {
-      const verifiedAt = '2026-10-09T10:00:00.000Z';
-      mockGetClient.execute.mockResolvedValue({ id: 'client-1', name: 'Sara', email: 'sara@example.test', emailVerified: verifiedAt });
-      const res = await request(app.getHttpServer()).get('/mobile/client/profile').expect(200);
-      expect(res.body.email).toBe('sara@example.test');
+      expect(mockGetClient.execute).toHaveBeenCalledWith('client-1');
     });
   });
 
@@ -178,5 +168,22 @@ describe('MobileClientProfileController (e2e)', () => {
 
     expect(res.body.status).toBe('closed');
     expect(mockRequestAccountDeletion.execute).toHaveBeenCalledWith({ clientId: 'client-1' });
+  });
+});
+
+describe('MobileUpdateProfileBody validation', () => {
+  const errorsFor = async (payload: Record<string, unknown>) =>
+    (await validate(plainToInstance(MobileUpdateProfileBody, payload))).map(e => e.property);
+
+  it('rejects a malformed email', async () => {
+    expect(await errorsFor({ email: 'not-an-email' })).toContain('email');
+  });
+
+  it('rejects a non-URL avatar', async () => {
+    expect(await errorsFor({ avatarUrl: 'not a url' })).toContain('avatarUrl');
+  });
+
+  it('accepts a valid email and avatar URL', async () => {
+    expect(await errorsFor({ email: 'sara@example.com', avatarUrl: 'https://cdn.example.com/a.jpg' })).toEqual([]);
   });
 });

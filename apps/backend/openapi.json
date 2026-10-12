@@ -2093,6 +2093,492 @@
         ],
         "type": "string"
       },
+      "ClientBookingBranchDto": {
+        "properties": {
+          "id": {
+            "description": "Branch id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "ClientBookingDto": {
+        "properties": {
+          "bookingNumber": {
+            "description": "Human-readable booking number (mapper origin)",
+            "nullable": true,
+            "type": "number"
+          },
+          "bookingType": {
+            "description": "Booking type, lower-case (individual, walk_in, group)",
+            "type": "string"
+          },
+          "branch": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingBranchDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "branchId": {
+            "description": "Branch id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "branchName": {
+            "description": "Branch name (English)",
+            "type": "string"
+          },
+          "branchNameAr": {
+            "description": "Branch name (Arabic)",
+            "nullable": true,
+            "type": "string"
+          },
+          "branchNameSnapshot": {
+            "description": "@deprecated Branch name snapshot; prefer branchName/branchNameAr.",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationReason": {
+            "description": "Cancellation reason code; null for late-entry rows",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationRefund": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PersistedCancellationRefundDto"
+              }
+            ],
+            "description": "Persisted refund outcome; present on detail only, when status is CANCELLED"
+          },
+          "cancelledAt": {
+            "description": "Cancelled at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "categoryNameSnapshot": {
+            "description": "Category name snapshot",
+            "nullable": true,
+            "type": "string"
+          },
+          "checkedInAt": {
+            "description": "Checked-in at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "completedAt": {
+            "description": "Completed at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmedAt": {
+            "description": "Confirmed at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Created at (ISO 8601)",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "date": {
+            "description": "Start date, Asia/Riyadh wall clock (YYYY-MM-DD)",
+            "nullable": true,
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Session delivery channel. IN_PERSON/ONLINE on the web route, lower-case on the mobile route.",
+            "example": "ONLINE",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "type": "number"
+          },
+          "durationMinutesSnapshot": {
+            "description": "@deprecated Alias of durationMins (mapper origin).",
+            "nullable": true,
+            "type": "number"
+          },
+          "employee": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingEmployeeDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "employeeId": {
+            "description": "Employee id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeName": {
+            "description": "Employee name (English)",
+            "type": "string"
+          },
+          "employeeNameAr": {
+            "description": "Employee name (Arabic)",
+            "nullable": true,
+            "type": "string"
+          },
+          "endsAt": {
+            "description": "End (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "endTime": {
+            "description": "End time, Asia/Riyadh wall clock (HH:mm)",
+            "nullable": true,
+            "type": "string"
+          },
+          "hasRated": {
+            "description": "Whether this client already rated the booking",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Booking id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoice": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingInvoiceDto"
+              }
+            ],
+            "description": "Invoice summary (mapper origin)",
+            "nullable": true,
+            "type": "object"
+          },
+          "invoiceId": {
+            "description": "Invoice id",
+            "nullable": true,
+            "type": "string"
+          },
+          "invoiceStatus": {
+            "description": "Raw invoice status (Prisma enum)",
+            "nullable": true,
+            "type": "string"
+          },
+          "noShowAt": {
+            "description": "No-show at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "payAtClinic": {
+            "description": "Client pays at the center",
+            "type": "boolean"
+          },
+          "payment": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingPaymentDto"
+              }
+            ],
+            "description": "Latest payment summary (mapper origin)",
+            "nullable": true,
+            "type": "object"
+          },
+          "paymentStatus": {
+            "description": "Raw latest payment status (Prisma enum); null when no payment",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Booked price serialised as a decimal string; unit per `currency`",
+            "example": "150",
+            "type": "string"
+          },
+          "priceSnapshot": {
+            "description": "@deprecated Alias of price as a number (mapper origin).",
+            "nullable": true,
+            "type": "number"
+          },
+          "scheduledAt": {
+            "description": "Start (ISO 8601)",
+            "type": "string"
+          },
+          "service": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingServiceDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "serviceId": {
+            "description": "Service id",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceName": {
+            "description": "Service name (English, falls back to Arabic then snapshot)",
+            "type": "string"
+          },
+          "serviceNameAr": {
+            "description": "Service name (Arabic)",
+            "nullable": true,
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Start time, Asia/Riyadh wall clock (HH:mm)",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Booking status. Upper-case Prisma enum on the web route, lower-case on the mobile route (legacy wire format).",
+            "example": "CONFIRMED",
+            "type": "string"
+          },
+          "type": {
+            "description": "@deprecated Legacy UI alias of bookingType (mapper origin; individual maps to in_person).",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Updated at (ISO 8601, mapper origin)",
+            "type": "string"
+          },
+          "zoomHostUrl": {
+            "description": "Always null for clients (host privilege URL). Key kept for the alias period.",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomJoinUrl": {
+            "description": "Zoom join URL (attendee link)",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingStatus": {
+            "description": "Zoom meeting status",
+            "enum": [
+              "PENDING",
+              "CREATED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomStartUrl": {
+            "description": "Always null for clients (host privilege URL). Key kept for shipped mobile builds.",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "scheduledAt",
+          "durationMins",
+          "price",
+          "currency",
+          "payAtClinic",
+          "deliveryType",
+          "bookingType",
+          "type",
+          "serviceName",
+          "employeeId",
+          "employeeName",
+          "branchId",
+          "branchName",
+          "hasRated"
+        ],
+        "type": "object"
+      },
+      "ClientBookingEmployeeDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Avatar URL",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialty": {
+            "description": "Specialty (English)",
+            "example": "",
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Specialty (Arabic)",
+            "example": "",
+            "type": "string"
+          },
+          "user": {
+            "description": "Display name parts (mapper origin, kept for the alias period)",
+            "example": {
+              "firstName": "Sara",
+              "lastName": ""
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "specialty",
+          "specialtyAr"
+        ],
+        "type": "object"
+      },
+      "ClientBookingInvoiceDto": {
+        "properties": {
+          "id": {
+            "description": "Invoice id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "outstanding": {
+            "description": "Total minus completed payments in halalas",
+            "type": "number"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum)",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Subtotal in halalas",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total after discount in halalas",
+            "type": "number"
+          },
+          "vatRate": {
+            "description": "Fractional VAT rate (0 when the center is not VAT-registered)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "subtotal",
+          "vatRate",
+          "total",
+          "outstanding",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ClientBookingPaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Amount in halalas",
+            "type": "number"
+          },
+          "id": {
+            "description": "Payment id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "description": "UI payment method",
+            "enum": [
+              "moyasar",
+              "bank_transfer",
+              "cash",
+              "mada",
+              "tabby"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "description": "UI payment status",
+            "enum": [
+              "pending",
+              "awaiting",
+              "paid",
+              "failed",
+              "refunded",
+              "rejected"
+            ],
+            "type": "string"
+          },
+          "totalAmount": {
+            "description": "Amount in halalas (alias of amount)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "totalAmount",
+          "method",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ClientBookingServiceDto": {
+        "properties": {
+          "duration": {
+            "description": "Service duration in minutes",
+            "type": "number"
+          },
+          "id": {
+            "description": "Service id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name (empty string when absent)",
+            "type": "string"
+          },
+          "price": {
+            "description": "Service list price (not the booked price); unit per `currency`",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "price",
+          "duration"
+        ],
+        "type": "object"
+      },
       "ClientBookingSummaryDto": {
         "properties": {
           "date": {
@@ -2600,6 +3086,134 @@
         "required": [
           "phone",
           "tokens"
+        ],
+        "type": "object"
+      },
+      "ClientProfileDto": {
+        "properties": {
+          "accountType": {
+            "description": "Account type",
+            "enum": [
+              "full",
+              "walk_in"
+            ],
+            "example": "full",
+            "type": "string"
+          },
+          "avatarUrl": {
+            "description": "Avatar image URL",
+            "example": "https://cdn.example.com/avatars/sara.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimedAt": {
+            "description": "Account claim timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Date of birth (ISO 8601)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address. Null unless the email has been verified.",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name",
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "description": "Gender (lowercase)",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Client UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name",
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Mobile phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "phoneVerified": {
+            "description": "Phone verification timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred app locale",
+            "example": "ar",
+            "nullable": true,
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "unverifiedEmail": {
+            "description": "Stored email that has not been verified yet (set when emailVerified is null), so the client can see what they entered. Null once the email is verified or when none is stored.",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "firstName",
+          "lastName",
+          "email",
+          "unverifiedEmail",
+          "phone",
+          "emailVerified",
+          "phoneVerified",
+          "avatarUrl",
+          "gender",
+          "dateOfBirth",
+          "preferredLocale",
+          "pushEnabled",
+          "accountType",
+          "claimedAt",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -8253,21 +8867,20 @@
           "avatarUrl": {
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
-            "nullable": true,
             "type": "string"
           },
           "email": {
-            "description": "Email address",
-            "example": "user@example.com",
+            "description": "Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).",
+            "example": "client@example.com",
             "type": "string"
           },
           "name": {
-            "description": "Full display name",
-            "example": "Sara Al-Harbi",
+            "description": "Full name",
+            "example": "أحمد محمد العتيبي",
             "type": "string"
           },
           "phone": {
-            "description": "Saudi mobile number",
+            "description": "Saudi mobile number (any common format; normalized to E.164)",
             "example": "+966501234567",
             "type": "string"
           },
@@ -9725,6 +10338,7 @@
               "Branch",
               "Category",
               "Client",
+              "Content",
               "Conversation",
               "Coupon",
               "Department",
@@ -9732,6 +10346,9 @@
               "Integration",
               "Invoice",
               "Payment",
+              "PersonalData",
+              "ProviderConfig",
+              "Refund",
               "Report",
               "Role",
               "Service",
@@ -39458,6 +40075,18 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/ClientBookingDto"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    }
+                  },
                   "type": "object"
                 }
               }
@@ -39619,13 +40248,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "properties": {
-                    "cancellationRefund": {
-                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingDto"
                 }
               }
             },
@@ -41990,7 +42613,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
@@ -42065,7 +42688,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
@@ -46556,12 +47179,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Client profile with membership info",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
-            "description": ""
+            "description": "Client profile record"
           },
           "400": {
             "content": {
@@ -46632,12 +47254,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Updated client profile",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
-            "description": ""
+            "description": "Updated client profile"
           },
           "400": {
             "content": {
@@ -46733,12 +47354,28 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Paginated bookings list",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/ClientBookingDto"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
                   "type": "object"
                 }
               }
             },
-            "description": ""
+            "description": "Paginated bookings list"
           },
           "400": {
             "content": {
@@ -46811,18 +47448,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "description": "Booking detail",
-                  "properties": {
-                    "cancellationRefund": {
-                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingDto"
                 }
               }
             },
-            "description": ""
+            "description": "Booking detail"
           },
           "400": {
             "content": {

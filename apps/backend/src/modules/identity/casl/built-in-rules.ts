@@ -15,6 +15,11 @@ const SHARED_ADMIN_OWNER_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'Payment' },
   { action: 'manage', subject: 'Report' },
   { action: 'manage', subject: 'Setting' },
+  // Subjects split off `Setting`; admin/owner keep full access to each.
+  { action: 'manage', subject: 'Content' },
+  { action: 'manage', subject: 'PersonalData' },
+  { action: 'manage', subject: 'ProviderConfig' },
+  { action: 'manage', subject: 'Refund' },
   { action: 'manage', subject: 'Department' },
   { action: 'manage', subject: 'Category' },
   { action: 'manage', subject: 'Service' },
@@ -37,7 +42,7 @@ export const BUILT_IN: Record<string, readonly Rule[]> = {
     { action: ['create', 'read', 'update'], subject: 'Client' },
     // `update` lets reception issue a MANUAL (cash/bank-transfer) refund — the
     // off-gateway refund endpoint is gated on update:Payment. Gateway (card)
-    // refunds remain admin/owner-only (manage:Setting).
+    // refunds remain admin/owner-only (manage:Refund).
     { action: ['create', 'read', 'update'], subject: 'Payment' },
     { action: ['create', 'read'], subject: 'Invoice' },
     { action: 'read', subject: 'Coupon' },

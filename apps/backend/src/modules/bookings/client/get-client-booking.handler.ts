@@ -1,66 +1,38 @@
 import { ClientCancellationOutcomeHandler } from './client-cancellation-outcome.handler';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { buildClientBooking, type ClientBookingEnumCase } from './client-booking.builder';
+import type { ClientBookingDto } from './client-booking.dto';
 
 @Injectable()
 export class GetClientBookingHandler {
   constructor(private readonly prisma: PrismaService, private readonly cancellationOutcome: ClientCancellationOutcomeHandler) {}
 
-  async execute(bookingId: string, clientId: string) {
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId, clientId },
-      include: {
-        programEnrollment: {
-          include: {
-            program: true,
-          },
-        },
-      },
-    });
+  async execute(bookingId: string, clientId: string, options: { enumCase?: ClientBookingEnumCase } = {}): Promise<ClientBookingDto> {
+    // Ownership is part of the query: a foreign id is indistinguishable from a
+    // missing one (404), on both the web and the mobile route.
+    const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, clientId } });
 
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
 
-    const [_client, employee, service, branch] = await Promise.all([
-      this.prisma.client.findFirst({ where: { id: booking.clientId } }),
+    const [employee, service, branch, invoice, rating] = await Promise.all([
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
       booking.serviceId ? this.prisma.service.findFirst({ where: { id: booking.serviceId } }) : Promise.resolve(null),
       this.prisma.branch.findFirst({ where: { id: booking.branchId } }),
+      this.prisma.invoice.findFirst({
+        where: { bookingId: booking.id },
+        include: { payments: { orderBy: { createdAt: 'desc' } } },
+      }),
+      this.prisma.rating.findUnique({ where: { bookingId: booking.id }, select: { id: true } }),
     ]);
 
-    const invoice = await this.prisma.invoice.findFirst({
-      where: { bookingId: booking.id },
-      include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } }
+    const dto = buildClientBooking(booking, {
+      employee, service, branch, invoice, hasRated: Boolean(rating), enumCase: options.enumCase,
     });
-    const payment = invoice?.payments[0];
-
-    return {
-      ...(booking.status === 'CANCELLED' ? { cancellationRefund: await this.cancellationOutcome.execute(booking.id, clientId) } : {}),
-      id: booking.id,
-      status: booking.status,
-      scheduledAt: booking.scheduledAt.toISOString(),
-      endsAt: booking.endsAt?.toISOString() ?? null,
-      durationMins: booking.durationMins,
-      price: booking.price.toString(),
-      currency: booking.currency,
-      serviceId: booking.serviceId,
-      // Fall back to the snapshot captured at booking time so a later
-      // hard-delete of the service/employee/branch does not blank the name.
-      serviceName: service?.nameEn ?? service?.nameAr ?? booking.serviceNameSnapshot ?? '',
-      serviceNameAr: service?.nameAr ?? booking.serviceNameSnapshot ?? null,
-      employeeId: booking.employeeId,
-      employeeName: employee?.name ?? booking.employeeNameSnapshot ?? '',
-      employeeNameAr: booking.employeeNameSnapshot ?? null,
-      branchId: booking.branchId,
-      branchName: branch?.nameEn ?? branch?.nameAr ?? booking.branchNameSnapshot ?? '',
-      branchNameAr: branch?.nameAr ?? booking.branchNameSnapshot ?? null,
-      paymentStatus: payment?.status ?? null,
-      invoiceId: invoice?.id ?? null,
-      invoiceStatus: invoice?.status ?? null,
-      deliveryType: booking.deliveryType,
-      zoomJoinUrl: booking.zoomJoinUrl ?? null,
-      createdAt: booking.createdAt.toISOString(),
-    };
+    return booking.status === 'CANCELLED'
+      ? { ...dto, cancellationRefund: await this.cancellationOutcome.execute(booking.id, clientId) }
+      : dto;
   }
 }

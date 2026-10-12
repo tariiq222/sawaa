@@ -53,4 +53,18 @@ describe('flattenPermissions', () => {
     expect(result).toContain('booking:read');
     expect(result).toContain('invoice:read');
   });
+
+  it('lower-cases the subjects split off Setting', () => {
+    const result = flattenPermissions({
+      role: null,
+      customRole: {
+        permissions: [
+          { action: 'manage', subject: 'ProviderConfig' },
+          { action: 'read', subject: 'PersonalData' },
+        ],
+      },
+    });
+    expect(result).toContain('providerconfig:*');
+    expect(result).toContain('personaldata:read');
+  });
 });

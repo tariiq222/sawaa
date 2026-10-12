@@ -124,6 +124,7 @@ describe('home/detail timestamp boundary', () => {
         employee: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) },
         service: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) },
         client: { findFirst: jest.fn().mockResolvedValue(null) }, branch: { findFirst: jest.fn().mockResolvedValue(null) }, invoice: { findFirst: jest.fn().mockResolvedValue(null) },
+        rating: { findUnique: jest.fn().mockResolvedValue(null) },
       } as unknown as PrismaService;
       const home = new MobileClientHomeController(new ListClientUpcomingBookingsHandler(prisma), { execute: async () => [] } as unknown as ListNotificationsHandler, { execute: async () => [] } as unknown as ListPaymentsHandler, { execute: async () => null } as unknown as GetClientHandler);
       const detail = new GetClientBookingHandler(prisma, { execute: jest.fn() } as never);

@@ -1,16 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-export interface ClientProfile {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  emailVerified: Date | null;
-  phoneVerified: Date | null;
-  accountType: string;
-  claimedAt: Date | null;
-  createdAt: Date;
-}
+import { withProvenEmailOnly } from '../../people/clients/client.serializer';
+import { ClientProfileDto } from './client-profile.dto';
+
+export type ClientProfile = ClientProfileDto;
 
 @Injectable()
 export class GetMeHandler {
@@ -24,10 +17,17 @@ export class GetMeHandler {
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         phone: true,
         emailVerified: true,
         phoneVerified: true,
+        avatarUrl: true,
+        gender: true,
+        dateOfBirth: true,
+        preferredLocale: true,
+        pushEnabled: true,
         accountType: true,
         claimedAt: true,
         createdAt: true,
@@ -38,6 +38,13 @@ export class GetMeHandler {
       throw new NotFoundException('Client not found');
     }
 
-    return client as ClientProfile;
+    // A legacy email that was never proven is not echoed as `email`; it is
+    // surfaced separately as `unverifiedEmail` so the client sees what is stored.
+    return withProvenEmailOnly({
+      ...client,
+      unverifiedEmail: client.emailVerified ? null : client.email,
+      gender: client.gender ? (client.gender.toLowerCase() as 'male' | 'female') : null,
+      accountType: client.accountType === 'FULL' ? ('full' as const) : ('walk_in' as const),
+    });
   }
 }

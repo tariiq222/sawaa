@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateClientProfileHandler } from './update-client-profile.handler';
+import { GetMeHandler } from './get-me.handler';
 
 describe('UpdateClientProfileHandler', () => {
   let handler: UpdateClientProfileHandler;
@@ -46,13 +47,17 @@ describe('UpdateClientProfileHandler', () => {
     },
   };
 
+  const mockGetMe = { execute: jest.fn() };
+
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockGetMe.execute.mockResolvedValue(updatedProfile);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UpdateClientProfileHandler,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: GetMeHandler, useValue: mockGetMe },
       ],
     }).compile();
 
@@ -75,7 +80,8 @@ describe('UpdateClientProfileHandler', () => {
 
   it('updates name and keeps firstName/middleName/lastName in sync', async () => {
     mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-    mockPrisma.client.update.mockResolvedValue({ ...updatedProfile, name: 'Sara Mohammed Otaibi' });
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
+    mockGetMe.execute.mockResolvedValue({ ...updatedProfile, name: 'Sara Mohammed Otaibi' });
 
     const result = await handler.execute('cl-1', { name: 'Sara Mohammed Otaibi' });
 
@@ -93,9 +99,20 @@ describe('UpdateClientProfileHandler', () => {
     expect(result.name).toBe('Sara Mohammed Otaibi');
   });
 
+  it('returns the full profile re-read through GetMeHandler after the update', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
+
+    const result = await handler.execute('cl-1', { name: 'Sara' });
+
+    expect(mockGetMe.execute).toHaveBeenCalledWith('cl-1');
+    expect(result).toBe(updatedProfile);
+  });
+
   it('updates a single-token name with null lastName', async () => {
     mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-    mockPrisma.client.update.mockResolvedValue({ ...updatedProfile, name: 'Sara' });
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
+    mockGetMe.execute.mockResolvedValue({ ...updatedProfile, name: 'Sara' });
 
     await handler.execute('cl-1', { name: 'Sara' });
 
@@ -108,8 +125,8 @@ describe('UpdateClientProfileHandler', () => {
 
   it('updates the client-owned avatar URL without using the administrative client updater', async () => {
     mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-    mockPrisma.client.update.mockResolvedValue({
-      ...updatedProfile,
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
+    mockGetMe.execute.mockResolvedValue({ ...updatedProfile,
       avatarUrl: 'https://cdn.example.com/avatars/sara.jpg',
     });
 
@@ -135,7 +152,7 @@ describe('UpdateClientProfileHandler', () => {
 
   it.each(['0500000001', '00966500000001', '+966 50 000 0001'])('ignores normalized copies of the current phone %s', async phone => {
     mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-    mockPrisma.client.update.mockResolvedValue(updatedProfile);
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
     await handler.execute('cl-1', { phone });
     expect(mockPrisma.client.findFirst).toHaveBeenCalledTimes(1);
     expect(mockPrisma.client.update).toHaveBeenCalledWith(expect.objectContaining({ data: {} }));
@@ -143,7 +160,7 @@ describe('UpdateClientProfileHandler', () => {
 
   it.each([null, ''])('lets a client without a phone save other fields when older builds send %p', async phone => {
     mockPrisma.client.findFirst.mockResolvedValue({ ...existingClient, phone: null });
-    mockPrisma.client.update.mockResolvedValue(updatedProfile);
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
     await handler.execute('cl-1', { name: 'Sara', phone } as never);
     expect(mockPrisma.client.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.not.objectContaining({ phone: expect.anything() }) }));
   });
@@ -171,7 +188,7 @@ describe('UpdateClientProfileHandler', () => {
 
   it('skips duplicate check and phoneVerified reset when phone is unchanged', async () => {
     mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-    mockPrisma.client.update.mockResolvedValue(updatedProfile);
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
 
     await handler.execute('cl-1', { phone: '+966500000001' });
 
@@ -184,8 +201,8 @@ describe('UpdateClientProfileHandler', () => {
 
   it('updates preferences without changing unrelated profile fields and returns the saved values', async () => {
     mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-    mockPrisma.client.update.mockResolvedValue({
-      ...updatedProfile,
+    mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
+    mockGetMe.execute.mockResolvedValue({ ...updatedProfile,
       preferredLocale: 'ar',
       pushEnabled: false,
     });
@@ -199,7 +216,7 @@ describe('UpdateClientProfileHandler', () => {
       expect.objectContaining({
         where: { id: 'cl-1' },
         data: { preferredLocale: 'ar', pushEnabled: false },
-        select: expect.objectContaining({ preferredLocale: true, pushEnabled: true }),
+        select: { id: true },
       }),
     );
     expect(result).toMatchObject({ preferredLocale: 'ar', pushEnabled: false });
@@ -212,8 +229,8 @@ describe('UpdateClientProfileHandler', () => {
       mockPrisma.client.findFirst
         .mockResolvedValueOnce(phoneOnlyClient) // load client
         .mockResolvedValueOnce(null); // email duplicate check
-      mockPrisma.client.update.mockResolvedValue({
-        ...updatedProfile,
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
+    mockGetMe.execute.mockResolvedValue({ ...updatedProfile,
         email: 'new@example.com',
         emailVerified: null,
       });
@@ -243,7 +260,7 @@ describe('UpdateClientProfileHandler', () => {
 
     it('treats resubmitting the same email as a no-op', async () => {
       mockPrisma.client.findFirst.mockResolvedValue(existingClient);
-      mockPrisma.client.update.mockResolvedValue(updatedProfile);
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
 
       await handler.execute('cl-1', { email: 'ahmed@example.com' });
 

@@ -10,7 +10,7 @@ import { useLocale } from '@/components/locale-provider'
 import { mapApiForm } from '@/lib/mappers/intake-form'
 
 export default function IntakeFormDetailRoute() {
-  return <PermissionGuard module="setting" action="read"><IntakeFormDetailInner /></PermissionGuard>
+  return <PermissionGuard module="content" action="read"><IntakeFormDetailInner /></PermissionGuard>
 }
 function IntakeFormDetailInner() {
   const { id } = useParams<{ id: string }>()

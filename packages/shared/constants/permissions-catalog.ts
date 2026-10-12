@@ -21,6 +21,7 @@ export const PERMISSION_SUBJECTS = [
   'Branch',
   'Category',
   'Client',
+  'Content',
   'Conversation',
   'Coupon',
   'Department',
@@ -28,6 +29,9 @@ export const PERMISSION_SUBJECTS = [
   'Integration',
   'Invoice',
   'Payment',
+  'PersonalData',
+  'ProviderConfig',
+  'Refund',
   'Report',
   'Role',
   'Service',
@@ -36,6 +40,19 @@ export const PERMISSION_SUBJECTS = [
 ] as const;
 
 export type PermissionSubject = (typeof PERMISSION_SUBJECTS)[number];
+
+/**
+ * Subjects split out of the former catch-all `Setting` subject. The data
+ * migration `20261013000000_expand_setting_permission_subjects` copies every
+ * stored `Setting` permission row onto each of these, so no existing role
+ * changes effective access. Keep in sync with that migration's VALUES list.
+ */
+export const SETTING_SPLIT_SUBJECTS = [
+  'Content',
+  'PersonalData',
+  'ProviderConfig',
+  'Refund',
+] as const satisfies readonly PermissionSubject[];
 
 export const PERMISSION_ACTIONS = [
   'manage',

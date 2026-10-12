@@ -30,7 +30,7 @@ import { Type } from 'class-transformer';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListPaymentsHandler } from '../../../modules/finance/list-payments/list-payments.handler';
-import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invoice.handler';
+import { GetPublicInvoiceHandler } from '../../../modules/finance/get-invoice/get-public-invoice.handler';
 import {
   ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES,
   BankTransferUploadHandler,
@@ -66,7 +66,7 @@ export class MobileBankTransferUploadDto {
 export class MobileClientPaymentsController {
   constructor(
     private readonly listPayments: ListPaymentsHandler,
-    private readonly getInvoice: GetInvoiceHandler,
+    private readonly getInvoice: GetPublicInvoiceHandler,
     private readonly bankTransferUpload: BankTransferUploadHandler,
     private readonly initClientPayment: InitClientPaymentHandler,
     private readonly getClientBankTransferSettings: GetClientBankTransferSettingsHandler,
@@ -112,15 +112,34 @@ export class MobileClientPaymentsController {
   @Get()
   @ApiOperation({ summary: 'List the authenticated client\'s payments' })
   @ApiOkResponse({ description: 'Paginated payment list for the current client' })
-  listMyPayments(
+  async listMyPayments(
     @ClientSession() user: ClientSession,
     @Query() q: MobileListPaymentsQuery,
   ) {
-    return this.listPayments.execute({
+    const result = await this.listPayments.execute({
       clientId: user.id,
       page: q.page ?? 1,
       limit: q.limit ?? 20,
     });
+    // Explicit allow-list (docs/architecture/client-api-unification.md §3.3): the
+    // dashboard handler returns staff-shaped rows (client PII, gatewayRef,
+    // receipt/audit/lease fields). Only what the app consumes leaves here.
+    return {
+      ...result,
+      items: result.items.map((p) => ({
+        id: p.id,
+        number: p.number,
+        invoiceId: p.invoiceId,
+        amount: p.amount,
+        currency: p.currency,
+        method: p.method,
+        status: p.status,
+        createdAt: p.createdAt,
+        processedAt: p.processedAt,
+        collectionDate: p.collectionDate,
+        invoice: p.invoice ? { bookingId: p.invoice.bookingId, total: p.invoice.total } : null,
+      })),
+    };
   }
 
   @Get('bank-transfer/settings')
@@ -162,7 +181,8 @@ export class MobileClientPaymentsController {
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() user: ClientSession,
   ) {
-    return this.getInvoice.execute({ invoiceId: id, clientId: user.id });
+    // Ownership is part of the query: a foreign id is a 404, never a 403.
+    return this.getInvoice.execute(id, user.id);
   }
 
   @ClientThrottle('payment')

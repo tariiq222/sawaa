@@ -84,14 +84,14 @@ export class DashboardAiController {
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
   @ApiOkResponse({ description: 'Paginated list of knowledge-base documents', type: KnowledgeDocumentPageResponseDto })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   listDocuments(@Query() query: ListDocumentsDto) {
     return this.knowledgeBase.listDocuments(query);
   }
 
   @Post('knowledge-base')
   @HttpCode(HttpStatus.CREATED)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @ApiOperation({ summary: 'Create a knowledge-base document' })
   @ApiCreatedResponse({ description: 'Created knowledge-base document', type: KnowledgeDocumentSummaryResponseDto })
   createDocument(
@@ -103,14 +103,14 @@ export class DashboardAiController {
 
   // ── Sawaa AI provider ──────────────────────────────────────────────────────
   @Get('provider-config')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Get the safe AI provider configuration projection' })
   @ApiOkResponse({ type: AiProviderConfigResponseDto })
   getAiProviderConfigEndpoint() { return this.getAiProviderConfig.execute(); }
 
   @Put('provider-config')
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Update AI provider settings without accepting a credential' })
   @ApiOkResponse({ type: AiProviderConfigResponseDto })
   @ApiResponse({ status: 400, description: 'Enablement requires a matching successful test' })
@@ -120,7 +120,7 @@ export class DashboardAiController {
 
   @Post('provider-config/test')
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Test a write-only candidate AI provider credential' })
   @ApiOkResponse({ type: AiProviderTestResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid provider candidate or model' })
@@ -129,7 +129,7 @@ export class DashboardAiController {
   }
 
   @Get('provider-config/models')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'List safe curated AI provider model suggestions' })
   @ApiOkResponse({ type: AiProviderModelSuggestionDto, isArray: true })
   getAiProviderModels() {
@@ -137,7 +137,7 @@ export class DashboardAiController {
       { provider: AiProvider.OPENROUTER, models: [DEFAULT_OPENROUTER_MODEL], allowCustom: false },
     ];
   }
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @Get('knowledge-base/:id')
   @ApiOperation({ summary: 'Get a knowledge-base document by ID' })
   @ApiParam({ name: 'id', description: 'Document UUID', example: '00000000-0000-0000-0000-000000000001' })
@@ -149,7 +149,7 @@ export class DashboardAiController {
 
   @Post('knowledge-base/:id/publish')
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @ApiOperation({ summary: 'Publish a knowledge-base document' })
   @ApiParam({ name: 'id', description: 'Document UUID' })
   @ApiOkResponse({ description: 'Published document', type: KnowledgeDocumentSummaryResponseDto })
@@ -162,7 +162,7 @@ export class DashboardAiController {
 
   @Post('knowledge-base/:id/unpublish')
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @ApiOperation({ summary: 'Unpublish a knowledge-base document' })
   @ApiParam({ name: 'id', description: 'Document UUID' })
   @ApiOkResponse({ description: 'Unpublished document', type: KnowledgeDocumentSummaryResponseDto })
@@ -175,7 +175,7 @@ export class DashboardAiController {
 
   @Post('knowledge-base/:id/reindex')
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @ApiOperation({ summary: 'Request knowledge-base document reindexing' })
   @ApiParam({ name: 'id', description: 'Document UUID' })
   @ApiOkResponse({ description: 'Reindex request accepted', type: KnowledgeReindexResponseDto })
@@ -185,7 +185,7 @@ export class DashboardAiController {
   ) {
     return this.knowledgeBase.reindexDocument({ documentId: id, actor: req.user });
   }
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @Patch('knowledge-base/:id')
   @ApiOperation({ summary: 'Update a knowledge-base document' })
   @ApiParam({ name: 'id', description: 'Document UUID', example: '00000000-0000-0000-0000-000000000001' })
@@ -198,7 +198,7 @@ export class DashboardAiController {
   ) {
     return this.knowledgeBase.updateDocument({ documentId: id, ...body, actor: req.user });
   }
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @Delete('knowledge-base/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a knowledge-base document' })
@@ -225,11 +225,11 @@ export class DashboardAiController {
       },
     },
   })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   getChatbotConfigEndpoint() {
     return this.getChatbotConfig.execute();
   }
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @Patch('chatbot-config')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Upsert chatbot configuration (org-unique singleton)' })

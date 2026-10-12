@@ -217,6 +217,8 @@ Mobile builds in the field cannot be force-upgraded, so the old URLs must keep w
 3. Where legacy DTO field names differ (`startsAt` vs `scheduledAt`, `limit` vs `pageSize`, mobile cancel `reason` enum), the new DTO accepts both spellings for the alias period via `@Transform`, and the OpenAPI marks the legacy spelling deprecated.
 4. Sunset when the legacy counter is zero for a full month or the owner-set date passes, whichever is later. Then the alias prefixes and the compatibility transforms are removed in one commit.
 
+**Implemented mechanism** (`common/middleware/legacy-client-prefix.middleware.ts`, wired in `main.ts` after CSRF): requests under `/api/v1/mobile/client/*` and `/api/v1/public/me/*` get `Deprecation: true`, plus `Sunset: <HTTP-date>` when env `CLIENT_LEGACY_PREFIX_SUNSET` holds a valid date (invalid values are ignored with a one-time warning). On response finish the counter `sawaa_client_api_legacy_prefix_requests_total{prefix,route}` is incremented, where `prefix` is `mobile/client` or `public/me` and `route` is the Express route template (the prefix alone when no template matched). The unified `/api/v1/client/*` prefix is never marked. This is the counter named `client_api_legacy_prefix_total` in item 2 above.
+
 ---
 
 ## 5. Migration plan

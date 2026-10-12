@@ -13,7 +13,7 @@ import { SawaaAiKnowledgeBase } from "./sawaa-ai-knowledge-base"
 export function SawaaAiSettingsContent() {
   const { t } = useLocale()
   const { canDo } = useAuth()
-  const canManage = canDo("setting", "manage")
+  const canManage = canDo("providerconfig", "manage")
   const { config, loading, error } = useSawaaAiSettings()
   const modelsQuery = useSawaaAiModels()
   const save = useSaveSawaaAiSettings()

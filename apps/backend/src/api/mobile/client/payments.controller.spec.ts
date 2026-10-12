@@ -3,11 +3,11 @@ import { InitNativePaymentHandler } from '../../../modules/finance/native-paymen
 import { ReconcileNativePaymentHandler } from '../../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
 import { InitNativePackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-native-package-purchase.handler';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, NotFoundException, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { MobileClientPaymentsController } from './payments.controller';
 import { ListPaymentsHandler } from '../../../modules/finance/list-payments/list-payments.handler';
-import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invoice.handler';
+import { GetPublicInvoiceHandler } from '../../../modules/finance/get-invoice/get-public-invoice.handler';
 import { BankTransferUploadHandler } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitPackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
@@ -29,7 +29,7 @@ describe('MobileClientPaymentsController (e2e)', () => {
       providers: [
         ...[GetNativePaymentConfigHandler,InitNativePaymentHandler,ReconcileNativePaymentHandler,InitNativePackagePurchaseHandler].map(provide=>({provide,useValue:{execute:jest.fn().mockResolvedValue({})}})),
         { provide: ListPaymentsHandler, useValue: mockListPayments },
-        { provide: GetInvoiceHandler, useValue: mockGetInvoice },
+        { provide: GetPublicInvoiceHandler, useValue: mockGetInvoice },
         { provide: BankTransferUploadHandler, useValue: mockBankTransfer },
         { provide: InitClientPaymentHandler, useValue: mockInitPayment },
         { provide: InitPackagePurchaseHandler, useValue: { execute: jest.fn() } },
@@ -77,21 +77,34 @@ describe('MobileClientPaymentsController (e2e)', () => {
 
   describe('GET /mobile/client/payments', () => {
     it('returns 200 with paginated payments', async () => {
-      mockListPayments.execute.mockResolvedValue({ data: [{ id: 'p-1' }], total: 1, page: 1, limit: 20 });
+      mockListPayments.execute.mockResolvedValue({
+        items: [{
+          id: 'p-1', number: 7, invoiceId: 'inv-1', amount: 100, currency: 'SAR', method: 'ONLINE_CARD',
+          status: 'COMPLETED', createdAt: '2026-01-01', processedAt: null, collectionDate: '2026-01-01',
+          gatewayRef: 'moy_secret', receiptUrl: 'k', idempotencyKey: 'x', failureReason: 'f',
+          invoice: { bookingId: 'b-1', total: 100, clientId: 'client-1', client: { phone: '+966500000000' } },
+        }],
+        meta: { total: 1 },
+      });
 
       const res = await request(app.getHttpServer())
         .get('/mobile/client/payments')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.meta).toEqual({ total: 1 });
+      expect(Object.keys(res.body.items[0]).sort()).toEqual([
+        'amount', 'collectionDate', 'createdAt', 'currency', 'id', 'invoice', 'invoiceId', 'method', 'number', 'processedAt', 'status',
+      ]);
+      expect(res.body.items[0].invoice).toEqual({ bookingId: 'b-1', total: 100 });
       expect(mockListPayments.execute).toHaveBeenCalledWith(
         expect.objectContaining({ clientId: 'client-1', page: 1, limit: 20 }),
       );
     });
 
     it('passes page and limit query params', async () => {
-      mockListPayments.execute.mockResolvedValue({ data: [], total: 0, page: 2, limit: 10 });
+      mockListPayments.execute.mockResolvedValue({ items: [], meta: { total: 0 } });
 
       await request(app.getHttpServer())
         .get('/mobile/client/payments?page=2&limit=10')
@@ -131,7 +144,16 @@ describe('MobileClientPaymentsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.total).toBe(150);
-      expect(mockGetInvoice.execute).toHaveBeenCalledWith({ invoiceId, clientId: 'client-1' });
+      expect(mockGetInvoice.execute).toHaveBeenCalledWith(invoiceId, 'client-1');
+    });
+
+    it('returns 404 (not 403) for an invoice owned by another client', async () => {
+      mockGetInvoice.execute.mockRejectedValue(new NotFoundException('Invoice not found'));
+
+      await request(app.getHttpServer())
+        .get(`/mobile/client/payments/invoices/${invoiceId}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(404);
     });
 
     it('returns 400 for invalid UUID', async () => {

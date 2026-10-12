@@ -11,7 +11,7 @@ import type { Payment, PaymentRefundRequest } from "@/lib/types/payment"
 export function PaymentRefundRequests({ payment }: { payment: Payment }) {
   const { t } = useLocale()
   const { canDo } = useAuth()
-  const canReview = payment.method === "ONLINE_CARD" ? canDo("setting", "manage") : canDo("payment", "update")
+  const canReview = payment.method === "ONLINE_CARD" ? canDo("refund", "manage") : canDo("payment", "update")
   return <section className="flex flex-col gap-3 sm:col-span-2" aria-label={t("refund.review.title")}>
     <h3 className="text-sm font-semibold">{t("refund.review.title")}</h3>
     <p className="text-sm text-muted-foreground">{t("refund.review.description")}</p>

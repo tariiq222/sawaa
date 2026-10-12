@@ -14,7 +14,7 @@ function stateLabel(entry: KnowledgeEntry, t: (key: string) => string) {
 export function SawaaAiKnowledgeBase() {
   const { t } = useLocale()
   const { canDo } = useAuth()
-  const canManage = canDo("setting", "manage")
+  const canManage = canDo("content", "manage")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [form, setForm] = useState<KnowledgeInput>({ title: "", content: "", sourceType: "manual" })
   const [error, setError] = useState<string | null>(null)

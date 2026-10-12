@@ -83,4 +83,14 @@ describe('AssignPermissionsDto', () => {
     });
     expect(errors.some((e) => e.property === 'permissions')).toBe(true);
   });
+
+  it('accepts the subjects split off Setting and still accepts Setting', async () => {
+    const errors = await validateDto({
+      permissions: ['Setting', 'Content', 'PersonalData', 'ProviderConfig', 'Refund'].map((subject) => ({
+        action: 'read',
+        subject,
+      })),
+    });
+    expect(errors).toHaveLength(0);
+  });
 });

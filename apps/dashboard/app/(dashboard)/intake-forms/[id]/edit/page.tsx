@@ -18,7 +18,7 @@ export default function EditIntakeFormPage({
   params: Promise<{ id: string }>
 }) {
   return (
-    <PermissionGuard module="setting" action="update">
+    <PermissionGuard module="content" action="update">
       <EditIntakeFormPageInner params={params} />
     </PermissionGuard>
   )

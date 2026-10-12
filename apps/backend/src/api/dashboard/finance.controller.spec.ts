@@ -369,4 +369,16 @@ describe('DashboardFinanceController', () => {
     );
     expect(perms).toEqual([{ action: 'create', subject: 'Invoice' }]);
   });
+
+  it('gates refunds on manage:Refund and Moyasar config on ProviderConfig (Setting split)', () => {
+    const reflector = new Reflector();
+    const proto = DashboardFinanceController.prototype;
+    for (const fn of [proto.refundPaymentEndpoint, proto.refundPackagePurchaseEndpoint]) {
+      expect(reflector.get(CHECK_PERMISSIONS_KEY, fn)).toEqual([{ action: 'manage', subject: 'Refund' }]);
+    }
+    expect(reflector.get(CHECK_PERMISSIONS_KEY, proto.getMoyasarConfigEndpoint)).toEqual([{ action: 'read', subject: 'ProviderConfig' }]);
+    for (const fn of [proto.upsertMoyasarConfigEndpoint, proto.testMoyasarConfigEndpoint]) {
+      expect(reflector.get(CHECK_PERMISSIONS_KEY, fn)).toEqual([{ action: 'manage', subject: 'ProviderConfig' }]);
+    }
+  });
 });

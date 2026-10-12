@@ -66,10 +66,31 @@ describe('legacy cancellation consent preview', () => {
   });
 });
 
-it('preserves mobile late direct and hold-full legacy terms and binds the channel', () => {
-  const legacy = { ...settings, clientCancellationPolicyEnabled: false, freeCancelBeforeHours: 24 };
-  const mobile = calculateClientCancellation(booking, legacy, [payment], now, 'MOBILE');
-  expect(mobile).toMatchObject({ requiresApproval: false, refund: { refundAmount: 2500, refundPercent: 25 } });
-  expect(calculateClientCancellation({ ...booking, status: 'AWAITING_PAYMENT' }, legacy, [payment], now, 'MOBILE').refund).toMatchObject({ refundAmount: 10000, refundPercent: 100 });
-  expect(calculateClientCancellation(booking, legacy, [payment], now, 'PUBLIC').quoteToken).not.toBe(mobile.quoteToken);
+describe('legacy cancellation: one channel-free rule set', () => {
+  const legacy = { ...settings, clientCancellationPolicyEnabled: false };
+  const late = new Date('2026-10-03T11:30:00Z');
+  const cases = (['EARLY', 'LATE'] as const).flatMap(window => ([true, false] as const).flatMap(paid =>
+    (['AWAITING_PAYMENT', 'CONFIRMED'] as const).flatMap(status => ([false, true] as const).map(approval => ({ window, paid, status, approval })))));
+
+  it.each(cases)('$window paid=$paid $status requireCancelApproval=$approval', ({ window, paid, status, approval }) => {
+    const quote = calculateClientCancellation({ ...booking, status }, { ...legacy, requireCancelApproval: approval }, paid ? [payment] : [], window === 'EARLY' ? now : late);
+    const requiresApproval = approval || (window === 'LATE' && status !== 'AWAITING_PAYMENT');
+    const refundPercent = status === 'AWAITING_PAYMENT' ? 100 : 25;
+    const refundAmount = requiresApproval || !paid ? 0 : refundPercent * 100;
+    expect(quote).toMatchObject({
+      policyEnabled: false, canCancel: true, reasonCode: 'ALLOWED', requiresApproval,
+      refundDecision: requiresApproval ? 'AFTER_APPROVAL' : 'QUOTED',
+      refund: {
+        refundPercent, refundAmount, window,
+        status: requiresApproval ? 'PENDING_REVIEW' : !paid ? 'NOT_APPLICABLE' : 'PROCESSING',
+        execution: requiresApproval ? 'REVIEW' : refundAmount ? 'AUTOMATIC' : 'NONE',
+      },
+    });
+  });
+
+  it('takes no channel input, so web and app quotes for the same booking are identical', () => {
+    // @ts-expect-error the transport channel is no longer part of the policy signature
+    calculateClientCancellation(booking, legacy, [payment], now, 'MOBILE');
+    expect(calculateClientCancellation(booking, legacy, [payment], now).quoteToken).toBe(calculateClientCancellation(booking, legacy, [payment], now).quoteToken);
+  });
 });

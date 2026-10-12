@@ -8,6 +8,7 @@ import { ClientSession } from '../../common/auth/client-session.decorator';
 import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler';
 import { UpdateClientProfileHandler } from '../../modules/identity/client-auth/update-client-profile.handler';
 import { UpdateClientProfileDto } from '../../modules/identity/client-auth/update-client-profile.dto';
+import { ClientProfileDto } from '../../modules/identity/client-auth/client-profile.dto';
 import { ListClientInvoicesHandler } from '../../modules/finance/list-client-invoices/list-client-invoices.handler';
 import { ListClientBookingsHandler, ClientBookingsTab } from '../../modules/bookings/client/list-client-bookings.handler';
 import { ClientCancelBookingHandler } from '../../modules/bookings/client/client-cancel-booking.handler';
@@ -15,10 +16,11 @@ import { ClientCancelBookingDto } from '../../modules/bookings/client/client-can
 import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/client-reschedule-booking.handler';
 import { ClientRescheduleBookingDto } from '../../modules/bookings/client/client-reschedule-booking.dto';
 import { GetClientBookingHandler } from '../../modules/bookings/client/get-client-booking.handler';
+import { ClientBookingDto } from '../../modules/bookings/client/client-booking.dto';
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
 
-@ApiExtraModels(CancellationRefundSummaryDto, PersistedCancellationRefundDto)
+@ApiExtraModels(CancellationRefundSummaryDto, PersistedCancellationRefundDto, ClientBookingDto)
 @ApiTags('Public / Me')
 @ApiStandardResponses()
 @ClientRoute()
@@ -38,7 +40,7 @@ export class PublicMeController {
 
   @Get()
   @ApiOperation({ summary: 'Get authenticated client profile' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Client profile with membership info' } })
+  @ApiOkResponse({ type: ClientProfileDto, description: 'Client profile record' })
   async meEndpoint(@ClientSession() session: { id: string }) {
     return this.getMe.execute(session.id);
   }
@@ -46,7 +48,7 @@ export class PublicMeController {
   @ClientThrottle('write')
   @Patch()
   @ApiOperation({ summary: 'Update authenticated client profile' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Updated client profile' } })
+  @ApiOkResponse({ type: ClientProfileDto, description: 'Updated client profile' })
   @ApiResponse({ status: 409, description: 'Phone number already used by another account' })
   async updateProfileEndpoint(
     @ClientSession() session: { id: string },
@@ -87,25 +89,34 @@ export class PublicMeController {
   @ApiQuery({ name: 'tab', required: false, enum: ClientBookingsTab })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Paginated bookings list' } })
+  @ApiOkResponse({
+    description: 'Paginated bookings list',
+    schema: {
+      type: 'object',
+      properties: {
+        items: { type: 'array', items: { $ref: getSchemaPath(ClientBookingDto) } },
+        total: { type: 'integer' }, page: { type: 'integer' }, pageSize: { type: 'integer' },
+      },
+    },
+  })
   async bookingsEndpoint(
     @ClientSession() session: { id: string },
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('tab', new ParseEnumPipe(ClientBookingsTab, { optional: true })) tab?: ClientBookingsTab,
   ) {
-    return this.listBookings.execute(
-      session.id,
-      page ? Number.parseInt(page, 10) : 1,
-      pageSize ? Number.parseInt(pageSize, 10) : 10,
+    return this.listBookings.execute({
+      clientId: session.id,
+      page: page ? Number.parseInt(page, 10) : 1,
+      pageSize: pageSize ? Number.parseInt(pageSize, 10) : 10,
       tab,
-    );
+    });
   }
 
   @Get('bookings/:id')
   @ApiOperation({ summary: 'Get a single client booking by ID' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Booking detail', additionalProperties: true, properties: { cancellationRefund: { $ref: getSchemaPath(PersistedCancellationRefundDto) } } } })
+  @ApiOkResponse({ description: 'Booking detail', type: ClientBookingDto })
   @ApiResponse({ status: 404, description: 'Booking not found' })
   async getBookingEndpoint(
     @ClientSession() session: { id: string },

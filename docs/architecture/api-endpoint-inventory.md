@@ -181,6 +181,25 @@ Current audit: all 22 `ClientSessionGuard` usages are at class level, so no rout
 
 67 permission checks collapse onto `Setting`. Granting a receptionist `Setting:read` to see booking settings also exposes AI provider config, Moyasar config (masked), SMS/email provider settings, and media. Splitting into at least `Setting`, `ProviderConfig` (AI/SMS/Email/Zoom/Moyasar), `Catalog` (services/packages/families), and `Content` (home cards, intake forms, media) would make role design meaningful. This touches the Critical auth tier and needs owner approval before any change.
 
+#### Setting subject split
+
+Status: implemented (owner-approved), with zero change in effective access for every existing role.
+
+The 67 `Setting` checks under `apps/backend/src/api/dashboard` now use 5 subjects. Actions are unchanged; 54 decorators moved and 13 stay on `Setting`.
+
+| Subject | Routes | Count |
+|---|---|---|
+| `ProviderConfig` | AI provider config (+ test, models), SMS and email provider settings (+ test), Moyasar config (+ test), platform integrations | 15 |
+| `Refund` | Payment refund, package purchase refund, refund approve and deny (still `manage`) | 4 |
+| `PersonalData` | SMS deliveries, contact messages (list, status), delivery logs, intake form responses | 6 |
+| `Content` | Knowledge base, chatbot config, email templates, mobile home cards, media, intake form definitions | 29 |
+| `Setting` (kept) | Organization settings, booking settings, business hours and holidays, discount reasons | 13 |
+
+- Catalog: `SETTING_SPLIT_SUBJECTS` in `packages/shared/constants/permissions-catalog.ts`. `ADMIN` and `OWNER` built-in rules get `manage` on the four new subjects.
+- Data migration: `20261013000000_expand_setting_permission_subjects`. It copies every stored `Setting` permission row (custom and system roles) onto the four new subjects. It is additive-only and idempotent.
+- Parity net: `src/api/dashboard/route-permission-parity.spec.ts` compares routes and built-in roles against `test/fixtures/route-permissions.baseline.json`, which was captured before the split. Never refresh that baseline.
+- Deploy note: the migration must be applied before the new image starts; until it is applied, custom roles holding `Setting` lose access to the 54 moved routes. A pending migration blocks publication until it is separately authorized (see the deployment policy).
+
 ### 4.4 Guest chat has no dedicated throttle
 
 `POST /public/chat/conversations/{id}/messages` and `.../retry` rely on the 300/min default. Each message can trigger an AI provider call, so this is a cost-exposure vector rather than a security hole. Conversation creation and handoff are also on the default bucket. A 10–20/min per-IP bucket on these four routes would match the rest of the public surface.

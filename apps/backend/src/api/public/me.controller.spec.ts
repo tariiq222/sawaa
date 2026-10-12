@@ -171,12 +171,12 @@ describe('PublicMeController (e2e)', () => {
     it('validates and forwards the selected tab with the authenticated client', async () => {
       mockListBookings.execute.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
       await request(app.getHttpServer()).get('/public/me/bookings?pageSize=50&tab=upcoming').expect(200);
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 50, 'upcoming');
+      expect(mockListBookings.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 1, pageSize: 50, tab: 'upcoming' });
       await request(app.getHttpServer()).get('/public/me/bookings?tab=invalid').expect(400);
     });
     it('returns 200 with paginated bookings', async () => {
       mockListBookings.execute.mockResolvedValue({
-        data: [{ id: 'b-1', status: 'CONFIRMED' }],
+        items: [{ id: 'b-1', status: 'CONFIRMED' }],
         total: 1,
         page: 1,
         pageSize: 10,
@@ -187,19 +187,20 @@ describe('PublicMeController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 10, undefined);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+      expect(mockListBookings.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 1, pageSize: 10, tab: undefined });
     });
 
     it('passes page and pageSize query params', async () => {
-      mockListBookings.execute.mockResolvedValue({ data: [], total: 0, page: 2, pageSize: 5 });
+      mockListBookings.execute.mockResolvedValue({ items: [], total: 0, page: 2, pageSize: 5 });
 
       await request(app.getHttpServer())
         .get('/public/me/bookings?page=2&pageSize=5')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 2, 5, undefined);
+      expect(mockListBookings.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 2, pageSize: 5, tab: undefined });
     });
   });
 

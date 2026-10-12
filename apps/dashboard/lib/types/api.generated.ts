@@ -6899,6 +6899,224 @@ export interface components {
          * @enum {string}
          */
         ClientBloodType: "A_POS" | "A_NEG" | "B_POS" | "B_NEG" | "AB_POS" | "AB_NEG" | "O_POS" | "O_NEG" | "UNKNOWN" | "a_pos" | "a_neg" | "b_pos" | "b_neg" | "ab_pos" | "ab_neg" | "o_pos" | "o_neg" | "unknown";
+        ClientBookingBranchDto: {
+            /**
+             * Format: uuid
+             * @description Branch id
+             */
+            id: string;
+            /** @description Arabic name */
+            nameAr?: string | null;
+            /** @description English name */
+            nameEn?: string | null;
+        };
+        ClientBookingDto: {
+            /** @description Human-readable booking number (mapper origin) */
+            bookingNumber?: number | null;
+            /** @description Booking type, lower-case (individual, walk_in, group) */
+            bookingType: string;
+            branch?: components["schemas"]["ClientBookingBranchDto"] | null;
+            /**
+             * Format: uuid
+             * @description Branch id
+             */
+            branchId: string;
+            /** @description Branch name (English) */
+            branchName: string;
+            /** @description Branch name (Arabic) */
+            branchNameAr?: string | null;
+            /** @description @deprecated Branch name snapshot; prefer branchName/branchNameAr. */
+            branchNameSnapshot?: string | null;
+            /** @description Cancellation reason code; null for late-entry rows */
+            cancellationReason?: string | null;
+            /** @description Persisted refund outcome; present on detail only, when status is CANCELLED */
+            cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
+            /** @description Cancelled at (ISO 8601) */
+            cancelledAt?: string | null;
+            /** @description Category name snapshot */
+            categoryNameSnapshot?: string | null;
+            /** @description Checked-in at (ISO 8601) */
+            checkedInAt?: string | null;
+            /** @description Completed at (ISO 8601) */
+            completedAt?: string | null;
+            /** @description Confirmed at (ISO 8601) */
+            confirmedAt?: string | null;
+            /** @description Created at (ISO 8601) */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /** @description Start date, Asia/Riyadh wall clock (YYYY-MM-DD) */
+            date?: string | null;
+            /**
+             * @description Session delivery channel. IN_PERSON/ONLINE on the web route, lower-case on the mobile route.
+             * @example ONLINE
+             */
+            deliveryType: string;
+            /** @description Duration in minutes */
+            durationMins: number;
+            /** @description @deprecated Alias of durationMins (mapper origin). */
+            durationMinutesSnapshot?: number | null;
+            employee?: components["schemas"]["ClientBookingEmployeeDto"] | null;
+            /**
+             * Format: uuid
+             * @description Employee id
+             */
+            employeeId: string;
+            /** @description Employee name (English) */
+            employeeName: string;
+            /** @description Employee name (Arabic) */
+            employeeNameAr?: string | null;
+            /** @description End (ISO 8601) */
+            endsAt?: string | null;
+            /** @description End time, Asia/Riyadh wall clock (HH:mm) */
+            endTime?: string | null;
+            /** @description Whether this client already rated the booking */
+            hasRated: boolean;
+            /**
+             * Format: uuid
+             * @description Booking id
+             */
+            id: string;
+            /** @description Invoice summary (mapper origin) */
+            invoice?: components["schemas"]["ClientBookingInvoiceDto"] | null;
+            /** @description Invoice id */
+            invoiceId?: string | null;
+            /** @description Raw invoice status (Prisma enum) */
+            invoiceStatus?: string | null;
+            /** @description No-show at (ISO 8601) */
+            noShowAt?: string | null;
+            /** @description Client pays at the center */
+            payAtClinic: boolean;
+            /** @description Latest payment summary (mapper origin) */
+            payment?: components["schemas"]["ClientBookingPaymentDto"] | null;
+            /** @description Raw latest payment status (Prisma enum); null when no payment */
+            paymentStatus?: string | null;
+            /**
+             * @description Booked price serialised as a decimal string; unit per `currency`
+             * @example 150
+             */
+            price: string;
+            /** @description @deprecated Alias of price as a number (mapper origin). */
+            priceSnapshot?: number | null;
+            /** @description Start (ISO 8601) */
+            scheduledAt: string;
+            service?: components["schemas"]["ClientBookingServiceDto"] | null;
+            /** @description Service id */
+            serviceId?: string | null;
+            /** @description Service name (English, falls back to Arabic then snapshot) */
+            serviceName: string;
+            /** @description Service name (Arabic) */
+            serviceNameAr?: string | null;
+            /** @description Start time, Asia/Riyadh wall clock (HH:mm) */
+            startTime?: string | null;
+            /**
+             * @description Booking status. Upper-case Prisma enum on the web route, lower-case on the mobile route (legacy wire format).
+             * @example CONFIRMED
+             */
+            status: string;
+            /** @description @deprecated Legacy UI alias of bookingType (mapper origin; individual maps to in_person). */
+            type: string;
+            /** @description Updated at (ISO 8601, mapper origin) */
+            updatedAt: string;
+            /** @description Always null for clients (host privilege URL). Key kept for the alias period. */
+            zoomHostUrl?: string | null;
+            /** @description Zoom join URL (attendee link) */
+            zoomJoinUrl?: string | null;
+            /**
+             * @description Zoom meeting status
+             * @enum {string|null}
+             */
+            zoomMeetingStatus?: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /** @description Always null for clients (host privilege URL). Key kept for shipped mobile builds. */
+            zoomStartUrl?: string | null;
+        };
+        ClientBookingEmployeeDto: {
+            /** @description Avatar URL */
+            avatarUrl?: string | null;
+            /**
+             * Format: uuid
+             * @description Employee id
+             */
+            id: string;
+            /** @description Arabic name */
+            nameAr?: string | null;
+            /** @description English name */
+            nameEn?: string | null;
+            /**
+             * @description Specialty (English)
+             * @example
+             */
+            specialty: string;
+            /**
+             * @description Specialty (Arabic)
+             * @example
+             */
+            specialtyAr: string;
+            /**
+             * @description Display name parts (mapper origin, kept for the alias period)
+             * @example {
+             *       "firstName": "Sara",
+             *       "lastName": ""
+             *     }
+             */
+            user: Record<string, never>;
+        };
+        ClientBookingInvoiceDto: {
+            /**
+             * Format: uuid
+             * @description Invoice id
+             */
+            id: string;
+            /** @description Total minus completed payments in halalas */
+            outstanding: number;
+            /** @description Invoice status (Prisma enum) */
+            status: string;
+            /** @description Subtotal in halalas */
+            subtotal: number;
+            /** @description Total after discount in halalas */
+            total: number;
+            /** @description Fractional VAT rate (0 when the center is not VAT-registered) */
+            vatRate: number;
+        };
+        ClientBookingPaymentDto: {
+            /** @description Amount in halalas */
+            amount: number;
+            /**
+             * Format: uuid
+             * @description Payment id
+             */
+            id: string;
+            /**
+             * @description UI payment method
+             * @enum {string}
+             */
+            method: "moyasar" | "bank_transfer" | "cash" | "mada" | "tabby";
+            /**
+             * @description UI payment status
+             * @enum {string}
+             */
+            status: "pending" | "awaiting" | "paid" | "failed" | "refunded" | "rejected";
+            /** @description Amount in halalas (alias of amount) */
+            totalAmount: number;
+        };
+        ClientBookingServiceDto: {
+            /** @description Service duration in minutes */
+            duration: number;
+            /**
+             * Format: uuid
+             * @description Service id
+             */
+            id: string;
+            /** @description Arabic name */
+            nameAr: string;
+            /** @description English name (empty string when absent) */
+            nameEn: string;
+            /** @description Service list price (not the booked price); unit per `currency` */
+            price: number;
+        };
         ClientBookingSummaryDto: {
             /**
              * Format: date-time
@@ -7134,6 +7352,94 @@ export interface components {
              *     }
              */
             tokens: components["schemas"]["ClientPhoneTokensDto"];
+        };
+        ClientProfileDto: {
+            /**
+             * @description Account type
+             * @example full
+             * @enum {string}
+             */
+            accountType: "full" | "walk_in";
+            /**
+             * @description Avatar image URL
+             * @example https://cdn.example.com/avatars/sara.jpg
+             */
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Account claim timestamp
+             */
+            claimedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Date of birth (ISO 8601)
+             */
+            dateOfBirth: string | null;
+            /**
+             * @description Email address. Null unless the email has been verified.
+             * @example sara@example.com
+             */
+            email: string | null;
+            /**
+             * Format: date-time
+             * @description Email verification timestamp
+             */
+            emailVerified: string | null;
+            /**
+             * @description First name
+             * @example Sara
+             */
+            firstName: string | null;
+            /**
+             * @description Gender (lowercase)
+             * @enum {string|null}
+             */
+            gender: "male" | "female" | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Last name
+             * @example Al-Harbi
+             */
+            lastName: string | null;
+            /**
+             * @description Full display name
+             * @example Sara Al-Harbi
+             */
+            name: string;
+            /**
+             * @description Mobile phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description Phone verification timestamp
+             */
+            phoneVerified: string | null;
+            /**
+             * @description Preferred app locale
+             * @example ar
+             */
+            preferredLocale: string | null;
+            /**
+             * @description Whether push notifications are enabled
+             * @example true
+             */
+            pushEnabled: boolean;
+            /**
+             * @description Stored email that has not been verified yet (set when emailVerified is null), so the client can see what they entered. Null once the email is verified or when none is stored.
+             * @example sara@example.com
+             */
+            unverifiedEmail: string | null;
         };
         ClientRequestHandoffDto: Record<string, never>;
         ClientRescheduleBookingDto: {
@@ -10782,19 +11088,19 @@ export interface components {
              * @description Avatar image URL
              * @example https://cdn.example.com/avatars/sara.jpg
              */
-            avatarUrl?: string | null;
+            avatarUrl?: string;
             /**
-             * @description Email address
-             * @example user@example.com
+             * @description Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).
+             * @example client@example.com
              */
             email?: string;
             /**
-             * @description Full display name
-             * @example Sara Al-Harbi
+             * @description Full name
+             * @example أحمد محمد العتيبي
              */
             name?: string;
             /**
-             * @description Saudi mobile number
+             * @description Saudi mobile number (any common format; normalized to E.164)
              * @example +966501234567
              */
             phone?: string;
@@ -11701,7 +12007,7 @@ export interface components {
              * @example Booking
              * @enum {string}
              */
-            subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
+            subject: "Booking" | "Branch" | "Category" | "Client" | "Content" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "PersonalData" | "ProviderConfig" | "Refund" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
         PersistedCancellationRefundDto: {
             /** @description Already refunded amount in halalas */
@@ -33141,7 +33447,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        items?: components["schemas"]["ClientBookingDto"][];
+                        meta?: {
+                            [key: string]: unknown;
+                        };
+                    };
                 };
             };
             /** @description Validation failed */
@@ -33265,11 +33576,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
-                    } & {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ClientBookingDto"];
                 };
             };
             /** @description Validation failed */
@@ -34979,7 +35286,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ClientResponseDto"];
+                    "application/json": components["schemas"]["ClientProfileDto"];
                 };
             };
             /** @description Validation failed */
@@ -35099,7 +35406,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ClientResponseDto"];
+                    "application/json": components["schemas"]["ClientProfileDto"];
                 };
             };
             /** @description Validation failed */
@@ -38281,12 +38588,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Client profile record */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["ClientProfileDto"];
                 };
             };
             /** @description Validation failed */
@@ -38340,12 +38648,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Updated client profile */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["ClientProfileDto"];
                 };
             };
             /** @description Validation failed */
@@ -38406,12 +38715,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Paginated bookings list */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        items?: components["schemas"]["ClientBookingDto"][];
+                        page?: number;
+                        pageSize?: number;
+                        total?: number;
+                    };
                 };
             };
             /** @description Validation failed */
@@ -38463,16 +38778,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Booking detail */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        cancellationRefund?: components["schemas"]["PersistedCancellationRefundDto"];
-                    } & {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ClientBookingDto"];
                 };
             };
             /** @description Validation failed */

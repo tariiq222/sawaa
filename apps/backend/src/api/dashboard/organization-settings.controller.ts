@@ -225,7 +225,7 @@ export class DashboardOrganizationSettingsController {
   // ── Intake Forms ──────────────────────────────────────────────────────────
 
   @Post('intake-forms')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @ApiOperation({ summary: 'Create an intake form' })
   @ApiCreatedResponse({ description: 'Intake form created', type: IntakeFormResponseDto })
   createIntakeFormEndpoint(@Body() body: CreateIntakeFormDto) {
@@ -233,7 +233,7 @@ export class DashboardOrganizationSettingsController {
   }
 
   @Get('intake-forms')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @ApiOperation({ summary: 'List intake forms' })
   @ApiOkResponse({ description: 'List of intake forms', type: [IntakeFormListItemResponseDto] })
   listIntakeFormsEndpoint(@Query() query: ListIntakeFormsDto) {
@@ -243,7 +243,7 @@ export class DashboardOrganizationSettingsController {
   // NOTE: This static-segment route MUST be declared before /:formId routes
   // so NestJS does not treat "responses" as a formId value.
   @Get('intake-forms/responses/:bookingId')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'PersonalData' })
   @ApiOperation({ summary: 'Get intake form responses for a booking' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'List of intake responses for the booking, each with its form, resolved scope label and submission count', type: [IntakeBookingResponseDto] })
@@ -252,7 +252,7 @@ export class DashboardOrganizationSettingsController {
   }
 
   @Post('intake-forms/responses/:bookingId')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'PersonalData' })
   @ApiOperation({ summary: 'Submit (or overwrite) intake answers on behalf of a client for a booking' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiCreatedResponse({ description: 'Persisted intake response', type: IntakeSubmissionResponseDto })
@@ -270,7 +270,7 @@ export class DashboardOrganizationSettingsController {
   }
 
   @Get('intake-forms/:formId')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @ApiOperation({ summary: 'Get an intake form by ID' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID or reference (e.g. FRM-1024)', example: 'FRM-1024' })
   @ApiOkResponse({ description: 'Intake form detail', type: IntakeFormResponseDto })
@@ -280,7 +280,7 @@ export class DashboardOrganizationSettingsController {
   }
 
   @Patch('intake-forms/:formId')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update an intake form' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
@@ -295,7 +295,7 @@ export class DashboardOrganizationSettingsController {
   }
 
   @Put('intake-forms/:formId/fields')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Replace all fields on an intake form' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
@@ -310,7 +310,7 @@ export class DashboardOrganizationSettingsController {
   }
 
   @Delete('intake-forms/:formId')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an intake form' })
   @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })

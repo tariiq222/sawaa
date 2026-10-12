@@ -15,12 +15,12 @@
  * this dialog from a purchase card and enters the refund amount +
  * optional notes.
  *
- * Permission gate: refund is gated on `manage:Setting` server-side
+ * Permission gate: refund is gated on `manage:Refund` server-side
  * (OWNER/ADMIN, NOT ACCOUNTANT — see
  * apps/backend/src/api/dashboard/finance.controller.ts
  * `refundPackagePurchaseEndpoint`). The UI gate is defense-in-depth:
  * the trigger button in `client-package-balances-panel.tsx` checks
- * `canDo("setting", "manage")` before showing.
+ * `canDo("refund", "manage")` before showing.
  */
 
 import { HugeiconsIcon } from "@hugeicons/react"

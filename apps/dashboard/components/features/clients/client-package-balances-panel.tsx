@@ -19,7 +19,7 @@
  *   - "نقل الرصيد" per credit  → TransferCreditDialog (gated on
  *     canDo("booking", "manage") — backend requires `manage:Booking`).
  *   - "استرداد" per purchase  → RefundPackageDialog (gated on
- *     canDo("setting", "manage") — backend requires `manage:Setting`).
+ *     canDo("refund", "manage") — backend requires `manage:Refund`).
  *
  * Cross-feature rule: this component lives under `components/features/
  * clients/` and must NOT import from `components/features/bookings/`.
@@ -63,7 +63,7 @@ export function ClientPackageBalancesPanel({ clientId }: Props) {
   // Defense-in-depth permission gates — the backend is the source of
   // truth; the UI just hides the trigger for users who can't act.
   const canTransferCredit = canDo("booking", "manage")
-  const canRefundPurchase = canDo("setting", "manage")
+  const canRefundPurchase = canDo("refund", "manage")
 
   // Phase 3 — which credit row is currently being booked. The dialog
   // remounts when this flips so each open seeds fresh form state.
