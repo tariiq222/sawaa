@@ -311,3 +311,11 @@ Still owed before «انشر» (owner-visible checklist):
 4. Publish via `git push origin task/client-api-unification:refs/heads/publish/client-api-unification` and a merge-commit PR into `develop`; staging through `build-images.yml` only.
 5. Sunset (Phase 5) only when `sawaa_client_api_legacy_prefix_requests_total` stays at zero for a month after the app release.
 Known unrelated: 5 website test files fail on a clean checkout with a localStorage "reading 'clear'" environment error.
+
+### 9.1 Live smoke evidence (2026-10-12, local docker infra, branch build on port 5201)
+
+Unauthenticated: `/client/*` → 401 without a session; legacy prefixes → 401 with `Deprecation: true`; `/client/*` carries no Deprecation header; `/public/payments/methods` → 200 anonymously; cookie session without CSRF → 403 `CSRF_INVALID` on both `/client/bookings` and `/mobile/client/bookings` (gap closed); bearer without cookie bypasses CSRF and hits auth (401); Swagger exposes the 54 `/client` operations; `/public/metrics` → 401 without token.
+
+Authenticated (review client, server-signed test tokens for both channels, deleted afterwards): all 13 `/client` reads → 200 with the canonical envelopes; profile keys identical across `/client/profile`, `/mobile/client/profile` and `/public/me` (17 keys, `email` null + `unverifiedEmail` set, no staff fields); cookie GET → 200; cookie PATCH without CSRF → 403, with double-submit token → 204, legacy mobile PATCH with cookie and no CSRF → 403; foreign booking/invoice ids → 404 on new and legacy routes; `pageSize=1000` → 400; `unreadOnly=false` → 200; `sawaa_client_api_legacy_prefix_requests_total` increments per legacy route and is exposed on `/public/metrics`.
+
+Not yet exercised live: booking creation, Moyasar payment init/webhook (sandbox), cancellation with refunds, account closure, the website and the simulator end to end.
