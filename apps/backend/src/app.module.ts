@@ -28,6 +28,7 @@ import { OpsModule } from "./modules/ops/ops.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { CommsModule } from "./modules/comms/comms.module";
 import { MobileClientModule } from "./api/mobile/client/mobile-client.module";
+import { ClientApiModule } from "./api/client/client-api.module";
 import { MobileEmployeeModule } from "./api/mobile/employee/mobile-employee.module";
 import { PublicModule } from "./api/public/public.module";
 import { TelemetryModule } from "./infrastructure/telemetry/telemetry.module";
@@ -84,6 +85,7 @@ import { TelemetryModule } from "./infrastructure/telemetry/telemetry.module";
     DashboardModule,
     CommsModule,
     MobileClientModule,
+    ClientApiModule,
     MobileEmployeeModule,
     PublicModule,
   ],

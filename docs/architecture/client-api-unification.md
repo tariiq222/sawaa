@@ -149,6 +149,7 @@ Both frontends centralise the base URL but hard-code the path per call, so a mov
 ```
 /api/v1/client
 ├── profile                     GET PATCH DELETE
+│   ├── email                   GET      (verification state)
 │   ├── email/{request,verify,decline}        POST
 │   └── phone/{request,verify}                POST
 ├── bookings                    GET POST
@@ -163,7 +164,6 @@ Both frontends centralise the base URL but hard-code the path per call, so a mov
 │   └── {id}                    GET
 │       └── pdf                 GET
 ├── payments                    GET
-│   ├── methods                 GET      (anonymous-safe, stays also under /public)
 │   ├── init                    POST
 │   ├── native/{config,init,{paymentId}/reconcile}
 │   ├── bank-transfer           POST
@@ -184,7 +184,7 @@ Both frontends centralise the base URL but hard-code the path per call, so a mov
 └── portal/{home,summary,upcoming} GET  (mobile BFF reads; harmless for web)
 ```
 
-Anonymous discovery (`/public/services`, `/public/employees`, `/public/availability`, `/public/packages`, `/public/programs`, guest chat, auth/OTP, webhooks) **stays under `/public`**. Only client-owned routes move.
+Anonymous discovery (`/public/services`, `/public/employees`, `/public/availability`, `/public/packages`, `/public/programs`, `/public/payments/methods`, guest chat, auth/OTP, webhooks) **stays under `/public`**. Only client-owned routes move.
 
 ### 4.3 Backend structure (target)
 
