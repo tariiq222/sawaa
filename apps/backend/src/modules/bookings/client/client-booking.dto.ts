@@ -100,15 +100,15 @@ export class ClientBookingDto {
   @ApiPropertyOptional({ description: 'Service id', nullable: true, type: String }) serviceId!: string | null;
   @ApiProperty({ description: 'Service name (English, falls back to Arabic then snapshot)' }) serviceName!: string;
   @ApiPropertyOptional({ description: 'Service name (Arabic)', nullable: true, type: String }) serviceNameAr!: string | null;
-  @ApiPropertyOptional({ type: () => ClientBookingServiceDto, nullable: true }) service!: ClientBookingServiceDto | null;
+  @ApiPropertyOptional({ description: 'Client-visible service summary for this booking', type: () => ClientBookingServiceDto, nullable: true }) service!: ClientBookingServiceDto | null;
   @ApiProperty({ description: 'Employee id', format: 'uuid' }) employeeId!: string;
   @ApiProperty({ description: 'Employee name (English)' }) employeeName!: string;
   @ApiPropertyOptional({ description: 'Employee name (Arabic)', nullable: true, type: String }) employeeNameAr!: string | null;
-  @ApiPropertyOptional({ type: () => ClientBookingEmployeeDto, nullable: true }) employee!: ClientBookingEmployeeDto | null;
+  @ApiPropertyOptional({ description: 'Client-visible practitioner profile without staff account fields', type: () => ClientBookingEmployeeDto, nullable: true }) employee!: ClientBookingEmployeeDto | null;
   @ApiProperty({ description: 'Branch id', format: 'uuid' }) branchId!: string;
   @ApiProperty({ description: 'Branch name (English)' }) branchName!: string;
   @ApiPropertyOptional({ description: 'Branch name (Arabic)', nullable: true, type: String }) branchNameAr!: string | null;
-  @ApiPropertyOptional({ type: () => ClientBookingBranchDto, nullable: true }) branch!: ClientBookingBranchDto | null;
+  @ApiPropertyOptional({ description: 'Client-visible branch summary for this booking', type: () => ClientBookingBranchDto, nullable: true }) branch!: ClientBookingBranchDto | null;
 
   // --- zoom (client-safe only) ---------------------------------------------
   @ApiPropertyOptional({ description: 'Zoom join URL (attendee link)', nullable: true, type: String }) zoomJoinUrl!: string | null;

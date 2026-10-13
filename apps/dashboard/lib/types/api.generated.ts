@@ -7759,6 +7759,7 @@ export interface components {
             bookingNumber?: number | null;
             /** @description Booking type, lower-case (individual, walk_in, group) */
             bookingType: string;
+            /** @description Client-visible branch summary for this booking */
             branch?: components["schemas"]["ClientBookingBranchDto"] | null;
             /**
              * Format: uuid
@@ -7803,6 +7804,7 @@ export interface components {
             durationMins: number;
             /** @description @deprecated Alias of durationMins (mapper origin). */
             durationMinutesSnapshot?: number | null;
+            /** @description Client-visible practitioner profile without staff account fields */
             employee?: components["schemas"]["ClientBookingEmployeeDto"] | null;
             /**
              * Format: uuid
@@ -7847,6 +7849,7 @@ export interface components {
             priceSnapshot?: number | null;
             /** @description Start (ISO 8601) */
             scheduledAt: string;
+            /** @description Client-visible service summary for this booking */
             service?: components["schemas"]["ClientBookingServiceDto"] | null;
             /** @description Service id */
             serviceId?: string | null;

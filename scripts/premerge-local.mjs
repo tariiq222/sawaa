@@ -7,10 +7,12 @@ import { once } from 'node:events';
 import { assertPlaywrightReport, assertE2eReport } from './premerge-local-results.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-// The `e2e` CLI used for the booking journeys needs Node 22.12+; fail before the long build.
-const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
-if (nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 12)) {
-  console.error(`pnpm test:premerge requires Node 22.12 or newer (found ${process.versions.node}); run \`nvm use\` with the repo's .nvmrc.`);
+// Match the installed e2e runner engines; reject unsupported runtimes before building.
+const [nodeMajor, nodeMinor, nodePatch] = process.versions.node.split('.').map(Number);
+const supportedNode = nodeMajor > 24 || (nodeMajor === 24 && nodeMinor >= 8)
+  || (nodeMajor === 22 && (nodeMinor > 22 || (nodeMinor === 22 && nodePatch >= 3)));
+if (!supportedNode) {
+  console.error(`pnpm test:premerge requires Node 22.22.3+ on Node22, or 24.8+ (found ${process.versions.node}).`);
   process.exit(1);
 }
 if (process.argv.includes('--help')) {

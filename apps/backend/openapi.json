@@ -2133,6 +2133,7 @@
                 "$ref": "#/components/schemas/ClientBookingBranchDto"
               }
             ],
+            "description": "Client-visible branch summary for this booking",
             "nullable": true,
             "type": "object"
           },
@@ -2227,6 +2228,7 @@
                 "$ref": "#/components/schemas/ClientBookingEmployeeDto"
               }
             ],
+            "description": "Client-visible practitioner profile without staff account fields",
             "nullable": true,
             "type": "object"
           },
@@ -2327,6 +2329,7 @@
                 "$ref": "#/components/schemas/ClientBookingServiceDto"
               }
             ],
+            "description": "Client-visible service summary for this booking",
             "nullable": true,
             "type": "object"
           },
