@@ -1,6 +1,7 @@
 import * as Joi from 'joi';
 import { isProductionChatGuestTokenSecretPlaceholder } from './guest-chat-token-secret.policy';
 import packageJson from '../../package.json';
+import { REVIEW_OTP_HASH_PATTERN } from '../modules/identity/review-otp/review-otp.policy';
 
 /**
  * Boot-time validation for process.env.
@@ -32,6 +33,8 @@ export const envValidationSchema = Joi.object({
   // Database (Prisma)
   // Optional, fail-closed dedicated synthetic account; never a generic OTP bypass.
   MOBILE_REVIEW_CLIENT_ID: Joi.string().empty('').guid({ version: 'uuidv4' }).optional(),
+  MOBILE_REVIEW_OTP_HASH: Joi.string().empty('').pattern(REVIEW_OTP_HASH_PATTERN).optional(),
+  MOBILE_REVIEW_OTP_EXPIRES_AT: Joi.date().iso().empty('').optional(),
 
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
@@ -255,6 +258,8 @@ export const envValidationSchema = Joi.object({
 
 })
   .unknown(true)
+  .and('MOBILE_REVIEW_OTP_HASH', 'MOBILE_REVIEW_OTP_EXPIRES_AT')
+  .with('MOBILE_REVIEW_OTP_HASH', 'MOBILE_REVIEW_CLIENT_ID')
   // Production safety net: refuse to boot if any sensitive value is still a
   // dev placeholder. The strings here are the literal dev defaults committed
   // to .env.example. If any of them slip into production, fail fast — a

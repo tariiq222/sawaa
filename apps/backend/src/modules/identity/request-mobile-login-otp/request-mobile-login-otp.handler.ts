@@ -6,6 +6,8 @@ import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/ident
 import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
+import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
+import { REVIEW_OTP_EMAIL } from '../review-otp/review-otp.policy';
 
 export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto;
 
@@ -19,11 +21,19 @@ export class RequestMobileLoginOtpHandler {
     private readonly prisma: PrismaService,
     private readonly requestOtp: RequestOtpHandler,
     private readonly settings: PlatformSettingsService,
+    private readonly reviewOtp: ReviewOtpHandler,
   ) {}
 
   async execute(cmd: RequestMobileLoginOtpCommand): Promise<RequestMobileLoginOtpResult> {
     const channel: AuthChannel = detectChannel(cmd.identifier);
     const identifier = normalizeIdentifier(cmd.identifier, channel);
+
+    // This reserved synthetic address must never fall through to a new User/staff identity.
+    if (channel === 'EMAIL' && identifier === REVIEW_OTP_EMAIL) {
+      const review = await this.reviewOtp.execute({ identifier, channel: OtpChannel.EMAIL, purpose: OtpPurpose.MOBILE_LOGIN });
+      if (review) await this.requestOtp.execute({ identifier, channel: OtpChannel.EMAIL, purpose: OtpPurpose.MOBILE_LOGIN });
+      return { maskedIdentifier: maskIdentifier(identifier, channel) };
+    }
 
     const where = channel === 'EMAIL' ? { email: identifier } : { phone: identifier };
     const user = await this.prisma.user.findFirst({

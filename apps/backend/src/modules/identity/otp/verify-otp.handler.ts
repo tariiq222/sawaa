@@ -5,6 +5,8 @@ import { PrismaService } from '../../../infrastructure/database';
 import { SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { VerifyOtpDto } from './verify-otp.dto';
 import { OtpSessionService } from './otp-session.service';
+import { OtpPurpose } from '@prisma/client';
+import { REVIEW_OTP_EMAIL } from '../review-otp/review-otp.policy';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 
@@ -21,6 +23,10 @@ export class VerifyOtpHandler {
   ) {}
 
   async execute(dto: VerifyOtpCommand): Promise<{ sessionToken: string }> {
+    // Reviewer challenges may only be consumed by mobile verification's locked identity checks.
+    if (dto.identifier.trim().toLowerCase() === REVIEW_OTP_EMAIL && dto.purpose === OtpPurpose.MOBILE_LOGIN) {
+      throw new BadRequestException('Invalid OTP purpose');
+    }
     const contextId = SINGLE_TENANT_CONTEXT_ID;
 
     return this.cls.run(async () => {
