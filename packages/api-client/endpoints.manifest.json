@@ -40,6 +40,86 @@
     "path": "/api/v1/auth/reset-password"
   },
   {
+    "method": "GET",
+    "path": "/api/v1/client/bookings"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/client/bookings/{id}/cancel"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client/bookings/{id}/cancellation-preview"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client/bookings/{id}/join"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/client/bookings/{id}/rate"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/client/bookings/{id}/reschedule"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client/invoices"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/client/package-purchases/init"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/client/packages/book"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client/packages/purchases"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client/packages/purchases/{id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/client/profile"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/client/profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/client/profile"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/client/refunds/request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/bookings"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/bookings"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/bookings/late-entry"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/bookings/late-entry/context"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/bookings/{id}"
+  },
+  {
     "method": "PATCH",
     "path": "/api/v1/dashboard/bookings/{id}/cancel"
   },
@@ -52,32 +132,28 @@
     "path": "/api/v1/dashboard/bookings/{id}/confirm"
   },
   {
-    "method": "GET",
-    "path": "/api/v1/dashboard/bookings/{id}"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/bookings/late-entry/context"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/dashboard/bookings/late-entry"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/bookings"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/dashboard/bookings"
-  },
-  {
     "method": "POST",
     "path": "/api/v1/dashboard/finance/bookings/{bookingId}/collect"
   },
   {
     "method": "PATCH",
     "path": "/api/v1/dashboard/finance/invoices/{id}/discount"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/finance/payments"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/finance/payments"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/finance/payments/stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/finance/payments/{id}"
   },
   {
     "method": "PATCH",
@@ -89,19 +165,31 @@
   },
   {
     "method": "GET",
-    "path": "/api/v1/dashboard/finance/payments/{id}"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/finance/payments/stats"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/finance/payments"
+    "path": "/api/v1/dashboard/organization/package-families"
   },
   {
     "method": "POST",
-    "path": "/api/v1/dashboard/finance/payments"
+    "path": "/api/v1/dashboard/organization/package-families"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/dashboard/organization/package-families/{id}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/organization/package-families/{id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/dashboard/organization/package-families/{id}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/organization/packages"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/organization/packages"
   },
   {
     "method": "DELETE",
@@ -117,11 +205,23 @@
   },
   {
     "method": "GET",
-    "path": "/api/v1/dashboard/organization/packages"
+    "path": "/api/v1/dashboard/people/employees"
   },
   {
     "method": "POST",
-    "path": "/api/v1/dashboard/organization/packages"
+    "path": "/api/v1/dashboard/people/employees"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/dashboard/people/employees/{id}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/people/employees/{id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/dashboard/people/employees/{id}"
   },
   {
     "method": "GET",
@@ -132,48 +232,28 @@
     "path": "/api/v1/dashboard/people/employees/{id}/breaks"
   },
   {
+    "method": "GET",
+    "path": "/api/v1/dashboard/people/employees/{id}/services"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/dashboard/people/employees/{id}/services"
+  },
+  {
     "method": "PATCH",
     "path": "/api/v1/dashboard/people/employees/{id}/services/{serviceId}"
   },
   {
     "method": "GET",
-    "path": "/api/v1/dashboard/people/employees/{id}/services"
+    "path": "/api/v1/dashboard/people/employees/{id}/vacations"
   },
   {
     "method": "POST",
-    "path": "/api/v1/dashboard/people/employees/{id}/services"
+    "path": "/api/v1/dashboard/people/employees/{id}/vacations"
   },
   {
     "method": "DELETE",
     "path": "/api/v1/dashboard/people/employees/{id}/vacations/{vacationId}"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/people/employees/{id}/vacations"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/dashboard/people/employees/{id}/vacations"
-  },
-  {
-    "method": "DELETE",
-    "path": "/api/v1/dashboard/people/employees/{id}"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/people/employees/{id}"
-  },
-  {
-    "method": "PATCH",
-    "path": "/api/v1/dashboard/people/employees/{id}"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/dashboard/people/employees"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/dashboard/people/employees"
   },
   {
     "method": "POST",
@@ -197,11 +277,23 @@
   },
   {
     "method": "GET",
-    "path": "/api/v1/public/me/bookings/{id}/cancellation-preview"
+    "path": "/api/v1/public/me"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/public/me"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/public/me/bookings"
   },
   {
     "method": "PATCH",
     "path": "/api/v1/public/me/bookings/{id}/cancel"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/public/me/bookings/{id}/cancellation-preview"
   },
   {
     "method": "PATCH",
@@ -209,43 +301,19 @@
   },
   {
     "method": "GET",
-    "path": "/api/v1/public/me/bookings"
-  },
-  {
-    "method": "GET",
     "path": "/api/v1/public/me/invoices"
   },
   {
-    "method": "GET",
-    "path": "/api/v1/public/me"
-  },
-  {
-    "method": "PATCH",
-    "path": "/api/v1/public/me"
-  },
-  {
     "method": "POST",
-    "path": "/api/v1/public/refunds/request"
+    "path": "/api/v1/public/me/packages/book"
   },
   {
     "method": "GET",
-    "path": "/api/v1/dashboard/organization/package-families"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/dashboard/organization/package-families"
+    "path": "/api/v1/public/me/packages/purchases"
   },
   {
     "method": "GET",
-    "path": "/api/v1/dashboard/organization/package-families/{id}"
-  },
-  {
-    "method": "PATCH",
-    "path": "/api/v1/dashboard/organization/package-families/{id}"
-  },
-  {
-    "method": "DELETE",
-    "path": "/api/v1/dashboard/organization/package-families/{id}"
+    "path": "/api/v1/public/me/packages/purchases/{id}"
   },
   {
     "method": "GET",
@@ -260,15 +328,7 @@
     "path": "/api/v1/public/payments/package-purchases/init"
   },
   {
-    "method": "GET",
-    "path": "/api/v1/public/me/packages/purchases"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/public/me/packages/purchases/{id}"
-  },
-  {
     "method": "POST",
-    "path": "/api/v1/public/me/packages/book"
+    "path": "/api/v1/public/refunds/request"
   }
 ]

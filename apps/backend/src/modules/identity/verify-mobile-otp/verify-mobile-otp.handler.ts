@@ -10,6 +10,8 @@ import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/ident
 import { MobileOtpPurposeDto, VerifyMobileOtpDto } from './verify-mobile-otp.dto';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
+import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
+import { REVIEW_OTP_EMAIL } from '../review-otp/review-otp.policy';
 
 const LOCKOUT_WINDOW_MINUTES = 10;
 export type VerifyMobileOtpCommand = VerifyMobileOtpDto;
@@ -33,6 +35,7 @@ export class VerifyMobileOtpHandler {
     private readonly cls: ClsService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settings: PlatformSettingsService,
+    private readonly reviewOtp: ReviewOtpHandler,
   ) {}
 
   async execute(cmd: VerifyMobileOtpCommand): Promise<VerifyMobileOtpResult> {
@@ -54,6 +57,14 @@ export class VerifyMobileOtpHandler {
         }
         let user = initialUser;
         let client: ClientIdentity | null = null;
+        let reviewHash: string | null = null;
+        if (channel === 'EMAIL' && identifier === REVIEW_OTP_EMAIL) {
+          if (user || cmd.purpose !== MobileOtpPurposeDto.LOGIN) throw new UnauthorizedException('Invalid credentials');
+          const review = await this.reviewOtp.execute({ identifier, channel: otpChannel, purpose: otpPurpose }, tx);
+          if (!review) throw new UnauthorizedException('Invalid credentials');
+          client = review.client;
+          reviewHash = review.codeHash;
+        }
         if (user) {
           await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "User" WHERE "id" = ${user.id} FOR UPDATE`);
           const lockedUser = await tx.user.findUnique({ where: { id: user.id }, include: { customRole: { include: { permissions: true } } } });
@@ -78,6 +89,10 @@ export class VerifyMobileOtpHandler {
           const lockedClient = await tx.client.findUnique({ where: { id: client.id } });
           if (!lockedClient) throw new ConflictException('Client identity conflict: customer record disappeared');
           client = lockedClient as ClientIdentity;
+          if (reviewHash) {
+            const review = await this.reviewOtp.execute({ identifier, channel: otpChannel, purpose: otpPurpose }, tx);
+            if (!review || review.client.id !== client.id || review.codeHash !== reviewHash) throw new UnauthorizedException('Invalid credentials');
+          }
           if (!client.isActive || client.deletedAt) throw new UnauthorizedException('Account is inactive');
           if (channel === 'SMS' && client.phone !== identifier) throw new ConflictException('Client identity conflict: verified phone changed');
           if (channel === 'EMAIL' && user?.role === 'CLIENT' && client.userId !== user.id) {
@@ -95,6 +110,7 @@ export class VerifyMobileOtpHandler {
         const lockedOtp = await tx.otpCode.findFirst({ where: { id: otpRecord.id } });
         if (!lockedOtp) throw new ConflictException('OTP identity conflict: code disappeared');
         const currentOtp = lockedOtp;
+        if (reviewHash && currentOtp.codeHash !== reviewHash) throw new BadRequestException('Invalid or expired code');
         const lockedNow = new Date();
         if (currentOtp.consumedAt || currentOtp.expiresAt <= lockedNow || (currentOtp.lockedUntil && currentOtp.lockedUntil > lockedNow)) {
           throw new BadRequestException('Invalid or expired code');
@@ -150,7 +166,7 @@ export class VerifyMobileOtpHandler {
           client = await tx.client.update({ where: { id: client.id }, data: { phoneVerified: new Date() } }) as ClientIdentity;
         }
         return {
-          tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified ?? null, tokenVersion: client.tokenVersion }, tx)),
+          tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified ?? null, tokenVersion: client.tokenVersion }, { channel: 'mobile' }, tx)),
           sessionKind: 'client' as const,
         };
       });

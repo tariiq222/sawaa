@@ -1,9 +1,7 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
-import { ModelPropertiesAccessor } from '@nestjs/swagger/dist/services/model-properties-accessor';
-import { SchemaObjectFactory } from '@nestjs/swagger/dist/services/schema-object-factory';
-import { SwaggerTypesMapper } from '@nestjs/swagger/dist/services/swagger-types-mapper';
-import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { Test } from '@nestjs/testing';
+import { DocumentBuilder, SwaggerModule, type SchemaObject } from '@nestjs/swagger';
 import type { SerializedClient } from '../../../modules/people/clients/client.serializer';
 import {
   ClientResponseDto,
@@ -100,13 +98,19 @@ function makeEmployee(overrides: Partial<EmployeeResponseDto> = {}): EmployeeRes
 }
 
 describe('ClientResponseDto (output shape)', () => {
-  it('documents every key emitted by serializeClient with scalar metadata', () => {
+  it('documents every key emitted by serializeClient with scalar metadata', async () => {
     const serializerFixture = makeClient() satisfies SerializedClient;
-    const schemas: Record<string, SchemaObject> = {};
-    const factory = new SchemaObjectFactory(new ModelPropertiesAccessor(), new SwaggerTypesMapper());
-
-    factory.exploreModelSchema(ClientResponseDto, schemas);
-    const schema = schemas['ClientResponseDto'];
+    const moduleRef = await Test.createTestingModule({}).compile();
+    const app = moduleRef.createNestApplication();
+    let schema: SchemaObject | undefined;
+    try {
+      const document = SwaggerModule.createDocument(app, new DocumentBuilder().build(), {
+        extraModels: [ClientResponseDto],
+      });
+      schema = document.components?.schemas?.ClientResponseDto as SchemaObject | undefined;
+    } finally {
+      await app.close();
+    }
     expect(schema).toBeDefined();
     if (!schema) throw new Error('ClientResponseDto schema was not generated');
 

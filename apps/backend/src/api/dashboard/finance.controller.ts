@@ -403,7 +403,7 @@ export class DashboardFinanceController {
   // Direct refund moves real money via Moyasar — OWNER/ADMIN only (manage:Setting),
   // excluding ACCOUNTANT. Mirrors dashboard/refunds approve/deny. Routine
   // payment work (record/verify) stays on manage:Payment below.
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Refund' })
   @ApiOperation({ summary: 'Refund a payment' })
   @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Payment refunded' })
@@ -513,7 +513,7 @@ export class DashboardFinanceController {
   // ── Moyasar Credentials ───────────────────────────────────────────────────
 
   @Get('moyasar/config')
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Get the Moyasar configuration (secret key masked)' })
   @ApiOkResponse({ description: 'Moyasar configuration or null if unconfigured' })
   getMoyasarConfigEndpoint() {
@@ -521,7 +521,7 @@ export class DashboardFinanceController {
   }
 
   @Patch('moyasar/config')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Create or update the Moyasar configuration' })
   @ApiOkResponse({ description: 'Moyasar configuration saved (secrets encrypted at rest)' })
   upsertMoyasarConfigEndpoint(@Body() body: UpsertMoyasarConfigDto) {
@@ -529,7 +529,7 @@ export class DashboardFinanceController {
   }
 
   @Post('moyasar/config/test')
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Probe Moyasar with the stored credentials and persist verification status' })
   @ApiOkResponse({ description: 'Connectivity test result' })
@@ -556,7 +556,7 @@ export class DashboardFinanceController {
   @Post('package-purchases/:purchaseId/refund')
   // Manual refund moves money — same OWNER/ADMIN privilege as the gateway
   // refund approve/deny endpoints (manage:Setting), NOT routine manage:Invoice.
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Refund' })
   @ApiOperation({ summary: 'Manually refund a session-package purchase (marks REFUNDED, voids credits, records the refund)' })
   @ApiParam({ name: 'purchaseId', description: 'Package purchase UUID', example: '00000000-0000-4000-a000-000000000007' })
   @ApiOkResponse({ description: 'Purchase marked REFUNDED, credits voided, refund recorded' })

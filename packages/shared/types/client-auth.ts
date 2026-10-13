@@ -2,6 +2,8 @@ export interface ClientProfile {
   id: string;
   name: string;
   email: string | null;
+  /** Stored email awaiting verification (email is null until proven). */
+  unverifiedEmail?: string | null;
   phone: string | null;
   emailVerified: string | null;
   phoneVerified: string | null;
@@ -27,7 +29,7 @@ export interface ClientBookingItem {
   employeeNameAr: string | null;
   branchName: string;
   branchNameAr: string | null;
-  paymentStatus: string;
+  paymentStatus: string | null;
   createdAt: string;
   /** Invoice linked to this booking (null when no invoice exists yet). */
   invoiceId?: string | null;
@@ -105,8 +107,18 @@ export interface ClientRegisterPayload {
   name?: string;
 }
 
+export type ClientCancellationReason =
+  | 'CLIENT_REQUESTED'
+  | 'EMPLOYEE_UNAVAILABLE'
+  | 'NO_SHOW'
+  | 'SYSTEM_EXPIRED'
+  | 'OTHER';
+
 export interface CancelMyBookingPayload {
-  reason?: string;
+  /** CancellationReason enum; the backend defaults to CLIENT_REQUESTED. */
+  reason?: ClientCancellationReason;
+  /** Free-text note shown to staff. */
+  notes?: string;
 }
 
 export interface RescheduleMyBookingPayload {

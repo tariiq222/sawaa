@@ -1,13 +1,15 @@
 import 'reflect-metadata';
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, type INestApplication } from '@nestjs/common';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
-import { DECORATORS } from '@nestjs/swagger/dist/constants';
-import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import { ModelPropertiesAccessor } from '@nestjs/swagger/dist/services/model-properties-accessor';
-import { SchemaObjectFactory } from '@nestjs/swagger/dist/services/schema-object-factory';
-import { SwaggerTypesMapper } from '@nestjs/swagger/dist/services/swagger-types-mapper';
+import { Test } from '@nestjs/testing';
+import { DocumentBuilder, SwaggerModule, type OpenAPIObject, type SchemaObject } from '@nestjs/swagger';
 import { DashboardDiscountReasonsController } from './discount-reasons.controller';
-import { DiscountReasonResponseDto } from '../../modules/org-experience/discount-reasons/discount-reason-response.dto';
+import { ListDiscountReasonsHandler } from '../../modules/org-experience/discount-reasons/list-discount-reasons.handler';
+import { CreateDiscountReasonHandler } from '../../modules/org-experience/discount-reasons/create-discount-reason.handler';
+import { UpdateDiscountReasonHandler } from '../../modules/org-experience/discount-reasons/update-discount-reason.handler';
+import { DeleteDiscountReasonHandler } from '../../modules/org-experience/discount-reasons/delete-discount-reason.handler';
+import { JwtGuard } from '../../common/guards/jwt.guard';
+import { CaslGuard } from '../../common/guards/casl.guard';
 
 const reason = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -24,35 +26,52 @@ describe('DashboardDiscountReasonsController response contract', () => {
   const createReason = { execute: jest.fn() };
   const updateReason = { execute: jest.fn() };
   const deleteReason = { execute: jest.fn() };
-  const controller = new DashboardDiscountReasonsController(
-    listReasons as never,
-    createReason as never,
-    updateReason as never,
-    deleteReason as never,
-  );
+  let app: INestApplication;
+  let controller: DashboardDiscountReasonsController;
+  let document: OpenAPIObject;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [DashboardDiscountReasonsController],
+      providers: [
+        { provide: ListDiscountReasonsHandler, useValue: listReasons },
+        { provide: CreateDiscountReasonHandler, useValue: createReason },
+        { provide: UpdateDiscountReasonHandler, useValue: updateReason },
+        { provide: DeleteDiscountReasonHandler, useValue: deleteReason },
+      ],
+    })
+      .overrideGuard(JwtGuard).useValue({ canActivate: () => true })
+      .overrideGuard(CaslGuard).useValue({ canActivate: () => true })
+      .compile();
+    app = moduleRef.createNestApplication();
+    controller = app.get(DashboardDiscountReasonsController);
+    document = SwaggerModule.createDocument(app, new DocumentBuilder().build());
+  });
+
+  afterAll(async () => app?.close());
 
   beforeEach(() => jest.clearAllMocks());
 
   it('documents the complete Prisma row returned by list/create/update', () => {
-    const schemas: Record<string, SchemaObject> = {};
-    const factory = new SchemaObjectFactory(new ModelPropertiesAccessor(), new SwaggerTypesMapper());
-    factory.exploreModelSchema(DiscountReasonResponseDto, schemas);
+    const schema = document.components?.schemas?.DiscountReasonResponseDto as SchemaObject | undefined;
+    expect(schema).toBeDefined();
+    if (!schema) throw new Error('DiscountReasonResponseDto schema was not generated');
 
-    expect(Object.keys(schemas['DiscountReasonResponseDto'].properties ?? {}).sort()).toEqual(Object.keys(reason).sort());
-    expect(schemas['DiscountReasonResponseDto'].required?.sort()).toEqual(Object.keys(reason).sort());
-    expect(schemas['DiscountReasonResponseDto'].properties?.labelEn).toMatchObject({ type: 'string', nullable: true });
-    expect(schemas['DiscountReasonResponseDto'].properties?.createdAt).toMatchObject({ type: 'string', format: 'date-time' });
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(Object.keys(reason).sort());
+    expect(schema.required?.sort()).toEqual(Object.keys(reason).sort());
+    expect(schema.properties?.labelEn).toMatchObject({ type: 'string', nullable: true });
+    expect(schema.properties?.createdAt).toMatchObject({ type: 'string', format: 'date-time' });
   });
 
   it('binds list/create/update Swagger responses to DiscountReasonResponseDto', () => {
-    const listResponse = Reflect.getMetadata(DECORATORS.API_RESPONSE, controller.listEndpoint);
-    const createResponse = Reflect.getMetadata(DECORATORS.API_RESPONSE, controller.createEndpoint);
-    const updateResponse = Reflect.getMetadata(DECORATORS.API_RESPONSE, controller.updateEndpoint);
+    const reasonRef = { $ref: '#/components/schemas/DiscountReasonResponseDto' };
+    const itemResponse = { content: { 'application/json': { schema: reasonRef } } };
 
-    expect(listResponse[HttpStatus.OK].type).toBe(DiscountReasonResponseDto);
-    expect(listResponse[HttpStatus.OK].isArray).toBe(true);
-    expect(createResponse[HttpStatus.CREATED].type).toBe(DiscountReasonResponseDto);
-    expect(updateResponse[HttpStatus.OK].type).toBe(DiscountReasonResponseDto);
+    expect(document.paths['/dashboard/discount-reasons']?.get?.responses?.['200']).toMatchObject({
+      content: { 'application/json': { schema: { type: 'array', items: reasonRef } } },
+    });
+    expect(document.paths['/dashboard/discount-reasons']?.post?.responses?.['201']).toMatchObject(itemResponse);
+    expect(document.paths['/dashboard/discount-reasons/{id}']?.patch?.responses?.['200']).toMatchObject(itemResponse);
   });
 
   it('preserves the actual 204 no-content delete HTTP contract', async () => {
@@ -61,8 +80,7 @@ describe('DashboardDiscountReasonsController response contract', () => {
     await expect(controller.deleteEndpoint(reason.id)).resolves.toEqual({ id: reason.id });
     expect(Reflect.getMetadata(HTTP_CODE_METADATA, controller.deleteEndpoint)).toBe(HttpStatus.NO_CONTENT);
 
-    const deleteResponse = Reflect.getMetadata(DECORATORS.API_RESPONSE, controller.deleteEndpoint);
-    expect(deleteResponse[HttpStatus.NO_CONTENT]).toMatchObject({ description: 'Discount reason deleted' });
-    expect(deleteResponse[HttpStatus.NO_CONTENT].type).toBeUndefined();
+    const deleteResponse = document.paths['/dashboard/discount-reasons/{id}']?.delete?.responses?.['204'];
+    expect(deleteResponse).toEqual({ description: 'Discount reason deleted' });
   });
 });

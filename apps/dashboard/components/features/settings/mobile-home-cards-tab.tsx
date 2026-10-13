@@ -16,7 +16,7 @@ import { MobileHomeCardEditor } from "./mobile-home-card-editor"
 export function MobileHomeCardsTab() {
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
-  const canManage = canDo("setting", "update")
+  const canManage = canDo("content", "update")
   const query = useMobileHomeCards()
   const mutations = useMobileHomeCardMutations()
   const [selectedId, setSelectedId] = useState<string | null>(null)

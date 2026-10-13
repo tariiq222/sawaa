@@ -117,6 +117,6 @@ describe('ClientRefreshHandler', () => {
       id: 'c1',
       email: 'a@b.com',
       tokenVersion: 3,
-    });
+    }, { channel: 'web' });
   });
 });

@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -30,7 +29,7 @@ export class ReconcileNativePaymentHandler {
       where: { id: payment.invoiceId },
     });
     if (!invoice || invoice.clientId !== cmd.clientId)
-      throw new ForbiddenException("Payment does not belong to this client");
+      throw new NotFoundException("Payment not found");
     if (payment.gatewayRef !== payment.id)
       throw new ConflictException({
         code: "HOSTED_PAYMENT_IN_PROGRESS",
@@ -69,7 +68,7 @@ export class ReconcileNativePaymentHandler {
           where: { id: current.invoiceId },
         });
         if (!currentInvoice || currentInvoice.clientId !== cmd.clientId)
-          throw new ForbiddenException("Payment does not belong to this client");
+          throw new NotFoundException("Payment not found");
         const review = await this.prisma.refundRequest.findFirst({
           where: { paymentId: current.id, status: "PENDING_REVIEW" },
           select: { id: true },

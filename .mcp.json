@@ -25,6 +25,11 @@
       "env": {
         "E2E_TELEMETRY_DISABLED": "1"
       }
+    },
+    "jev-review": {
+      "type": "stdio",
+      "command": "/Users/tariq/.local/bin/node",
+      "args": ["/Users/tariq/code/sawaa/scripts/mcp/jev-review.cjs"]
     }
   }
 }

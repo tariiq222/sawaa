@@ -1,3 +1,4 @@
+import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   HttpException,
@@ -45,6 +46,7 @@ describe('RequestOtpHandler', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: ReviewOtpHandler, useValue: { execute: async () => null } },
         RequestOtpHandler,
         { provide: NotificationChannelRegistry, useValue: { resolve: jest.fn().mockReturnValue(mockChannel) } },
         { provide: ConfigService, useValue: { get: jest.fn() } },

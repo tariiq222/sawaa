@@ -1,3 +1,4 @@
+import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
@@ -50,6 +51,7 @@ describe('VerifyMobileOtpHandler', () => {
     });
     const moduleRef = await Test.createTestingModule({
       providers: [
+        { provide: ReviewOtpHandler, useValue: { execute: async () => null } },
         VerifyMobileOtpHandler,
         { provide: PrismaService, useValue: prismaMock },
         { provide: TokenService, useValue: tokensMock },
@@ -373,6 +375,7 @@ describe('VerifyMobileOtpHandler', () => {
 
     expect(clientTokensMock.issueTokenPair).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'c1', tokenVersion: 2 }),
+      { channel: 'mobile' },
       prismaMock,
     );
     expect(tokensMock.issueTokenPair).not.toHaveBeenCalled();

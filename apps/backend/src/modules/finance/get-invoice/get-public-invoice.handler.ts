@@ -27,15 +27,55 @@ export interface GetPublicInvoiceResult {
   pdfUrl: string | null;
 }
 
+/** Client-safe payment row: no gateway refs, idempotency keys, receipt paths or audit fields. */
+export interface GetClientInvoicePayment {
+  id: string;
+  number: number;
+  amount: number;
+  refundedAmount: number;
+  currency: string;
+  method: string;
+  status: string;
+  createdAt: string;
+  processedAt: string | null;
+}
+
+/**
+ * The single client invoice read shared by the website (`/public/invoices/:id`)
+ * and the app (`/mobile/client/payments/invoices/:id`): the union of both
+ * channels' fields minus staff-only data (notes, discount audit, pdf keys,
+ * sentToClientAt, receipt audit ids).
+ */
+export interface GetClientInvoiceResult extends GetPublicInvoiceResult {
+  number: number;
+  payments: GetClientInvoicePayment[];
+}
+
 @Injectable()
 export class GetPublicInvoiceHandler {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(invoiceId: string, clientId: string): Promise<GetPublicInvoiceResult> {
+  async execute(invoiceId: string, clientId: string): Promise<GetClientInvoiceResult> {
     const invoice = await this.prisma.invoice.findFirst({
       where: {
         id: invoiceId,
         clientId: clientId,
+      },
+      include: {
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            number: true,
+            amount: true,
+            refundedAmount: true,
+            currency: true,
+            method: true,
+            status: true,
+            createdAt: true,
+            processedAt: true,
+          },
+        },
       },
     });
 
@@ -45,6 +85,20 @@ export class GetPublicInvoiceHandler {
 
     const sellerName = await resolveInvoiceSellerName(this.prisma);
 
-    return mapInvoiceResult(invoice, sellerName);
+    return {
+      ...mapInvoiceResult(invoice, sellerName),
+      number: invoice.number,
+      payments: invoice.payments.map((p) => ({
+        id: p.id,
+        number: p.number,
+        amount: Number(p.amount),
+        refundedAmount: Number(p.refundedAmount),
+        currency: p.currency,
+        method: p.method,
+        status: p.status,
+        createdAt: p.createdAt.toISOString(),
+        processedAt: p.processedAt?.toISOString() ?? null,
+      })),
+    };
   }
 }

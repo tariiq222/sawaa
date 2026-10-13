@@ -1,3 +1,4 @@
+import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
 import { Test } from '@nestjs/testing';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { RequestMobileLoginOtpHandler } from './request-mobile-login-otp.handler';
@@ -18,6 +19,7 @@ describe('RequestMobileLoginOtpHandler', () => {
     prismaMock.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     const moduleRef = await Test.createTestingModule({
       providers: [
+        { provide: ReviewOtpHandler, useValue: { execute: async () => null } },
         RequestMobileLoginOtpHandler,
         { provide: PrismaService, useValue: prismaMock },
         { provide: RequestOtpHandler, useValue: requestOtpMock },

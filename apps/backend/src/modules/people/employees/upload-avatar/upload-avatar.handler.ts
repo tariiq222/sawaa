@@ -5,7 +5,7 @@ import { MEDIA_IMAGE_URL_EXPIRY_SECONDS } from '../../../media/media-image-url.h
 import { PrismaService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
 
-const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIMETYPES: ReadonlySet<string> = new Set([
   'image/png',
   'image/jpeg',
@@ -34,11 +34,11 @@ export class UploadAvatarHandler {
     buffer: Buffer,
   ): Promise<{ fileId: string; url: string }> {
     if (!ALLOWED_AVATAR_MIMETYPES.has(cmd.mimetype)) {
-      throw new BadRequestException(`Avatar mimetype not allowed: ${cmd.mimetype}`);
+      throw new BadRequestException('صيغة الصورة غير مدعومة؛ اختر صورة بصيغة JPG أو PNG أو WebP');
     }
     if (cmd.size > MAX_AVATAR_BYTES) {
       throw new BadRequestException(
-        `Avatar exceeds maximum size of ${MAX_AVATAR_BYTES} bytes`,
+        'الصورة أكبر من 5 ميجابايت؛ اختر صورة أصغر ثم حاول مجددًا',
       );
     }
 

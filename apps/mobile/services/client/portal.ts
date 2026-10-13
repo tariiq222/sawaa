@@ -1,4 +1,5 @@
 import api from '../api';
+import { readListEnvelope } from './list-envelope';
 
 /** Single booking row inside the home/upcoming portal endpoints. Shape is
  *  produced by booking-row.mapper.ts on the backend — only the fields the
@@ -52,7 +53,19 @@ export interface PortalHomeResponse {
   profile: PortalProfile | null;
   upcomingBookings: PortalBookingRow[];
   unreadNotifications: PortalNotificationRow[];
-  recentPayments: Array<{ id: string; amount: number; status: string; createdAt: string }>;
+  recentPayments: Array<{
+    id: string;
+    number?: number | string | null;
+    invoiceId?: string | null;
+    amount: number;
+    currency?: string | null;
+    method?: string | null;
+    status: string;
+    createdAt: string;
+    processedAt?: string | null;
+    collectionDate?: string | null;
+    invoice?: { bookingId: string | null; total: number } | null;
+  }>;
 }
 
 export interface PortalSummary {
@@ -63,20 +76,25 @@ export interface PortalSummary {
 
 export const clientPortalService = {
   async getHome(): Promise<PortalHomeResponse> {
-    const res = await api.get<PortalHomeResponse>('/mobile/client/portal/home');
+    const res = await api.get<PortalHomeResponse>('/client/portal/home');
     return res.data;
   },
 
   async getSummary(): Promise<PortalSummary> {
-    const res = await api.get<PortalSummary>('/mobile/client/portal/summary');
+    const res = await api.get<PortalSummary>('/client/portal/summary');
     return res.data;
   },
 
-  async getUpcoming(page = 1, limit = 10) {
-    const res = await api.get<{ data: PortalBookingRow[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
-      '/mobile/client/portal/upcoming',
-      { params: { page, limit } },
+  async getUpcoming(page = 1, limit = 10): Promise<{
+    data: PortalBookingRow[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const res = await api.get<unknown>(
+      '/client/portal/upcoming',
+      { params: { page, pageSize: limit } },
     );
-    return res.data;
+    // Canonical `{ items, total, page, pageSize }`; legacy `{ data, meta }` still accepted.
+    const { items, meta } = readListEnvelope<PortalBookingRow>(res.data, limit);
+    return { data: items, meta: { total: meta.total, page: meta.page, limit: meta.perPage, totalPages: meta.totalPages } };
   },
 };

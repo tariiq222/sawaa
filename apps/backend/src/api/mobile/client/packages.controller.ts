@@ -8,15 +8,13 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+  } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PackagePurchaseStatus } from '@prisma/client';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { ListClientPackagePurchasesHandler } from '../../../modules/finance/package-purchases/list-client-package-purchases/list-client-package-purchases.handler';
 import { ClientPackageBookDto } from '../../../modules/bookings/client/client-package-book.dto';
@@ -31,10 +29,8 @@ class MobileClientPackagePurchasesQuery {
 }
 
 @ApiTags('Mobile Client / Packages')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller(['mobile/client/packages', 'public/me/packages'])
 export class MobileClientPackagesController {
   constructor(

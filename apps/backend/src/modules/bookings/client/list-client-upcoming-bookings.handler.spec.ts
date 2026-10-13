@@ -1,4 +1,4 @@
-import { BookingStatus, type Booking } from '@prisma/client';
+import { BookingStatus, Prisma, type Booking } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListClientUpcomingBookingsHandler } from './list-client-upcoming-bookings.handler';
 
@@ -7,6 +7,7 @@ const row = (id: string, scheduledAt: string, status: BookingStatus = BookingSta
   id, clientId, employeeId: 'emp-1', serviceId: 'svc-1', scheduledAt: new Date(scheduledAt),
   endsAt: new Date(new Date(scheduledAt).getTime() + 3600000), status, bookingType: 'INDIVIDUAL', deliveryType: 'IN_PERSON',
   createdAt: now, updatedAt: now,
+  price: new Prisma.Decimal(0), currency: 'SAR', branchId: 'branch-1',
 } as Booking);
 
 describe('ListClientUpcomingBookingsHandler', () => {
@@ -17,6 +18,18 @@ describe('ListClientUpcomingBookingsHandler', () => {
   };
   const handler = new ListClientUpcomingBookingsHandler(prisma as unknown as PrismaService);
   beforeEach(() => jest.clearAllMocks());
+
+  it('keeps display fields while excluding staff notes, identity and provider metadata', async () => {
+    prisma.booking.findMany.mockResolvedValue([{ ...row('private', '2026-10-09T13:00:00Z'), notes: 'staff note', zoomMeetingError: 'provider detail', lateEntryRecordedBy: 'staff-id', source: 'RECEPTION', zoomHostUrl: 'host-secret', zoomStartUrl: 'start-secret' }]);
+    prisma.booking.count.mockResolvedValue(1);
+    prisma.employee.findMany.mockResolvedValueOnce([{ id: 'emp-1', name: 'Sara Therapist', userId: 'staff-user' }]);
+    const result = await handler.execute({ clientId: 'client-1', now });
+    expect(result.data[0]).toMatchObject({ id: 'private', status: 'confirmed', employee: { user: { firstName: 'Sara', lastName: 'Therapist' } } });
+    for (const field of ['notes', 'zoomMeetingError', 'lateEntryRecordedBy', 'source']) expect(result.data[0]).not.toHaveProperty(field);
+    expect(result.data[0].employee).not.toHaveProperty('userId');
+    expect(result.data[0].zoomHostUrl).toBeNull();
+    expect(result.data[0].zoomStartUrl).toBeNull();
+  });
 
   it('returns canonical UTC and Riyadh display fields with therapist/service details', async () => {
     prisma.booking.findMany.mockResolvedValue([row('nearest', '2026-10-09T13:00:00Z')]);

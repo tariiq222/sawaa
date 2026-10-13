@@ -1,10 +1,10 @@
-import { ArgumentsHost, Body, Controller, Catch, ExceptionFilter, Header, HttpCode, HttpException, Post, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ArgumentsHost, Body, Controller, Catch, ExceptionFilter, Header, HttpCode, HttpException, Post, Res, UseFilters } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
+import { respondToClientPhoneVerification } from '../../../common/auth/client-phone-session-response';
 import { ApiStandardResponses } from '../../../common/swagger';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { RequestClientPhoneHandler } from '../../../modules/identity/client-phone/request-client-phone.handler';
 import { VerifyClientPhoneHandler } from '../../../modules/identity/client-phone/verify-client-phone.handler';
@@ -37,10 +37,8 @@ export class ClientPhoneValidationFilter implements ExceptionFilter {
 
 @UseFilters(new ClientPhoneValidationFilter())
 @ApiTags('Mobile Client / Profile')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/profile/phone')
 export class MobileClientPhoneController {
   constructor(
@@ -62,5 +60,7 @@ export class MobileClientPhoneController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: 'Verify the code, adopt the new client phone and rotate session tokens' })
   @ApiOkResponse({ type: ClientPhoneVerifiedDto })
-  verify(@ClientSession() user: ClientSession, @Body() body: VerifyClientPhoneDto) { return this.verifyPhone.execute(user.id, body); }
+  async verify(@ClientSession() user: ClientSession, @Body() body: VerifyClientPhoneDto, @Res({ passthrough: true }) response?: Response) {
+    return respondToClientPhoneVerification(await this.verifyPhone.execute(user.id, body, user.channel), user.channel, response);
+  }
 }

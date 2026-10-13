@@ -17,7 +17,7 @@ export type ClientEmailChallenge = {
   retryAfterSeconds: 60;
 };
 
-const base = '/mobile/client/profile/email';
+const base = '/client/profile/email';
 
 // The challenge id and code live in screen memory only; they are never put in
 // route params, storage or logs, and the mutations never cache responses.

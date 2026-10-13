@@ -39,21 +39,21 @@ describe('DashboardAiController provider permissions (real CaslGuard)', () => {
   });
   afterAll(async () => app.close());
 
-  it('allows Setting read to GET config and models but forbids PUT and test', async () => {
-    permissions = [{ action: 'read', subject: 'Setting' }];
+  it('allows ProviderConfig read to GET config and models but forbids PUT and test', async () => {
+    permissions = [{ action: 'read', subject: 'ProviderConfig' }];
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(200);
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(200);
     await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }).expect(403);
     await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(403);
   });
 
-  it('allows Setting manage to mutate provider settings', async () => {
-    permissions = [{ action: 'manage', subject: 'Setting' }];
+  it('allows ProviderConfig manage to mutate provider settings', async () => {
+    permissions = [{ action: 'manage', subject: 'ProviderConfig' }];
     await request(app.getHttpServer()).put('/dashboard/ai/provider-config').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731' }).expect(200);
     await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(200);
   });
 
-  it('forbids users without Setting permission', async () => {
+  it('forbids users without ProviderConfig permission', async () => {
     permissions = [{ action: 'read', subject: 'Booking' }];
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(403);
     await request(app.getHttpServer()).get('/dashboard/ai/provider-config/models').expect(403);
@@ -61,9 +61,15 @@ describe('DashboardAiController provider permissions (real CaslGuard)', () => {
     await request(app.getHttpServer()).post('/dashboard/ai/provider-config/test').send({ provider: 'OPENROUTER', model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key' }).expect(403);
   });
 
+  it('does not let a Setting-only grant reach provider config or knowledge base', async () => {
+    permissions = [{ action: 'manage', subject: 'Setting' }];
+    await request(app.getHttpServer()).get('/dashboard/ai/provider-config').expect(403);
+    await request(app.getHttpServer()).get('/dashboard/ai/knowledge-base').expect(403);
+  });
+
   it('enforces read/manage permissions for every knowledge-base verb', async () => {
     const id = '00000000-0000-4000-a000-000000000001';
-    permissions = [{ action: 'read', subject: 'Setting' }];
+    permissions = [{ action: 'read', subject: 'Content' }];
     await request(app.getHttpServer()).get('/dashboard/ai/knowledge-base').expect(200);
     await request(app.getHttpServer()).get(`/dashboard/ai/knowledge-base/${id}`).expect(200);
     await request(app.getHttpServer()).post('/dashboard/ai/knowledge-base').send({ title: 'FAQ', sourceType: 'manual', content: 'hello' }).expect(403);
@@ -72,7 +78,7 @@ describe('DashboardAiController provider permissions (real CaslGuard)', () => {
     await request(app.getHttpServer()).post(`/dashboard/ai/knowledge-base/${id}/unpublish`).expect(403);
     await request(app.getHttpServer()).post(`/dashboard/ai/knowledge-base/${id}/reindex`).expect(403);
     await request(app.getHttpServer()).delete(`/dashboard/ai/knowledge-base/${id}`).expect(403);
-    permissions = [{ action: 'manage', subject: 'Setting' }];
+    permissions = [{ action: 'manage', subject: 'Content' }];
     await request(app.getHttpServer()).post('/dashboard/ai/knowledge-base').send({ title: 'FAQ', sourceType: 'manual', content: 'hello' }).expect(201);
     await request(app.getHttpServer()).patch(`/dashboard/ai/knowledge-base/${id}`).send({ title: 'FAQ' }).expect(200);
     await request(app.getHttpServer()).post(`/dashboard/ai/knowledge-base/${id}/publish`).expect(200);

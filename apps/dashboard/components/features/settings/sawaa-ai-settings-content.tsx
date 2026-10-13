@@ -11,9 +11,17 @@ import type { AiProvider } from "@/lib/api/sawaa-ai-settings"
 import { SawaaAiKnowledgeBase } from "./sawaa-ai-knowledge-base"
 
 export function SawaaAiSettingsContent() {
+  const { canDo } = useAuth()
+  return <div className="space-y-4">
+    {canDo("providerconfig", "read") && <SawaaAiProviderSettings />}
+    {canDo("content", "read") && <SawaaAiKnowledgeBase />}
+  </div>
+}
+
+function SawaaAiProviderSettings() {
   const { t } = useLocale()
   const { canDo } = useAuth()
-  const canManage = canDo("setting", "manage")
+  const canManage = canDo("providerconfig", "manage")
   const { config, loading, error } = useSawaaAiSettings()
   const modelsQuery = useSawaaAiModels()
   const save = useSaveSawaaAiSettings()
@@ -75,7 +83,7 @@ export function SawaaAiSettingsContent() {
   if (loading) return <Card><CardContent className="py-8"><p className="text-sm text-muted-foreground">{t("common.loading")}</p></CardContent></Card>
   if (error) return <Card><CardContent className="py-8"><p role="alert" className="text-sm text-destructive">{t("sawaaAi.loadFailed")}</p></CardContent></Card>
 
-  return <div className="space-y-4"><Card data-testid="sawaa-ai-settings" className="overflow-hidden">
+  return <Card data-testid="sawaa-ai-settings" className="overflow-hidden">
     <CardHeader><div className="flex items-center gap-3"><span className="rounded-xl bg-primary/10 p-2 text-primary"><HugeiconsIcon icon={AiChat02Icon} size={22} /></span><div><CardTitle>{t("sawaaAi.title")}</CardTitle><p className="text-sm text-muted-foreground">{t("sawaaAi.description")}</p></div></div></CardHeader>
     <CardContent className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -90,5 +98,5 @@ export function SawaaAiSettingsContent() {
       {canManage && <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={onTest} disabled={test.isPending || save.isPending || !apiKey.trim()}>{test.isPending ? t("sawaaAi.testing") : t("sawaaAi.test")}</Button><Button type="button" onClick={onSave} disabled={save.isPending || test.isPending || (enabled && !canEnable)}>{save.isPending || test.isPending ? t("common.saving") : t("settings.save")}</Button></div>}
       {!canManage && <p className="text-sm text-muted-foreground">{t("sawaaAi.readOnly")}</p>}
     </CardContent>
-  </Card><SawaaAiKnowledgeBase /></div>
+  </Card>
 }

@@ -102,7 +102,7 @@ describe("payment refund requests", () => {
   it.each([
     ["CASH", null, "payment", "update"],
     ["BANK_TRANSFER", "bank-transfer-admin-reference", "payment", "update"],
-    ["ONLINE_CARD", "gateway-1", "setting", "manage"],
+    ["ONLINE_CARD", "gateway-1", "refund", "manage"],
   ] as const)(
     "hides %s actions without their endpoint permission",
     (method, gatewayRef, subject, action) => {

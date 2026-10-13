@@ -12,7 +12,7 @@ import { mapDraftToCreate } from "@/lib/mappers/intake-form"
 
 export default function CreateIntakeFormPage() {
   return (
-    <PermissionGuard module="setting" action="create">
+    <PermissionGuard module="content" action="create">
       <CreateIntakeFormPageInner />
     </PermissionGuard>
   )

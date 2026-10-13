@@ -211,8 +211,14 @@ function isAuthEndpoint(path: string): boolean {
   return AUTH_ENDPOINTS_NO_RETRY.some((suffix) => path.endsWith(suffix))
 }
 
+// Client cookie-session routes: the anonymous `/public/*` surface and the
+// authenticated `/client/*` surface share the same session cookie and CSRF gate.
+function isClientCookiePath(path: string): boolean {
+  return path.startsWith('/public/') || path.startsWith('/client/')
+}
+
 function getRefreshPath(path: string): string {
-  return path.startsWith('/public/') ? '/public/auth/refresh' : '/auth/refresh'
+  return isClientCookiePath(path) ? '/public/auth/refresh' : '/auth/refresh'
 }
 
 export async function apiRequest<T>(
@@ -255,7 +261,7 @@ async function requestWithParser<T>(
   // POST always 403'd in the browser console before the retry path ran.
   if (
     isUnsafeMethod(options.method) &&
-    path.startsWith('/public/') &&
+    isClientCookiePath(path) &&
     typeof window !== 'undefined' &&
     !hasHeader(headers, CSRF_HEADER_NAME)
   ) {

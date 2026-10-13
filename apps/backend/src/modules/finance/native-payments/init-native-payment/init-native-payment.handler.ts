@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -49,7 +48,7 @@ export class InitNativePaymentHandler {
     });
     if (!visible) throw new NotFoundException("Invoice not found");
     if (visible.clientId !== cmd.clientId)
-      throw new ForbiddenException("Invoice does not belong to this client");
+      throw new NotFoundException("Invoice not found");
     const config = await this.configurations.getPaymentConfiguration();
     if (cmd.method === "APPLE_PAY" && !config.applePay)
       throw new BadRequestException("Apple Pay is not configured");
@@ -71,9 +70,7 @@ export class InitNativePaymentHandler {
           where: { id: cmd.invoiceId },
         });
         if (!invoice || invoice.clientId !== cmd.clientId)
-          throw new ForbiddenException(
-            "Invoice does not belong to this client",
-          );
+          throw new NotFoundException("Invoice not found");
         if (invoice.status === "PAID") {
           const completed = await tx.payment.findFirst({
             where: {

@@ -7,6 +7,13 @@ jest.mock('@/services/client/payments', () => ({
   },
 }));
 
+const mockGetBooking = jest.fn();
+jest.mock('@/services/client/bookings', () => ({
+  clientBookingsService: {
+    getById: (...args: unknown[]) => mockGetBooking(...args),
+  },
+}));
+
 import { usePaymentStatus, resolveConfirmedPhase } from '@/features/booking/use-payment-status';
 
 describe('usePaymentStatus', () => {
@@ -18,6 +25,26 @@ describe('usePaymentStatus', () => {
     const { result } = renderHook(() => usePaymentStatus(undefined));
     await waitFor(() => expect(result.current.phase).toBe('confirmed'));
     expect(mockGetInvoice).not.toHaveBeenCalled();
+  });
+
+  it('reports confirmed without an invoice when the booking is CONFIRMED', async () => {
+    mockGetBooking.mockResolvedValue({ id: 'b-1', status: 'CONFIRMED' });
+    const { result } = renderHook(() => usePaymentStatus(undefined, undefined, 'b-1'));
+    await waitFor(() => expect(result.current.phase).toBe('confirmed'));
+    expect(mockGetBooking).toHaveBeenCalledWith('b-1');
+    expect(mockGetInvoice).not.toHaveBeenCalled();
+  });
+
+  it('reports cancelled without an invoice when the booking is CANCELLED', async () => {
+    mockGetBooking.mockResolvedValue({ id: 'b-1', status: 'CANCELLED' });
+    const { result } = renderHook(() => usePaymentStatus(undefined, undefined, 'b-1'));
+    await waitFor(() => expect(result.current.phase).toBe('cancelled'));
+  });
+
+  it('never reports confirmed without an invoice when the booking read fails', async () => {
+    mockGetBooking.mockRejectedValue(new Error('network'));
+    const { result } = renderHook(() => usePaymentStatus(undefined, undefined, 'b-1'));
+    await waitFor(() => expect(result.current.phase).toBe('pending'));
   });
 
   it('reports confirmed when the invoice is PAID', async () => {

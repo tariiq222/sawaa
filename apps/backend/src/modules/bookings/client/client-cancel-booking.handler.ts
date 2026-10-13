@@ -37,8 +37,7 @@ export type ClientCancelCommand = ClientCancelBookingDto & {
   clientId: string;
   sourceActionId?: string;
   transaction?: Prisma.TransactionClient;
-  /** Server-derived transport semantics; never accepted from a client DTO. */
-  legacyChannel?: 'PUBLIC' | 'MOBILE';
+  /** Structured cancellation reason; defaults to CLIENT_REQUESTED. `reason` is persisted as free-text notes. */
   cancellationReason?: CancellationReason;
 };
 
@@ -74,7 +73,7 @@ export class ClientCancelBookingHandler {
       await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Booking" WHERE "id" = ${cmd.bookingId} FOR UPDATE`);
       const booking = await tx.booking.findUnique({ where: { id: cmd.bookingId } });
       if (!booking) throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
-      if (booking.clientId !== cmd.clientId) throw new ForbiddenException('You do not own this booking');
+      if (booking.clientId !== cmd.clientId) throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
       assertBookingIsMutable(booking);
 
       if (cmd.sourceActionId) {
@@ -110,11 +109,11 @@ export class ClientCancelBookingHandler {
         return this.cancelWithPolicy(tx, cmd, booking, settings as ClientCancellationSettings, cancellationEventId, actionHash);
       }
       const payments = await readCancellationPayments(tx, booking.id, true);
-      const quote = calculateClientCancellation(booking, settings, payments, new Date(), cmd.legacyChannel);
+      const quote = calculateClientCancellation(booking, settings, payments, new Date());
       if (cmd.quoteToken !== quote.quoteToken) throw new ConflictException('Cancellation terms changed. Reload the cancellation preview.');
       if (!quote.canCancel) throw new BadRequestException({ message: 'Client cancellation is unavailable', reasonCode: quote.reasonCode });
       // The money locks may have waited across the legacy free-window boundary.
-      if (calculateClientCancellation(booking, settings, payments, new Date(), cmd.legacyChannel).quoteToken !== quote.quoteToken) {
+      if (calculateClientCancellation(booking, settings, payments, new Date()).quoteToken !== quote.quoteToken) {
         throw new ConflictException('Cancellation terms changed. Reload the cancellation preview.');
       }
       if (quote.requiresApproval) {
@@ -123,7 +122,7 @@ export class ClientCancelBookingHandler {
           bookingId: cmd.bookingId,
           currentStatus: booking.status,
           actionLabel: 'cancel requested',
-          data: { status: nextStatus, cancelNotes: cmd.reason ?? null, ...(cmd.legacyChannel === 'MOBILE' ? { cancelReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED } : {}) },
+          data: { status: nextStatus, cancelNotes: cmd.reason ?? null, cancelReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED },
           ...(booking.deliveryType === 'ONLINE' ? {
             extraWhere: {
               AND: [
@@ -166,7 +165,7 @@ export class ClientCancelBookingHandler {
       }
 
       const directCancelStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
-      // Execute the accepted quote, including the legacy mobile hold's FULL
+      // Execute the accepted quote, including the payment hold's FULL
       // entitlement. A later clock tick must not choose another refund tier.
       const refundPercent = quote.refund.refundPercent;
       const refundType = refundPercent === 100 ? RefundType.FULL
@@ -184,7 +183,7 @@ export class ClientCancelBookingHandler {
           cancelReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
           cancelNotes: cmd.reason ?? null,
           cancelledAt: new Date(),
-          ...(cmd.legacyChannel === 'MOBILE' && booking.zoomMeetingId ? { zoomMeetingStatus: 'CANCELLED' } : {}),
+          ...(booking.zoomMeetingId ? { zoomMeetingStatus: 'CANCELLED' } : {}),
         },
         ...(booking.deliveryType === 'ONLINE' ? {
           extraWhere: {
@@ -209,7 +208,7 @@ export class ClientCancelBookingHandler {
           fromStatus: booking.status,
           toStatus: directCancelStatus,
           changedBy: cmd.clientId,
-          reason: cmd.legacyChannel === 'MOBILE' ? cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED : cmd.reason ?? 'CLIENT_CANCEL',
+          reason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
           sourceActionId: cmd.sourceActionId,
           sourceActionHash: cmd.sourceActionId ? actionHash : undefined,
           sourceActionResult: cmd.sourceActionId
@@ -243,7 +242,7 @@ export class ClientCancelBookingHandler {
           }
         }
       }
-      if (cmd.legacyChannel === 'MOBILE' && booking.couponCode) {
+      if (booking.couponCode) {
         await tx.coupon.updateMany({ where: { code: booking.couponCode, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
       }
       if (booking.packageCreditId) await returnPackageCreditForBooking(tx, cmd.bookingId);
@@ -260,7 +259,8 @@ export class ClientCancelBookingHandler {
         clientId: booking.clientId,
         employeeId: booking.employeeId,
         reason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
-        ...(cmd.legacyChannel === 'MOBILE' ? { zoomMeetingId: booking.zoomMeetingId, legacyClientCancellation: true } : {}),
+        zoomMeetingId: booking.zoomMeetingId,
+        legacyClientCancellation: true,
         cancelNotes: cmd.reason ?? undefined,
         refundType,
         paymentId,
@@ -363,7 +363,6 @@ export class ClientCancelBookingHandler {
         reason: cmd.reason ?? null,
         acceptedRefundTerms: cmd.acceptedRefundTerms,
         quoteToken: cmd.quoteToken,
-        legacyChannel: cmd.legacyChannel ?? 'PUBLIC',
         cancellationReason: cmd.cancellationReason ?? CancellationReason.CLIENT_REQUESTED,
       }))
       .digest('hex');

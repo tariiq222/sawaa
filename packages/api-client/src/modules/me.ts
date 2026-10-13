@@ -14,11 +14,11 @@ export function setMeBaseUrl(url: string): void {
 }
 
 export async function getMe(): Promise<ClientProfile> {
-  return apiRequest<ClientProfile>('/public/me', { credentials: 'include' });
+  return apiRequest<ClientProfile>('/client/profile', { credentials: 'include' });
 }
 
 /**
- * PATCH /public/me body. `email` may only be set when the account has no
+ * PATCH /client/profile body. `email` may only be set when the account has no
  * email yet — the backend rejects otherwise and returns 409 Conflict when
  * the email belongs to another account.
  */
@@ -36,7 +36,7 @@ export type UpdatedMyProfile = ClientProfile & {
 export async function updateMyProfile(
   payload: UpdateMyProfileRequest,
 ): Promise<UpdatedMyProfile> {
-  return apiRequest<UpdatedMyProfile>('/public/me', {
+  return apiRequest<UpdatedMyProfile>('/client/profile', {
     method: 'PATCH',
     credentials: 'include',
     body: JSON.stringify(payload),
@@ -48,7 +48,7 @@ export async function getMyInvoices(
   pageSize = 50,
 ): Promise<ClientInvoiceListResponse> {
   return apiRequest<ClientInvoiceListResponse>(
-    `/public/me/invoices?page=${page}&pageSize=${pageSize}`,
+    `/client/invoices?page=${page}&pageSize=${pageSize}`,
     { credentials: 'include' },
   );
 }
@@ -59,13 +59,13 @@ export async function getMyBookings(
   tab?: 'upcoming' | 'past' | 'cancelled',
 ): Promise<ClientBookingListResponse> {
   return apiRequest<ClientBookingListResponse>(
-    `/public/me/bookings?page=${page}&pageSize=${pageSize}${tab ? `&tab=${tab}` : ''}`,
+    `/client/bookings?page=${page}&pageSize=${pageSize}${tab ? `&tab=${tab}` : ''}`,
     { credentials: 'include' },
   );
 }
 
 export async function getMyCancellationPreview(bookingId: string): Promise<CancellationPreview> {
-  return apiRequest<CancellationPreview>(`/public/me/bookings/${encodeURIComponent(bookingId)}/cancellation-preview`, { credentials: 'include' });
+  return apiRequest<CancellationPreview>(`/client/bookings/${encodeURIComponent(bookingId)}/cancellation-preview`, { credentials: 'include' });
 }
 
 export async function cancelMyBooking(
@@ -73,7 +73,7 @@ export async function cancelMyBooking(
   payload: CancelMyBookingPayload & CancellationQuoteInput,
 ): Promise<ClientCancellationResult> {
   return apiRequest<ClientCancellationResult>(
-    `/public/me/bookings/${bookingId}/cancel`,
+    `/client/bookings/${bookingId}/cancel`,
     {
       method: 'PATCH',
       credentials: 'include',
@@ -82,12 +82,42 @@ export async function cancelMyBooking(
   );
 }
 
+/** DELETE /client/profile — closes the signed-in client's account. */
+export async function closeMyAccount(): Promise<void> {
+  await apiRequest<unknown>('/client/profile', { method: 'DELETE', credentials: 'include' });
+}
+
+export interface RateMyBookingPayload {
+  score: number;
+  comment?: string;
+  isPublic?: boolean;
+}
+
+/** POST /client/bookings/:id/rate */
+export async function rateMyBooking(
+  bookingId: string,
+  payload: RateMyBookingPayload,
+): Promise<unknown> {
+  return apiRequest<unknown>(`/client/bookings/${encodeURIComponent(bookingId)}/rate`, {
+    method: 'POST',
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+}
+
+/** GET /client/bookings/:id/join — lazily resolves the online session link. */
+export async function getMyBookingJoinLink(bookingId: string): Promise<unknown> {
+  return apiRequest<unknown>(`/client/bookings/${encodeURIComponent(bookingId)}/join`, {
+    credentials: 'include',
+  });
+}
+
 export async function rescheduleMyBooking(
   bookingId: string,
   payload: RescheduleMyBookingPayload,
 ): Promise<{ booking: unknown }> {
   return apiRequest<{ booking: unknown }>(
-    `/public/me/bookings/${bookingId}/reschedule`,
+    `/client/bookings/${bookingId}/reschedule`,
     {
       method: 'PATCH',
       credentials: 'include',

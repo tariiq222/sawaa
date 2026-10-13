@@ -1,4 +1,5 @@
 import { ClientCancelBookingDto } from '../../../modules/bookings/client/client-cancel-booking.dto';
+import { ClientThrottle } from '../../../common/throttle/client-throttle';
 import { PickType } from '@nestjs/swagger';
 import { ClientCancellationPreviewHandler } from '../../../modules/bookings/client/client-cancellation-preview.handler';
 import { ClientCancellationPreviewDto, PersistedCancellationRefundDto, CancellationRefundSummaryDto } from '../../../modules/bookings/client/client-cancellation-preview.dto';
@@ -12,23 +13,24 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation,
+  ApiTags, ApiOperation,
   ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
-import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
-import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
+import { ListClientBookingsHandler } from '../../../modules/bookings/client/list-client-bookings.handler';
+import { GetClientBookingHandler } from '../../../modules/bookings/client/get-client-booking.handler';
+import { ClientBookingDto } from '../../../modules/bookings/client/client-booking.dto';
+import { projectClientBookingMutation } from '../../../modules/bookings/client/client-booking-mutation.projection';
+import { toListResponse } from '../../../common/dto';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
@@ -108,17 +110,15 @@ export class MobileListBookingsDto {
   @IsOptional() @IsEnum(BookingStatus) status?: BookingStatus;
 }
 
-@ApiExtraModels(PersistedCancellationRefundDto, CancellationRefundSummaryDto)
+@ApiExtraModels(PersistedCancellationRefundDto, CancellationRefundSummaryDto, ClientBookingDto)
 @ApiTags('Mobile Client / Bookings')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@Public()
-@UseGuards(ClientSessionGuard)
+@ClientRoute()
 @Controller('mobile/client/bookings')
 export class MobileClientBookingsController {
   constructor(
-    private readonly list: ListBookingsHandler,
-    private readonly get: GetBookingHandler,
+    private readonly list: ListClientBookingsHandler,
+    private readonly get: GetClientBookingHandler,
     private readonly create: CreateBookingHandler,
     private readonly cancel: CancelBookingHandler,
     private readonly requestCancel: RequestCancelBookingHandler,
@@ -131,6 +131,7 @@ export class MobileClientBookingsController {
     private readonly cancellationOutcome: ClientCancellationOutcomeHandler,
   ) {}
 
+  @ClientThrottle('money')
   @Post()
   @ApiOperation({ summary: 'Create a booking' })
   @ApiCreatedResponse({
@@ -165,31 +166,44 @@ export class MobileClientBookingsController {
 
   @Get()
   @ApiOperation({ summary: 'List my bookings' })
-  @ApiOkResponse({ description: 'Paginated list of the authenticated client bookings', schema: { type: 'object' } })
-  listMyBookings(
+  @ApiOkResponse({
+    description: 'Paginated list of the authenticated client bookings',
+    schema: {
+      type: 'object',
+      properties: {
+        items: { type: 'array', items: { $ref: getSchemaPath(ClientBookingDto) } },
+        meta: { type: 'object', additionalProperties: true },
+      },
+    },
+  })
+  async listMyBookings(
     @ClientSession() user: ClientSession,
     @Query() q: MobileListBookingsDto,
   ) {
-    return this.list.execute({
+    const result = await this.list.execute({
       clientId: user.id,
       page: q.page ?? 1,
-      limit: q.limit ?? 20,
+      pageSize: q.limit ?? 20,
       status: q.status,
-      clientTab: q.tab,
+      tab: q.tab,
+      // Mobile tabs classify by lifecycle status and keep lower-case enums.
+      tabSemantics: 'lifecycle',
+      enumCase: 'lower',
     });
+    // Mobile envelope is `{ items, meta }`; the handler's flat envelope is the web one.
+    return toListResponse(result.items, result.total, result.page, result.pageSize);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a booking by ID' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking detail', schema: { type: 'object', additionalProperties: true, properties: { cancellationRefund: { $ref: getSchemaPath(PersistedCancellationRefundDto) } } } })
+  @ApiOkResponse({ description: 'Booking detail', type: ClientBookingDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  async getBooking(
+  getBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    const booking = await this.get.execute({ bookingId: id, clientId: user.id });
-    return { ...booking, ...(booking.status.toUpperCase() === 'CANCELLED' ? { cancellationRefund: await this.cancellationOutcome.execute(id, user.id) } : {}) };
+    return this.get.execute(id, user.id, { enumCase: 'lower' });
   }
 
   @Get(':id/cancellation-preview')
@@ -197,9 +211,10 @@ export class MobileClientBookingsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: ClientCancellationPreviewDto })
   cancellationPreviewEndpoint(@ClientSession() user: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
-    return this.cancellationPreview.execute(id, user.id, 'MOBILE');
+    return this.cancellationPreview.execute(id, user.id);
   }
 
+  @ClientThrottle('write')
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
@@ -213,10 +228,11 @@ export class MobileClientBookingsController {
   ) {
     const result = await this.clientCancel.execute({
       bookingId: id, clientId: user.id, reason: body.cancelNotes,
-      cancellationReason: body.reason, legacyChannel: 'MOBILE',
+      cancellationReason: body.reason,
       acceptedRefundTerms: body.acceptedRefundTerms, quoteToken: body.quoteToken, sourceActionId: body.sourceActionId,
     });
-    return { ...result.booking, ...result };
+    const booking = projectClientBookingMutation(result.booking);
+    return { ...booking, ...result, booking };
   }
 
   @Get(':id/join')
@@ -236,6 +252,7 @@ export class MobileClientBookingsController {
     return { joinUrl: updated.zoomJoinUrl, scheduledAt: updated.scheduledAt };
   }
 
+  @ClientThrottle('write')
   @Post(':id/rate')
   @ApiOperation({ summary: 'Submit a rating for a completed booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
@@ -257,20 +274,22 @@ export class MobileClientBookingsController {
     });
   }
 
+  @ClientThrottle('write')
   @Patch(':id/reschedule')
   @ApiOperation({ summary: 'Reschedule a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Booking rescheduled', schema: { type: 'object' } })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  rescheduleBooking(
+  async rescheduleBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: ClientRescheduleBookingDto,
   ) {
-    return this.reschedule.execute({
+    const result = await this.reschedule.execute({
       bookingId: id,
       clientId: user.id,
       newScheduledAt: body.newScheduledAt,
     });
+    return { ...result, booking: projectClientBookingMutation(result.booking) };
   }
 }

@@ -3,6 +3,7 @@ import { GetPublicInvoiceHandler } from './get-public-invoice.handler';
 
 const mockInvoice = {
   id: 'inv-1',
+  number: 42,
   organizationId: 'org-1',
   branchId: 'branch-1',
   clientId: 'client-1',
@@ -21,6 +22,15 @@ const mockInvoice = {
   dueAt: null,
   paidAt: new Date('2026-04-17T10:05:00Z'),
   createdAt: new Date('2026-04-17T10:00:00Z'),
+  notes: 'staff only',
+  discountAppliedBy: 'staff-1',
+  payments: [
+    {
+      id: 'pay-1', number: 5, amount: '10350', refundedAmount: '0', currency: 'SAR',
+      method: 'ONLINE_CARD', status: 'COMPLETED',
+      createdAt: new Date('2026-04-17T10:01:00Z'), processedAt: new Date('2026-04-17T10:05:00Z'),
+    },
+  ],
 };
 
 describe('GetPublicInvoiceHandler', () => {
@@ -90,5 +100,42 @@ describe('GetPublicInvoiceHandler', () => {
     const handler = new GetPublicInvoiceHandler(prisma as never);
 
     await expect(handler.execute('inv-x', 'client-1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('returns the superset shape (invoice number + client-safe payments) with no staff-only fields', async () => {
+    const prisma = buildPrisma();
+    const handler = new GetPublicInvoiceHandler(prisma as never);
+
+    const result = await handler.execute('inv-1', 'client-1');
+
+    expect(result.number).toBe(42);
+    expect(result.payments).toEqual([
+      {
+        id: 'pay-1', number: 5, amount: 10350, refundedAmount: 0, currency: 'SAR',
+        method: 'ONLINE_CARD', status: 'COMPLETED',
+        createdAt: '2026-04-17T10:01:00.000Z', processedAt: '2026-04-17T10:05:00.000Z',
+      },
+    ]);
+    expect(result).not.toHaveProperty('notes');
+    expect(result).not.toHaveProperty('discountAppliedBy');
+    expect(prisma.invoice.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: { payments: expect.objectContaining({ orderBy: { createdAt: 'desc' } }) },
+      }),
+    );
+    const select = (prisma.invoice.findFirst.mock.calls[0][0] as any).include.payments.select;
+    expect(select).not.toHaveProperty('gatewayRef');
+    expect(select).not.toHaveProperty('receiptUrl');
+    expect(select).not.toHaveProperty('idempotencyKey');
+  });
+
+  it('returns 404 for a foreign-owner invoice: ownership is inside the query, no existence leak', async () => {
+    const prisma = buildPrisma(null);
+    const handler = new GetPublicInvoiceHandler(prisma as never);
+
+    await expect(handler.execute('inv-1', 'other-client')).rejects.toThrow(NotFoundException);
+    expect(prisma.invoice.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'inv-1', clientId: 'other-client' } }),
+    );
   });
 });

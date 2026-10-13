@@ -16,7 +16,7 @@ import { useLocale } from "@/components/locale-provider"
 export default function SmsSettingsPage() {
   const { t } = useLocale()
   return (
-    <PermissionGuard module="setting" action="manage">
+    <PermissionGuard module="providerconfig" action="manage">
       <ListPageShell>
         <Breadcrumbs />
         <PageHeader

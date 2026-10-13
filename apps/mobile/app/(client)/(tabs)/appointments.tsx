@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useClientBookings, clientBookingsKeys } from '@/hooks/queries';
-import { bookingTabForStatus, type ClientBookingRow } from '@/services/client/bookings';
+import type { ClientBookingRow } from '@/services/client/bookings';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { createAppointmentsStyles } from '@/components/features/appointments/appointments.styles';
 
@@ -36,12 +36,9 @@ export default function AppointmentsScreen() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, isRefetching, refetch } = useClientBookings({ tab, page, limit: 50 });
-  const bookings = useMemo(() => data?.items ?? [], [data?.items]);
-
-  const items = useMemo(
-    () => bookings.filter((b) => bookingTabForStatus(b.status) === tab),
-    [bookings, tab],
-  );
+  // The unified client API filters tabs server-side by date (upcoming/past by
+  // scheduledAt, cancelled by status), so the list is rendered as returned.
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   const onRefresh = () => {
     queryClient.invalidateQueries({ queryKey: clientBookingsKeys.all });

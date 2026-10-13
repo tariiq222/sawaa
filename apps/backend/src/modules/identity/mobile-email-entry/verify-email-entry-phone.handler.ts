@@ -36,7 +36,7 @@ export class VerifyEmailEntryPhoneHandler {
         client = await tx.client.create({ data: { userId: user.id, name, firstName: flow.firstName, lastName: flow.lastName, email: flow.email, phone: flow.phone,
           isActive: true, phoneVerified: now, emailVerified: now, accountType: 'FULL', claimedAt: now, consentedAt: flow.privacyAcceptedAt, consentVersion: PRIVACY_POLICY_VERSION } });
       } else return { error: 'flow' as const };
-      const pair = await this.tokens.issueTokenPair(client, tx);
+      const pair = await this.tokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated' as const, sessionKind: 'client' as const, tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };
     }).catch(translateConflict);
     if ('error' in result) throw result.error === 'code' ? invalidCode() : result.error === 'flow' ? invalidFlow() : detailsUnavailable();

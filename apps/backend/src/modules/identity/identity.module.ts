@@ -25,6 +25,7 @@ import { RequestEmailEntryPhoneHandler } from './mobile-email-entry/request-emai
 import { ResendEmailEntryPhoneHandler } from './mobile-email-entry/resend-email-entry-phone.handler';
 import { VerifyEmailEntryPhoneHandler } from './mobile-email-entry/verify-email-entry-phone.handler';
 import { ReviewLoginHandler } from './review-login/review-login.handler';
+import { ReviewOtpHandler } from './review-otp/review-otp.handler';
 import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -104,7 +105,7 @@ const handlers = [
   ClientEmailStore, GetClientEmailStatusHandler, RequestClientEmailHandler, VerifyClientEmailHandler, DeclineClientEmailHandler,
   ClientPhoneStore, RequestClientPhoneHandler, VerifyClientPhoneHandler,
   MobileEmailFlowStore, MobileEmailIdentity, MobileEmailSendLimiter, MobileEmailDelivery, MobileEmailPhoneDispatch, RequestEmailEntryHandler, VerifyEmailEntryHandler, RequestEmailEntryPhoneHandler, ResendEmailEntryPhoneHandler, VerifyEmailEntryPhoneHandler,
-  ReviewLoginHandler,
+  ReviewLoginHandler, ReviewOtpHandler,
   LoginHandler, RefreshTokenHandler, LogoutHandler,
   GetCurrentUserHandler, CreateUserHandler, GetUserHandler, UpdateUserHandler, UpdateUserRoleHandler, ListUsersHandler,
   DeactivateUserHandler, DeleteUserHandler, AssignRoleHandler, RemoveRoleHandler,

@@ -63,7 +63,7 @@ export default function BookingSuccessScreen() {
 
   // Payment phase is derived by polling the backend (the source of truth). The
   // WebBrowser result alone is NOT trusted: see use-payment-status for the rules.
-  const { phase, checkAgain } = usePaymentStatus(invoiceId, webResult);
+  const { phase, checkAgain } = usePaymentStatus(invoiceId, webResult, bookingId);
   const checkPaymentAndBookingAgain = () => {
     checkAgain();
     if (bookingId) void bookingQuery.refetch();
@@ -117,9 +117,16 @@ export default function BookingSuccessScreen() {
         ? (t('booking.paymentReceived'))
         : (t('booking.paymentFollowUp')),
     },
+    cancelled: {
+      title: t('booking.appointmentNotConfirmed'),
+      subtitle: t('booking.appointmentNotConfirmedHint'),
+    },
     pending: phase === 'confirmed' ? {
       title: t('booking.confirmingAppointment'),
       subtitle: t('booking.checkingAppointmentStatus'),
+    } : !invoiceId ? {
+      title: t('booking.confirmingAppointment'),
+      subtitle: t('booking.appointmentCheckFailed'),
     } : {
       title: t('booking.paymentProcessing'),
       subtitle: t('booking.paymentUnconfirmed'),
@@ -131,7 +138,7 @@ export default function BookingSuccessScreen() {
   };
   const { title: headerTitle, subtitle: paymentStatusCopy } = headerCopy[effectivePhase];
   const phaseColor =
-    effectivePhase === 'failed'
+    effectivePhase === 'failed' || effectivePhase === 'cancelled'
       ? colors.accent.coral
       : effectivePhase === 'pending' || effectivePhase === 'polling'
         ? colors.accent.amber
@@ -173,7 +180,7 @@ export default function BookingSuccessScreen() {
     });
   }
 
-  const StatusIcon: LucideIcon = effectivePhase === 'failed' ? CircleAlert : effectivePhase === 'confirmed' ? Check : Clock;
+  const StatusIcon: LucideIcon = effectivePhase === 'failed' || effectivePhase === 'cancelled' ? CircleAlert : effectivePhase === 'confirmed' ? Check : Clock;
   const isConfirmed = effectivePhase === 'confirmed';
 
   return (

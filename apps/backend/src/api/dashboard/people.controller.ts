@@ -1009,7 +1009,7 @@ export class DashboardPeopleController {
       type: 'object',
       required: ['file'],
       properties: {
-        file: { type: 'string', format: 'binary', description: 'Avatar image (JPEG/PNG/WebP)' },
+        file: { type: 'string', format: 'binary', description: 'Avatar image (JPEG/PNG/WebP), up to 5 MiB' },
       },
     },
   })
@@ -1038,7 +1038,7 @@ export class DashboardPeopleController {
       type: 'object',
       required: ['file'],
       properties: {
-        file: { type: 'string', format: 'binary', description: 'Public profile image (JPEG/PNG/WebP)' },
+        file: { type: 'string', format: 'binary', description: 'Public profile image (JPEG/PNG/WebP), up to 5 MiB' },
       },
     },
   })

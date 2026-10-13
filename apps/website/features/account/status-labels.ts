@@ -72,3 +72,24 @@ export const INVOICE_STATUS_TOKEN: Record<string, string> = {
 export function isInvoicePayable(status: string | null | undefined): boolean {
   return status === 'DRAFT' || status === 'ISSUED' || status === 'PARTIALLY_PAID';
 }
+
+/** Booking statuses that never offer "pay now" (terminal, or awaiting a staff decision). */
+const NON_PAYABLE_BOOKING_STATUSES = ['CANCELLED', 'EXPIRED', 'NO_SHOW', 'COMPLETED', 'CANCEL_REQUESTED'];
+
+/** A booking is payable only with a payable invoice and a non-terminal status. */
+export function isBookingPayable(booking: {
+  status: string;
+  invoiceId?: string | null;
+  invoiceStatus?: string | null;
+}): boolean {
+  return (
+    !!booking.invoiceId &&
+    isInvoicePayable(booking.invoiceStatus) &&
+    !NON_PAYABLE_BOOKING_STATUSES.includes(booking.status)
+  );
+}
+
+/** Cancelled-like bookings carry no meaningful "unpaid" state, so the badge is hidden. */
+export function isBookingVoided(status: string): boolean {
+  return ['CANCELLED', 'EXPIRED', 'NO_SHOW', 'CANCEL_REQUESTED'].includes(status);
+}

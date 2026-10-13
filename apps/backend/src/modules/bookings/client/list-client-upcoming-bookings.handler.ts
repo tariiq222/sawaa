@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { mapBookingRow } from '../booking-row.mapper';
+import { buildClientBooking } from './client-booking.builder';
 import { PrismaService } from '../../../infrastructure/database';
 
 const UPCOMING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID];
@@ -13,7 +13,7 @@ export interface ListClientUpcomingBookingsCommand {
 }
 
 export interface ListClientUpcomingBookingsResult {
-  data: ReturnType<typeof mapBookingRow>[];
+  data: ReturnType<typeof buildClientBooking>[];
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
@@ -47,12 +47,12 @@ export class ListClientUpcomingBookingsHandler {
       employeeIds.length ? this.prisma.employee.findMany({ where: { id: { in: employeeIds } } }) : [],
       serviceIds.length ? this.prisma.service.findMany({ where: { id: { in: serviceIds } } }) : [],
     ]);
-    const relations = {
-      clientsById: new Map(),
-      employeesById: new Map(employees.map((employee) => [employee.id, employee])),
-      servicesById: new Map(services.map((service) => [service.id, service])),
-      paymentsByBookingId: new Map(),
-    };
-    return { data: data.map((booking) => mapBookingRow(booking, relations)), meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    const employeesById = new Map(employees.map(employee => [employee.id, employee]));
+    const servicesById = new Map(services.map(service => [service.id, service]));
+    return { data: data.map(booking => buildClientBooking(booking, {
+      employee: employeesById.get(booking.employeeId),
+      service: booking.serviceId ? servicesById.get(booking.serviceId) : undefined,
+      enumCase: 'lower',
+    })), meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 }

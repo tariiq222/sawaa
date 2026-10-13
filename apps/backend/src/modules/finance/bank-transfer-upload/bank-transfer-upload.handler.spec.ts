@@ -1,4 +1,4 @@
-import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { BankTransferUploadHandler, MAX_BANK_TRANSFER_RECEIPT_BYTES } from './bank-transfer-upload.handler';
 
@@ -129,6 +129,31 @@ describe('BankTransferUploadHandler', () => {
     expect(storage.uploadFile).not.toHaveBeenCalled();
   });
 
+  it('preserves staff receipt uploads without a clientId ownership filter', async () => {
+    const prisma = buildPrisma({ clientId: 'other-client' });
+    const storage = buildStorage();
+    const handler = buildHandler(prisma, storage);
+    await expect(handler.execute({ ...baseCmd, clientId: undefined,
+      fileBuffer: JPEG_BUFFER, mimetype: 'image/jpeg', filename: 'receipt.jpg',
+    })).resolves.toEqual(mockPayment);
+    expect(prisma.organizationSettings.findFirst).not.toHaveBeenCalled();
+    expect(prisma.payment.create).toHaveBeenCalled();
+  });
+
+  it.each([null, { ...mockInvoice, clientId: 'other-client' }])(
+    'returns 404 and deletes uploaded receipt when locked invoice disappears or changes owner: %p', async (invoice) => {
+      const prisma = buildPrisma();
+      prisma.invoice.findFirst.mockResolvedValueOnce(mockInvoice).mockResolvedValueOnce(invoice);
+      const storage = buildStorage();
+      const handler = buildHandler(prisma, storage);
+      await expect(handler.execute({ ...baseCmd,
+        fileBuffer: JPEG_BUFFER, mimetype: 'image/jpeg', filename: 'receipt.jpg',
+      })).rejects.toThrow(NotFoundException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(storage.deleteFile).toHaveBeenCalled();
+    },
+  );
+
   describe('valid uploads', () => {
     it('uploads JPEG receipt and creates PENDING_VERIFICATION payment', async () => {
       const prisma = buildPrisma();
@@ -232,10 +257,7 @@ describe('BankTransferUploadHandler', () => {
   });
 
   describe('ownership and amount validation', () => {
-    it('throws NotFoundException when invoice belongs to another client', async () => {
-      // commit 2c3fb949: handler now scopes invoice lookup by organizationId only.
-      // A foreign-client invoice that shares the same org returns null → NotFoundException.
-      // To simulate: return null from findFirst (invoice not visible under tenant scope).
+    it('throws NotFoundException when invoice is missing before upload', async () => {
       const prisma = buildPrisma();
       prisma.invoice.findFirst = jest.fn().mockResolvedValue(null);
       const handler = buildHandler(prisma, buildStorage());
@@ -445,9 +467,10 @@ describe('BankTransferUploadHandler', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws ForbiddenException when client tries to pay another client\'s invoice (P0-5)', async () => {
+    it('throws NotFoundException when client tries to pay another client\'s invoice (P0-5)', async () => {
       const prisma = buildPrisma({ clientId: 'other-client' });
-      const handler = buildHandler(prisma, buildStorage());
+      const storage = buildStorage();
+      const handler = buildHandler(prisma, storage);
       await expect(
         handler.execute({
           ...baseCmd,
@@ -456,7 +479,8 @@ describe('BankTransferUploadHandler', () => {
           mimetype: 'image/jpeg',
           filename: 'receipt.jpg',
         }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toMatchObject({ status: 404, response: { message: 'Invoice inv-1 not found' } });
+      expect(storage.uploadFile).not.toHaveBeenCalled();
       expect(prisma.payment.create).not.toHaveBeenCalled();
     });
   });

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { InitClientPaymentHandler } from './init-client-payment.handler';
 
@@ -207,11 +207,13 @@ describe('InitClientPaymentHandler', () => {
     });
   });
 
-  it('throws ForbiddenException when the invoice belongs to another client', async () => {
-    const { handler, prisma } = buildHandler();
+  it('throws NotFoundException when the invoice belongs to another client', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
     prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, clientId: 'foreign-client' });
 
-    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ForbiddenException);
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toMatchObject({ status: 404, response: { message: `Invoice ${invoiceId} not found` } });
+    expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+    expect(prisma.organizationSettings.findFirst).not.toHaveBeenCalled();
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 
@@ -253,6 +255,16 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.create).not.toHaveBeenCalled();
     expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
   });
+
+  it.each([null, { ...mockInvoice, clientId: 'foreign-client' }])(
+    'returns 404 when locked invoice is missing or changes ownership: %p', async (lockedInvoice) => {
+      const { handler, prisma, moyasar } = buildHandler();
+      prisma.invoice.findFirst.mockResolvedValueOnce(mockInvoice).mockResolvedValueOnce(lockedInvoice);
+      await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(NotFoundException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(moyasar.createCheckoutInvoice).not.toHaveBeenCalled();
+    },
+  );
 
   it('throws NotFoundException when the invoice is missing', async () => {
     const { handler, prisma } = buildHandler();

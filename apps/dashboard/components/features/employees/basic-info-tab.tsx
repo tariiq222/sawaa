@@ -14,7 +14,7 @@ import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
-import { AvatarUpload } from "@sawaa/ui"
+import { EmployeeImageUpload } from "./employee-image-upload"
 import {
   Select,
   SelectTrigger,
@@ -70,7 +70,7 @@ export function BasicInfoTab({ form, showEmail = false, emailRequired = false, e
       {/* ── Column 1 (1/3): Personal Info ── */}
       <FormSection className="md:row-span-2 lg:row-span-2">
         {/* Avatar + switch in same row */}
-        <AvatarUpload
+        <EmployeeImageUpload
           value={form.watch("avatarUrl") || undefined}
           uploadAriaLabel={t("employees.avatar.change")}
           addAriaLabel={t("employees.avatar.add")}
@@ -97,7 +97,7 @@ export function BasicInfoTab({ form, showEmail = false, emailRequired = false, e
               </div>
             )}
           </div>
-        </AvatarUpload>
+        </EmployeeImageUpload>
 
         <div className="space-y-4">
           {/* Title */}

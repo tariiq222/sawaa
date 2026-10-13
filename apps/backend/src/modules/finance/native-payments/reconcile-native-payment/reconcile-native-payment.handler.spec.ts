@@ -50,8 +50,36 @@ describe("native reconciliation", () => {
     });
     await expect(
       handler.execute({ clientId: "client", paymentId: "payment" }),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 404, response: { message: "Payment not found" } });
     expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+  });
+  it("returns 404 for a missing payment before provider access", async () => {
+    const { handler, prisma, moyasar } = setup();
+    prisma.payment.findUnique.mockResolvedValue(null);
+    await expect(handler.execute({ clientId: "client", paymentId: "missing" })).rejects.toMatchObject({ status: 404, response: { message: "Payment not found" } });
+    expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+  });
+  it("returns 404 for a missing invoice before provider access", async () => {
+    const { handler, prisma, moyasar } = setup();
+    prisma.invoice.findFirst.mockResolvedValue(null);
+    await expect(handler.execute({ clientId: "client", paymentId: "payment" })).rejects.toMatchObject({ status: 404, response: { message: "Payment not found" } });
+    expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+  });
+  it.each([null, { id: "invoice", clientId: "other" }])(
+    "returns 404 when invoice disappears or changes owner during provider lookup: %p", async (invoice) => {
+      const { handler, prisma, moyasar, settlement } = setup();
+      prisma.invoice.findFirst.mockResolvedValueOnce({ id: "invoice", clientId: "client" }).mockResolvedValueOnce(invoice);
+      moyasar.getPaymentStatus.mockRejectedValue(new NotFoundException());
+      await expect(handler.execute({ clientId: "client", paymentId: "payment" })).rejects.toMatchObject({ status: 404, response: { message: "Payment not found" } });
+      expect(settlement.execute).not.toHaveBeenCalled();
+    },
+  );
+  it("propagates provider 403 rather than concealing it as resource 404", async () => {
+    const { handler, moyasar, settlement } = setup();
+    const providerFailure = new ForbiddenException("provider rejected credentials");
+    moyasar.getPaymentStatus.mockRejectedValue(providerFailure);
+    await expect(handler.execute({ clientId: "client", paymentId: "payment" })).rejects.toBe(providerFailure);
+    expect(settlement.execute).not.toHaveBeenCalled();
   });
   it("keeps the reservation on provider 404", async () => {
     const { handler, moyasar, settlement } = setup();
@@ -179,7 +207,7 @@ describe("native reconciliation", () => {
       prisma.invoice.findFirst.mockResolvedValue({ id: "invoice", clientId: "other", status: "ISSUED" });
       throw new NotFoundException();
     });
-    await expect(handler.execute({ clientId: "client", paymentId: "payment" })).rejects.toThrow(ForbiddenException);
+    await expect(handler.execute({ clientId: "client", paymentId: "payment" })).rejects.toThrow(NotFoundException);
   });
   it.each([
     { gatewayRef: "different" }, { invoiceId: "other" },

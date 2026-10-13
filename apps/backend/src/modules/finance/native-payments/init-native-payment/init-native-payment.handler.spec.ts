@@ -70,6 +70,23 @@ describe("native payment reservation", () => {
       },
     };
   };
+  it.each([null, { id: "invoice", clientId: "other" }])(
+    "returns 404 for a missing or foreign invoice before configuration: %p", async (invoice) => {
+      const { handler, prisma, settings } = setup();
+      prisma.invoice.findFirst.mockResolvedValue(invoice);
+      await expect(handler.execute({ clientId: "client", invoiceId: "invoice" })).rejects.toMatchObject({ status: 404, response: { message: "Invoice not found" } });
+      expect(settings.getPaymentConfiguration).not.toHaveBeenCalled();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    },
+  );
+  it.each([null, { id: "invoice", clientId: "other" }])(
+    "returns 404 when locked invoice is missing or changes ownership: %p", async (lockedInvoice) => {
+      const { handler, prisma, invoice } = setup();
+      prisma.invoice.findFirst.mockResolvedValueOnce(invoice).mockResolvedValueOnce(lockedInvoice);
+      await expect(handler.execute({ clientId: "client", invoiceId: "invoice" })).rejects.toMatchObject({ status: 404, response: { message: "Invoice not found" } });
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    },
+  );
   it("reserves amount and provider UUID atomically without a hosted URL", async () => {
     const { handler, prisma } = setup();
     const result = await handler.execute({

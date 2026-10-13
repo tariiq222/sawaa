@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ClientRescheduleBookingHandler } from './client-reschedule-booking.handler';
 import { stableEventId } from '../../../common/events';
@@ -36,6 +36,19 @@ const buildZoomService = () => ({
 });
 
 describe('ClientRescheduleBookingHandler', () => {
+  it('returns 404 for a missing booking before mutation', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue(null);
+    const handler = new ClientRescheduleBookingHandler(
+      prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never,
+      buildZoomService() as never, buildAvailabilityHandler() as never,
+    );
+    await expect(handler.execute({ bookingId: 'missing', clientId: 'client-1',
+      newScheduledAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
+    })).rejects.toThrow(NotFoundException);
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+  });
+
   it('reschedules DEPOSIT_PAID and preserves its balance-due status', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, status: BookingStatus.DEPOSIT_PAID });
@@ -97,7 +110,7 @@ describe('ClientRescheduleBookingHandler', () => {
     expect(result.booking).toBeDefined();
   });
 
-  it('throws ForbiddenException when client does not own the booking', async () => {
+  it('throws NotFoundException when client does not own the booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
     const handler = new ClientRescheduleBookingHandler(
@@ -114,7 +127,9 @@ describe('ClientRescheduleBookingHandler', () => {
         clientId: 'other-client',
         newScheduledAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
       }),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 404, response: { message: 'Booking book-1 not found' } });
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
   it('throws BadRequestException when booking status is not reschedulable', async () => {
