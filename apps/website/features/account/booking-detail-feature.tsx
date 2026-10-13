@@ -28,7 +28,7 @@ import { riyadhWallTimeToUtcIso } from '@/features/booking/booking-timezone';
 import {
   paymentStatusKey,
   PAYMENT_STATUS_TOKEN,
-  isInvoicePayable,
+  isBookingPayable,
 } from './status-labels';
 import {
   Calendar,
@@ -146,8 +146,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
 
   const payPillKey = paymentStatusKey(booking.paymentStatus);
   const payPillColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
-  const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus);
-  const canPayOnline = paymentMethods?.moyasarEnabled === true;
+  const payable = isBookingPayable({ ...booking, status: displayStatus });
+  const canPayOnline = payable && paymentMethods?.moyasarEnabled === true;
   const showPayUnavailable = payable && !canPayOnline && !paymentMethodsLoading;
   const canJoin =
     booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && ['CONFIRMED', 'DEPOSIT_PAID'].includes(displayStatus);
@@ -329,7 +329,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
             // Refresh cached bookings (list + detail) so the new status persists.
             void queryClient.invalidateQueries({ queryKey: ['client', 'bookings'] });
           }}
-          cancelApi={(reason, quote) => cancelMyBookingApi(bookingId, reason, quote)}
+          cancelApi={(notes, quote) => cancelMyBookingApi(bookingId, notes, quote)}
         />
       )}
 
@@ -431,14 +431,14 @@ function CancelModal({
   onClose: () => void;
   bookingId: string;
   onSuccess: (status: 'CANCELLED' | 'CANCEL_REQUESTED', refund?: CancellationRefund) => void;
-  cancelApi: (reason?: string, quote?: CancellationQuoteInput) => Promise<{ status: string; requiresApproval: boolean; refund?: CancellationRefund }>;
+  cancelApi: (notes?: string, quote?: CancellationQuoteInput) => Promise<{ status: string; requiresApproval: boolean; refund?: CancellationRefund }>;
 }) {
   const tt = useT();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const actionId = useRef<string | undefined>(undefined);
   const quote = useQuery({ queryKey: ['client', 'cancellation-preview', bookingId], queryFn: () => getMyCancellationPreviewApi(bookingId), retry: false, staleTime: 0 });
-  const mutation = useMutation({ mutationFn: (input: { reason?: string; quote?: CancellationQuoteInput }) => cancelApi(input.reason, input.quote), retry: false });
+  const mutation = useMutation({ mutationFn: (input: { notes?: string; quote?: CancellationQuoteInput }) => cancelApi(input.notes, input.quote), retry: false });
   const isLoading = mutation.isPending;
   const eligible = !!quote.data && quote.data.canCancel;
 
@@ -447,7 +447,7 @@ function CancelModal({
     setError(null);
     try {
       if (!actionId.current) actionId.current = crypto.randomUUID();
-      const result = await mutation.mutateAsync({ reason: reason || undefined, quote: { acceptedRefundTerms: true, quoteToken: quote.data.quoteToken, sourceActionId: actionId.current } });
+      const result = await mutation.mutateAsync({ notes: reason || undefined, quote: { acceptedRefundTerms: true, quoteToken: quote.data.quoteToken, sourceActionId: actionId.current } });
       onSuccess(result.status === 'CANCELLED' ? 'CANCELLED' : 'CANCEL_REQUESTED', result.refund);
     } catch (err) {
       if ((err as { status?: number })?.status === 409) {

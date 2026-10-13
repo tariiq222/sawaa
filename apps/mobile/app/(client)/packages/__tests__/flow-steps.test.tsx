@@ -13,7 +13,7 @@ let mockBranches: { id: string; nameAr: string; nameEn: string; city: null; isMa
 let mockVatRate = 0;
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, replace: mockReplace, back: jest.fn(), canGoBack: () => true }),
+  useFocusEffect: (callback: () => void | (() => void)) => require('react').useEffect(callback, [callback]), useRouter: () => ({ push: mockPush, replace: mockReplace, back: jest.fn(), canGoBack: () => true }),
   useLocalSearchParams: () => mockParams,
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));

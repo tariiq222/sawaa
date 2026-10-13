@@ -19,13 +19,18 @@ const mockClearPending = jest.fn(async () => undefined);
 const mockClearAttemptKey = jest.fn(async (..._args: unknown[]) => undefined);
 const mockRunCheckout = jest.fn();
 const mockMutateAsync = jest.fn();
+let mockFocusCleanups: (() => void)[] = [];
 
 jest.mock('expo-router', () => {
   const ReactActual = jest.requireActual('react');
   return {
     useRouter: () => ({ replace: mockReplace }),
     useLocalSearchParams: () => mockParams,
-    useFocusEffect: (callback: () => void) => ReactActual.useEffect(callback, [callback]),
+    useFocusEffect: (callback: () => void | (() => void)) => ReactActual.useEffect(() => {
+      const cleanup = callback();
+      if (typeof cleanup === 'function') mockFocusCleanups.push(cleanup);
+      return cleanup;
+    }, [callback]),
   };
 });
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
@@ -58,6 +63,7 @@ function lastPollOption() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFocusCleanups = [];
   mockParams = { ...target };
   mockUserId = 'client-1';
   mockPurchase.data = undefined;
@@ -199,4 +205,19 @@ it('does not offer retry for a target that disagrees with purchase identity', ()
   mockPurchase.data = { id: 'purchase-1', packageId: 'other-package', branchId: 'branch-1', packageFamilyId: 'family-1', status: 'PENDING' };
   const screen = render(<PackagePaymentReturnScreen />);
   expect(screen.queryByText('packages.tryPaymentAgain')).toBeNull();
+});
+
+it.each(['blur', 'unmount'])('does not navigate when payment retry resolves after %s', async (departure) => {
+  mockParams = { ...target, status: 'failed' };
+  mockPurchase.data = { id: 'purchase-1', packageId: 'package-1', branchId: 'branch-1', packageFamilyId: 'family-1', status: 'PENDING' };
+  let finish!: (value: { purchaseId: string; invoiceId: string }) => void;
+  mockRunCheckout.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  const screen = render(<PackagePaymentReturnScreen />);
+
+  fireEvent.press(screen.getByText('packages.tryPaymentAgain'));
+  if (departure === 'unmount') screen.unmount();
+  else act(() => { mockFocusCleanups.forEach((cleanup) => cleanup()); });
+  await act(async () => { finish({ purchaseId: 'purchase-1', invoiceId: 'invoice-1' }); });
+
+  expect(mockReplace).not.toHaveBeenCalled();
 });

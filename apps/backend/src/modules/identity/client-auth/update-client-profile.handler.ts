@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateClientProfileDto } from './update-client-profile.dto';
-import type { ClientProfile } from './get-me.handler';
+import { GetMeHandler, type ClientProfile } from './get-me.handler';
 import { normalizePhone } from '../shared/identifier-detector';
 
 /**
@@ -18,7 +18,10 @@ function splitName(full: string): { firstName: string; lastName: string | null }
 
 @Injectable()
 export class UpdateClientProfileHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly getMe: GetMeHandler,
+  ) {}
 
   async execute(clientId: string, dto: UpdateClientProfileDto): Promise<ClientProfile> {
     if (
@@ -94,26 +97,7 @@ export class UpdateClientProfileHandler {
     if (dto.pushEnabled !== undefined) data.pushEnabled = dto.pushEnabled;
 
     try {
-      const updated = await this.prisma.client.update({
-        where: { id: clientId },
-        data,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          emailVerified: true,
-          phoneVerified: true,
-          avatarUrl: true,
-          preferredLocale: true,
-          pushEnabled: true,
-          accountType: true,
-          claimedAt: true,
-          createdAt: true,
-        },
-      });
-
-      return updated as ClientProfile;
+      await this.prisma.client.update({ where: { id: clientId }, data, select: { id: true } });
     } catch (error) {
       // Preserve the email TOCTOU conflict behavior; other unique conflicts
       // must not reveal whether a phone belongs to another account.
@@ -126,5 +110,8 @@ export class UpdateClientProfileHandler {
       }
       throw error;
     }
+
+    // Both PATCH routes answer with the same full profile read model.
+    return this.getMe.execute(clientId);
   }
 }

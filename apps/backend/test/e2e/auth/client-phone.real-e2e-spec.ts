@@ -1,5 +1,6 @@
 /** Real PostgreSQL + Redis; SMS delivery is captured in memory. */
 import { INestApplication } from '@nestjs/common';
+import type { Request, Response, NextFunction } from 'express';
 import { Test } from '@nestjs/testing';
 import { createHash, randomInt } from 'node:crypto';
 import request from 'supertest';
@@ -13,6 +14,8 @@ import { SmsChannelAdapter } from '../../../src/modules/comms/notification-chann
 import { ClientTokenService } from '../../../src/modules/identity/shared/client-token.service';
 import { configureHttpContract } from '../../../src/common/bootstrap/configure-http-contract';
 import { getRealE2eDatabaseUrl } from '../../helpers/create-real-e2e-app';
+import { csrfMiddleware } from '../../../src/common/middleware/csrf.middleware';
+import { shouldBypassCsrf } from '../../../src/common/middleware/csrf-policy';
 
 const describeReal = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 const root = '/api/v1/mobile/client/profile/phone';
@@ -43,6 +46,10 @@ describeReal('Mobile client phone change — code to the new number', () => {
       .compile();
     app = module.createNestApplication();
     app.use(cookieParser());
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (shouldBypassCsrf({ path: req.path, hasClientSessionCookie: Boolean(req.cookies?.client_access_token) })) return next();
+      return csrfMiddleware(req, res, next);
+    });
     configureHttpContract(app, 'production');
     await app.listen(0, '127.0.0.1');
     prisma = app.get(PrismaService);
@@ -68,11 +75,11 @@ describeReal('Mobile client phone change — code to the new number', () => {
     }
   });
 
-  async function signedInClient() {
+  async function signedInClient(channel: 'web' | 'mobile' = 'mobile') {
     const phone = number();
     const client = await prisma.client.create({ data: { name: 'Synthetic phone change', phone, phoneVerified: new Date(), accountType: 'FULL' } });
     clients.add(client.id);
-    const pair = await clientTokens.issueTokenPair(client);
+    const pair = await clientTokens.issueTokenPair(client, { channel });
     return { client, phone, accessToken: pair.accessToken, refreshToken: pair.rawRefresh };
   }
   async function phoneEntry(phone: string) {
@@ -140,5 +147,32 @@ describeReal('Mobile client phone change — code to the new number', () => {
 
   it('blocks unauthenticated access', async () => {
     await api().post(`${root}/request`).send({ phone: number() }).expect(401);
+  });
+
+  it.each(['/api/v1/client/profile/phone', root])('rotates web cookies through %s without returning credentials', async path => {
+    const f = await signedInClient('web');
+    const next = number();
+    const csrf = 'a'.repeat(64);
+    const cookies = [`client_access_token=${f.accessToken}`, `ck_csrf=${csrf}`];
+    const requested = await api().post(`${path}/request`).set('Cookie', cookies).set('x-csrf-token', csrf).send({ phone: next }).expect(200);
+    await api().post(`${path}/verify`).set('Cookie', cookies).send({ challengeId: requested.body.challengeId, code: codes.get(next) }).expect(403);
+    expect((await prisma.client.findUniqueOrThrow({ where: { id: f.client.id } })).phone).toBe(f.phone);
+    const verified = await api().post(`${path}/verify`).set('Cookie', cookies).set('x-csrf-token', csrf)
+      .send({ challengeId: requested.body.challengeId, code: codes.get(next) }).expect(200);
+    expect(verified.body).toEqual({ phone: next });
+    const rotated = (verified.headers['set-cookie'] as unknown as string[]).filter(c => c.startsWith('client_'));
+    expect(rotated).toHaveLength(2);
+    for (const cookie of rotated) {
+      expect(cookie).toMatch(/; HttpOnly/i);
+      expect(cookie).toMatch(/; Path=\//i);
+      expect(cookie).toMatch(/; SameSite=Lax/i);
+      expect(cookie).toMatch(/; Max-Age=[1-9]\d*/i);
+    }
+    await api().get('/api/v1/client/profile').set('Cookie', cookies).expect(401);
+    await api().get('/api/v1/client/profile').set('Cookie', rotated.map(c => c.split(';')[0])).expect(200);
+    await api().post('/api/v1/mobile/auth/refresh').send({ refreshToken: f.refreshToken }).expect(401);
+    const access = rotated.find(c => c.startsWith('client_access_token='))!.split(';')[0].slice('client_access_token='.length);
+    const claim = JSON.parse(Buffer.from(access.split('.')[1], 'base64url').toString()) as { channel: string };
+    expect(claim.channel).toBe('web');
   });
 });

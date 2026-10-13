@@ -373,6 +373,7 @@ describe('VerifyMobileOtpHandler', () => {
 
     expect(clientTokensMock.issueTokenPair).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'c1', tokenVersion: 2 }),
+      { channel: 'mobile' },
       prismaMock,
     );
     expect(tokensMock.issueTokenPair).not.toHaveBeenCalled();

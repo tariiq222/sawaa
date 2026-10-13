@@ -2093,6 +2093,492 @@
         ],
         "type": "string"
       },
+      "ClientBookingBranchDto": {
+        "properties": {
+          "id": {
+            "description": "Branch id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "ClientBookingDto": {
+        "properties": {
+          "bookingNumber": {
+            "description": "Human-readable booking number (mapper origin)",
+            "nullable": true,
+            "type": "number"
+          },
+          "bookingType": {
+            "description": "Booking type, lower-case (individual, walk_in, group)",
+            "type": "string"
+          },
+          "branch": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingBranchDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "branchId": {
+            "description": "Branch id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "branchName": {
+            "description": "Branch name (English)",
+            "type": "string"
+          },
+          "branchNameAr": {
+            "description": "Branch name (Arabic)",
+            "nullable": true,
+            "type": "string"
+          },
+          "branchNameSnapshot": {
+            "description": "@deprecated Branch name snapshot; prefer branchName/branchNameAr.",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationReason": {
+            "description": "Cancellation reason code; null for late-entry rows",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationRefund": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PersistedCancellationRefundDto"
+              }
+            ],
+            "description": "Persisted refund outcome; present on detail only, when status is CANCELLED"
+          },
+          "cancelledAt": {
+            "description": "Cancelled at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "categoryNameSnapshot": {
+            "description": "Category name snapshot",
+            "nullable": true,
+            "type": "string"
+          },
+          "checkedInAt": {
+            "description": "Checked-in at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "completedAt": {
+            "description": "Completed at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmedAt": {
+            "description": "Confirmed at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Created at (ISO 8601)",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "date": {
+            "description": "Start date, Asia/Riyadh wall clock (YYYY-MM-DD)",
+            "nullable": true,
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Session delivery channel. IN_PERSON/ONLINE on the web route, lower-case on the mobile route.",
+            "example": "ONLINE",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "type": "number"
+          },
+          "durationMinutesSnapshot": {
+            "description": "@deprecated Alias of durationMins (mapper origin).",
+            "nullable": true,
+            "type": "number"
+          },
+          "employee": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingEmployeeDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "employeeId": {
+            "description": "Employee id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeName": {
+            "description": "Employee name (English)",
+            "type": "string"
+          },
+          "employeeNameAr": {
+            "description": "Employee name (Arabic)",
+            "nullable": true,
+            "type": "string"
+          },
+          "endsAt": {
+            "description": "End (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "endTime": {
+            "description": "End time, Asia/Riyadh wall clock (HH:mm)",
+            "nullable": true,
+            "type": "string"
+          },
+          "hasRated": {
+            "description": "Whether this client already rated the booking",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Booking id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoice": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingInvoiceDto"
+              }
+            ],
+            "description": "Invoice summary (mapper origin)",
+            "nullable": true,
+            "type": "object"
+          },
+          "invoiceId": {
+            "description": "Invoice id",
+            "nullable": true,
+            "type": "string"
+          },
+          "invoiceStatus": {
+            "description": "Raw invoice status (Prisma enum)",
+            "nullable": true,
+            "type": "string"
+          },
+          "noShowAt": {
+            "description": "No-show at (ISO 8601)",
+            "nullable": true,
+            "type": "string"
+          },
+          "payAtClinic": {
+            "description": "Client pays at the center",
+            "type": "boolean"
+          },
+          "payment": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingPaymentDto"
+              }
+            ],
+            "description": "Latest payment summary (mapper origin)",
+            "nullable": true,
+            "type": "object"
+          },
+          "paymentStatus": {
+            "description": "Raw latest payment status (Prisma enum); null when no payment",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Booked price serialised as a decimal string; unit per `currency`",
+            "example": "150",
+            "type": "string"
+          },
+          "priceSnapshot": {
+            "description": "@deprecated Alias of price as a number (mapper origin).",
+            "nullable": true,
+            "type": "number"
+          },
+          "scheduledAt": {
+            "description": "Start (ISO 8601)",
+            "type": "string"
+          },
+          "service": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingServiceDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "serviceId": {
+            "description": "Service id",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceName": {
+            "description": "Service name (English, falls back to Arabic then snapshot)",
+            "type": "string"
+          },
+          "serviceNameAr": {
+            "description": "Service name (Arabic)",
+            "nullable": true,
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Start time, Asia/Riyadh wall clock (HH:mm)",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Booking status. Upper-case Prisma enum on the web route, lower-case on the mobile route (legacy wire format).",
+            "example": "CONFIRMED",
+            "type": "string"
+          },
+          "type": {
+            "description": "@deprecated Legacy UI alias of bookingType (mapper origin; individual maps to in_person).",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Updated at (ISO 8601, mapper origin)",
+            "type": "string"
+          },
+          "zoomHostUrl": {
+            "description": "Always null for clients (host privilege URL). Key kept for the alias period.",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomJoinUrl": {
+            "description": "Zoom join URL (attendee link)",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingStatus": {
+            "description": "Zoom meeting status",
+            "enum": [
+              "PENDING",
+              "CREATED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomStartUrl": {
+            "description": "Always null for clients (host privilege URL). Key kept for shipped mobile builds.",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "scheduledAt",
+          "durationMins",
+          "price",
+          "currency",
+          "payAtClinic",
+          "deliveryType",
+          "bookingType",
+          "type",
+          "serviceName",
+          "employeeId",
+          "employeeName",
+          "branchId",
+          "branchName",
+          "hasRated"
+        ],
+        "type": "object"
+      },
+      "ClientBookingEmployeeDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Avatar URL",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialty": {
+            "description": "Specialty (English)",
+            "example": "",
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Specialty (Arabic)",
+            "example": "",
+            "type": "string"
+          },
+          "user": {
+            "description": "Display name parts (mapper origin, kept for the alias period)",
+            "example": {
+              "firstName": "Sara",
+              "lastName": ""
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "specialty",
+          "specialtyAr"
+        ],
+        "type": "object"
+      },
+      "ClientBookingInvoiceDto": {
+        "properties": {
+          "id": {
+            "description": "Invoice id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "outstanding": {
+            "description": "Total minus completed payments in halalas",
+            "type": "number"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum)",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Subtotal in halalas",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total after discount in halalas",
+            "type": "number"
+          },
+          "vatRate": {
+            "description": "Fractional VAT rate (0 when the center is not VAT-registered)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "subtotal",
+          "vatRate",
+          "total",
+          "outstanding",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ClientBookingPaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Amount in halalas",
+            "type": "number"
+          },
+          "id": {
+            "description": "Payment id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "description": "UI payment method",
+            "enum": [
+              "moyasar",
+              "bank_transfer",
+              "cash",
+              "mada",
+              "tabby"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "description": "UI payment status",
+            "enum": [
+              "pending",
+              "awaiting",
+              "paid",
+              "failed",
+              "refunded",
+              "rejected"
+            ],
+            "type": "string"
+          },
+          "totalAmount": {
+            "description": "Amount in halalas (alias of amount)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "totalAmount",
+          "method",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ClientBookingServiceDto": {
+        "properties": {
+          "duration": {
+            "description": "Service duration in minutes",
+            "type": "number"
+          },
+          "id": {
+            "description": "Service id",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name (empty string when absent)",
+            "type": "string"
+          },
+          "price": {
+            "description": "Service list price (not the booked price); unit per `currency`",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "price",
+          "duration"
+        ],
+        "type": "object"
+      },
       "ClientBookingSummaryDto": {
         "properties": {
           "date": {
@@ -2148,6 +2634,45 @@
           "reason": {
             "description": "Reason for cancellation",
             "type": "string"
+          },
+          "sourceActionId": {
+            "description": "Stable UUID for retrying the same cancellation",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "acceptedRefundTerms",
+          "quoteToken"
+        ],
+        "type": "object"
+      },
+      "ClientCancelBookingRequestDto": {
+        "properties": {
+          "acceptedRefundTerms": {
+            "description": "Explicit acceptance of the displayed current cancellation and refund terms",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
+          "notes": {
+            "description": "Free-text notes about the cancellation (max 2000 chars)",
+            "type": "string"
+          },
+          "quoteToken": {
+            "description": "Current cancellation preview fingerprint; refresh and reconfirm after conflict",
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "reason": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CancellationReason"
+              }
+            ],
+            "default": "CLIENT_REQUESTED",
+            "description": "Structured cancellation reason; defaults to CLIENT_REQUESTED"
           },
           "sourceActionId": {
             "description": "Stable UUID for retrying the same cancellation",
@@ -2381,6 +2906,69 @@
         ],
         "type": "object"
       },
+      "ClientCreateBookingDto": {
+        "properties": {
+          "bookingType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingType"
+              }
+            ],
+            "description": "Booking type (legacy; prefer deliveryType)"
+          },
+          "branchId": {
+            "description": "Branch ID; resolved to the main branch when omitted",
+            "format": "uuid",
+            "type": "string"
+          },
+          "couponCode": {
+            "description": "Discount coupon code",
+            "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Session delivery channel. Omitted defaults to IN_PERSON."
+          },
+          "durationOptionId": {
+            "description": "Specific duration option to resolve price and duration",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee performing the service",
+            "format": "uuid",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Free-text notes for the booking",
+            "type": "string"
+          },
+          "payAtClinic": {
+            "description": "Client chose to pay at the center. The booking is confirmed without an online invoice and the amount is collected at reception. Rejected when pay-at-center is disabled.",
+            "type": "boolean"
+          },
+          "scheduledAt": {
+            "description": "ISO 8601 start datetime",
+            "example": "2026-05-01T09:00:00.000Z",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service to be performed",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "serviceId",
+          "employeeId",
+          "scheduledAt"
+        ],
+        "type": "object"
+      },
       "ClientEmailChallengeDto": {
         "properties": {
           "challengeId": {
@@ -2603,8 +3191,175 @@
         ],
         "type": "object"
       },
+      "ClientProfileDto": {
+        "properties": {
+          "accountType": {
+            "description": "Account type",
+            "enum": [
+              "full",
+              "walk_in"
+            ],
+            "example": "full",
+            "type": "string"
+          },
+          "avatarUrl": {
+            "description": "Avatar image URL",
+            "example": "https://cdn.example.com/avatars/sara.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "claimedAt": {
+            "description": "Account claim timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Date of birth (ISO 8601)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address. Null unless the email has been verified.",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name",
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "description": "Gender (lowercase)",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Client UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name",
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Mobile phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "phoneVerified": {
+            "description": "Phone verification timestamp",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "preferredLocale": {
+            "description": "Preferred app locale",
+            "example": "ar",
+            "nullable": true,
+            "type": "string"
+          },
+          "pushEnabled": {
+            "description": "Whether push notifications are enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "unverifiedEmail": {
+            "description": "Stored email that has not been verified yet (set when emailVerified is null), so the client can see what they entered. Null once the email is verified or when none is stored.",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "firstName",
+          "lastName",
+          "email",
+          "unverifiedEmail",
+          "phone",
+          "emailVerified",
+          "phoneVerified",
+          "avatarUrl",
+          "gender",
+          "dateOfBirth",
+          "preferredLocale",
+          "pushEnabled",
+          "accountType",
+          "claimedAt",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ClientRateBookingDto": {
+        "properties": {
+          "comment": {
+            "description": "Optional comment (max 2000 chars)",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Make this rating publicly visible",
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Rating score from 1 to 5",
+            "example": 5,
+            "type": "number"
+          }
+        },
+        "required": [
+          "score"
+        ],
+        "type": "object"
+      },
       "ClientRequestHandoffDto": {
         "properties": {},
+        "type": "object"
+      },
+      "ClientRequestRefundDto": {
+        "properties": {
+          "invoiceId": {
+            "description": "ID of the invoice to request a refund for",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Optional reason for the refund request",
+            "example": "Service was not provided",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
         "type": "object"
       },
       "ClientRescheduleBookingDto": {
@@ -8253,21 +9008,20 @@
           "avatarUrl": {
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
-            "nullable": true,
             "type": "string"
           },
           "email": {
-            "description": "Email address",
-            "example": "user@example.com",
+            "description": "Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).",
+            "example": "client@example.com",
             "type": "string"
           },
           "name": {
-            "description": "Full display name",
-            "example": "Sara Al-Harbi",
+            "description": "Full name",
+            "example": "أحمد محمد العتيبي",
             "type": "string"
           },
           "phone": {
-            "description": "Saudi mobile number",
+            "description": "Saudi mobile number (any common format; normalized to E.164)",
             "example": "+966501234567",
             "type": "string"
           },
@@ -15220,6 +15974,4674 @@
         "summary": "Reset staff (User) password using a token from the reset email",
         "tags": [
           "Public / Auth"
+        ]
+      }
+    },
+    "/api/v1/client/bookings": {
+      "get": {
+        "operationId": "ClientBookingsController_listMyBookings_v1",
+        "parameters": [
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Records per page",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Tab filter. `upcoming` and `past` are by appointment date; `cancelled` is by status (CANCELLED / CANCEL_REQUESTED).",
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "enum": [
+                "upcoming",
+                "past",
+                "cancelled"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by booking status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BookingStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/ClientBookingDto"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated list of the authenticated client bookings"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List my bookings",
+        "tags": [
+          "Client / Bookings"
+        ]
+      },
+      "post": {
+        "operationId": "ClientBookingsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientCreateBookingDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "bookingNumber": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "invoiceId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "paymentStatus": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Booking created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a booking",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}": {
+      "get": {
+        "operationId": "ClientBookingsController_getBooking_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookingDto"
+                }
+              }
+            },
+            "description": "Booking detail"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a booking by ID",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}/cancel": {
+      "patch": {
+        "operationId": "ClientBookingsController_cancel_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientCancelBookingRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    },
+                    "refund": {
+                      "$ref": "#/components/schemas/CancellationRefundSummaryDto"
+                    },
+                    "requiresApproval": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "enum": [
+                        "CANCELLED",
+                        "CANCEL_REQUESTED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "booking",
+                    "requiresApproval"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "409": {
+            "description": "Cancellation terms changed; refresh the preview"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a booking",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}/cancellation-preview": {
+      "get": {
+        "operationId": "ClientBookingsController_preview_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCancellationPreviewDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview client cancellation eligibility and refund terms",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}/invoice": {
+      "get": {
+        "operationId": "ClientBookingsController_invoice_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invoice details; `hasReceipt` replaces the receipt storage key",
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the invoice for a booking",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}/join": {
+      "get": {
+        "operationId": "ClientBookingsController_join_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Zoom join URL and appointment time"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get (or lazily create) the Zoom join URL for an ONLINE booking",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}/rate": {
+      "post": {
+        "operationId": "ClientBookingsController_rateBooking_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientRateBookingDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Rating submitted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit a rating for a completed booking",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/bookings/{id}/reschedule": {
+      "patch": {
+        "operationId": "ClientBookingsController_rescheduleBooking_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientRescheduleBookingDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Booking rescheduled"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reschedule a booking",
+        "tags": [
+          "Client / Bookings"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations": {
+      "get": {
+        "operationId": "ClientChatController_listConversationsForClient_v1",
+        "parameters": [
+          {
+            "description": "Cursor (conversation UUID) for keyset pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of conversations to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListClientChatConversationsResponseDto"
+                }
+              }
+            },
+            "description": "Only conversations owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client chat conversation history",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations/{conversationId}": {
+      "get": {
+        "operationId": "ClientChatController_getConversationForClient_v1",
+        "parameters": [
+          {
+            "description": "Client conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatConversationDetailDto"
+                }
+              }
+            },
+            "description": "Safe detail for the authenticated client-owned conversation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Conversation is not owned by the authenticated client or does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get one authenticated client-owned chat conversation",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations/{conversationId}/claim": {
+      "post": {
+        "operationId": "ClientChatController_claim_v1",
+        "parameters": [
+          {
+            "description": "Guest conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimGuestConversationDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimGuestConversationResponseDto"
+                }
+              }
+            },
+            "description": "Guest conversation claimed by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Claim a guest conversation for the authenticated client",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations/{conversationId}/handoff": {
+      "post": {
+        "operationId": "ClientChatController_requestReceptionForClient_v1",
+        "parameters": [
+          {
+            "description": "Client conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientRequestHandoffDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request reception handoff as the authenticated client",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations/{conversationId}/messages": {
+      "get": {
+        "operationId": "ClientChatController_listMessagesForClient_v1",
+        "parameters": [
+          {
+            "description": "Client conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Cursor (message UUID) for keyset pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of web chat messages to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List messages as the authenticated client",
+        "tags": [
+          "Client / Chat"
+        ]
+      },
+      "post": {
+        "operationId": "ClientChatController_sendMessageForClient_v1",
+        "parameters": [
+          {
+            "description": "Client conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendChatMessageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a message as the authenticated client",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations/{conversationId}/messages/{messageId}/retry": {
+      "post": {
+        "operationId": "ClientChatController_retryMessageForClient_v1",
+        "parameters": [
+          {
+            "description": "Client conversation UUID",
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inbound message UUID",
+            "in": "path",
+            "name": "messageId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryAdministrativeMessageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponseDto"
+                }
+              }
+            },
+            "description": "The retryable inbound message after a durable retry was staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retry an unanswered administrative assistant message as the client owner",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/conversations/current": {
+      "get": {
+        "operationId": "ClientChatController_current_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current conversation for the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated client chat conversation",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/operations/{operationId}/acknowledge": {
+      "post": {
+        "operationId": "ClientChatController_acknowledgeAdditionalBooking_v1",
+        "parameters": [
+          {
+            "description": "Chat operation UUID",
+            "in": "path",
+            "name": "operationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationVersionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Acknowledge an additional appointment before confirmation",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/operations/{operationId}/confirm": {
+      "post": {
+        "operationId": "ClientChatController_confirmPreparedOperation_v1",
+        "parameters": [
+          {
+            "description": "Chat operation UUID",
+            "in": "path",
+            "name": "operationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationVersionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm and execute a prepared chat operation",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/chat/operations/{operationId}/decline": {
+      "post": {
+        "operationId": "ClientChatController_declinePreparedOperation_v1",
+        "parameters": [
+          {
+            "description": "Chat operation UUID",
+            "in": "path",
+            "name": "operationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationVersionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decline a prepared chat operation without executing it",
+        "tags": [
+          "Client / Chat"
+        ]
+      }
+    },
+    "/api/v1/client/invoices": {
+      "get": {
+        "operationId": "ClientInvoicesController_list_v1",
+        "parameters": [
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Records per page",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Paginated invoices with the full client outstanding balance",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "outstandingBalance": {
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize",
+                    "outstandingBalance"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List client invoices",
+        "tags": [
+          "Client / Invoices"
+        ]
+      }
+    },
+    "/api/v1/client/invoices/{id}": {
+      "get": {
+        "operationId": "ClientInvoicesController_get_v1",
+        "parameters": [
+          {
+            "description": "Invoice UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get an invoice by id (client-scoped)",
+        "tags": [
+          "Client / Invoices"
+        ]
+      }
+    },
+    "/api/v1/client/invoices/{id}/pdf": {
+      "get": {
+        "description": "Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.",
+        "operationId": "ClientInvoicesController_getPdf_v1",
+        "parameters": [
+          {
+            "description": "Invoice UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Short-lived URL of the paid receipt PDF"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No receipt has been issued for this invoice"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a URL to download the paid receipt PDF (client-owned only)",
+        "tags": [
+          "Client / Invoices"
+        ]
+      }
+    },
+    "/api/v1/client/notifications": {
+      "get": {
+        "operationId": "ClientNotificationsController_list_v1",
+        "parameters": [
+          {
+            "description": "Return only unread notifications",
+            "in": "query",
+            "name": "unreadOnly",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Number of results per page",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated notification list"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List notifications for the current client",
+        "tags": [
+          "Client / Notifications"
+        ]
+      }
+    },
+    "/api/v1/client/notifications/fcm-token": {
+      "delete": {
+        "operationId": "ClientNotificationsController_unregisterFcmToken_v1",
+        "parameters": [
+          {
+            "description": "FCM registration token for this device; omit to remove all devices",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tokens removed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a device token, or all tokens when omitted",
+        "tags": [
+          "Client / Notifications"
+        ]
+      },
+      "post": {
+        "operationId": "ClientNotificationsController_registerFcmToken_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterFcmTokenDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Token stored"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register an FCM registration token for the current client",
+        "tags": [
+          "Client / Notifications"
+        ]
+      }
+    },
+    "/api/v1/client/notifications/mark-read": {
+      "patch": {
+        "description": "Pass `notificationId` in the body to mark a single notification; omit to mark all.",
+        "operationId": "ClientNotificationsController_markReadEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Notifications marked as read"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark notifications as read (all or a single one)",
+        "tags": [
+          "Client / Notifications"
+        ]
+      }
+    },
+    "/api/v1/client/notifications/unread-count": {
+      "get": {
+        "operationId": "ClientNotificationsController_unreadCount_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Unread count value"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get unread notification count for the current client",
+        "tags": [
+          "Client / Notifications"
+        ]
+      }
+    },
+    "/api/v1/client/package-purchases/init": {
+      "post": {
+        "operationId": "ClientPackagePurchasesController_init_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "invoiceId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "paymentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "purchaseId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "example": "https://checkout.moyasar.com/pay/payment-id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "purchaseId",
+                    "invoiceId",
+                    "paymentId",
+                    "redirectUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Package purchase initialized (PENDING until the Moyasar payment completes)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a Moyasar payment to self-purchase a session package",
+        "tags": [
+          "Client / Package purchases"
+        ]
+      }
+    },
+    "/api/v1/client/package-purchases/native/init": {
+      "post": {
+        "operationId": "ClientPackagePurchasesController_initNative_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePackagePurchaseInitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve or resume a native package purchase payment",
+        "tags": [
+          "Client / Package purchases"
+        ]
+      }
+    },
+    "/api/v1/client/packages/book": {
+      "post": {
+        "operationId": "ClientPackagesController_bookCredit_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPackageBookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package credit booking created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment using an owned package credit",
+        "tags": [
+          "Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/client/packages/purchases": {
+      "get": {
+        "operationId": "ClientPackagesController_listMyPurchases_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PackagePurchaseStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchases owned by the authenticated client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client package purchases and credit balance",
+        "tags": [
+          "Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/client/packages/purchases/{id}": {
+      "get": {
+        "operationId": "ClientPackagesController_getMyPurchase_v1",
+        "parameters": [
+          {
+            "description": "Package purchase UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decorated package purchase status"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read an authenticated client package purchase status",
+        "tags": [
+          "Client / Packages"
+        ]
+      }
+    },
+    "/api/v1/client/payments": {
+      "get": {
+        "operationId": "ClientPaymentsController_list_v1",
+        "parameters": [
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Records per page",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated payment list for the current client"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated client's payments",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/bank-transfer": {
+      "post": {
+        "operationId": "ClientPaymentsController_uploadBankTransfer_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "amount": {
+                    "description": "Transfer amount in integer halalas",
+                    "example": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "invoiceId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "receipt": {
+                    "description": "Receipt image or PDF",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "receipt",
+                  "invoiceId",
+                  "amount"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Receipt file + invoice metadata",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Receipt uploaded, payment recorded as PENDING_VERIFICATION"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a bank-transfer receipt for an invoice (client)",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/bank-transfer/settings": {
+      "get": {
+        "operationId": "ClientPaymentsController_bankTransferSettings_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "accounts": {
+                      "items": {
+                        "properties": {
+                          "bankName": {
+                            "type": "string"
+                          },
+                          "beneficiaryName": {
+                            "type": "string"
+                          },
+                          "iban": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "bankName",
+                          "beneficiaryName",
+                          "iban"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "accounts"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Bank transfer availability and configured recipient accounts"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get client-visible bank transfer settings and accounts",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/init": {
+      "post": {
+        "operationId": "ClientPaymentsController_init_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitClientPaymentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "paymentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "example": "https://checkout.moyasar.com/pay/payment-id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "redirectUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Payment initialized"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a Moyasar payment for a client invoice",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/native/{paymentId}/reconcile": {
+      "post": {
+        "operationId": "ClientPaymentsController_nativeReconcileEndpoint_v1",
+        "parameters": [
+          {
+            "description": "Reserved native Payment UUID",
+            "in": "path",
+            "name": "paymentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentReconcileResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reconcile an owned native payment with Moyasar",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/native/config": {
+      "get": {
+        "operationId": "ClientPaymentsController_nativeConfigEndpoint_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentCapabilitiesDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get native payment capabilities",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/native/init": {
+      "post": {
+        "operationId": "ClientPaymentsController_nativeInitEndpoint_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitClientPaymentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativePaymentInitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reserve or resume a native invoice payment",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/portal/home": {
+      "get": {
+        "operationId": "ClientPortalController_home_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "profile": {
+                      "description": "Client profile",
+                      "type": "object"
+                    },
+                    "recentPayments": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "unreadNotifications": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "upcomingBookings": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Client profile, upcoming bookings, unread notifications, and recent payments."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get home screen aggregated data for the authenticated client",
+        "tags": [
+          "Client / Portal"
+        ]
+      }
+    },
+    "/api/v1/client/portal/summary": {
+      "get": {
+        "operationId": "ClientPortalController_summary_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "lastVisit": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "outstandingBalance": {
+                      "description": "Outstanding balance across all client invoices, in halalas",
+                      "example": 25000,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "totalBookings": {
+                      "example": 8,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Total bookings count, last visit date, and outstanding balance."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get account summary statistics for the authenticated client",
+        "tags": [
+          "Client / Portal"
+        ]
+      }
+    },
+    "/api/v1/client/portal/upcoming": {
+      "get": {
+        "operationId": "ClientPortalController_upcoming_v1",
+        "parameters": [
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Number of results per page",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated list of upcoming bookings (PENDING, CONFIRMED or DEPOSIT_PAID), nearest first."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List upcoming bookings for the authenticated client",
+        "tags": [
+          "Client / Portal"
+        ]
+      }
+    },
+    "/api/v1/client/profile": {
+      "delete": {
+        "operationId": "ClientProfileController_deleteProfile_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "retained": {
+                      "items": {
+                        "enum": [
+                          "clinical_records",
+                          "financial_records"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "status": {
+                      "enum": [
+                        "closed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "retained"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Login closed; clinical and financial records retained"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close the authenticated client's login immediately",
+        "tags": [
+          "Client / Profile"
+        ]
+      },
+      "get": {
+        "operationId": "ClientProfileController_getProfile_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientProfileDto"
+                }
+              }
+            },
+            "description": "Client profile record"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated client's profile",
+        "tags": [
+          "Client / Profile"
+        ]
+      },
+      "patch": {
+        "operationId": "ClientProfileController_updateProfile_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClientProfileDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientProfileDto"
+                }
+              }
+            },
+            "description": "Updated client profile"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update the authenticated client's profile",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/profile/email": {
+      "get": {
+        "operationId": "ClientEmailController_status_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated client's email verification state",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/profile/email/decline": {
+      "post": {
+        "operationId": "ClientEmailController_decline_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Drop the unverified client email and resolve the prompt",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/profile/email/request": {
+      "post": {
+        "operationId": "ClientEmailController_request_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestClientEmailDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a code to prove ownership of a new client email",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/profile/email/verify": {
+      "post": {
+        "operationId": "ClientEmailController_verify_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyClientEmailDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEmailStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the code and adopt the new client email",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/profile/phone/request": {
+      "post": {
+        "operationId": "ClientPhoneController_request_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestClientPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPhoneChallengeDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a code to prove ownership of a new client phone",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/profile/phone/verify": {
+      "post": {
+        "operationId": "ClientPhoneController_verify_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyClientPhoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "description": "Web sessions receive rotated HTTP-only cookies",
+                      "properties": {
+                        "phone": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "phone"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ClientPhoneVerifiedDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify the code, adopt the new client phone and rotate session tokens",
+        "tags": [
+          "Client / Profile"
+        ]
+      }
+    },
+    "/api/v1/client/programs/{id}/enroll": {
+      "post": {
+        "operationId": "ClientProgramsController_enroll_v1",
+        "parameters": [
+          {
+            "description": "Public program UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bookingId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "invoiceId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "enum": [
+                        "ENROLLED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "bookingId",
+                    "status",
+                    "invoiceId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Program enrollment created or resumed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Program not found"
+          },
+          "409": {
+            "description": "Program full or enrollment unavailable"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enroll the authenticated client in a public program",
+        "tags": [
+          "Client / Programs"
+        ]
+      }
+    },
+    "/api/v1/client/refunds/request": {
+      "post": {
+        "operationId": "ClientRefundsController_request_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientRequestRefundDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request a refund for an invoice",
+        "tags": [
+          "Client / Refunds"
         ]
       }
     },
@@ -39459,6 +44881,18 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/ClientBookingDto"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    }
+                  },
                   "type": "object"
                 }
               }
@@ -39620,13 +45054,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "properties": {
-                    "cancellationRefund": {
-                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingDto"
                 }
               }
             },
@@ -41991,7 +47419,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
@@ -42066,7 +47494,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
@@ -46557,12 +51985,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Client profile with membership info",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
-            "description": ""
+            "description": "Client profile record"
           },
           "400": {
             "content": {
@@ -46633,12 +52060,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Updated client profile",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientProfileDto"
                 }
               }
             },
-            "description": ""
+            "description": "Updated client profile"
           },
           "400": {
             "content": {
@@ -46734,12 +52160,28 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Paginated bookings list",
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/ClientBookingDto"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
                   "type": "object"
                 }
               }
             },
-            "description": ""
+            "description": "Paginated bookings list"
           },
           "400": {
             "content": {
@@ -46812,18 +52254,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "description": "Booking detail",
-                  "properties": {
-                    "cancellationRefund": {
-                      "$ref": "#/components/schemas/PersistedCancellationRefundDto"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingDto"
                 }
               }
             },
-            "description": ""
+            "description": "Booking detail"
           },
           "400": {
             "content": {

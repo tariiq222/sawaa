@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -66,7 +65,7 @@ export class InitClientPaymentHandler {
       throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
     }
     if (visibleInvoice.clientId !== cmd.clientId) {
-      throw new ForbiddenException('Invoice does not belong to this client');
+      throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
     }
 
     const organizationSettings = await this.prisma.organizationSettings.findFirst({
@@ -228,7 +227,7 @@ export class InitClientPaymentHandler {
         throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
       }
       if (invoice.clientId !== cmd.clientId) {
-        throw new ForbiddenException('Invoice does not belong to this client');
+        throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
       }
       if (isNonPayableInvoiceStatus(invoice.status as InvoiceStatus)) {
         throw new BadRequestException(

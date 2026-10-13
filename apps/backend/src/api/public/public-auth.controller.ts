@@ -82,7 +82,7 @@ export class PublicAuthController {
   @ApiOperation({ summary: 'Log in with email or phone and password' })
   @ApiOkResponse({ schema: { type: 'object', description: 'Auth tokens' } })
   async loginEndpoint(@Body() dto: ClientLoginDto, @Ip() ip: string, @Res({ passthrough: true }) res: Response) {
-    const result = await this.login.execute(dto, ip);
+    const result = await this.login.execute(dto, ip, undefined, undefined, 'web');
     setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
     return { clientId: result.clientId };
   }

@@ -166,7 +166,7 @@ describe('ClientLoginHandler', () => {
         id: 'cl-1',
         email: 'test@example.com',
         tokenVersion: 0,
-      });
+      }, { channel: 'web' });
     });
 
     // P1-7: a password reset bumps Client.tokenVersion. Login must issue a token
@@ -194,7 +194,7 @@ describe('ClientLoginHandler', () => {
         id: 'cl-reset',
         email: 'reset@example.com',
         tokenVersion: 1,
-      });
+      }, { channel: 'web' });
     });
 
     it('throws Unauthorized for non-existent client', async () => {
@@ -386,7 +386,7 @@ describe('ClientLoginHandler', () => {
       expect(result.clientId).toBe('cl-p1');
       expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:id:+966501234567');
       // Token pair still issued with the (null) email — service accepts string | null.
-      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({ id: 'cl-p1', email: null, tokenVersion: 0 });
+      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({ id: 'cl-p1', email: null, tokenVersion: 0 }, { channel: 'web' });
     });
 
     it('throws constant Invalid credentials for unknown phone', async () => {

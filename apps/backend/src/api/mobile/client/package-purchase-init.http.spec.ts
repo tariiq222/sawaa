@@ -19,7 +19,7 @@ import { csrfMiddleware } from '../../../common/middleware/csrf.middleware';
 import { PrismaService } from '../../../infrastructure/database';
 import { ClientJwtStrategy } from '../../../modules/identity/client-jwt.strategy';
 import { ListPaymentsHandler } from '../../../modules/finance/list-payments/list-payments.handler';
-import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invoice.handler';
+import { GetPublicInvoiceHandler } from '../../../modules/finance/get-invoice/get-public-invoice.handler';
 import { BankTransferUploadHandler } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitPackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
@@ -75,7 +75,7 @@ describe.each(['HOSTED','NATIVE'] as const)('Mobile package purchase init HTTP c
         { provide: InitNativePackagePurchaseHandler, useValue: purchaseHandler },
         ...[
           ListPaymentsHandler,
-          GetInvoiceHandler,
+          GetPublicInvoiceHandler,
           BankTransferUploadHandler,
           InitClientPaymentHandler,
           GetPublicPaymentMethodsHandler,
@@ -86,7 +86,7 @@ describe.each(['HOSTED','NATIVE'] as const)('Mobile package purchase init HTTP c
     app = module.createNestApplication();
     app.use(cookieParser());
     app.use((req: Request, res: Response, next: NextFunction) =>
-      shouldBypassCsrf(req.path) ? next() : csrfMiddleware(req, res, next));
+      shouldBypassCsrf({ path: req.path, hasClientSessionCookie: Boolean(req.cookies?.client_access_token) }) ? next() : csrfMiddleware(req, res, next));
     configureHttpContract(app, 'production');
     await app.init();
   });

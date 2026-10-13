@@ -137,7 +137,7 @@ describe('support-groups.api (programs backend)', () => {
       const out = await bookGroupSession('prog-1');
 
       expect(out).toEqual({ type: 'ENROLLED', bookingId: 'bk1' });
-      expect(publicFetchMock).toHaveBeenCalledWith('/public/programs/prog-1/enroll', {
+      expect(publicFetchMock).toHaveBeenCalledWith('/client/programs/prog-1/enroll', {
         method: 'POST',
         credentials: 'include',
       });

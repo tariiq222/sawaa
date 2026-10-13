@@ -32,15 +32,20 @@ async function fixture(opts: { client?: Record<string, unknown>; otherClient?: b
 }
 
 describe('VerifyClientPhoneHandler', () => {
+  it('keeps the signed web channel on the replacement session', async () => {
+    const f = await fixture();
+    await f.handler.execute('client-1', { challengeId: 'ch-1', code: '012345' }, 'web');
+    expect(f.tokens.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'client-1', tokenVersion: 4 }), { channel: 'web' }, f.tx);
+  });
   it('adopts the new number, bumps tokenVersion, revokes every refresh token and returns fresh tokens', async () => {
     const f = await fixture();
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     try {
       expect(await f.handler.execute('client-1', { challengeId: 'ch-1', code: '012345' }))
-        .toEqual({ phone: NEW_PHONE, tokens: { accessToken: 'new-access', refreshToken: 'new-refresh' } });
+        .toEqual({ phone: NEW_PHONE, tokens: { accessToken: 'new-access', refreshToken: 'new-refresh' }, tokenPair: { accessToken: 'new-access', rawRefresh: 'new-refresh' } });
       expect(f.tx.client.update).toHaveBeenCalledWith({ where: { id: 'client-1' }, data: { phone: NEW_PHONE, phoneVerified: expect.any(Date), tokenVersion: { increment: 1 } } });
       expect(f.tx.clientRefreshToken.updateMany).toHaveBeenCalledWith({ where: { clientId: 'client-1', revokedAt: null }, data: { revokedAt: expect.any(Date) } });
-      expect(f.tokens.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'client-1', tokenVersion: 4 }), f.tx);
+      expect(f.tokens.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'client-1', tokenVersion: 4 }), { channel: 'mobile' }, f.tx);
       expect(log).toHaveBeenCalledWith({ event: 'client_phone.changed', clientId: 'client-1' });
       expect(JSON.stringify(log.mock.calls)).not.toContain('966');
     } finally { log.mockRestore(); }

@@ -25,6 +25,14 @@ describe('PublicMeController (e2e)', () => {
   const mockGetClientBooking = { execute: jest.fn() };
   const mockPreview = { execute: jest.fn() };
   const mockGetInvoice = { execute: jest.fn() };
+  it('does not return host capabilities or staff notes when rescheduling through the legacy web route', async () => {
+    mockReschedule.execute.mockResolvedValue({ booking: { id: 'b-1', status: 'CONFIRMED', zoomHostUrl: 'host-secret', zoomStartUrl: 'start-secret', notes: 'staff-private' } });
+    const res = await request(app.getHttpServer())
+      .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/reschedule')
+      .send({ newScheduledAt: '2030-10-20T09:00:00.000Z' }).expect(200);
+    expect(res.body.booking).toMatchObject({ id: 'b-1', status: 'CONFIRMED' });
+    for (const field of ['zoomHostUrl', 'zoomStartUrl', 'notes']) expect(res.body.booking).not.toHaveProperty(field);
+  });
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -171,12 +179,12 @@ describe('PublicMeController (e2e)', () => {
     it('validates and forwards the selected tab with the authenticated client', async () => {
       mockListBookings.execute.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
       await request(app.getHttpServer()).get('/public/me/bookings?pageSize=50&tab=upcoming').expect(200);
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 50, 'upcoming');
+      expect(mockListBookings.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 1, pageSize: 50, tab: 'upcoming' });
       await request(app.getHttpServer()).get('/public/me/bookings?tab=invalid').expect(400);
     });
     it('returns 200 with paginated bookings', async () => {
       mockListBookings.execute.mockResolvedValue({
-        data: [{ id: 'b-1', status: 'CONFIRMED' }],
+        items: [{ id: 'b-1', status: 'CONFIRMED' }],
         total: 1,
         page: 1,
         pageSize: 10,
@@ -187,25 +195,26 @@ describe('PublicMeController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 1, 10, undefined);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+      expect(mockListBookings.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 1, pageSize: 10, tab: undefined });
     });
 
     it('passes page and pageSize query params', async () => {
-      mockListBookings.execute.mockResolvedValue({ data: [], total: 0, page: 2, pageSize: 5 });
+      mockListBookings.execute.mockResolvedValue({ items: [], total: 0, page: 2, pageSize: 5 });
 
       await request(app.getHttpServer())
         .get('/public/me/bookings?page=2&pageSize=5')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(mockListBookings.execute).toHaveBeenCalledWith('client-1', 2, 5, undefined);
+      expect(mockListBookings.execute).toHaveBeenCalledWith({ clientId: 'client-1', page: 2, pageSize: 5, tab: undefined });
     });
   });
 
   describe('PATCH /public/me/bookings/:id/cancel', () => {
     it('returns 200 on cancel with reason', async () => {
-      mockCancel.execute.mockResolvedValue({ id: 'b-1', status: 'CANCELLED' });
+      mockCancel.execute.mockResolvedValue({ status: 'CANCELLED', requiresApproval: false, booking: { id: 'b-1', status: 'CANCELLED' } });
 
       const res = await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/cancel')
@@ -222,7 +231,7 @@ describe('PublicMeController (e2e)', () => {
     });
 
     it('returns 200 on cancel without reason', async () => {
-      mockCancel.execute.mockResolvedValue({ id: 'b-1', status: 'CANCELLED' });
+      mockCancel.execute.mockResolvedValue({ status: 'CANCELLED', requiresApproval: false, booking: { id: 'b-1', status: 'CANCELLED' } });
 
       const res = await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/cancel')
@@ -266,7 +275,7 @@ describe('PublicMeController (e2e)', () => {
 
   describe('PATCH /public/me/bookings/:id/reschedule', () => {
     it('returns 200 on reschedule', async () => {
-      mockReschedule.execute.mockResolvedValue({ id: 'b-1', status: 'RESCHEDULED' });
+      mockReschedule.execute.mockResolvedValue({ booking: { id: 'b-1', status: 'CONFIRMED' } });
 
       const res = await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/reschedule')
@@ -274,7 +283,7 @@ describe('PublicMeController (e2e)', () => {
         .send({ newScheduledAt: '2026-12-31T10:00:00Z' })
         .expect(200);
 
-      expect(res.body.status).toBe('RESCHEDULED');
+      expect(res.body.booking.status).toBe('CONFIRMED');
       expect(mockReschedule.execute).toHaveBeenCalledWith({
         bookingId: '00000000-0000-4000-a000-000000000001',
         clientId: 'client-1',
@@ -283,7 +292,7 @@ describe('PublicMeController (e2e)', () => {
     });
 
     it('rejects a forged duration because client reschedule preserves the existing duration', async () => {
-      mockReschedule.execute.mockResolvedValue({ id: 'b-1', status: 'RESCHEDULED' });
+      mockReschedule.execute.mockResolvedValue({ booking: { id: 'b-1', status: 'CONFIRMED' } });
 
       await request(app.getHttpServer())
         .patch('/public/me/bookings/00000000-0000-4000-a000-000000000001/reschedule')

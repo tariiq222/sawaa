@@ -117,7 +117,7 @@ try {
   evidence.candidate = candidate();
   writeEvidence();
   await command('Local isolation and acceptance guards', process.execPath,
-    ['--test', 'e2e/local/safety.test.mjs', 'e2e/playwright/mcp-policy.test.mjs', 'scripts/premerge-local-results.test.mjs']);
+    ['--test', 'e2e/local/safety.test.mjs', 'e2e/playwright/mcp-policy.test.mjs', 'scripts/premerge-local-results.test.mjs', 'scripts/dev/client-api-live-smoke.test.mjs']);
   await command('Build shared types', 'pnpm', ['--filter', '@sawaa/shared', 'build']);
   await command('Build backend', 'pnpm', ['--filter', 'backend', 'build']);
   // Same CLI as the smoke run below; a no-op when the matching Chromium is present.
@@ -129,6 +129,8 @@ try {
   if (owner.runDir !== runDir || !/^sawaa-e2e-\d+$/.test(owner.project)
     || !runDir.startsWith(resolve(root, '.e2e', 'local-'))) throw new Error('Invalid local stack ownership');
   const withEnv = ['e2e/local/with-env.mjs', runDir];
+  await command('Client API transport and legacy compatibility', process.execPath,
+    [...withEnv, process.execPath, 'scripts/dev/client-api-live-smoke.mjs']);
   await command('Playwright local smoke', process.execPath,
     [...withEnv, process.execPath, 'scripts/run-playwright.cjs', 'test', '--config', 'playwright.local.config.ts']);
   const playwrightReport = resolve(runDir, 'playwright-report.json');

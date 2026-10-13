@@ -87,7 +87,7 @@ describe('RegisterHandler', () => {
       email: 'a@b.com',
       emailVerified: expect.any(Date),
       tokenVersion: 0,
-    });
+    }, { channel: 'web' });
     expect(result.accessToken).toBe('at');
     expect(prisma.client.create).toHaveBeenCalled();
     const createData = prisma.client.create.mock.calls[0][0].data;
@@ -138,7 +138,7 @@ describe('RegisterHandler', () => {
       email: 'a@b.com',
       emailVerified: expect.any(Date),
       tokenVersion: 2,
-    });
+    }, { channel: 'web' });
     expect(prisma.client.update).toHaveBeenCalled();
     const updateData = prisma.client.update.mock.calls[0][0].data;
     expect(updateData.emailVerified).toBeInstanceOf(Date);

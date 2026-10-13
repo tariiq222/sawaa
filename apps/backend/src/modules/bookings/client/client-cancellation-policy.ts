@@ -70,10 +70,9 @@ export function calculateClientCancellation(
   settings: ClientCancellationSettings,
   payments: CancellationPayment[],
   now = new Date(),
-  legacyChannel: 'PUBLIC' | 'MOBILE' = 'PUBLIC',
 ): ClientCancellationPreview & { allocations: CancellationRefundAllocation[] } {
   const policyEnabled = settings.clientCancellationPolicyEnabled === true;
-  if (!policyEnabled) return calculateLegacyCancellation(booking, settings, payments, now, legacyChannel);
+  if (!policyEnabled) return calculateLegacyCancellation(booking, settings, payments, now);
   const configured = policyEnabled &&
     ['BEFORE_START', 'BEFORE_CHECK_IN'].includes(settings.clientCancelCutoffMode ?? '') &&
     (settings.clientCancelCutoffMode !== 'BEFORE_START' || (typeof settings.clientCancelBeforeHours === 'number' && Number.isFinite(settings.clientCancelBeforeHours) && settings.clientCancelBeforeHours >= 0)) &&
@@ -129,16 +128,21 @@ export function calculateClientCancellation(
   return { policyEnabled, requiresApproval: false, refundDecision: 'QUOTED', canCancel: reasonCode === 'ALLOWED', reasonCode, cutoffAt: cutoffAt?.toISOString() ?? null, quoteToken, refund, allocations };
 }
 
-/** Preserve the existing legacy execution: one COMPLETED capture, with its legacy percentage. */
+/**
+ * Legacy execution (configurable policy disabled): one COMPLETED capture, with its legacy percentage.
+ * One channel-free rule set (owner decision A): late cancellations of paid bookings need approval,
+ * and an unpaid payment hold is always fully released without approval.
+ */
 function calculateLegacyCancellation(
   booking: CancellationBooking, settings: ClientCancellationSettings, payments: CancellationPayment[],
-  now: Date, channel: 'PUBLIC' | 'MOBILE',
+  now: Date,
 ): ClientCancellationPreview & { allocations: CancellationRefundAllocation[] } {
   const early = booking.scheduledAt.getTime() - now.getTime() >= settings.freeCancelBeforeHours * 3600000;
-  const requiresApproval = settings.requireCancelApproval === true || (channel === 'PUBLIC' && !early);
+  const paymentHold = ['AWAITING_PAYMENT', 'PENDING_GROUP_FILL'].includes(booking.status);
+  // Unpaid holds have nothing to adjudicate: they are released in full without staff approval.
+  const requiresApproval = settings.requireCancelApproval === true || (!early && !paymentHold);
   const partialPercent = typeof settings.lateCancelRefundPercent === 'number' && Number.isFinite(settings.lateCancelRefundPercent)
     ? Math.min(100, Math.max(0, Math.round(settings.lateCancelRefundPercent))) : 0;
-  const paymentHold = channel === 'MOBILE' && ['AWAITING_PAYMENT', 'PENDING_GROUP_FILL'].includes(booking.status);
   const refundPercent = paymentHold ? 100 : early
     ? settings.freeCancelRefundType === 'FULL' ? 100 : settings.freeCancelRefundType === 'PARTIAL' ? partialPercent : 0
     : partialPercent;
@@ -165,7 +169,7 @@ function calculateLegacyCancellation(
     currency: booking.currency, execution: requiresApproval ? 'REVIEW' : refundAmount ? 'AUTOMATIC' : 'NONE', window: early ? 'EARLY' : 'LATE',
   };
   const refundDecision = requiresApproval ? 'AFTER_APPROVAL' as const : 'QUOTED' as const;
-  const quoteToken = createHash('sha256').update(JSON.stringify({ booking, settings, channel, requiresApproval, refundDecision, reasonCode, refund,
+  const quoteToken = createHash('sha256').update(JSON.stringify({ booking, settings, requiresApproval, refundDecision, reasonCode, refund,
     payments: ordered.map(p => ({ ...p, refundRequests: [...p.refundRequests].sort((a, b) => a.id.localeCompare(b.id)) })),
   })).digest('hex');
   return { policyEnabled: false, requiresApproval, refundDecision, canCancel: reasonCode === 'ALLOWED', reasonCode, cutoffAt: null, quoteToken, refund, allocations: [] };
