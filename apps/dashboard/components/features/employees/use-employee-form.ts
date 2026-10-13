@@ -245,8 +245,9 @@ export function useEmployeeForm({
     if (data.avatarFile) {
       try {
         await uploadEmployeeAvatar(id, data.avatarFile)
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorAvatar"))
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : ""
+        stepErrors.push(`${t("employees.form.stepErrorAvatar")}${detail ? `: ${detail}` : ""}`)
       }
     }
     const activeSlots = schedule.filter((s) => s.isActive)

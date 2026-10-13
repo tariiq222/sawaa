@@ -7,6 +7,8 @@ import { cn } from "../lib/cn"
 
 interface AvatarUploadProps {
   value?: string
+  accept?: string
+  validateFile?: (file: File) => string | undefined
   onChange: (file: File, previewUrl: string) => void
   onClear: () => void
   className?: string
@@ -21,6 +23,8 @@ interface AvatarUploadProps {
 
 export function AvatarUpload({
   value,
+  accept = "image/png,image/jpeg,image/webp,image/gif",
+  validateFile,
   onChange,
   onClear,
   className,
@@ -29,12 +33,17 @@ export function AvatarUpload({
   clearAriaLabel = "Remove avatar",
   children,
 }: AvatarUploadProps) {
+  const [error, setError] = useState<string>()
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | undefined>(value)
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (inputRef.current) inputRef.current.value = ""
+    const validationError = validateFile?.(file)
+    setError(validationError)
+    if (validationError) return
     const url = URL.createObjectURL(file)
     setPreview(url)
     onChange(file, url)
@@ -43,12 +52,13 @@ export function AvatarUpload({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
+    setError(undefined)
     setPreview(undefined)
     onClear()
   }
 
   return (
-    <div className={cn("flex items-center justify-between gap-4 pb-4 mb-2 border-b border-border", className)}>
+    <div className={cn("flex items-center justify-between flex-wrap gap-4 pb-4 mb-2 border-b border-border", className)}>
       {/* Avatar + badge button */}
       <div className="flex items-center gap-3">
         <div className="relative h-20 w-20 shrink-0">
@@ -99,10 +109,12 @@ export function AvatarUpload({
       {/* Slot for switch or other controls */}
       {children}
 
+      {error && <p role="alert" className="basis-full text-sm text-destructive">{error}</p>}
+
       <input
         ref={inputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
+        accept={accept}
         className="hidden"
         onChange={handleFile}
       />
