@@ -115,7 +115,7 @@ describe('MobilePasswordLoginHandler', () => {
     expect(await handler.execute({ ...identifier, password: 'CorrectPass123' }, '1.2.3.4')).toEqual({
       sessionKind: 'client', tokens: { accessToken: 'client-access', refreshToken: 'client-refresh' },
     });
-    expect(issueTokenPair).toHaveBeenCalledWith({ id: 'client-1', email: 'client@example.com', emailVerified: expect.any(Date), tokenVersion: 7 });
+    expect(issueTokenPair).toHaveBeenCalledWith({ id: 'client-1', email: 'client@example.com', emailVerified: expect.any(Date), tokenVersion: 7 }, { channel: 'mobile' });
     expect(clients[0].lastLoginAt).toBeInstanceOf(Date);
   });
 

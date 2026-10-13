@@ -166,7 +166,7 @@ export class VerifyMobileOtpHandler {
           client = await tx.client.update({ where: { id: client.id }, data: { phoneVerified: new Date() } }) as ClientIdentity;
         }
         return {
-          tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified ?? null, tokenVersion: client.tokenVersion }, tx)),
+          tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified ?? null, tokenVersion: client.tokenVersion }, { channel: 'mobile' }, tx)),
           sessionKind: 'client' as const,
         };
       });

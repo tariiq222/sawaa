@@ -30,6 +30,10 @@ export const envValidationSchema = Joi.object({
   // In production MUST be set to the dashboard + mobile origins (no localhost).
   CORS_ORIGINS: Joi.string().allow('').optional(),
 
+  // Optional sunset date (ISO 8601) advertised via the `Sunset` header on legacy
+  // client API prefixes (/mobile/client, /public/me). Invalid values are ignored.
+  CLIENT_LEGACY_PREFIX_SUNSET: Joi.string().allow('').optional(),
+
   // Database (Prisma)
   // Optional, fail-closed dedicated synthetic account; never a generic OTP bypass.
   MOBILE_REVIEW_CLIENT_ID: Joi.string().empty('').guid({ version: 'uuidv4' }).optional(),

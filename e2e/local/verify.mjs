@@ -56,3 +56,31 @@ export async function verifyBooking(kind, status = 'CONFIRMED') {
     return receipt;
   } finally { await prisma.$disconnect(); }
 }
+
+/**
+ * Prove private reservation identity only through the isolated local database.
+ * @param {{ paymentId: string; invoiceId: string; bookingId: string; status?: 'PENDING' | 'COMPLETED' }} expected
+ */
+export async function verifyNativePayment({ paymentId, invoiceId, bookingId, status }) {
+  assert.ok([paymentId, invoiceId, bookingId].every(id => typeof id === 'string' && id.trim().length > 0),
+    'Native reservation identifiers are required');
+  const f = fixture();
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, bookingId, clientId: f.clients.payment.id },
+      select: { id: true, bookingId: true, clientId: true,
+        payments: { select: { id: true, gatewayRef: true, status: true, amount: true, currency: true } } },
+    });
+    assert.ok(invoice, 'Native reservation must belong to the isolated payment client and booking');
+    assert.equal(invoice.clientId, f.clients.payment.id);
+    assert.equal(invoice.payments.length, 1, 'Native checkout must have exactly one reserved payment');
+    const payment = invoice.payments[0];
+    assert.equal(payment.id, paymentId);
+    assert.equal(payment.gatewayRef, paymentId, 'Existing attempt must be a native reservation');
+    assert.equal(Number(payment.amount), f.priceHalalas);
+    assert.equal(payment.currency, 'SAR');
+    if (status) assert.equal(payment.status, status);
+    return { paymentId: payment.id, invoiceId: invoice.id, bookingId: invoice.bookingId, status: payment.status };
+  } finally { await prisma.$disconnect(); }
+}

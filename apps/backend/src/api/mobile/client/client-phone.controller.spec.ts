@@ -61,7 +61,7 @@ describe('client-phone HTTP input and delegation', () => {
       ],
     }).overrideGuard(ClientSessionGuard).useValue({
       canActivate: (ctx: { switchToHttp: () => { getRequest: () => { user?: unknown } } }) => {
-        ctx.switchToHttp().getRequest().user = { id: 'client-1' };
+        ctx.switchToHttp().getRequest().user = { id: 'client-1', channel: 'mobile' };
         return true;
       },
     }).compile();
@@ -85,10 +85,10 @@ describe('client-phone HTTP input and delegation', () => {
   });
   it('delegates a six-digit code and returns both fresh tokens', async () => {
     const result = { phone: '+966512345678', tokens: { accessToken: 'access', refreshToken: 'refresh' } };
-    mockVerify.execute.mockResolvedValue(result);
+    mockVerify.execute.mockResolvedValue({ ...result, tokenPair: { accessToken: 'access', rawRefresh: 'refresh', accessMaxAgeMs: 60000, refreshMaxAgeMs: 120000 } });
     const res = await request(app.getHttpServer()).post('/mobile/client/profile/phone/verify').send({ challengeId, code: '012345' }).expect(200);
     expect(res.body).toEqual(result);
-    expect(mockVerify.execute).toHaveBeenCalledWith('client-1', { challengeId, code: '012345' });
+    expect(mockVerify.execute).toHaveBeenCalledWith('client-1', { challengeId, code: '012345' }, 'mobile');
   });
   it.each(['1234', '12345x', '1234567', 123456])('rejects malformed code %s', async code => {
     const res = await request(app.getHttpServer()).post('/mobile/client/profile/phone/verify').send({ challengeId, code }).expect(400);

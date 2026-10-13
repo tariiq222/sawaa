@@ -193,3 +193,8 @@ outputs/
 
 # Agentic E2E reports, traces, sessions and replay cache.
 .e2e/
+!docs/architecture/api-endpoint-inventory.md
+!docs/architecture/client-api-unification.md
+
+# Local-only synthetic test credentials (never commit)
+apps/backend/.local-*.json

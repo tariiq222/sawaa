@@ -116,6 +116,18 @@ export class AppMetricsService {
     registers: [this.registry],
   });
 
+  /**
+   * Requests served on the legacy client prefixes during the client API
+   * unification alias period. `route` is the Express route template (or the
+   * prefix when none matched) to keep cardinality bounded.
+   */
+  readonly legacyClientPrefixRequests = new Counter({
+    name: 'sawaa_client_api_legacy_prefix_requests_total',
+    help: 'Total requests on legacy client API prefixes by prefix and route template',
+    labelNames: ['prefix', 'route'] as const,
+    registers: [this.registry],
+  });
+
   readonly paymentAttempts = new Counter({
     name: 'payment_attempt_total',
     help: 'Total Moyasar payment webhook events by result',

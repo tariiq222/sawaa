@@ -1,6 +1,7 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 import type { Notification } from '@/types/models';
+import { readListEnvelope, type ListMeta } from './client/list-envelope';
 
 interface NotificationParams {
   page?: number;
@@ -8,23 +9,9 @@ interface NotificationParams {
   unreadOnly?: boolean;
 }
 
-/**
- * Backend list responses follow the canonical `{ items, meta }` shape from
- * `apps/backend/src/common/dto/list-response.ts`. The global response is NOT
- * wrapped in `{ success, data }` — these endpoints return bare objects.
- */
-interface NotificationListMeta {
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
-
 export interface NotificationListResponse {
   items: Notification[];
-  meta: NotificationListMeta;
+  meta: ListMeta;
 }
 
 // The backend stores already-rendered title/body, while older app payloads
@@ -58,15 +45,17 @@ function normalizeNotification(item: NotificationPayload): Notification {
   };
 }
 
-const BASE = '/mobile/client/notifications';
+const BASE = '/client/notifications';
 
 export const notificationsService = {
   async getAll(params?: NotificationParams): Promise<NotificationListResponse> {
     const { perPage, ...rest } = params ?? {};
-    const response = await api.get<Omit<NotificationListResponse, 'items'> & { items: NotificationPayload[] }>(BASE, {
-      params: { ...rest, ...(perPage ? { limit: perPage } : {}) },
+    const response = await api.get<unknown>(BASE, {
+      params: { ...rest, ...(perPage ? { pageSize: perPage } : {}) },
     });
-    return { ...response.data, items: response.data.items.map(normalizeNotification) };
+    // Canonical `{ items, total, page, pageSize }`; legacy `{ items, meta }` still accepted.
+    const { items, meta } = readListEnvelope<NotificationPayload>(response.data, perPage ?? 20);
+    return { items: items.map(normalizeNotification), meta };
   },
 
   async getUnreadCount(): Promise<{ count: number }> {

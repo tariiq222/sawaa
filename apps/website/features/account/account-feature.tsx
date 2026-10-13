@@ -155,7 +155,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
     <div className="flex flex-col gap-8">
       <ProfileCard
         name={client.name}
-        email={client.email}
+        email={client.email ?? client.unverifiedEmail ?? null}
         phone={client.phone}
         emailVerified={client.emailVerified != null}
         greeting={`${tt('account.greeting')} ${firstName}`}
@@ -204,7 +204,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
       </div>
 
       <div role="tabpanel" id={`account-panel-${activeTab}`}>
-        {activeTab === 'overview' && client.email === null && !emailNoticeDismissed && (
+        {activeTab === 'overview' && client.email === null && !client.unverifiedEmail && !emailNoticeDismissed && (
           <div
             role="status"
             className="flex items-center justify-between gap-3 px-4 py-3 mb-6 rounded-2xl text-sm"

@@ -18,6 +18,7 @@ import { AppMetricsService } from './infrastructure/telemetry/app-metrics.servic
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
 import { csrfMiddleware } from './common/middleware/csrf.middleware';
+import { legacyClientPrefixMiddleware } from './common/middleware/legacy-client-prefix.middleware';
 import { shouldBypassCsrf } from './common/middleware/csrf-policy';
 import { InFlightRequestTracker } from './common/shutdown/request-tracker';
 import { configureHttpContract } from './common/bootstrap/configure-http-contract';
@@ -41,11 +42,16 @@ async function bootstrap(): Promise<void> {
   // public with session cookie). Dashboard/admin and mobile API clients use
   // bearer auth, while provider webhooks authenticate by signature.
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (shouldBypassCsrf(req.path)) {
+    if (shouldBypassCsrf({
+      path: req.path,
+      hasClientSessionCookie: Boolean(req.cookies?.client_access_token),
+    })) {
       return next();
     }
     return csrfMiddleware(req, res, next);
   });
+  // Mark legacy client prefixes (Deprecation/Sunset headers + usage counter).
+  app.use(legacyClientPrefixMiddleware(app.get(AppMetricsService)));
   if (process.env.THROTTLER_DISABLED !== 'true') {
     app.use('/api/v1/auth', rateLimit({
       windowMs: 15 * 60 * 1000,

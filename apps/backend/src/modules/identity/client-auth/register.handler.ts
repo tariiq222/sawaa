@@ -103,7 +103,7 @@ export class RegisterHandler {
       // Registering by email proves that address with the OTP just consumed.
       emailVerified: isEmailChannel ? new Date() : null,
       tokenVersion,
-    });
+    }, { channel: 'web' });
 
     return {
       accessToken: tokens.accessToken,

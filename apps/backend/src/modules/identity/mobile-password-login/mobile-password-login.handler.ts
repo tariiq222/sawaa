@@ -93,7 +93,7 @@ export class MobilePasswordLoginHandler {
       : { phone: client.phone ?? undefined, password: dto.password };
     if (!loginDto.email && !loginDto.phone) return this.rejectCredentials(dto.password);
     try {
-      const result = await this.login.execute(loginDto, ip, client.id, attempt);
+      const result = await this.login.execute(loginDto, ip, client.id, attempt, 'mobile');
       await Promise.all([redisClient.del(identifierKey), redisClient.del(ipKey)]);
       return { sessionKind: 'client', tokens: { accessToken: result.accessToken, refreshToken: result.refreshToken } };
     } catch (error) {

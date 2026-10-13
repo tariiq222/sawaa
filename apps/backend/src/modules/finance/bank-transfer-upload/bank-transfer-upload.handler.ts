@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -82,7 +82,7 @@ export class BankTransferUploadHandler {
 
     // SECURITY (P0-5): caller must own the invoice when invoked from a client surface.
     if (cmd.clientId && invoice.clientId !== cmd.clientId) {
-      throw new ForbiddenException('Invoice does not belong to caller');
+      throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
     }
 
     this.assertInvoiceAcceptsPayment(invoice.id, invoice.status);
@@ -116,7 +116,7 @@ export class BankTransferUploadHandler {
           throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
         }
         if (cmd.clientId && lockedInvoice.clientId !== cmd.clientId) {
-          throw new ForbiddenException('Invoice does not belong to caller');
+          throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
         }
         this.assertInvoiceAcceptsPayment(lockedInvoice.id, lockedInvoice.status);
 

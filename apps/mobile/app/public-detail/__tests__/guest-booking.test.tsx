@@ -20,6 +20,7 @@ let mockBookingMode = 'SERVICES';
 let mockPackageExtra: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: (callback: () => void | (() => void)) => require('react').useEffect(callback, [callback]),
   useRouter: () => ({ push: mockPush, back: jest.fn(), canGoBack: () => false, replace: mockReplace }),
   useLocalSearchParams: () => ({ kind: mockKind, id: mockId, clinicId: mockClinicId, serviceId: mockServiceId, steps: mockSteps }),
 }));

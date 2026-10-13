@@ -1,4 +1,5 @@
 import { GetNativePaymentConfigHandler } from '../../../modules/finance/native-payments/get-native-payment-config/get-native-payment-config.handler';
+import { ClientThrottle } from '../../../common/throttle/client-throttle';
 import { InitNativePaymentHandler } from '../../../modules/finance/native-payments/init-native-payment/init-native-payment.handler';
 import { ReconcileNativePaymentHandler } from '../../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
 import { InitNativePackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-native-package-purchase.handler';
@@ -14,24 +15,22 @@ import {
   Post,
   Query,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
+  ApiTags, ApiOperation, ApiParam,
   ApiOkResponse, ApiResponse, ApiProperty, ApiPropertyOptional,
   ApiConsumes, ApiBody, ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListPaymentsHandler } from '../../../modules/finance/list-payments/list-payments.handler';
-import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invoice.handler';
+import { GetPublicInvoiceHandler } from '../../../modules/finance/get-invoice/get-public-invoice.handler';
 import {
   ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES,
   BankTransferUploadHandler,
@@ -41,7 +40,7 @@ import { InitClientPaymentHandler } from '../../../modules/finance/payments/clie
 import { InitClientPaymentDto } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
 import { InitPackagePurchaseHandler } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
 import { InitPackagePurchaseDto } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.dto';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { GetClientBankTransferSettingsHandler } from '../../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
 
 export class MobileListPaymentsQuery {
@@ -61,15 +60,13 @@ export class MobileBankTransferUploadDto {
 }
 
 @ApiTags('Mobile Client / Payments')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/payments')
 export class MobileClientPaymentsController {
   constructor(
     private readonly listPayments: ListPaymentsHandler,
-    private readonly getInvoice: GetInvoiceHandler,
+    private readonly getInvoice: GetPublicInvoiceHandler,
     private readonly bankTransferUpload: BankTransferUploadHandler,
     private readonly initClientPayment: InitClientPaymentHandler,
     private readonly getClientBankTransferSettings: GetClientBankTransferSettingsHandler,
@@ -85,16 +82,16 @@ export class MobileClientPaymentsController {
   @ApiOkResponse({type:NativePaymentCapabilitiesDto})
   getNativeConfig() { return this.nativeConfig.execute(); }
 
+  @ClientThrottle('payment')
   @Post('native/init')
-  @Throttle({default:{ttl:60_000,limit:3}})
   @ApiOperation({summary:'Reserve or resume a native invoice payment'})
   @ApiCreatedResponse({type:NativePaymentInitResponseDto})
   initNativePayment(@ClientSession() user:ClientSession,@Body() body:InitClientPaymentDto) {
     return this.nativeInit.execute({clientId:user.id,invoiceId:body.invoiceId,method:body.method});
   }
 
+  @ClientThrottle('money')
   @Post('package-purchases/native/init')
-  @Throttle({default:{ttl:60_000,limit:5}})
   @ApiOperation({summary:'Reserve or resume a native package purchase payment'})
   @ApiCreatedResponse({type:NativePackagePurchaseInitResponseDto})
   initNativePackagePurchase(@ClientSession() user:ClientSession,@Body() body:InitPackagePurchaseDto) {
@@ -115,15 +112,34 @@ export class MobileClientPaymentsController {
   @Get()
   @ApiOperation({ summary: 'List the authenticated client\'s payments' })
   @ApiOkResponse({ description: 'Paginated payment list for the current client' })
-  listMyPayments(
+  async listMyPayments(
     @ClientSession() user: ClientSession,
     @Query() q: MobileListPaymentsQuery,
   ) {
-    return this.listPayments.execute({
+    const result = await this.listPayments.execute({
       clientId: user.id,
       page: q.page ?? 1,
       limit: q.limit ?? 20,
     });
+    // Explicit allow-list (docs/architecture/client-api-unification.md §3.3): the
+    // dashboard handler returns staff-shaped rows (client PII, gatewayRef,
+    // receipt/audit/lease fields). Only what the app consumes leaves here.
+    return {
+      ...result,
+      items: result.items.map((p) => ({
+        id: p.id,
+        number: p.number,
+        invoiceId: p.invoiceId,
+        amount: p.amount,
+        currency: p.currency,
+        method: p.method,
+        status: p.status,
+        createdAt: p.createdAt,
+        processedAt: p.processedAt,
+        collectionDate: p.collectionDate,
+        invoice: p.invoice ? { bookingId: p.invoice.bookingId, total: p.invoice.total } : null,
+      })),
+    };
   }
 
   @Get('bank-transfer/settings')
@@ -165,11 +181,12 @@ export class MobileClientPaymentsController {
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() user: ClientSession,
   ) {
-    return this.getInvoice.execute({ invoiceId: id, clientId: user.id });
+    // Ownership is part of the query: a foreign id is a 404, never a 403.
+    return this.getInvoice.execute(id, user.id);
   }
 
+  @ClientThrottle('payment')
   @Post('init')
-  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @ApiOperation({ summary: 'Initialize a Moyasar payment for an authenticated client invoice' })
   @ApiCreatedResponse({
     description: 'Payment initialized',
@@ -194,8 +211,8 @@ export class MobileClientPaymentsController {
     });
   }
 
+  @ClientThrottle('money')
   @Post('package-purchases/init')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Initialize a Moyasar payment to self-purchase a session package' })
   @ApiCreatedResponse({
     description: 'Package purchase initialized (PENDING until the Moyasar payment completes)',

@@ -1,16 +1,13 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
-import { ClientSessionGuard } from '../../../../common/guards/client-session.guard';
+import { Controller, Get } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
-import { Public } from '../../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../../common/auth/client-route.decorator';
 import { GetClientPortalSummaryHandler } from '../../../../modules/bookings/client/get-client-portal-summary.handler';
 
 @ApiTags('Mobile Client / Portal')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/portal/summary')
 export class MobileClientSummaryController {
   constructor(private readonly summaryHandler: GetClientPortalSummaryHandler) {}

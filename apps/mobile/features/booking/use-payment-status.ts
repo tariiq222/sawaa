@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
 
 /**
@@ -10,7 +11,9 @@ import { clientPaymentsService, type ClientInvoice } from '@/services/client/pay
  * backend invoice is the source of truth, so we poll it (mirroring the website
  * confirm-page polling) and only then branch the UI.
  *
- * - no invoice → 'confirmed' (pay-at-clinic / no online charge required)
+ * - no invoice → the booking is read (pay-at-clinic / no online charge required):
+ *   CONFIRMED/PENDING → 'confirmed'; CANCELLED/EXPIRED/NO_SHOW → 'cancelled';
+ *   a failed read → 'pending' (retryable), never 'confirmed'
  * - invoice PAID / DEPOSIT_PAID → 'confirmed'
  * - invoice cancelled/void or a payment FAILED → 'failed'
  * - a payment still PENDING / PENDING_VERIFICATION → 'pending'
@@ -20,7 +23,7 @@ import { clientPaymentsService, type ClientInvoice } from '@/services/client/pay
  * because the backend creates the PENDING card payment before the gateway
  * opens (see `abortedGatewayPhase`).
  */
-export type PaymentPhase = 'polling' | 'confirmed' | 'pending' | 'failed';
+export type PaymentPhase = 'polling' | 'confirmed' | 'pending' | 'failed' | 'cancelled';
 
 const MAX_ATTEMPTS = 10;
 const INTERVAL_MS = 3000;
@@ -103,6 +106,8 @@ export function abortedGatewayPhase(
 }
 
 const CONFIRMED_BOOKING_STATUSES = new Set(['CONFIRMED', 'COMPLETED']);
+const NO_INVOICE_CONFIRMED_STATUSES = new Set(['CONFIRMED', 'PENDING']);
+const NO_INVOICE_CANCELLED_STATUSES = new Set(['CANCELLED', 'EXPIRED', 'NO_SHOW']);
 
 /**
  * A paid invoice is NOT enough to call an appointment confirmed: the booking
@@ -133,14 +138,35 @@ export function resolveConfirmedPhase(
  * spinning the full window (and ending on 'pending') for an abandoned charge,
  * so the success screen offers a payment retry for the same invoice.
  */
-export function usePaymentStatus(invoiceId?: string, webResult?: string) {
-  const [phase, setPhase] = useState<PaymentPhase>(invoiceId ? 'polling' : 'confirmed');
+export function usePaymentStatus(invoiceId?: string, webResult?: string, bookingId?: string) {
+  const [phase, setPhase] = useState<PaymentPhase>(invoiceId || bookingId ? 'polling' : 'confirmed');
   const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     if (!invoiceId) {
-      setPhase('confirmed');
-      return;
+      if (!bookingId) {
+        setPhase('confirmed');
+        return;
+      }
+      // Pay-at-center: no invoice to poll, so the booking itself is the source
+      // of truth. A failed read must never be shown as a confirmed appointment.
+      let bookingCancelled = false;
+      setPhase('polling');
+      clientBookingsService
+        .getById(bookingId)
+        .then((booking) => {
+          if (bookingCancelled) return;
+          const status = normalized(booking.status);
+          if (NO_INVOICE_CANCELLED_STATUSES.has(status)) setPhase('cancelled');
+          else if (NO_INVOICE_CONFIRMED_STATUSES.has(status)) setPhase('confirmed');
+          else setPhase('pending');
+        })
+        .catch(() => {
+          if (!bookingCancelled) setPhase('pending');
+        });
+      return () => {
+        bookingCancelled = true;
+      };
     }
 
     let cancelled = false;
@@ -205,7 +231,7 @@ export function usePaymentStatus(invoiceId?: string, webResult?: string) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [invoiceId, webResult, retryNonce]);
+  }, [invoiceId, webResult, bookingId, retryNonce]);
 
   const checkAgain = useCallback(() => {
     setPhase('polling');

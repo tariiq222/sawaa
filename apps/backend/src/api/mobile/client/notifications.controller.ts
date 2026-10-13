@@ -1,12 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Query } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation,
+  ApiTags, ApiOperation,
   ApiOkResponse, ApiNoContentResponse, ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsInt, IsOptional, IsString, IsNotEmpty, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { ListNotificationsHandler } from '../../../modules/comms/notifications/list-notifications.handler';
@@ -16,7 +15,7 @@ import { GetUnreadCountHandler } from '../../../modules/comms/notifications/get-
 import { RegisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/register-fcm-token.handler';
 import { UnregisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/unregister-fcm-token.handler';
 import { RegisterFcmTokenDto } from '../../../modules/comms/fcm-tokens/register-fcm-token.dto';
-import { Public } from '../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 
 export class MobileListNotificationsQuery {
   @ApiPropertyOptional({ description: 'Return only unread notifications', example: true })
@@ -36,10 +35,8 @@ export class MobileUnregisterFcmQuery {
 }
 
 @ApiTags('Mobile Client / Notifications')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/notifications')
 export class MobileClientNotificationsController {
   constructor(

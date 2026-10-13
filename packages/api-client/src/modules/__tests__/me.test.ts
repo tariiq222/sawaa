@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initClient } from '../../client'
 import {
   cancelMyBooking,
+  closeMyAccount,
+  getMyBookingJoinLink,
+  rateMyBooking,
   getMyCancellationPreview,
   getMe,
   getMyBookings,
@@ -88,10 +91,10 @@ describe('getMe', () => {
 
     const calls = vi.mocked(fetch).mock.calls
     expect(calls).toHaveLength(4)
-    expect(calls[0]?.[0]).toBe('http://api.test/api/v1/public/me')
+    expect(calls[0]?.[0]).toBe('http://api.test/api/v1/client/profile')
     expect(calls[1]?.[0]).toBe('http://api.test/api/v1/public/branding')
     expect(calls[2]?.[0]).toBe('http://api.test/api/v1/public/auth/refresh')
-    expect(calls[3]?.[0]).toBe('http://api.test/api/v1/public/me')
+    expect(calls[3]?.[0]).toBe('http://api.test/api/v1/client/profile')
 
     const refreshInit = calls[2]?.[1] as RequestInit
     expect((calls[0]?.[1] as RequestInit).credentials).toBe('include')
@@ -105,9 +108,9 @@ describe('getMyBookings', () => {
   it('sends the selected booking tab to the server', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items: [], total: 0, page: 1, pageSize: 50 }))
     await getMyBookings(1, 50, 'upcoming')
-    expect(vi.mocked(fetch).mock.calls[0]![0]).toBe('http://api.test/api/v1/public/me/bookings?page=1&pageSize=50&tab=upcoming')
+    expect(vi.mocked(fetch).mock.calls[0]![0]).toBe('http://api.test/api/v1/client/bookings?page=1&pageSize=50&tab=upcoming')
   })
-  it('GETs /public/me/bookings with credentials and unwraps the envelope', async () => {
+  it('GETs /client/bookings with credentials and unwraps the envelope', async () => {
     const fakeBookings = { items: [], page: 2, pageSize: 5 } as unknown as ClientBookingListResponse
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({ success: true, data: fakeBookings }),
@@ -117,13 +120,13 @@ describe('getMyBookings', () => {
 
     expect(result).toEqual(fakeBookings)
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
-    expect(url).toBe('http://api.test/api/v1/public/me/bookings?page=2&pageSize=5')
+    expect(url).toBe('http://api.test/api/v1/client/bookings?page=2&pageSize=5')
     expect((init as RequestInit).credentials).toBe('include')
   })
 })
 
 describe('updateMyProfile', () => {
-  it('PATCHes /public/me with credentials and the payload', async () => {
+  it('PATCHes /client/profile with credentials and the payload', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(csrfBootstrapResponse())
       .mockResolvedValueOnce(jsonResponse({ success: true, data: fakeProfile }))
@@ -132,7 +135,7 @@ describe('updateMyProfile', () => {
 
     expect(result).toEqual(fakeProfile)
     const [url, init] = vi.mocked(fetch).mock.calls[1]!
-    expect(url).toBe('http://api.test/api/v1/public/me')
+    expect(url).toBe('http://api.test/api/v1/client/profile')
     expect(init?.method).toBe('PATCH')
     expect((init as RequestInit).credentials).toBe('include')
     expect(JSON.parse(init?.body as string)).toEqual({
@@ -143,7 +146,7 @@ describe('updateMyProfile', () => {
 })
 
 describe('getMyInvoices', () => {
-  it('GETs /public/me/invoices with credentials and unwraps the envelope', async () => {
+  it('GETs /client/invoices with credentials and unwraps the envelope', async () => {
     const fakeInvoices = { items: [], total: 0, page: 1, pageSize: 50 }
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({ success: true, data: fakeInvoices }),
@@ -153,13 +156,13 @@ describe('getMyInvoices', () => {
 
     expect(result).toEqual(fakeInvoices)
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
-    expect(url).toBe('http://api.test/api/v1/public/me/invoices?page=1&pageSize=50')
+    expect(url).toBe('http://api.test/api/v1/client/invoices?page=1&pageSize=50')
     expect((init as RequestInit).credentials).toBe('include')
   })
 })
 
 describe('requestRefund', () => {
-  it('POSTs /public/refunds/request with credentials and invoiceId + reason', async () => {
+  it('POSTs /client/refunds/request with credentials and invoiceId + reason', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(csrfBootstrapResponse())
       .mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'REQUESTED' } }))
@@ -168,7 +171,7 @@ describe('requestRefund', () => {
 
     expect(result).toEqual({ status: 'REQUESTED' })
     const [url, init] = vi.mocked(fetch).mock.calls[1]!
-    expect(url).toBe('http://api.test/api/v1/public/refunds/request')
+    expect(url).toBe('http://api.test/api/v1/client/refunds/request')
     expect(init?.method).toBe('POST')
     expect((init as RequestInit).credentials).toBe('include')
     expect(JSON.parse(init?.body as string)).toEqual({
@@ -190,7 +193,7 @@ describe('requestRefund', () => {
 })
 
 describe('cancelMyBooking', () => {
-  it('PATCHes /public/me/bookings/:id/cancel with payload', async () => {
+  it('PATCHes /client/bookings/:id/cancel with payload', async () => {
     const fakeResult = {
       status: 'CANCELLED',
       booking: { id: 'booking_1' },
@@ -200,18 +203,18 @@ describe('cancelMyBooking', () => {
       .mockResolvedValueOnce(csrfBootstrapResponse())
       .mockResolvedValueOnce(jsonResponse({ success: true, data: fakeResult }))
 
-    const result = await cancelMyBooking('booking_1', { reason: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1' })
+    const result = await cancelMyBooking('booking_1', { notes: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1' })
 
     expect(result).toEqual(fakeResult)
     const [url, init] = vi.mocked(fetch).mock.calls[1]!
-    expect(url).toBe('http://api.test/api/v1/public/me/bookings/booking_1/cancel')
+    expect(url).toBe('http://api.test/api/v1/client/bookings/booking_1/cancel')
     expect(init?.method).toBe('PATCH')
-    expect(JSON.parse(init?.body as string)).toEqual({ reason: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1' })
+    expect(JSON.parse(init?.body as string)).toEqual({ notes: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1' })
   })
 })
 
 describe('rescheduleMyBooking', () => {
-  it('PATCHes /public/me/bookings/:id/reschedule with payload', async () => {
+  it('PATCHes /client/bookings/:id/reschedule with payload', async () => {
     const fakeResult = { booking: { id: 'booking_1' } }
     vi.mocked(fetch)
       .mockResolvedValueOnce(csrfBootstrapResponse())
@@ -224,7 +227,7 @@ describe('rescheduleMyBooking', () => {
 
     expect(result).toEqual(fakeResult)
     const [url, init] = vi.mocked(fetch).mock.calls[1]!
-    expect(url).toBe('http://api.test/api/v1/public/me/bookings/booking_1/reschedule')
+    expect(url).toBe('http://api.test/api/v1/client/bookings/booking_1/reschedule')
     expect(init?.method).toBe('PATCH')
     expect(JSON.parse(init?.body as string)).toEqual({
       newScheduledAt: '2026-06-06T12:00:00.000Z',
@@ -239,13 +242,41 @@ describe('cancellation policy contract', () => {
     const preview = { policyEnabled: true, canCancel: true, acceptedRefundTerms: true, quoteToken: 'quote-1' }
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ success: true, data: preview }))
     expect(await getMyCancellationPreview('booking_1')).toEqual(preview)
-    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('http://api.test/api/v1/public/me/bookings/booking_1/cancellation-preview')
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('http://api.test/api/v1/client/bookings/booking_1/cancellation-preview')
   })
   it('sends the accepted quote and stable action id and preserves refund outcome', async () => {
     const refund = { status: 'PROCESSING', refundAmount: 5000 }
     vi.mocked(fetch).mockResolvedValueOnce(csrfBootstrapResponse()).mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'CANCELLED', requiresApproval: false, refund } }))
-    const result = await cancelMyBooking('booking_1', { reason: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
+    const result = await cancelMyBooking('booking_1', { notes: 'changed plans', acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
     expect(JSON.parse(vi.mocked(fetch).mock.calls[1]?.[1]?.body as string)).toMatchObject({ acceptedRefundTerms: true, quoteToken: 'quote-1', sourceActionId: '11111111-1111-4111-8111-111111111111' })
     expect(result.refund).toEqual(refund)
+  })
+})
+
+describe('client capabilities on /client', () => {
+  it('DELETEs /client/profile with credentials and a CSRF header', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(csrfBootstrapResponse()).mockResolvedValueOnce(jsonResponse({ success: true, data: {} }))
+    await closeMyAccount()
+    const [url, init] = vi.mocked(fetch).mock.calls[1]!
+    expect(url).toBe('http://api.test/api/v1/client/profile')
+    expect(init?.method).toBe('DELETE')
+    expect(init?.credentials).toBe('include')
+  })
+  it('POSTs the rating to /client/bookings/:id/rate', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(csrfBootstrapResponse()).mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'r1' } }))
+    const payload = { score: 5, comment: 'good', isPublic: false }
+    await expect(rateMyBooking('booking/1', payload)).resolves.toEqual({ id: 'r1' })
+    const [url, init] = vi.mocked(fetch).mock.calls[1]!
+    expect(url).toBe('http://api.test/api/v1/client/bookings/booking%2F1/rate')
+    expect(init?.method).toBe('POST')
+    expect(init?.credentials).toBe('include')
+    expect(JSON.parse(init?.body as string)).toEqual(payload)
+  })
+  it('GETs the lazy join link from /client/bookings/:id/join', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ success: true, data: { joinUrl: 'https://zoom.test/j/1' } }))
+    await expect(getMyBookingJoinLink('booking_1')).resolves.toEqual({ joinUrl: 'https://zoom.test/j/1' })
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/api/v1/client/bookings/booking_1/join')
+    expect(init?.credentials).toBe('include')
   })
 })

@@ -1,76 +1,50 @@
-import { Controller, Delete, Get, Patch, Body, UseGuards } from '@nestjs/common';
-import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString, ValidateIf } from 'class-validator';
+import { Controller, Delete, Get, Patch, Body } from '@nestjs/common';
+import { ClientThrottle } from '../../../common/throttle/client-throttle';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse,
+  ApiTags, ApiOperation, ApiOkResponse,
 } from '@nestjs/swagger';
-import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../../common/swagger';
-import { ClientResponseDto } from '../../dashboard/dto/people-response.dto';
-import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
+import { ClientProfileDto } from '../../../modules/identity/client-auth/client-profile.dto';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
-import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
+import { GetMeHandler } from '../../../modules/identity/client-auth/get-me.handler';
+import { UpdateClientProfileDto } from '../../../modules/identity/client-auth/update-client-profile.dto';
 import { UpdateClientProfileHandler } from '../../../modules/identity/client-auth/update-client-profile.handler';
-import { Public } from '../../../common/guards/jwt.guard';
-import { withProvenEmailOnly } from '../../../modules/people/clients/client.serializer';
+import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { RequestAccountDeletionHandler } from '../../../modules/identity/request-account-deletion/request-account-deletion.handler';
 
-export class MobileUpdateProfileBody {
-  @ApiPropertyOptional({ description: 'Full display name', example: 'Sara Al-Harbi' })
-  @IsOptional() @IsString() name?: string;
-
-  @ApiPropertyOptional({ description: 'Saudi mobile number', example: '+966501234567' })
-  @IsOptional() @IsString() phone?: string;
-
-  @ApiPropertyOptional({ description: 'Email address', example: 'user@example.com' })
-  @IsOptional() @IsString() email?: string;
-
-  @ApiPropertyOptional({ description: 'Avatar image URL', example: 'https://cdn.example.com/avatars/sara.jpg', nullable: true })
-  @IsOptional() @IsString() avatarUrl?: string;
-
-  @ApiPropertyOptional({ description: 'Preferred app locale', enum: ['ar', 'en'], example: 'ar' })
-  @Type(() => Object)
-  @ValidateIf((_, value) => value !== undefined)
-  @IsIn(['ar', 'en'], { message: 'اللغة المفضلة غير صالحة' })
-  preferredLocale?: 'ar' | 'en';
-
-  @ApiPropertyOptional({ description: 'Whether push notifications are enabled', example: true })
-  @Type(() => Object)
-  @ValidateIf((_, value) => value !== undefined)
-  @IsBoolean({ message: 'قيمة الإشعارات الفورية يجب أن تكون منطقية' })
-  pushEnabled?: boolean;
-}
+/** Same strict validators as PATCH /public/me; the class exists to keep the Swagger schema name. */
+export class MobileUpdateProfileBody extends UpdateClientProfileDto {}
 
 @ApiTags('Mobile Client / Profile')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/profile')
 export class MobileClientProfileController {
   constructor(
-    private readonly getClient: GetClientHandler,
+    private readonly getMe: GetMeHandler,
     private readonly updateClientProfile: UpdateClientProfileHandler,
     private readonly requestAccountDeletion: RequestAccountDeletionHandler,
   ) {}
 
   @Get()
   @ApiOperation({ summary: "Get the authenticated client's profile" })
-  @ApiOkResponse({ type: ClientResponseDto, description: 'Client profile record' })
+  @ApiOkResponse({ type: ClientProfileDto, description: 'Client profile record' })
   async getProfile(@ClientSession() user: ClientSession) {
-    return withProvenEmailOnly(await this.getClient.execute({ clientId: user.id }));
+    return this.getMe.execute(user.id);
   }
 
+  @ClientThrottle('write')
   @Patch()
   @ApiOperation({ summary: "Update the authenticated client's profile" })
-  @ApiOkResponse({ type: ClientResponseDto, description: 'Updated client profile' })
+  @ApiOkResponse({ type: ClientProfileDto, description: 'Updated client profile' })
   async updateProfile(
     @ClientSession() user: ClientSession,
     @Body() body: MobileUpdateProfileBody,
   ) {
-    return withProvenEmailOnly(await this.updateClientProfile.execute(user.id, body));
+    return this.updateClientProfile.execute(user.id, body);
   }
 
+  @ClientThrottle('write')
   @Delete()
   @ApiOperation({ summary: "Close the authenticated client's login immediately" })
   @ApiOkResponse({

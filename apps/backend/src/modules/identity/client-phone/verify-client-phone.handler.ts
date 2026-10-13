@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { ClientTokenService } from '../shared/client-token.service';
+import { ClientTokenService, type ClientTokenPair } from '../shared/client-token.service';
+import type { ClientChannel } from '../../../common/auth/client-channel';
 import { detailsUnavailable, invalidCode, translateConflict } from '../mobile-email-entry/mobile-email-errors';
 import { ClientPhoneStore } from './client-phone.store';
 import { VerifyClientPhoneDto } from './client-phone.dto';
@@ -20,7 +21,7 @@ export class VerifyClientPhoneHandler {
   private readonly logger = new Logger(VerifyClientPhoneHandler.name);
   constructor(private readonly store: ClientPhoneStore, private readonly tokens: ClientTokenService) {}
 
-  async execute(clientId: string, input: VerifyClientPhoneDto): Promise<ClientPhoneVerifiedDto> {
+  async execute(clientId: string, input: VerifyClientPhoneDto, channel: ClientChannel = 'mobile'): Promise<ClientPhoneVerifiedDto & { tokenPair: ClientTokenPair }> {
     // Error sentinels are returned (not thrown) so a wrong attempt COMMITS.
     const outcome = await this.store.transaction(async tx => {
       const client = await this.store.owner(tx, clientId);
@@ -51,8 +52,8 @@ export class VerifyClientPhoneHandler {
       // The number is the login identity: close every other session.
       await tx.clientRefreshToken.updateMany({ where: { clientId, revokedAt: null }, data: { revokedAt: now } });
       await tx.clientPhoneChallenge.updateMany({ where: { clientId, consumedAt: null }, data: { consumedAt: now } });
-      const pair = await this.tokens.issueTokenPair(updated, tx);
-      return { phone, tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };
+      const pair = await this.tokens.issueTokenPair(updated, { channel }, tx);
+      return { phone, tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh }, tokenPair: pair };
     }).catch(translateVerifyConflict);
 
     if ('error' in outcome) throw outcome.error === 'code' ? invalidCode() : detailsUnavailable();

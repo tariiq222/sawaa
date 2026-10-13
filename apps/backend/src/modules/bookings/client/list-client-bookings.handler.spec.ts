@@ -18,8 +18,15 @@ describe('ListClientBookingsHandler', () => {
     price: 150,
     currency: 'SAR',
     deliveryType: 'ONLINE',
+    bookingType: 'INDIVIDUAL',
+    bookingNumber: 7,
     zoomJoinUrl: 'https://zoom.us/j/123',
+    zoomHostUrl: 'https://zoom.us/s/host-secret',
+    zoomStartUrl: 'https://zoom.us/s/start-secret',
+    notes: 'internal staff note',
+    source: 'RECEPTION',
     createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-01-01T00:00:00Z'),
   };
 
   const mockPrisma = {
@@ -31,11 +38,12 @@ describe('ListClientBookingsHandler', () => {
     service: { findMany: jest.fn() },
     branch: { findMany: jest.fn() },
     invoice: { findMany: jest.fn() },
-    payment: { findMany: jest.fn() },
+    rating: { findMany: jest.fn() },
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.rating.findMany.mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -50,7 +58,7 @@ describe('ListClientBookingsHandler', () => {
   it.each([ClientBookingsTab.Upcoming, ClientBookingsTab.Past, ClientBookingsTab.Cancelled])('filters %s before pagination and counts only that tab', async (tab) => {
     mockPrisma.booking.findMany.mockResolvedValue([]);
     mockPrisma.booking.count.mockResolvedValue(60);
-    const result = await handler.execute('cl-1', 2, 50, tab);
+    const result = await handler.execute({ clientId: 'cl-1', page: 2, pageSize: 50, tab });
     const where = mockPrisma.booking.findMany.mock.calls[0][0].where;
     expect(where.clientId).toBe('cl-1');
     expect(where.status).toEqual(tab === ClientBookingsTab.Cancelled ? { in: ['CANCELLED', 'CANCEL_REQUESTED'] } : { notIn: ['CANCELLED', 'CANCEL_REQUESTED'] });
@@ -71,7 +79,7 @@ describe('ListClientBookingsHandler', () => {
     mockPrisma.booking.findMany.mockImplementation(async ({ where, skip, take }) => select(where).sort((a, b) => +a.scheduledAt - +b.scheduledAt).slice(skip, skip + take));
     mockPrisma.booking.count.mockImplementation(async ({ where }) => select(where).length);
     for (const relation of [mockPrisma.employee, mockPrisma.service, mockPrisma.branch, mockPrisma.invoice]) relation.findMany.mockResolvedValue([]);
-    const result = await handler.execute('cl-1', 1, 1, ClientBookingsTab.Upcoming);
+    const result = await handler.execute({ clientId: 'cl-1', page: 1, pageSize: 1, tab: ClientBookingsTab.Upcoming });
     expect(result.items.map((row) => row.id)).toEqual(['next']);
     expect(result.total).toBe(2);
     expect(mockPrisma.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }], take: 1 }));
@@ -81,7 +89,7 @@ describe('ListClientBookingsHandler', () => {
     mockPrisma.booking.findMany.mockResolvedValue([]);
     mockPrisma.booking.count.mockResolvedValue(0);
 
-    const result = await handler.execute('cl-1');
+    const result = await handler.execute({ clientId: 'cl-1' });
 
     expect(result.items).toHaveLength(0);
     expect(result.total).toBe(0);
@@ -101,7 +109,7 @@ describe('ListClientBookingsHandler', () => {
     ]);
     mockPrisma.invoice.findMany.mockResolvedValue([]);
 
-    const result = await handler.execute('cl-1');
+    const result = await handler.execute({ clientId: 'cl-1' });
 
     expect(result.items).toHaveLength(1);
     const item = result.items[0];
@@ -129,13 +137,13 @@ describe('ListClientBookingsHandler', () => {
     mockPrisma.service.findMany.mockResolvedValue([]);
     mockPrisma.branch.findMany.mockResolvedValue([]);
     mockPrisma.invoice.findMany.mockResolvedValue([
-      { id: 'inv-1', bookingId: 'bk-1', status: 'PAID' },
-    ]);
-    mockPrisma.payment.findMany.mockResolvedValue([
-      { id: 'pay-1', invoiceId: 'inv-1', status: 'COMPLETED' },
+      {
+        id: 'inv-1', bookingId: 'bk-1', status: 'PAID', subtotal: 15000, vatRate: 0, total: 15000,
+        payments: [{ id: 'pay-1', status: 'COMPLETED', amount: 15000, refundedAmount: 0, method: 'ONLINE_CARD' }],
+      },
     ]);
 
-    const result = await handler.execute('cl-1');
+    const result = await handler.execute({ clientId: 'cl-1' });
     const item = result.items[0];
 
     expect(item.invoiceId).toBe('inv-1');
@@ -153,7 +161,7 @@ describe('ListClientBookingsHandler', () => {
     mockPrisma.branch.findMany.mockResolvedValue([]);
     mockPrisma.invoice.findMany.mockResolvedValue([]);
 
-    const result = await handler.execute('cl-1');
+    const result = await handler.execute({ clientId: 'cl-1' });
     const item = result.items[0];
 
     expect(item.invoiceId).toBeNull();
@@ -170,7 +178,7 @@ describe('ListClientBookingsHandler', () => {
     mockPrisma.branch.findMany.mockResolvedValue([]);
     mockPrisma.invoice.findMany.mockResolvedValue([]);
 
-    const result = await handler.execute('cl-1');
+    const result = await handler.execute({ clientId: 'cl-1' });
     const item = result.items[0];
 
     expect(item.serviceName).toBe('');
@@ -183,7 +191,7 @@ describe('ListClientBookingsHandler', () => {
     mockPrisma.booking.findMany.mockResolvedValue([]);
     mockPrisma.booking.count.mockResolvedValue(25);
 
-    const result = await handler.execute('cl-1', 3, 5);
+    const result = await handler.execute({ clientId: 'cl-1', page: 3, pageSize: 5 });
 
     expect(result.page).toBe(3);
     expect(result.pageSize).toBe(5);
@@ -191,5 +199,71 @@ describe('ListClientBookingsHandler', () => {
     expect(mockPrisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 10, take: 5 }),
     );
+  });
+
+  it('defaults the web semantics: upper-case enums, date-based tabs, host URLs stripped', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([baseBooking]);
+    mockPrisma.booking.count.mockResolvedValue(1);
+    for (const relation of [mockPrisma.employee, mockPrisma.service, mockPrisma.branch, mockPrisma.invoice]) relation.findMany.mockResolvedValue([]);
+
+    const { items } = await handler.execute({ clientId: 'cl-1' });
+
+    expect(items[0].status).toBe('CONFIRMED');
+    expect(items[0].deliveryType).toBe('ONLINE');
+    expect(items[0].zoomHostUrl).toBeNull();
+    expect(items[0].zoomStartUrl).toBeNull();
+    expect(items[0]).not.toHaveProperty('notes');
+    expect(items[0]).not.toHaveProperty('source');
+  });
+
+  it('mobile semantics: lower-case enums, lifecycle tabs ordered ascending, status ANDed with the tab', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([baseBooking]);
+    mockPrisma.booking.count.mockResolvedValue(1);
+    for (const relation of [mockPrisma.employee, mockPrisma.service, mockPrisma.branch, mockPrisma.invoice]) relation.findMany.mockResolvedValue([]);
+
+    const { items } = await handler.execute({
+      clientId: 'cl-1', pageSize: 20, tab: ClientBookingsTab.Past, status: 'COMPLETED' as never,
+      tabSemantics: 'lifecycle', enumCase: 'lower',
+    });
+
+    const args = mockPrisma.booking.findMany.mock.calls[0][0];
+    expect(args.where).toEqual({
+      clientId: 'cl-1',
+      status: { in: ['COMPLETED', 'NO_SHOW'] },
+      AND: [{ status: 'COMPLETED' }],
+    });
+    expect(args.orderBy).toEqual([{ scheduledAt: 'asc' }, { id: 'asc' }]);
+    expect(items[0].status).toBe('confirmed');
+    expect(items[0].deliveryType).toBe('online');
+  });
+
+  it('mobile lifecycle cancelled tab includes EXPIRED and upcoming excludes finished states', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([]);
+    mockPrisma.booking.count.mockResolvedValue(0);
+
+    await handler.execute({ clientId: 'cl-1', tab: ClientBookingsTab.Cancelled, tabSemantics: 'lifecycle' });
+    expect(mockPrisma.booking.findMany.mock.calls[0][0].where.status).toEqual({ in: ['CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'] });
+
+    await handler.execute({ clientId: 'cl-1', tab: ClientBookingsTab.Upcoming, tabSemantics: 'lifecycle' });
+    const upcoming = mockPrisma.booking.findMany.mock.calls[1][0].where;
+    expect(upcoming.status).toEqual({ notIn: ['COMPLETED', 'NO_SHOW', 'CANCELLED', 'CANCEL_REQUESTED', 'EXPIRED'] });
+    expect(upcoming.scheduledAt).toBeUndefined();
+  });
+
+  it('keeps the positional signature used by chat operations', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([]);
+    mockPrisma.booking.count.mockResolvedValue(0);
+    const result = await handler.execute('cl-1', 2, 5);
+    expect(result).toEqual({ items: [], total: 0, page: 2, pageSize: 5 });
+  });
+
+  it('flags bookings the client already rated', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([baseBooking]);
+    mockPrisma.booking.count.mockResolvedValue(1);
+    for (const relation of [mockPrisma.employee, mockPrisma.service, mockPrisma.branch, mockPrisma.invoice]) relation.findMany.mockResolvedValue([]);
+    mockPrisma.rating.findMany.mockResolvedValue([{ bookingId: 'bk-1' }]);
+
+    const { items } = await handler.execute({ clientId: 'cl-1' });
+    expect(items[0].hasRated).toBe(true);
   });
 });

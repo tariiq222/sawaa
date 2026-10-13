@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import type { NativePaymentInitResponse, NativePaymentReconcileResponse } from '../../packages/shared/types/native-payment.ts';
-import { fixture, verifyBooking } from '../local/verify.mjs';
+import { fixture, verifyBooking, verifyNativePayment } from '../local/verify.mjs';
 import { isTarget, websiteUrl } from '../urls.ts';
 
 type Invoice = {
   id: string; bookingId: string; status: string; total: string | number;
   vatAmt: string | number; currency: string;
-  payments: Array<{ id: string; status: string; amount: string | number; gatewayRef: string }>;
+  payments: Array<{ id: string; status: string; amount: string | number }>;
 };
 
 // Native API/provider contract acceptance. This does not exercise native UI,
@@ -26,7 +26,7 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
   assert.ok(password, 'Synthetic client password is required');
   assert.ok(f.clients.payment?.email?.endsWith('@example.test'), 'Reserved synthetic payment client is required');
 
-  // Mobile controllers return bare JSON, unlike the website client transport.
+  // Canonical /client controllers return bare JSON for the mobile bearer session.
   // Never include response bodies or authentication material in failure messages.
   async function api<T>(path: string, token?: string, body?: unknown): Promise<T> {
     const response = await fetch(new URL(`/api/v1${path}`, backend), {
@@ -44,26 +44,28 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
   assert.equal(session.sessionKind, 'client');
   assert.ok(typeof session.tokens?.accessToken === 'string' && session.tokens.accessToken.length > 0, 'Password login must issue an access token');
   const token = session.tokens.accessToken;
-  const capabilities = await api<{ enabled: boolean; isLive: boolean }>('/mobile/client/payments/native/config', token);
+  const capabilities = await api<{ enabled: boolean; isLive: boolean }>('/client/payments/native/config', token);
   assert.ok(capabilities.enabled === true && capabilities.isLive === false, 'Moyasar Sandbox must be configured even when resuming a completed fixture');
 
   // Calendar day +4 in Riyadh, at 09:00 (+03:00); never depend on host timezone.
   const scheduledAt = f.appointments.payment;
-  type ExistingBooking = { id: string; clientId: string; serviceId: string; employeeId: string;
+  type ExistingBooking = { id: string; serviceId: string; employeeId: string;
     status: string; payAtClinic: boolean; invoice: { id: string } | null };
-  const existing = await api<{ items: ExistingBooking[]; meta: { total: number } }>('/mobile/client/bookings?limit=2', token);
-  assert.ok(existing.meta.total <= 1 && existing.items.length === existing.meta.total, 'Reserved client must have at most one booking; refusing duplicate creation');
+  const existing = await api<{ items: ExistingBooking[]; total: number; page: number; pageSize: number }>('/client/bookings?pageSize=2', token);
+  assert.equal(existing.page, 1);
+  assert.equal(existing.pageSize, 2);
+  assert.ok(existing.total <= 1 && existing.items.length === existing.total, 'Reserved client must have at most one booking; refusing duplicate creation');
   const previous = existing.items[0];
   if (previous) {
-    assert.equal(previous.clientId, f.clients.payment.id);
+    assert.ok(!Object.hasOwn(previous, 'clientId'), 'Client booking responses must omit client identity');
     assert.equal(previous.serviceId, f.serviceId);
     assert.equal(previous.employeeId, f.employeeId);
     assert.equal(previous.payAtClinic, false);
-    assert.ok(previous.status === 'awaiting_payment' || previous.status === 'confirmed', 'Existing payment booking is no longer resumable');
+    assert.ok(previous.status === 'AWAITING_PAYMENT' || previous.status === 'CONFIRMED', 'Existing payment booking is no longer resumable');
     assert.ok(previous.invoice?.id, 'Existing payment booking must have its invoice');
   }
   const booking = previous ? { id: previous.id, invoiceId: previous.invoice!.id, status: previous.status.toUpperCase() } : await api<{ id: string; invoiceId: string; status: string }>(
-    '/mobile/client/bookings', token, {
+    '/client/bookings', token, {
       branchId: f.branchId, employeeId: f.employeeId, serviceId: f.serviceId,
       durationOptionId: f.optionId, deliveryType: 'IN_PERSON', scheduledAt, payAtClinic: false,
     },
@@ -72,19 +74,21 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
   assert.ok(booking.invoiceId, 'Online booking must create an invoice');
   const initial = await verifyBooking('payment', booking.status);
   assert.equal(initial.bookingId, booking.id);
+  assert.equal(initial.clientId, f.clients.payment.id);
   assert.equal(initial.invoices[0].id, booking.invoiceId);
   assert.equal(initial.invoices[0].status, booking.status === 'CONFIRMED' ? 'PAID' : 'DRAFT');
 
   // Recover an ambiguous previous browser POST before exposing another create.
   // A provider404 is the only native contract that authorizes provider creation.
-  const before = await api<Invoice>(`/mobile/client/payments/invoices/${booking.invoiceId}`, token);
+  const before = await api<Invoice>(`/client/invoices/${booking.invoiceId}`, token);
   assert.ok(before.payments.length <= 1, 'Refusing a fixture with multiple payment attempts');
   let completedPaymentId: string | undefined;
   let initiatedPaymentId: string | undefined;
   if (before.payments[0]) {
     const reserved = before.payments[0];
-    assert.equal(reserved.gatewayRef, reserved.id, 'Existing attempt must be a native reservation');
-    const recovered = await api<NativePaymentReconcileResponse>(`/mobile/client/payments/native/${reserved.id}/reconcile`, token, {});
+    assert.ok(!Object.hasOwn(reserved, 'gatewayRef'), 'Client invoice payments must omit gateway references');
+    await verifyNativePayment({ paymentId: reserved.id, invoiceId: booking.invoiceId, bookingId: booking.id });
+    const recovered = await api<NativePaymentReconcileResponse>(`/client/payments/native/${reserved.id}/reconcile`, token, {});
     assert.equal(recovered.paymentId, reserved.id);
     assert.equal(recovered.invoiceId, booking.invoiceId);
     assert.equal(recovered.requiresReview, false);
@@ -112,7 +116,7 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
         givenId: initiatedPaymentId, amount: 30000, currency: 'SAR',
         description: `Invoice payment - ${booking.invoiceId}`, supportedNetworks: ['visa'], applePay: null };
     } else {
-      const initialized = await api<NativePaymentInitResponse>('/mobile/client/payments/native/init', token, {
+      const initialized = await api<NativePaymentInitResponse>('/client/payments/native/init', token, {
         invoiceId: booking.invoiceId, method: 'ONLINE_CARD',
       });
       attempt = initialized;
@@ -129,7 +133,8 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
       if (process.env.E2E_MOYASAR_PUBLISHABLE_KEY !== undefined) {
         assert.ok(config.publishableKey === process.env.E2E_MOYASAR_PUBLISHABLE_KEY, 'Injected publishable key must match authoritative native init configuration');
       }
-      const preflight = await api<NativePaymentReconcileResponse>(`/mobile/client/payments/native/${attempt.paymentId}/reconcile`, token, {});
+      await verifyNativePayment({ paymentId: attempt.paymentId, invoiceId: booking.invoiceId, bookingId: booking.id, status: 'PENDING' });
+      const preflight = await api<NativePaymentReconcileResponse>(`/client/payments/native/${attempt.paymentId}/reconcile`, token, {});
       assert.equal(preflight.paymentId, attempt.paymentId);
       assert.equal(preflight.invoiceId, booking.invoiceId);
       assert.equal(preflight.requiresReview, false);
@@ -202,14 +207,14 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
   }
 
   async function reconcile() {
-    const result = await api<NativePaymentReconcileResponse>(`/mobile/client/payments/native/${attempt.paymentId}/reconcile`, token, {});
+    const result = await api<NativePaymentReconcileResponse>(`/client/payments/native/${attempt.paymentId}/reconcile`, token, {});
     assert.equal(result.paymentId, attempt.paymentId);
     assert.equal(result.invoiceId, booking.invoiceId);
     assert.equal(result.status, 'COMPLETED', 'Backend must fetch a real paid Moyasar outcome');
     assert.equal(result.requiresReview, false);
   }
   async function readPaidInvoice() {
-    const invoice = await api<Invoice>(`/mobile/client/payments/invoices/${booking.invoiceId}`, token);
+    const invoice = await api<Invoice>(`/client/invoices/${booking.invoiceId}`, token);
     assert.equal(invoice.id, booking.invoiceId);
     assert.equal(invoice.bookingId, booking.id);
     assert.equal(invoice.status, 'PAID');
@@ -218,7 +223,8 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
     assert.equal(invoice.currency, 'SAR');
     assert.equal(invoice.payments.length, 1, 'Reconciliation must not duplicate payments');
     assert.equal(invoice.payments[0].id, attempt.paymentId);
-    assert.equal(invoice.payments[0].gatewayRef, attempt.paymentId);
+    assert.ok(!Object.hasOwn(invoice.payments[0], 'gatewayRef'), 'Client invoice payments must omit gateway references');
+    await verifyNativePayment({ paymentId: attempt.paymentId, invoiceId: booking.invoiceId, bookingId: booking.id, status: 'COMPLETED' });
     assert.equal(invoice.payments[0].status, 'COMPLETED');
     assert.equal(Number(invoice.payments[0].amount), 30000);
   }
@@ -232,9 +238,10 @@ test('SW-P01 native payment contract pays a booking through Moyasar Sandbox', {
   await readPaidInvoice();
   const repeated = await verifyBooking('payment');
   assert.deepEqual(repeated, paid, 'Repeated reconciliation must preserve the sole paid invoice/booking');
-  const readback = await api<{ id: string; status: string; payment: { id: string; status: string }; invoice: { id: string; status: string; outstanding: number } }>(`/mobile/client/bookings/${booking.id}`, token);
+  const readback = await api<{ id: string; status: string; payment: { id: string; status: string }; invoice: { id: string; status: string; outstanding: number } }>(`/client/bookings/${booking.id}`, token);
   assert.equal(readback.id, booking.id);
-  assert.equal(readback.status, 'confirmed');
+  assert.equal(readback.status, 'CONFIRMED');
+  assert.ok(!Object.hasOwn(readback, 'clientId'), 'Client booking responses must omit client identity');
   assert.equal(readback.payment.id, attempt.paymentId);
   assert.equal(readback.payment.status, 'paid');
   assert.equal(readback.invoice.id, booking.invoiceId);

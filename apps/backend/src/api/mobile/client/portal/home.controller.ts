@@ -1,13 +1,12 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
-import { ClientSessionGuard } from '../../../../common/guards/client-session.guard';
+import { Controller, Get } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
 import { ListClientUpcomingBookingsHandler } from '../../../../modules/bookings/client/list-client-upcoming-bookings.handler';
 import { ListNotificationsHandler } from '../../../../modules/comms/notifications/list-notifications.handler';
 import { ListPaymentsHandler } from '../../../../modules/finance/list-payments/list-payments.handler';
 import { GetClientHandler } from '../../../../modules/people/clients/get-client.handler';
-import { Public } from '../../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../../common/auth/client-route.decorator';
 
 /** List handlers answer `{ items, meta }`; the home payload exposes plain arrays. */
 function rowsOf(result: unknown): unknown[] {
@@ -17,10 +16,8 @@ function rowsOf(result: unknown): unknown[] {
 }
 
 @ApiTags('Mobile Client / Portal')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/portal')
 export class MobileClientHomeController {
   constructor(

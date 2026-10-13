@@ -34,7 +34,7 @@ export function ProfileTab() {
     );
   }
 
-  const canAddEmail = client.email === null;
+  const canAddEmail = client.email === null && !client.unverifiedEmail;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -138,9 +138,9 @@ export function ProfileTab() {
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--sw-neutral-50)] border border-[var(--sw-neutral-100)]">
             <Mail size={14} className="shrink-0 text-[var(--sw-neutral-400)]" aria-hidden="true" />
             <span className="text-sm text-[var(--sw-secondary-700)] truncate flex-1" dir="ltr">
-              {client.email ?? '—'}
+              {client.email ?? client.unverifiedEmail ?? '—'}
             </span>
-            {client.email && (
+            {(client.email ?? client.unverifiedEmail) && (
               <span
                 className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold ${
                   client.emailVerified != null

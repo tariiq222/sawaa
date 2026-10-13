@@ -64,7 +64,7 @@ describe('authService.requestAccountDeletion', () => {
     await Promise.all([first, second]);
 
     expect(mockedApi.delete).toHaveBeenCalledTimes(1);
-    expect(mockedApi.delete).toHaveBeenCalledWith('/mobile/client/profile');
+    expect(mockedApi.delete).toHaveBeenCalledWith('/client/profile');
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('refreshToken');
     expect(mockedApi.post).not.toHaveBeenCalled();
@@ -153,7 +153,7 @@ describe('authService.getProfile / sendVerificationEmail / getStoredTokens', () 
 
     const result = await authService.getProfile();
 
-    expect(mockedApi.get).toHaveBeenCalledWith('/mobile/client/profile');
+    expect(mockedApi.get).toHaveBeenCalledWith('/client/profile');
     expect(result.data).toEqual(expect.objectContaining({
       id: 'c1', role: 'CLIENT', firstName: 'Sara', lastName: 'Al-Harbi', permissions: [],
     }));
