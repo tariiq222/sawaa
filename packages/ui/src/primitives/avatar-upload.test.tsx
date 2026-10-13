@@ -91,6 +91,20 @@ describe('AvatarUpload', () => {
     );
   });
 
+  it('shows a validation error without replacing the saved portrait', () => {
+    let acceptedFile: File | undefined;
+    const { container } = render(<AvatarUpload value="https://example.com/saved.png" onChange={(file) => { acceptedFile = file; }} onClear={() => {}} validateFile={(file) => file.name === 'large.png' ? 'Choose an image smaller than 5 MB' : undefined} />);
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [makeFile('large.png')] } });
+    expect(screen.getByRole('alert').textContent).toBe('Choose an image smaller than 5 MB');
+    expect(screen.getByAltText('avatar').getAttribute('src')).toBe('https://example.com/saved.png');
+    expect(acceptedFile).toBeUndefined();
+    const valid = makeFile('valid.png');
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [valid] } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(acceptedFile).toBe(valid);
+    expect(screen.getByAltText('avatar').getAttribute('src')).toBe('blob:mock-valid.png');
+  });
+
   describe('file selection (handleFile)', () => {
     it('calls onChange(file, url) and creates a preview when a file is picked', () => {
       const onChange = vi.fn();

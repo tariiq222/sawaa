@@ -28440,7 +28440,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description Avatar image (JPEG/PNG/WebP)
+                     * @description Avatar image (JPEG/PNG/WebP), up to 5 MiB
                      */
                     file: string;
                 };
@@ -28516,7 +28516,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description Public profile image (JPEG/PNG/WebP)
+                     * @description Public profile image (JPEG/PNG/WebP), up to 5 MiB
                      */
                     file: string;
                 };
