@@ -6,7 +6,7 @@ import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { PrismaService } from '../../../../infrastructure/database';
 
 const EMPLOYEE_ID = '00000000-0000-0000-0000-000000000002';
-const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 const MOCK_FILE_ROW = {
   id: 'file-9',
@@ -59,6 +59,11 @@ describe('UploadAvatarHandler', () => {
     await expect(
       handler.execute({ ...validCmd, mimetype: 'application/pdf' }, Buffer.alloc(1024)),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it.each([2 * 1024 * 1024, 5 * 1024 * 1024])('accepts a supported avatar of %i bytes', async (size) => {
+    const { handler } = makeHandler();
+    await expect(handler.execute({ ...validCmd, size }, Buffer.alloc(size))).resolves.toEqual({ fileId: MOCK_FILE_ROW.id, url: EXPECTED_URL });
   });
 
   it('rejects oversized avatars', async () => {
