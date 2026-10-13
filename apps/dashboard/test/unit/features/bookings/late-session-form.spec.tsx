@@ -150,7 +150,7 @@ it('offers page-two clients and submits the newly visible selected client', asyn
   expect(state.submit.mock.calls[0][0]).toMatchObject({ clientId: 'client-2' })
 })
 it('allows reception without Settings access to use nonzero VAT and VAT-inclusive receipt', async () => {
-  state.canDo.mockImplementation((module) => module !== 'Setting')
+  state.canDo.mockImplementation((module) => !['Setting', 'ProviderConfig', 'Refund', 'PersonalData', 'Content'].includes(module))
   state.settings.data = { vatRate: 0.15, paymentMethods: ['CASH'] }
   render(<LateSessionForm onCancel={vi.fn()} onSaved={vi.fn()} />)
   change('clientId', 'client')

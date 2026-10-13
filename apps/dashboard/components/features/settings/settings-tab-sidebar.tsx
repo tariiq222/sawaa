@@ -51,6 +51,7 @@ export function SettingsTabSidebar({
             <div
               key={item.id}
               role="tab"
+              aria-label={item.label}
               aria-selected={isActive}
               tabIndex={0}
               onClick={() => onSelect(item.id)}

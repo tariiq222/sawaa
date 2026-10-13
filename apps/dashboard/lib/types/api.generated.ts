@@ -12935,7 +12935,7 @@ export interface components {
              * @example Booking
              * @enum {string}
              */
-            subject: "Booking" | "Branch" | "Category" | "Client" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
+            subject: "Booking" | "Branch" | "Category" | "Client" | "Content" | "Conversation" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "PersonalData" | "ProviderConfig" | "Refund" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
         PersistedCancellationRefundDto: {
             /** @description Already refunded amount in halalas */

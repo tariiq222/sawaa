@@ -6,20 +6,25 @@ const mutateTest = vi.fn()
 const mutateSave = vi.fn()
 let config: Record<string, unknown> | undefined
 let canManage = true
+let readSubjects = ["providerconfig", "content"]
+const providerReads = vi.fn()
+const modelReads = vi.fn()
+const knowledgeReads = vi.fn()
+let providerError: Error | null = null
 let modelsError = false
 const refetchModels = vi.fn()
 const emptyKnowledgePage = { data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } }
 
 vi.mock("@/components/locale-provider", () => ({ useLocale: () => ({ t: (key: string) => key, locale: "en" }) }))
-vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => ({ canDo: (_module: string, action: string) => canManage && (action === "read" || action === "manage") }) }))
+vi.mock("@/components/providers/auth-provider", () => ({ useAuth: () => ({ canDo: (module: string, action: string) => readSubjects.includes(module) && (action === "read" || (canManage && action === "manage")) }) }))
 vi.mock("@/hooks/use-sawaa-ai-settings", () => ({
-  useSawaaAiSettings: () => ({ config, loading: false, error: null }),
-  useSawaaAiModels: () => ({ data: [{ provider: "OPENROUTER", models: ["deepseek/deepseek-v4-flash-0731"], allowCustom: false }], isError: modelsError, isFetching: false, refetch: refetchModels }),
+  useSawaaAiSettings: () => { providerReads(); return { config, loading: false, error: providerError } },
+  useSawaaAiModels: () => { modelReads(); return ({ data: [{ provider: "OPENROUTER", models: ["deepseek/deepseek-v4-flash-0731"], allowCustom: false }], isError: modelsError, isFetching: false, refetch: refetchModels }) },
   useTestSawaaAiConnection: () => ({ mutateAsync: mutateTest, isPending: false }),
   useSaveSawaaAiSettings: () => ({ mutateAsync: mutateSave, isPending: false }),
 }))
 vi.mock("@/hooks/use-sawaa-ai-knowledge-base", () => ({
-  useSawaaAiKnowledge: () => ({ data: { pages: [emptyKnowledgePage] }, isLoading: false, isError: false, isFetching: false, isFetchingNextPage: false, hasNextPage: false, refetch: vi.fn(), fetchNextPage: vi.fn() }),
+  useSawaaAiKnowledge: () => { knowledgeReads(); return ({ data: { pages: [emptyKnowledgePage] }, isLoading: false, isError: false, isFetching: false, isFetchingNextPage: false, hasNextPage: false, refetch: vi.fn(), fetchNextPage: vi.fn() }) },
   useSawaaAiKnowledgeDetail: () => ({ data: null, isLoading: false, isError: false, refetch: vi.fn() }),
   useSawaaAiKnowledgeMutations: () => ({ create: { mutateAsync: vi.fn(), isPending: false }, update: { mutateAsync: vi.fn(), isPending: false }, publish: { mutateAsync: vi.fn(), isPending: false }, unpublish: { mutateAsync: vi.fn(), isPending: false }, reindex: { mutateAsync: vi.fn(), isPending: false }, remove: { mutateAsync: vi.fn(), isPending: false } }),
 }))
@@ -28,10 +33,40 @@ describe("Sawaa Ai settings", () => {
   beforeEach(() => {
     config = { provider: "OPENROUTER", model: "deepseek/deepseek-v4-flash-0731", temperature: 0.4, maxTokens: 800, isEnabled: false, connectionStatus: "NOT_TESTED", lastTestOk: null, hasCredential: false }
     canManage = true
+    readSubjects = ["providerconfig", "content"]
+    providerError = null
+    providerReads.mockClear(); modelReads.mockClear(); knowledgeReads.mockClear()
     modelsError = false
     refetchModels.mockReset()
     mutateTest.mockReset().mockResolvedValue({ ok: true, persisted: true, errorCode: null, testedAt: new Date().toISOString() })
     mutateSave.mockReset().mockResolvedValue({ ...config, hasCredential: true, connectionStatus: "CONNECTED", lastTestOk: true })
+  })
+
+  it("shows knowledge for Content-only readers without querying provider configuration or models", () => {
+    readSubjects = ["content"]; canManage = false; providerError = new Error("forbidden");
+    render(<SawaaAiSettingsContent />)
+    expect(screen.getByTestId("sawaa-ai-knowledge-base")).toBeInTheDocument()
+    expect(screen.queryByTestId("sawaa-ai-settings")).not.toBeInTheDocument()
+    expect(providerReads).not.toHaveBeenCalled(); expect(modelReads).not.toHaveBeenCalled()
+  })
+  it("shows ProviderConfig-only readers no knowledge panel or queries", () => {
+    readSubjects = ["providerconfig"]; canManage = false;
+    render(<SawaaAiSettingsContent />)
+    expect(screen.getByTestId("sawaa-ai-settings")).toBeInTheDocument()
+    expect(screen.queryByTestId("sawaa-ai-knowledge-base")).not.toBeInTheDocument()
+    expect(knowledgeReads).not.toHaveBeenCalled()
+  })
+  it("keeps authorized knowledge available when provider loading fails", () => {
+    providerError = new Error("unavailable");
+    render(<SawaaAiSettingsContent />)
+    expect(screen.getByRole("alert")).toHaveTextContent("sawaaAi.loadFailed")
+    expect(screen.getByTestId("sawaa-ai-knowledge-base")).toBeInTheDocument()
+  })
+  it("mounts no configuration or knowledge queries without either read permission", () => {
+    readSubjects = [];
+    render(<SawaaAiSettingsContent />)
+    expect(providerReads).not.toHaveBeenCalled(); expect(knowledgeReads).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText("sawaaAi.apiKey")).not.toBeInTheDocument()
   })
 
   it("keeps the API key write-only and sends it only through the connection test", async () => {

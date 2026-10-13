@@ -31,6 +31,10 @@ export function useSidebarNav() {
               const [module, action] = item.permission.split(":")
               if (!canDo(module, action)) return false
             }
+            if (item.anyPermissions && !item.anyPermissions.some((permission) => {
+              const [module, action] = permission.split(":")
+              return canDo(module, action)
+            })) return false
             return true
           }),
         }))

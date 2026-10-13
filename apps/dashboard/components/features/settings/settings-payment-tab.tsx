@@ -1,247 +1,57 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Label, Skeleton, Switch } from "@sawaa/ui"
+import { useState } from "react"
+import { Card, Switch, Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { useAuth } from "@/components/providers/auth-provider"
+import { usePaymentSettings, usePaymentSettingsMutation } from "@/hooks/use-organization-settings"
+import { toastApiError } from "@/lib/mutation-helpers"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"
 import { SettingsAtClinicPanel } from "./settings-at-clinic-panel"
-import {
-  usePaymentSettings,
-  usePaymentSettingsMutation,
-} from "@/hooks/use-organization-settings"
-import {
-  useMoyasarConfig,
-  useTestMoyasarConfig,
-  useUpsertMoyasarConfig,
-} from "@/hooks/use-moyasar-config"
-import type { UpsertMoyasarConfigPayload } from "@/lib/api/moyasar-config"
-import { toastApiError } from "@/lib/mutation-helpers"
 import { BankTransferAccountsPanel } from "./bank-transfer-accounts-panel"
+import { SettingsMoyasarPanel } from "./settings-moyasar-panel"
 
 type TabId = "moyasar" | "atclinic" | "bankTransfer"
 
 export function SettingsPaymentTab() {
+  const { canDo } = useAuth()
+  if (canDo("setting", "read")) return <PaymentMethodsSettings />
+  return canDo("providerconfig", "read") ? <SettingsMoyasarPanel /> : null
+}
+
+function PaymentMethodsSettings() {
   const { t } = useLocale()
-  const { data: paymentSettings, isLoading: paymentLoading } = usePaymentSettings()
-  const { data: moyasarConfig, isLoading: moyasarLoading } = useMoyasarConfig()
+  const { canDo } = useAuth()
+  const canUpdate = canDo("setting", "update")
+  const canReadProvider = canDo("providerconfig", "read")
+  const { data: paymentSettings, isLoading } = usePaymentSettings()
   const paymentMut = usePaymentSettingsMutation()
-  const upsertMoyasar = useUpsertMoyasarConfig()
-  const testMoyasar = useTestMoyasarConfig()
-
-  const [activeTab, setActiveTab] = useState<TabId>("moyasar")
-  const [publishableKey, setPublishableKey] = useState("")
-  const [secretKey, setSecretKey] = useState("")
-  const [webhookSecret, setWebhookSecret] = useState("")
-  const [isLive, setIsLive] = useState(false)
-
-  useEffect(() => {
-    if (!moyasarConfig) return
-    // Seed editable form fields from server settings; user edits locally and saves explicitly.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPublishableKey(moyasarConfig.publishableKey)
-    setIsLive(moyasarConfig.isLive)
-  }, [moyasarConfig])
-
+  const [activeTab, setActiveTab] = useState<TabId>(canReadProvider ? "moyasar" : "atclinic")
   const togglePaymentMethod = (key: "paymentMoyasarEnabled" | "paymentAtClinicEnabled", value: boolean) => {
-    paymentMut.mutate(
-      { [key]: value },
-      { onError: toastApiError(t("settings.error"), t) },
-    )
+    if (!canUpdate) return
+    paymentMut.mutate({ [key]: value }, { onError: toastApiError(t("settings.error"), t) })
   }
-
-  const handleSaveMoyasar = () => {
-    const pubChanged = publishableKey.trim() !== (moyasarConfig?.publishableKey ?? "")
-    const secretEntered = secretKey.trim().length > 0
-    const webhookEntered = webhookSecret.trim().length > 0
-    // Atomic rotation guard: if the user is rotating *any* credential,
-    // require them to re-enter *all* three together. Partial rotation can
-    // desync webhook verification (new pk, old secret/webhook → 401 on next
-    // webhook call). All-or-nothing for credential changes.
-    const anyChanged = pubChanged || secretEntered || webhookEntered
-    const allProvided = pubChanged && secretEntered && webhookEntered
-    if (anyChanged && !allProvided) {
-      toast.error(t("settings.moyasar.rotateAllOrNone"))
-      return
-    }
-
-    const payload: UpsertMoyasarConfigPayload = {
-      publishableKey: publishableKey.trim(),
-      isLive,
-    }
-    if (secretEntered) payload.secretKey = secretKey.trim()
-    if (webhookEntered) payload.webhookSecret = webhookSecret.trim()
-
-    upsertMoyasar.mutate(payload, {
-      onSuccess: () => {
-        toast.success(t("settings.saved"))
-        setSecretKey("")
-        setWebhookSecret("")
-      },
-      onError: toastApiError(t("settings.error"), t),
-    })
-  }
-
-  const handleTestMoyasar = () => {
-    testMoyasar.mutate(undefined, {
-      onSuccess: (result) => {
-        toast[result.ok ? "success" : "error"](
-          result.ok ? t("settings.moyasar.testOk") : `${t("settings.moyasar.testFailed")}: ${result.status}`,
-        )
-      },
-      onError: toastApiError(t("settings.error"), t),
-    })
-  }
-
-  if (paymentLoading || moyasarLoading) {
-    return (
-      <div className="flex gap-0 overflow-hidden rounded-xl border border-border">
-        <div className="w-64 space-y-1 border-e border-border bg-surface-muted p-2">
-          {[1, 2].map((i) => <Skeleton key={`skeleton-${i}`} className="h-14 rounded-lg" />)}
-        </div>
-        <div className="flex-1 p-6"><Skeleton className="h-48 rounded-lg" /></div>
-      </div>
-    )
-  }
-
-  const tabs: {
-    id: TabId
-    label: string
-    desc: string
-    enabled: boolean
-    onToggle: (v: boolean) => void
-    alwaysAvailable?: boolean
-    toggleHint?: string
-  }[] = [
-    {
-      id: "moyasar",
-      label: t("settings.booking.paymentMethods.moyasar"),
-      desc: t("settings.booking.paymentMethods.moyasarDesc"),
-      enabled: paymentSettings?.paymentMoyasarEnabled ?? false,
-      onToggle: (v) => togglePaymentMethod("paymentMoyasarEnabled", v),
-    },
-    {
-      id: "atclinic",
-      label: t("settings.booking.paymentMethods.atClinic"),
-      desc: t("settings.booking.paymentMethods.atClinicDesc"),
-      enabled: paymentSettings?.paymentAtClinicEnabled ?? false,
-      onToggle: (v) => togglePaymentMethod("paymentAtClinicEnabled", v),
-      alwaysAvailable: true,
-      toggleHint: t("settings.payment.atClinicToggleHint"),
-    },
-    {
-      id: "bankTransfer",
-      label: t("settings.payment.bankTransfer.title"),
-      desc: t("settings.payment.bankTransfer.description"),
-      enabled: true,
-      onToggle: () => undefined,
-      alwaysAvailable: true,
-    },
+  if (isLoading) return <Skeleton className="h-48 rounded-lg" />
+  const tabs = [
+    { id: "moyasar", label: t("settings.booking.paymentMethods.moyasar"), desc: t("settings.booking.paymentMethods.moyasarDesc"),
+      enabled: paymentSettings?.paymentMoyasarEnabled ?? false, toggle: (value: boolean) => togglePaymentMethod("paymentMoyasarEnabled", value) },
+    { id: "atclinic", label: t("settings.booking.paymentMethods.atClinic"), desc: t("settings.booking.paymentMethods.atClinicDesc"),
+      enabled: paymentSettings?.paymentAtClinicEnabled ?? false, toggle: (value: boolean) => togglePaymentMethod("paymentAtClinicEnabled", value) },
+    { id: "bankTransfer", label: t("settings.payment.bankTransfer.title"), desc: t("settings.payment.bankTransfer.description"), enabled: true, toggle: null },
   ]
-
-  const activeTabDef = tabs.find((tab) => tab.id === activeTab)!
-  const canSaveMoyasar = publishableKey.trim().length > 0 &&
-    (secretKey.trim().length > 0 || !!moyasarConfig?.secretKeyMasked) &&
-    (webhookSecret.trim().length > 0 || !!moyasarConfig?.hasWebhookSecret)
-
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex min-h-[420px]">
-        <SettingsTabSidebar
-          title={t("settings.payment.methods")}
-          items={tabs.map(tab => ({
-            id: tab.id,
-            label: tab.label,
-            desc: tab.desc,
-            extra: tab.id === "bankTransfer" ? null : (
-              <Switch
-                checked={tab.enabled}
-                onCheckedChange={tab.onToggle}
-                disabled={paymentMut.isPending}
-                title={tab.toggleHint}
-              />
-            ),
+        <SettingsTabSidebar title={t("settings.payment.methods")}
+          items={tabs.map((tab) => ({ id: tab.id, label: tab.label, desc: tab.desc,
+            extra: tab.toggle ? <Switch checked={tab.enabled} onCheckedChange={tab.toggle} disabled={!canUpdate || paymentMut.isPending}
+              aria-label={tab.label} title={tab.id === "atclinic" ? t("settings.payment.atClinicToggleHint") : undefined} /> : null,
           }))}
-          activeId={activeTab}
-          onSelect={(id) => setActiveTab(id as TabId)}
-        />
-
+          activeId={activeTab} onSelect={(id) => setActiveTab(id as TabId)} />
         <div className="flex-1 p-6">
-          {!activeTabDef.enabled && !activeTabDef.alwaysAvailable ? (
-            <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-surface-muted">
-                <Switch checked={false} disabled className="pointer-events-none scale-75" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">{activeTabDef.label}</p>
-                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                  {t("settings.payment.disabledHint")}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => activeTabDef.onToggle(true)}
-                disabled={paymentMut.isPending}
-              >
-                {t("settings.payment.enable")}
-              </Button>
-            </div>
-          ) : (
-            <>
-              {activeTab === "bankTransfer" && <BankTransferAccountsPanel />}
-
-              {activeTab === "moyasar" && (
-                <div className="flex h-full flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card className="bg-surface shadow-sm">
-                      <CardContent className="space-y-2 pt-3 pb-3">
-                        <Label>{t("settings.moyasarKey")}</Label>
-                        <Input value={publishableKey} onChange={(e) => setPublishableKey(e.target.value)} placeholder="pk_live_..." dir="ltr" />
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-surface shadow-sm">
-                      <CardContent className="space-y-2 pt-3 pb-3">
-                        <Label>{t("settings.moyasarSecret")}</Label>
-                        <Input value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={moyasarConfig?.secretKeyMasked ?? "sk_live_..."} type="password" dir="ltr" />
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-surface shadow-sm">
-                      <CardContent className="space-y-2 pt-3 pb-3">
-                        <Label>{t("settings.moyasar.webhookSecret")}</Label>
-                        <Input value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} placeholder={moyasarConfig?.hasWebhookSecret ? "............" : "whsec_..."} type="password" dir="ltr" />
-                        <p className="text-xs text-muted-foreground">{t("settings.moyasar.webhookSecretRequired")}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-surface shadow-sm">
-                      <CardContent className="flex items-center justify-between gap-4 pt-3 pb-3">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{t("settings.moyasar.liveMode")}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{t("settings.moyasar.liveModeDesc")}</p>
-                        </div>
-                        <Switch checked={isLive} onCheckedChange={setIsLive} />
-                      </CardContent>
-                    </Card>
-                  </div>
-                  {moyasarConfig && (
-                    <p className="text-xs text-muted-foreground">
-                      {t("settings.moyasar.lastStatus")}: {moyasarConfig.lastVerifiedStatus ?? "—"}
-                    </p>
-                  )}
-                  <div className="mt-auto flex justify-end gap-2 pt-2">
-                    <Button size="sm" variant="outline" disabled={!moyasarConfig || testMoyasar.isPending} onClick={handleTestMoyasar}>
-                      {t("settings.moyasar.test")}
-                    </Button>
-                    <Button size="sm" disabled={!canSaveMoyasar || upsertMoyasar.isPending} onClick={handleSaveMoyasar}>
-                      {t("settings.save")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "atclinic" && <SettingsAtClinicPanel />}
-            </>
-          )}
+          {activeTab === "moyasar" && (canReadProvider ? <SettingsMoyasarPanel /> : <p className="text-sm text-muted-foreground">{t("common.noPermission")}</p>)}
+          {activeTab === "atclinic" && <fieldset disabled={!canUpdate}><SettingsAtClinicPanel /></fieldset>}
+          {activeTab === "bankTransfer" && <fieldset disabled={!canUpdate}><BankTransferAccountsPanel /></fieldset>}
         </div>
       </div>
     </Card>

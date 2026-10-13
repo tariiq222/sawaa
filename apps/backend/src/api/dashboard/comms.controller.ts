@@ -94,7 +94,7 @@ export class DashboardCommsController {
   // ── SMS Settings (SaaS-02g-sms) ────────────────────────────────────────────
   @ApiOperation({ summary: 'Get SMS provider configuration (owner-scoped)' })
   @ApiOkResponse({ description: 'OrganizationSmsConfig view (no secrets)' })
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Get('settings/sms')
   getSmsConfigEndpoint() {
     return this.getOrgSmsConfig.execute();
@@ -102,7 +102,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Upsert SMS provider configuration' })
   @ApiOkResponse({ description: 'Updated OrganizationSmsConfig view' })
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/sms')
   upsertSmsConfigEndpoint(@Body() dto: UpsertOrgSmsConfigDto) {
     return this.upsertOrgSmsConfig.execute(dto);
@@ -110,7 +110,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Send a test SMS via the configured provider' })
   @ApiOkResponse({ description: 'Test result' })
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/sms/test')
   testSmsConfigEndpoint(@Body() dto: TestSmsConfigDto) {
     return this.testSmsConfig.execute(dto);
@@ -120,7 +120,7 @@ export class DashboardCommsController {
 
   @ApiOperation({ summary: 'Get email provider configuration (owner-scoped)' })
   @ApiOkResponse({ description: 'OrganizationEmailConfig view (no secrets)' })
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Get('settings/email')
   getEmailConfigEndpoint() {
     return this.getOrgEmailConfig.execute();
@@ -129,7 +129,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Upsert email provider configuration' })
   @ApiOkResponse({ description: 'Updated OrganizationEmailConfig view' })
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/email')
   upsertEmailConfigEndpoint(@Body() dto: UpsertOrgEmailConfigDto) {
     return this.upsertOrgEmailConfig.execute(dto);
@@ -138,7 +138,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Send a test email via the configured provider' })
   @ApiOkResponse({ description: 'Test result' })
   @HttpCode(HttpStatus.OK)
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/email/test')
   testEmailConfigEndpoint(@Body() dto: TestEmailConfigDto) {
     return this.testEmailConfig.execute(dto);
@@ -146,7 +146,7 @@ export class DashboardCommsController {
 
   @ApiOperation({ summary: 'List the 50 most recent SMS deliveries' })
   @ApiOkResponse({ description: 'Recent SmsDelivery rows (owner-scoped)' })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'PersonalData' })
   @Get('settings/sms/deliveries')
   listSmsDeliveriesEndpoint() {
     return this.listSmsDeliveries.execute();
@@ -158,7 +158,7 @@ export class DashboardCommsController {
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Results per page', example: 20 })
   @ApiOkResponse({ description: 'Paginated contact messages', type: PaginatedContactMessagesResponseDto })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'PersonalData' })
   @Get('contact-messages')
   listContactMessagesEndpoint(@Query() query: ListContactMessagesDto) {
     return this.listContactMessages.execute({
@@ -172,7 +172,7 @@ export class DashboardCommsController {
   @ApiParam({ name: 'id', description: 'Contact message UUID' })
   @ApiOkResponse({ description: 'Updated message', type: ContactMessageResponseDto })
   @ApiNotFoundResponse({ description: 'Contact message not found', type: ApiErrorDto })
-  @CheckPermissions({ action: 'update', subject: 'Setting' })
+  @CheckPermissions({ action: 'update', subject: 'PersonalData' })
   @Patch('contact-messages/:id/status')
   updateContactMessageStatusEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
@@ -244,7 +244,7 @@ export class DashboardCommsController {
 
   @ApiOperation({ summary: 'List email templates' })
   @ApiOkResponse({ description: 'Paginated email template list' })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @Get('email-templates')
   listEmailTemplatesEndpoint(
     @Query() query: ListEmailTemplatesDto,
@@ -257,7 +257,7 @@ export class DashboardCommsController {
 
   @ApiOperation({ summary: 'Create an email template' })
   @ApiCreatedResponse({ description: 'Email template created' })
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @Post('email-templates')
   @HttpCode(HttpStatus.CREATED)
   createEmailTemplateEndpoint(
@@ -269,7 +269,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Get a single email template by ID' })
   @ApiOkResponse({ description: 'Email template details' })
   @ApiParam({ name: 'id', description: 'Email template UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @Get('email-templates/:id')
   getEmailTemplateEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
@@ -280,7 +280,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Preview a rendered email template' })
   @ApiOkResponse({ description: 'Rendered HTML preview' })
   @ApiParam({ name: 'id', description: 'Email template UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'Content' })
   @Post('email-templates/:id/preview')
   @HttpCode(HttpStatus.OK)
   previewEmailTemplateEndpoint(
@@ -296,7 +296,7 @@ export class DashboardCommsController {
   @ApiOperation({ summary: 'Update an email template' })
   @ApiOkResponse({ description: 'Updated email template' })
   @ApiParam({ name: 'id', description: 'Email template UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @CheckPermissions({ action: 'manage', subject: 'Content' })
   @Patch('email-templates/:id')
   updateEmailTemplateEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
@@ -400,7 +400,7 @@ export class DashboardCommsController {
     });
   }
 
-  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @CheckPermissions({ action: 'read', subject: 'PersonalData' })
   @Get('delivery-logs')
   @ApiOperation({ summary: 'List email delivery logs for this organization' })
   @ApiOkResponse({ description: 'Paginated delivery log' })

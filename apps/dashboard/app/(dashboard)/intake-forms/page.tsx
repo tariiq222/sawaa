@@ -21,7 +21,7 @@ import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function IntakeFormsPage() {
   return (
-    <PermissionGuard module="setting" action="read">
+    <PermissionGuard module="content" action="read">
       <IntakeFormsPageInner />
     </PermissionGuard>
   )

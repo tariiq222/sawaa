@@ -26,6 +26,7 @@ export interface NavItem {
   href: string
   icon: typeof Home01Icon
   badge?: number
+  anyPermissions?: string[] // item shown when any listed permission is granted
   permission?: string // "module:action" — item hidden if user lacks this permission
 }
 
@@ -45,7 +46,7 @@ export const operationsNav: NavItem[] = [
 ]
 
 export const practiceNav: NavItem[] = [
-  { titleKey: "nav.intakeForms", href: "/intake-forms", icon: DocumentValidationIcon, permission: "setting:read" },
+  { titleKey: "nav.intakeForms", href: "/intake-forms", icon: DocumentValidationIcon, permission: "content:read" },
   { titleKey: "nav.ratings", href: "/ratings", icon: StarIcon, permission: "booking:read" },
 ]
 
@@ -65,13 +66,13 @@ export const managementNav: NavItem[] = [
 
 export const communicationNav: NavItem[] = [
   { titleKey: "nav.notifications", href: "/notifications", icon: Notification03Icon, permission: "booking:read" },
-  { titleKey: "nav.contactMessages", href: "/contact-messages", icon: InboxIcon, permission: "setting:read" },
+  { titleKey: "nav.contactMessages", href: "/contact-messages", icon: InboxIcon, permission: "personaldata:read" },
   { titleKey: "nav.conversations", href: "/conversations", icon: AiChat02Icon, permission: "conversation:read" },
 ]
 
 export const systemNav: NavItem[] = [
-  { titleKey: "nav.sms", href: "/settings/sms", icon: AiChat02Icon, permission: "setting:read" },
-  { titleKey: "nav.settings", href: "/settings", icon: Settings02Icon, permission: "setting:read" },
+  { titleKey: "nav.sms", href: "/settings/sms", icon: AiChat02Icon, permission: "providerconfig:read" },
+  { titleKey: "nav.settings", href: "/settings", icon: Settings02Icon, anyPermissions: ["setting:read", "content:read", "providerconfig:read"] },
 ]
 
 export const navGroups: NavGroup[] = [
