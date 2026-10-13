@@ -42,7 +42,7 @@
     "seed:sawaa-ai-local-catalog": "tsx prisma/seeds/sawaa-ai-local-catalog.ts",
     "reset:org-suspension": "tsx scripts/reset-org-suspension.ts",
     "openapi:export": "tsx scripts/export-openapi.ts",
-    "openapi:snapshot": "WRITE_OPENAPI_SPEC=1 tsx -e \"require('./dist/src/main.js')\" && cp dist/openapi.json openapi.json",
+    "openapi:snapshot": "WRITE_OPENAPI_SPEC=1 node -e \"require('./dist/src/main.js')\" && cp dist/openapi.json openapi.json",
     "openapi:build-and-snapshot": "pnpm run build && pnpm run openapi:snapshot",
     "check:openapi-coverage": "tsx scripts/check-openapi-coverage.ts",
     "legacy:extract": "tsx scripts/legacy-import/extract-booknetic.ts",
