@@ -40,7 +40,7 @@ describe('invoice.api — getMyBookingInvoice', () => {
     fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve(sample) });
     await getMyBookingInvoice('bk1', 'ck_access=abc');
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/api\/v1\/public\/me\/bookings\/bk1\/invoice$/);
+    expect(url).toMatch(/\/api\/v1\/client\/bookings\/bk1\/invoice$/);
     expect(init.cache).toBe('no-store');
     expect(init.headers).toMatchObject({ cookie: 'ck_access=abc' });
   });

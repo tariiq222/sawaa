@@ -118,7 +118,7 @@ export async function getPublicGroupSession(id: string): Promise<SupportGroup | 
 
 export async function bookGroupSession(id: string): Promise<BookGroupSessionResponse> {
   try {
-    return await publicFetch<BookGroupSessionResponse>(`/public/programs/${id}/enroll`, {
+    return await publicFetch<BookGroupSessionResponse>(`/client/programs/${id}/enroll`, {
       method: 'POST',
       credentials: 'include',
     });

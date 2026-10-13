@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ApiBearerAuth, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
-import { ClientSessionGuard } from '../../common/guards/client-session.guard';
-import { Public } from '../../common/guards/jwt.guard';
+import { ClientRoute } from '../../common/auth/client-route.decorator';
 import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
+import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { ClaimConversationHandler } from '../../modules/comms/chat/guest/claim-conversation.handler';
 import { ClaimGuestConversationDto } from '../../modules/comms/chat/guest/claim-guest-conversation.dto';
 import { CHAT_GUEST_COOKIE_NAME, GuestChatTokenService } from '../../modules/comms/chat/guest/guest-chat-token.service';
@@ -34,10 +34,9 @@ import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availabil
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
 @ApiTags('Public / Chat')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(WebChatEnabledGuard, ClientSessionGuard)
-@Public()
+@ClientRoute()
+@UseGuards(WebChatEnabledGuard)
 @Controller('public/me/chat')
 export class MyChatController {
   private readonly logger = new Logger(MyChatController.name);
@@ -91,6 +90,7 @@ export class MyChatController {
     return this.getConversation.execute({ clientId: session.id, conversationId });
   }
 
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/claim')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Claim a guest conversation for the authenticated client' })
@@ -128,6 +128,7 @@ export class MyChatController {
     return { ...conversation, resumedOperations };
   }
 
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/messages')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a message as the authenticated client' })
@@ -148,6 +149,7 @@ export class MyChatController {
     return toChatMessageResponse(message);
   }
 
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/messages/:messageId/retry')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retry an unanswered administrative assistant message as the client owner' })
@@ -183,6 +185,7 @@ export class MyChatController {
     });
   }
 
+  @ClientThrottle('chat')
   @Post('conversations/:conversationId/handoff')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request reception handoff as the authenticated client' })
@@ -199,6 +202,7 @@ export class MyChatController {
     }));
   }
 
+  @ClientThrottle('chat')
   @Post('operations/:operationId/acknowledge')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Acknowledge an additional appointment before confirmation' })
@@ -215,6 +219,7 @@ export class MyChatController {
     }));
   }
 
+  @ClientThrottle('chat')
   @Post('operations/:operationId/confirm')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm and execute a prepared chat operation' })
@@ -231,6 +236,7 @@ export class MyChatController {
     }));
   }
 
+  @ClientThrottle('chat')
   @Post('operations/:operationId/decline')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Decline a prepared chat operation without executing it' })

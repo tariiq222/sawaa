@@ -104,7 +104,7 @@ describeRealE2e('Moyasar webhook HMAC signature over HTTP — real-DB e2e', () =
     nest.use(helmet());
     nest.use(cookieParser());
     nest.use((req: express.Request, res: express.Response, next: express.NextFunction) =>
-      shouldBypassCsrf(req.path) ? next() : csrfMiddleware(req, res, next));
+      shouldBypassCsrf({ path: req.path, hasClientSessionCookie: Boolean(req.cookies?.client_access_token) }) ? next() : csrfMiddleware(req, res, next));
     configureHttpContract(nest, 'production');
     app = nest;
     await app.init();

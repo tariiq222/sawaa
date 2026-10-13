@@ -6,7 +6,6 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { formatTimeOfDay } from '../../../../../../mobile/lib/session-format';
 import { MobileClientHomeController } from './home.controller';
 import { ListClientUpcomingBookingsHandler } from '../../../../modules/bookings/client/list-client-upcoming-bookings.handler';
-import { ListBookingsHandler } from '../../../../modules/bookings/list-bookings/list-bookings.handler';
 import { ListNotificationsHandler } from '../../../../modules/comms/notifications/list-notifications.handler';
 import { ListPaymentsHandler } from '../../../../modules/finance/list-payments/list-payments.handler';
 import { GetClientHandler } from '../../../../modules/people/clients/get-client.handler';
@@ -26,7 +25,6 @@ describe('MobileClientHomeController (e2e)', () => {
       controllers: [MobileClientHomeController],
       providers: [
         { provide: ListClientUpcomingBookingsHandler, useValue: mockUpcoming },
-        { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: ListNotificationsHandler, useValue: mockListNotifications },
         { provide: ListPaymentsHandler, useValue: mockListPayments },
         { provide: GetClientHandler, useValue: mockGetClient },
@@ -124,6 +122,7 @@ describe('home/detail timestamp boundary', () => {
         employee: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) },
         service: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) },
         client: { findFirst: jest.fn().mockResolvedValue(null) }, branch: { findFirst: jest.fn().mockResolvedValue(null) }, invoice: { findFirst: jest.fn().mockResolvedValue(null) },
+        rating: { findUnique: jest.fn().mockResolvedValue(null) },
       } as unknown as PrismaService;
       const home = new MobileClientHomeController(new ListClientUpcomingBookingsHandler(prisma), { execute: async () => [] } as unknown as ListNotificationsHandler, { execute: async () => [] } as unknown as ListPaymentsHandler, { execute: async () => null } as unknown as GetClientHandler);
       const detail = new GetClientBookingHandler(prisma, { execute: jest.fn() } as never);

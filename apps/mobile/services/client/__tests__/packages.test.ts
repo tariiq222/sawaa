@@ -68,7 +68,7 @@ describe('clientPackagesService catalog and purchase calls', () => {
       idempotencyKey: 'attempt-1',
     });
 
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/payments/package-purchases/native/init', {
+    expect(mockedApi.post).toHaveBeenCalledWith('/client/package-purchases/native/init', {
       packageId: 'offer-9',
       packageFamilyId: 'family-1',
       branchId: 'branch-1',
@@ -86,8 +86,8 @@ describe('clientPackagesService authenticated balance and booking calls', () => 
     await clientPackagesService.listPurchases();
     await clientPackagesService.getPurchase('purchase-1');
 
-    expect(mockedApi.get).toHaveBeenNthCalledWith(1, '/mobile/client/packages/purchases');
-    expect(mockedApi.get).toHaveBeenNthCalledWith(2, '/mobile/client/packages/purchases/purchase-1');
+    expect(mockedApi.get).toHaveBeenNthCalledWith(1, '/client/packages/purchases');
+    expect(mockedApi.get).toHaveBeenNthCalledWith(2, '/client/packages/purchases/purchase-1');
   });
 
   it('books an available credit with server-resolved identity and selected time', async () => {
@@ -99,7 +99,7 @@ describe('clientPackagesService authenticated balance and booking calls', () => 
       scheduledAt: '2026-09-20T10:00:00.000Z',
     });
 
-    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/packages/book', {
+    expect(mockedApi.post).toHaveBeenCalledWith('/client/packages/book', {
       creditId: 'credit-1',
       branchId: 'branch-1',
       scheduledAt: '2026-09-20T10:00:00.000Z',

@@ -213,7 +213,7 @@ describe('apiRequest 401 refresh flow', () => {
       )
       .mockResolvedValueOnce(jsonResponse({ success: true, data: {} }))
 
-    await apiRequest('/public/me/bookings')
+    await apiRequest('/client/bookings')
 
     expect(vi.mocked(fetch).mock.calls[2]?.[0]).toBe(
       'http://api.test/public/auth/refresh',
@@ -234,7 +234,7 @@ describe('apiRequest 401 refresh flow', () => {
       .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'message-1' } }))
 
     await expect(
-      apiRequest('/public/me/chat/conversations/c1/messages', {
+      apiRequest('/client/chat/conversations/c1/messages', {
         method: 'POST',
         credentials: 'include',
         body,
@@ -244,9 +244,9 @@ describe('apiRequest 401 refresh flow', () => {
     const calls = vi.mocked(fetch).mock.calls
     expect(calls.map(([url]) => url)).toEqual([
       'http://api.test/public/branding',
-      'http://api.test/public/me/chat/conversations/c1/messages',
+      'http://api.test/client/chat/conversations/c1/messages',
       'http://api.test/public/auth/refresh',
-      'http://api.test/public/me/chat/conversations/c1/messages',
+      'http://api.test/client/chat/conversations/c1/messages',
     ])
     expect(calls[0]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' })
     expect(new Headers(calls[2]?.[1]?.headers).get('x-csrf-token')).toBe(csrfToken)
@@ -274,16 +274,16 @@ describe('apiRequest 401 refresh flow', () => {
       )
       .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 'booking-1' } }))
 
-    await expect(apiRequest('/public/me/bookings/booking-1')).resolves.toEqual({ id: 'booking-1' })
+    await expect(apiRequest('/client/bookings/booking-1')).resolves.toEqual({ id: 'booking-1' })
 
     const calls = vi.mocked(fetch).mock.calls
     expect(calls.map(([url]) => url)).toEqual([
-      'http://api.test/public/me/bookings/booking-1',
+      'http://api.test/client/bookings/booking-1',
       'http://api.test/public/branding',
       'http://api.test/public/auth/refresh',
       'http://api.test/public/branding',
       'http://api.test/public/auth/refresh',
-      'http://api.test/public/me/bookings/booking-1',
+      'http://api.test/client/bookings/booking-1',
     ])
     expect(new Headers(calls[2]?.[1]?.headers).get('x-csrf-token')).toBe(staleToken)
     expect(new Headers(calls[4]?.[1]?.headers).get('x-csrf-token')).toBe(freshToken)
@@ -304,7 +304,7 @@ describe('apiRequest 401 refresh flow', () => {
         jsonResponse({ statusCode: 403, code: 'CSRF_INVALID', message: 'CSRF token missing or invalid' }, 403),
       )
 
-    await expect(apiRequest('/public/me/bookings/booking-1')).rejects.toMatchObject({
+    await expect(apiRequest('/client/bookings/booking-1')).rejects.toMatchObject({
       status: 403,
       code: 'CSRF_INVALID',
     })

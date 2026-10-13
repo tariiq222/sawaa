@@ -66,6 +66,29 @@ describe('ClientJwtStrategy', () => {
       );
     });
 
+    describe('channel', () => {
+      const activeClient = { id: 'c1', email: null, phone: null, isActive: true, deletedAt: null, tokenVersion: 1 };
+
+      it.each(['web', 'mobile'] as const)('uses the %s claim from the token', async (channel) => {
+        prisma.client.findUnique.mockResolvedValue(activeClient);
+        const req = { cookies: { client_access_token: 't' } } as any;
+        const result = await strategy.validate(req, { ...validPayload, channel });
+        expect(result.channel).toBe(channel);
+      });
+
+      it('falls back to web for a legacy token read from the cookie', async () => {
+        prisma.client.findUnique.mockResolvedValue(activeClient);
+        const req = { cookies: { client_access_token: 't' }, headers: {} } as any;
+        expect((await strategy.validate(req, validPayload)).channel).toBe('web');
+      });
+
+      it('falls back to mobile for a legacy token read from the Authorization header', async () => {
+        prisma.client.findUnique.mockResolvedValue(activeClient);
+        const req = { cookies: {}, headers: { authorization: 'Bearer t' } } as any;
+        expect((await strategy.validate(req, validPayload)).channel).toBe('mobile');
+      });
+    });
+
     it('throws when namespace is not client', async () => {
       await expect(
         strategy.validate({} as any, { ...validPayload, namespace: 'user' as any }),

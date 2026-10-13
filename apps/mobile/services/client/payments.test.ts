@@ -7,7 +7,7 @@ jest.mock('../api', () => ({
 }));
 
 import api from '../api';
-import { clientPaymentsService, getReceiptUploadMetadata } from './payments';
+import { clientPaymentsService, getMyInvoicePdfUrl, getReceiptUploadMetadata, listMyInvoices, requestRefund } from './payments';
 
 const mockedApi = api as unknown as { post: jest.Mock };
 
@@ -42,7 +42,7 @@ describe('clientPaymentsService.initPayment', () => {
 
     expect(result).toEqual(payload);
     expect(mockedApi.post).toHaveBeenCalledWith(
-      '/mobile/client/payments/init',
+      '/client/payments/init',
       { invoiceId: 'inv-1', method: 'APPLE_PAY' },
     );
   });
@@ -58,7 +58,7 @@ describe('clientPaymentsService.getBankTransferSettings', () => {
 
     await expect(clientPaymentsService.getBankTransferSettings()).resolves.toEqual(settings);
     expect((mockedApi as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
-      '/mobile/client/payments/bank-transfer/settings',
+      '/client/payments/bank-transfer/settings',
     );
   });
 });
@@ -99,7 +99,7 @@ describe('receipt upload metadata', () => {
       ['amount', '12500'],
       ['receipt', { uri: 'file:///receipts/transfer.png', type: 'image/png', name: 'transfer.png' }],
     ]);
-    expect(mockedApi.post.mock.calls[0][0]).toBe('/mobile/client/payments/bank-transfer');
+    expect(mockedApi.post.mock.calls[0][0]).toBe('/client/payments/bank-transfer');
   });
 });
 
@@ -108,17 +108,60 @@ describe('native payment API boundaries', () => {
   it('loads native capabilities without making a payable attempt', async () => {
     jest.mocked(api.get).mockResolvedValueOnce({ data: { enabled: true } });
     expect(await clientPaymentsService.getNativeConfig()).toEqual({ enabled: true });
-    expect(api.get).toHaveBeenCalledWith('/mobile/client/payments/native/config');
+    expect(api.get).toHaveBeenCalledWith('/client/payments/native/config');
     expect(api.post).not.toHaveBeenCalled();
   });
   it('initializes using only the invoice and chosen method', async () => {
     mockedApi.post.mockResolvedValueOnce({ data: { paymentId: 'payment' } });
     await clientPaymentsService.initNativePayment('invoice', 'ONLINE_CARD');
-    expect(api.post).toHaveBeenCalledWith('/mobile/client/payments/native/init', { invoiceId: 'invoice', method: 'ONLINE_CARD' });
+    expect(api.post).toHaveBeenCalledWith('/client/payments/native/init', { invoiceId: 'invoice', method: 'ONLINE_CARD' });
   });
   it('reconciles identity only without SDK result or amount', async () => {
     mockedApi.post.mockResolvedValueOnce({ data: { status: 'PENDING' } });
     expect(await clientPaymentsService.reconcileNativePayment('payment')).toEqual({ status: 'PENDING' });
-    expect(api.post).toHaveBeenCalledWith('/mobile/client/payments/native/payment/reconcile');
+    expect(api.post).toHaveBeenCalledWith('/client/payments/native/payment/reconcile');
+  });
+});
+
+describe('invoices and refunds (unified client API)', () => {
+  const get = api.get as jest.Mock;
+  const post = api.post as jest.Mock;
+
+  it('lists invoices with pageSize pagination', async () => {
+    const data = { items: [], total: 0, page: 2, pageSize: 5, outstandingBalance: 1200 };
+    get.mockResolvedValueOnce({ data });
+    await expect(listMyInvoices({ page: 2, pageSize: 5 })).resolves.toEqual(data);
+    expect(get).toHaveBeenCalledWith('/client/invoices', { params: { page: 2, pageSize: 5 } });
+  });
+
+  it('fetches the presigned receipt URL', async () => {
+    get.mockResolvedValueOnce({ data: { url: 'https://signed' } });
+    await expect(getMyInvoicePdfUrl('inv 1')).resolves.toEqual({ url: 'https://signed' });
+    expect(get).toHaveBeenCalledWith('/client/invoices/inv%201/pdf');
+  });
+
+  it('posts a refund request', async () => {
+    post.mockResolvedValueOnce({ data: { id: 'r1' } });
+    await expect(requestRefund({ invoiceId: 'inv-1', reason: 'duplicate' })).resolves.toEqual({ id: 'r1' });
+    expect(post).toHaveBeenCalledWith('/client/refunds/request', { invoiceId: 'inv-1', reason: 'duplicate' });
+  });
+
+  it('maps list limit to pageSize', async () => {
+    get.mockResolvedValueOnce({ data: { items: [], total: 0, page: 1, pageSize: 10 } });
+    await clientPaymentsService.list({ page: 1, limit: 10 });
+    expect(get).toHaveBeenCalledWith('/client/payments', { params: { page: 1, pageSize: 10 } });
+  });
+
+  it('reads the canonical { items, total, page, pageSize } envelope into meta', async () => {
+    get.mockResolvedValueOnce({ data: { items: [{ id: 'p1' }], total: 25, page: 2, pageSize: 10 } });
+    const r = await clientPaymentsService.list({ page: 2, limit: 10 });
+    expect(r.items).toEqual([{ id: 'p1' }]);
+    expect(r.meta).toEqual({ total: 25, page: 2, perPage: 10, totalPages: 3, hasNextPage: true, hasPreviousPage: true });
+  });
+
+  it('still accepts the legacy { items, meta } envelope', async () => {
+    get.mockResolvedValueOnce({ data: { items: [], meta: { total: 5, page: 1, limit: 5, totalPages: 1 } } });
+    const r = await clientPaymentsService.list();
+    expect(r.meta).toMatchObject({ total: 5, page: 1, perPage: 5, totalPages: 1, hasNextPage: false });
   });
 });

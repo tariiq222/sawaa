@@ -5,8 +5,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { MobileClientBookingsController } from './bookings.controller';
-import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
-import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
+import { ListClientBookingsHandler } from '../../../modules/bookings/client/list-client-bookings.handler';
+import { GetClientBookingHandler } from '../../../modules/bookings/client/get-client-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { RequestCancelBookingHandler } from '../../../modules/bookings/request-cancel-booking/request-cancel-booking.handler';
@@ -40,8 +40,8 @@ describe('MobileClientBookingsController (e2e)', () => {
         { provide: ClientCancellationPreviewHandler, useValue: mockPreview },
         { provide: ClientCancelBookingHandler, useValue: mockClientCancel },
         { provide: ClientCancellationOutcomeHandler, useValue: mockOutcome },
-        { provide: ListBookingsHandler, useValue: mockList },
-        { provide: GetBookingHandler, useValue: mockGet },
+        { provide: ListClientBookingsHandler, useValue: mockList },
+        { provide: GetClientBookingHandler, useValue: mockGet },
         { provide: CreateBookingHandler, useValue: mockCreate },
         { provide: CancelBookingHandler, useValue: mockCancel },
         { provide: RequestCancelBookingHandler, useValue: mockRequestCancel },
@@ -77,12 +77,17 @@ describe('MobileClientBookingsController (e2e)', () => {
     mockPreview.execute.mockResolvedValue({ policyEnabled: false });
   });
 
-  it('includes the persisted refund outcome on lower-case mapped cancelled detail', async () => {
-    mockGet.execute.mockResolvedValue({ id: bookingId, status: 'cancelled' });
-    mockOutcome.execute.mockResolvedValue({ status: 'COMPLETED', completedAmount: 5000 });
+  it('returns the unified detail (refund outcome included by the handler, not merged by the controller)', async () => {
+    mockGet.execute.mockResolvedValue({ id: bookingId, status: 'cancelled', cancellationRefund: { status: 'COMPLETED', completedAmount: 5000 } });
     const response = await request(app.getHttpServer()).get(`/mobile/client/bookings/${bookingId}`).expect(200);
     expect(response.body.cancellationRefund).toEqual({ status: 'COMPLETED', completedAmount: 5000 });
-    expect(mockOutcome.execute).toHaveBeenCalledWith(bookingId, 'client-1');
+    expect(mockGet.execute).toHaveBeenCalledWith(bookingId, 'client-1', { enumCase: 'lower' });
+    expect(mockOutcome.execute).not.toHaveBeenCalled();
+  });
+
+  it('asks the cancellation preview with the same channel-free arguments as the web route', async () => {
+    await request(app.getHttpServer()).get(`/mobile/client/bookings/${bookingId}/cancellation-preview`).expect(200);
+    expect(mockPreview.execute).toHaveBeenCalledWith(bookingId, 'client-1');
   });
 
   it('uses the enabled shared policy and preserves old top-level booking fields', async () => {
@@ -91,11 +96,23 @@ describe('MobileClientBookingsController (e2e)', () => {
     const action = '11111111-1111-4111-8111-111111111111';
     const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`).send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Changed plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64), sourceActionId: action }).expect(200);
     expect(res.body).toMatchObject({ id: bookingId, status: 'CANCELLED', refund: { status: 'PROCESSING' } });
-    expect(mockClientCancel.execute).toHaveBeenCalledWith({ bookingId, clientId: 'client-1', legacyChannel: 'MOBILE', cancellationReason: 'CLIENT_REQUESTED', reason: 'Changed plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64), sourceActionId: action });
+    expect(mockClientCancel.execute).toHaveBeenCalledWith({ bookingId, clientId: 'client-1', cancellationReason: 'CLIENT_REQUESTED', reason: 'Changed plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64), sourceActionId: action });
     expect(mockCancel.execute).not.toHaveBeenCalled();
   });
 
   const bookingId = '00000000-0000-4000-a000-000000000001';
+  it('does not expose host capabilities or staff notes through the legacy cancellation envelope', async () => {
+    mockClientCancel.execute.mockResolvedValue({ status: 'CANCELLED', requiresApproval: false, booking: {
+      id: bookingId, status: 'CANCELLED', zoomHostUrl: 'host-secret', zoomStartUrl: 'start-secret', notes: 'staff-private',
+    } });
+    const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`)
+      .send({ reason: 'CLIENT_REQUESTED', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }).expect(200);
+    expect(res.body).toMatchObject({ id: bookingId, status: 'CANCELLED', booking: { id: bookingId } });
+    for (const field of ['zoomHostUrl', 'zoomStartUrl', 'notes']) {
+      expect(res.body).not.toHaveProperty(field);
+      expect(res.body.booking).not.toHaveProperty(field);
+    }
+  });
   const validBooking = {
     branchId: '00000000-0000-4000-a000-000000000002',
     employeeId: '00000000-0000-4000-a000-000000000003',
@@ -167,7 +184,9 @@ describe('MobileClientBookingsController (e2e)', () => {
     it('passes a validated tab and pagination with the authenticated client scope', async () => {
       mockList.execute.mockResolvedValue({ items: [], meta: { total: 0 } });
       await request(app.getHttpServer()).get('/mobile/client/bookings?tab=upcoming&page=2&limit=50').expect(200);
-      expect(mockList.execute).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'client-1', clientTab: 'upcoming', page: 2, limit: 50 }));
+      expect(mockList.execute).toHaveBeenCalledWith(expect.objectContaining({
+        clientId: 'client-1', tab: 'upcoming', page: 2, pageSize: 50, tabSemantics: 'lifecycle', enumCase: 'lower',
+      }));
     });
     it('rejects invalid tabs and caller-provided client identity', async () => {
       await request(app.getHttpServer()).get('/mobile/client/bookings?tab=invalid').expect(400);
@@ -175,18 +194,21 @@ describe('MobileClientBookingsController (e2e)', () => {
       expect(mockList.execute).not.toHaveBeenCalled();
     });
     it('returns 200 with paginated bookings', async () => {
-      mockList.execute.mockResolvedValue({ data: [{ id: 'b-1' }], total: 1, page: 1, limit: 20 });
+      mockList.execute.mockResolvedValue({ items: [{ id: 'b-1' }], total: 21, page: 1, pageSize: 20 });
 
       const res = await request(app.getHttpServer())
         .get('/mobile/client/bookings')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
+      // Mobile keeps the `{ items, meta }` envelope and the 20-row default page.
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.meta).toMatchObject({ total: 21, page: 1, limit: 20, totalPages: 2, hasNextPage: true });
+      expect(mockList.execute).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 20 }));
     });
 
     it('passes query filters', async () => {
-      mockList.execute.mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
+      mockList.execute.mockResolvedValue({ items: [], total: 0, page: 2, pageSize: 10 });
 
       await request(app.getHttpServer())
         .get('/mobile/client/bookings?status=CONFIRMED&page=2&limit=10')
@@ -194,7 +216,7 @@ describe('MobileClientBookingsController (e2e)', () => {
         .expect(200);
 
       expect(mockList.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ clientId: 'client-1', status: 'CONFIRMED', page: 2, limit: 10 }),
+        expect.objectContaining({ clientId: 'client-1', status: 'CONFIRMED', page: 2, pageSize: 10 }),
       );
     });
   });
@@ -209,6 +231,17 @@ describe('MobileClientBookingsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.status).toBe('CONFIRMED');
+    });
+
+    it('returns 404 for a booking owned by another client', async () => {
+      mockGet.execute.mockRejectedValue(new NotFoundException('Booking not found'));
+
+      await request(app.getHttpServer())
+        .get(`/mobile/client/bookings/${bookingId}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(404);
+
+      expect(mockGet.execute).toHaveBeenCalledWith(bookingId, 'client-1', { enumCase: 'lower' });
     });
 
     it('returns 400 for invalid UUID', async () => {
@@ -232,7 +265,7 @@ describe('MobileClientBookingsController (e2e)', () => {
       const res = await request(app.getHttpServer()).patch(`/mobile/client/bookings/${bookingId}/cancel`)
         .send({ reason: 'CLIENT_REQUESTED', cancelNotes: 'Change of plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }).expect(200);
       expect(res.body.status).toBe('CANCEL_REQUESTED');
-      expect(mockClientCancel.execute).toHaveBeenCalledWith(expect.objectContaining({ legacyChannel: 'MOBILE', cancellationReason: 'CLIENT_REQUESTED', reason: 'Change of plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }));
+      expect(mockClientCancel.execute).toHaveBeenCalledWith(expect.objectContaining({ cancellationReason: 'CLIENT_REQUESTED', reason: 'Change of plans', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }));
       expect(mockCancel.execute).not.toHaveBeenCalled();
       expect(mockRequestCancel.execute).not.toHaveBeenCalled();
     });
@@ -344,7 +377,7 @@ describe('MobileClientBookingsController (e2e)', () => {
 
   describe('PATCH /mobile/client/bookings/:id/reschedule', () => {
     it('returns 200 on reschedule', async () => {
-      mockReschedule.execute.mockResolvedValue({ id: bookingId, status: 'RESCHEDULED' });
+      mockReschedule.execute.mockResolvedValue({ booking: { id: bookingId, status: 'CONFIRMED' } });
 
       const res = await request(app.getHttpServer())
         .patch(`/mobile/client/bookings/${bookingId}/reschedule`)
@@ -352,7 +385,7 @@ describe('MobileClientBookingsController (e2e)', () => {
         .send({ newScheduledAt: '2026-12-31T10:00:00.000Z' })
         .expect(200);
 
-      expect(res.body.status).toBe('RESCHEDULED');
+      expect(res.body.booking.status).toBe('CONFIRMED');
     });
 
     it('returns 400 for invalid date', async () => {

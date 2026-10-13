@@ -86,7 +86,7 @@ describeReal('Mobile client email — real verification boundaries', () => {
     clients.add(client.id);
     return { client, user, email, phone: number };
   }
-  const bearer = async (client: { id: string; email: string | null; emailVerified?: Date | null; tokenVersion?: number }) => (await clientTokens.issueTokenPair({ ...client, emailVerified: client.emailVerified ?? null })).accessToken;
+  const bearer = async (client: { id: string; email: string | null; emailVerified?: Date | null; tokenVersion?: number }) => (await clientTokens.issueTokenPair({ ...client, emailVerified: client.emailVerified ?? null }, { channel: 'mobile' })).accessToken;
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
   // Test-clock boundary: expire only this synthetic client's send cooldown,
   // retaining the real Redis hourly budget and every other key's limits.

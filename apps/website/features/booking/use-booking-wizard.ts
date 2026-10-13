@@ -822,7 +822,7 @@ export function useBookingWizard() {
             serviceId: service.id,
             employeeId: employee.id,
             branchId: effectiveBranchId,
-            startsAt: slot.startTime,
+            scheduledAt: slot.startTime,
             durationOptionId: selectedChoice?.durationOptionId,
             deliveryType: selectedChoice?.deliveryType,
             payAtClinic,

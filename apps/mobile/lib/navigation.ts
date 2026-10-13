@@ -138,7 +138,7 @@ const ROUTER_STATE_PARAMS = new Set(['screen', 'params', 'pop', 'initial', 'path
 // Auth screens answer to both `/(auth)/login` and `/login`, so both forms must
 // be rejected — following one would drop the user back into the login flow.
 const AUTH_PATH =
-  /^\/(?:\(auth\)\/)?(?:login|register|otp-verify|forgot-password|reset-password|review-login|suspended)(?:\/|$)/;
+  /^\/(?:\(auth\)\/)?(?:login|register|otp-verify|forgot-password|reset-password|review-login|suspended|email-entry|staff-login)(?:\/|$)/;
 
 /**
  * Accepts a redirect target only when it is an in-app, non-auth path. The value

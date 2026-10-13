@@ -8,13 +8,14 @@ const JOINABLE_STATUSES: BookingStatus[] = [
   BookingStatus.DEPOSIT_PAID,
 ];
 
+/** Client actions hide foreign and missing bookings behind the same 404 response. */
 @Injectable()
 export class GetClientBookingForActionHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async executeForJoin(bookingId: string, clientId: string) {
     const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId },
+      where: { id: bookingId, clientId },
       select: {
         id: true,
         clientId: true,
@@ -25,7 +26,6 @@ export class GetClientBookingForActionHandler {
       },
     });
     if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.clientId !== clientId) throw new ForbiddenException('Not your booking');
     if (booking.deliveryType !== DeliveryType.ONLINE && !booking.zoomJoinUrl) {
       throw new ForbiddenException('Join is only available for online bookings');
     }
@@ -37,11 +37,10 @@ export class GetClientBookingForActionHandler {
 
   async executeForRate(bookingId: string, clientId: string) {
     const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId },
+      where: { id: bookingId, clientId },
       select: { id: true, clientId: true, employeeId: true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.clientId !== clientId) throw new ForbiddenException('Not your booking');
     return booking;
   }
 }

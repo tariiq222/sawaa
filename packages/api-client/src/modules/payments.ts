@@ -89,7 +89,7 @@ export async function requestRefund(
   invoiceId: string,
   reason?: string,
 ): Promise<unknown> {
-  return apiRequest('/public/refunds/request', {
+  return apiRequest('/client/refunds/request', {
     method: 'POST',
     credentials: 'include',
     body: JSON.stringify(reason ? { invoiceId, reason } : { invoiceId }),

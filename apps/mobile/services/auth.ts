@@ -52,7 +52,7 @@ export const authService = {
     const sessionEpoch = getSessionEpoch();
     if (accountClosureRequest?.epoch === sessionEpoch) return accountClosureRequest.promise;
     const pending = (async () => {
-      const response = await api.delete<{ status: string }>('/mobile/client/profile');
+      const response = await api.delete<{ status: string }>('/client/profile');
       if (response.data?.status !== 'closed') {
         throw new Error('Account closure was not confirmed');
       }
@@ -92,7 +92,7 @@ export const authService = {
   async getProfile(kind?: 'client' | 'staff'): Promise<ApiResponse<User>> {
     const sessionKind = kind ?? await getSessionKindFromAccessToken();
     if (sessionKind === 'client') {
-      const response = await api.get<unknown>('/mobile/client/profile');
+      const response = await api.get<unknown>('/client/profile');
       return { success: true, data: mapClientProfile(response.data) };
     }
     const response = await api.get<ApiResponse<User>>('/auth/me');

@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
@@ -54,7 +55,7 @@ export class PublicPaymentsController {
   @Public()
   @ApiBearerAuth()
   @UseGuards(ClientSessionGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ClientThrottle('payment')
   @Post('init')
   @ApiOperation({ summary: 'Initialize a Moyasar payment for a booking invoice (requires a logged-in client session)' })
   @ApiCreatedResponse({
@@ -84,7 +85,7 @@ export class PublicPaymentsController {
   @Public()
   @ApiBearerAuth()
   @UseGuards(ClientSessionGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ClientThrottle('money')
   @Post('package-purchases/init')
   @ApiOperation({
     summary:

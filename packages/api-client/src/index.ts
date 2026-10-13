@@ -26,10 +26,13 @@ export {
   getMyInvoices,
   getMyBookings,
   cancelMyBooking,
+  closeMyAccount,
+  rateMyBooking,
+  getMyBookingJoinLink,
   getMyCancellationPreview,
   rescheduleMyBooking,
 } from './modules/me'
-export type { UpdateMyProfileRequest } from './modules/me'
+export type { UpdateMyProfileRequest, RateMyBookingPayload } from './modules/me'
 export * as bookingsApi from './modules/bookings'
 export * as employeesApi from './modules/employees'
 export * as paymentsApi from './modules/payments'

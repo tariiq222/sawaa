@@ -7,14 +7,14 @@ describe('GetClientBookingForActionHandler', () => {
   const prisma = { booking: { findFirst: jest.fn() } };
   const handler = new GetClientBookingForActionHandler(prisma as unknown as PrismaService);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => jest.resetAllMocks());
 
-  it('returns a joinable online booking owned by the client', async () => {
+  it.each([BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID])('returns an owned online booking with joinable status %s', async (status) => {
     const booking = {
       id: 'b-1',
       clientId: 'client-1',
       deliveryType: DeliveryType.ONLINE,
-      status: BookingStatus.CONFIRMED,
+      status,
       zoomJoinUrl: 'https://zoom.us/j/123',
       scheduledAt: new Date('2026-12-31T09:00:00Z'),
     };
@@ -23,12 +23,12 @@ describe('GetClientBookingForActionHandler', () => {
     await expect(handler.executeForJoin('b-1', 'client-1')).resolves.toBe(booking);
   });
 
-  it('rejects a cancelled booking even when a zoom url is stored', async () => {
+  it.each([BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.NO_SHOW, BookingStatus.EXPIRED, BookingStatus.PENDING_GROUP_FILL, BookingStatus.AWAITING_PAYMENT, BookingStatus.CANCEL_REQUESTED])('rejects an owned booking with status %s even when a zoom url is stored', async (status) => {
     prisma.booking.findFirst.mockResolvedValue({
       id: 'b-1',
       clientId: 'client-1',
       deliveryType: DeliveryType.ONLINE,
-      status: BookingStatus.CANCELLED,
+      status,
       zoomJoinUrl: 'https://zoom.us/j/123',
     });
 
@@ -63,9 +63,25 @@ describe('GetClientBookingForActionHandler', () => {
     });
   });
 
-  it('rejects rating a booking owned by another client', async () => {
-    prisma.booking.findFirst.mockResolvedValue({ id: 'b-1', clientId: 'other-client', employeeId: 'emp-1' });
+  it.each(['executeForJoin', 'executeForRate'] as const)('%s scopes the lookup to the authenticated client', async (action) => {
+    const foreignBooking = {
+      id: 'b-1', clientId: 'other-client', employeeId: 'emp-1',
+      deliveryType: DeliveryType.ONLINE, status: BookingStatus.CONFIRMED,
+      zoomJoinUrl: 'https://zoom.us/j/123', scheduledAt: new Date('2026-12-31T09:00:00Z'),
+    };
+    // Model Prisma ownership filtering: an unscoped query exposes the row.
+    prisma.booking.findFirst.mockImplementation(({ where }: { where: { id: string; clientId?: string } }) =>
+      Promise.resolve(where.id === foreignBooking.id && (!where.clientId || where.clientId === foreignBooking.clientId)
+        ? foreignBooking : null));
 
-    await expect(handler.executeForRate('b-1', 'client-1')).rejects.toThrow('Not your booking');
+    await expect(handler[action]('b-1', 'client-1')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'b-1', clientId: 'client-1' },
+    }));
+  });
+
+  it.each(['executeForJoin', 'executeForRate'] as const)('%s reports missing rows as not found', async (action) => {
+    prisma.booking.findFirst.mockResolvedValue(null);
+    await expect(handler[action]('missing', 'client-1')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

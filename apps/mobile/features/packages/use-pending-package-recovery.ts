@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import { AppState } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useAppSelector } from '@/hooks/use-redux';
 import { getPendingPackagePurchase } from '@/services/client/packages';
@@ -24,13 +24,18 @@ export function usePendingPackageRecovery(
   const user = useAppSelector((state) => state.auth.user);
   const userRef = useRef(user?.id);
   userRef.current = user?.id;
+  const isActiveRef = useRef(true);
+  useFocusEffect(useCallback(() => {
+    isActiveRef.current = true;
+    return () => { isActiveRef.current = false; };
+  }, []));
 
   const recoverPending = useCallback(async () => {
-    if (checkoutInFlight.current) return;
+    if (checkoutInFlight.current || !isActiveRef.current) return;
     if (!user?.id) return;
     const pending = await getPendingPackagePurchase(user.id);
     // Ignore a previous account's asynchronous recovery read.
-    if (checkoutInFlight.current || userRef.current !== user?.id) return;
+    if (checkoutInFlight.current || !isActiveRef.current || userRef.current !== user?.id) return;
     if (pending && pending.clientId === user?.id && pending.packageId === optionId) {
       if (pending.invoiceId) {
         if (recoveredNativePurchases.has(pending.purchaseId)) return;

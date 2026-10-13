@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Layers, ListChecks, Package, Receipt, Wallet } from 'lucide-react-native';
@@ -42,6 +42,11 @@ export default function PackageConfirmScreen() {
   const branchQuery = usePublicBranches();
   const userRef = useRef(user?.id);
   userRef.current = user?.id;
+  const isActiveRef = useRef(true);
+  useFocusEffect(useCallback(() => {
+    isActiveRef.current = true;
+    return () => { isActiveRef.current = false; };
+  }, []));
   const initPurchase = useInitPackagePurchase();
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
@@ -64,13 +69,13 @@ export default function PackageConfirmScreen() {
     try {
       const target = { clientId: user.id, packageId: option.id, familyId, branchId };
       const result = await runPackageCheckout(initPurchase.mutateAsync, target);
-      if (userRef.current !== target.clientId) return;
+      if (!isActiveRef.current || userRef.current !== target.clientId) return;
       router.replace({
         pathname: '/(client)/payments/native-checkout',
         params: { purchaseId: result.purchaseId, invoiceId: result.invoiceId },
       });
     } catch (error) {
-      Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
+      if (isActiveRef.current) Alert.alert(t('packages.errorTitle'), t(packagePurchaseErrorKey(error)));
     } finally {
       checkoutInFlight.current = false;
     }

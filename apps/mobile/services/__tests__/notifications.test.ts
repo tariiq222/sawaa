@@ -27,4 +27,16 @@ describe('notificationsService.getAll', () => {
     expect(result.items.map((item) => item.type)).toEqual(['booking_confirmed', 'payment_failed']);
     expect(result.items[0]).toMatchObject({ userId: 'c1', titleAr: 'T', bodyEn: 'B' });
   });
+
+  it('reads the canonical { items, total, page, pageSize } envelope into meta', async () => {
+    mockedApi.get.mockResolvedValueOnce({
+      data: {
+        items: [{ id: 'n1', recipientId: 'c1', type: 'BOOKING_CONFIRMED', title: 'T', body: 'B', isRead: false, createdAt: '2026-09-30T10:00:00Z' }],
+        total: 45, page: 1, pageSize: 20,
+      },
+    });
+    const result = await notificationsService.getAll({ page: 1, perPage: 20 });
+    expect(result.meta).toEqual({ total: 45, page: 1, perPage: 20, totalPages: 3, hasNextPage: true, hasPreviousPage: false });
+    expect(result.items).toHaveLength(1);
+  });
 });

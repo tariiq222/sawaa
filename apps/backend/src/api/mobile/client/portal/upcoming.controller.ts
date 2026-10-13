@@ -1,11 +1,10 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
-import { ClientSessionGuard } from '../../../../common/guards/client-session.guard';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
-import { Public } from '../../../../common/guards/jwt.guard';
+import { ClientRoute } from '../../../../common/auth/client-route.decorator';
 import { ListClientUpcomingBookingsHandler } from '../../../../modules/bookings/client/list-client-upcoming-bookings.handler';
 
 export class UpcomingQuery {
@@ -14,10 +13,8 @@ export class UpcomingQuery {
 }
 
 @ApiTags('Mobile Client / Portal')
-@ApiBearerAuth()
 @ApiStandardResponses()
-@UseGuards(ClientSessionGuard)
-@Public()
+@ClientRoute()
 @Controller('mobile/client/portal/upcoming')
 export class MobileClientUpcomingController {
   constructor(private readonly upcomingHandler: ListClientUpcomingBookingsHandler) {}
