@@ -26,7 +26,7 @@ vi.mock("sonner", () => ({
 }))
 
 vi.mock("@/components/locale-provider", () => ({
-  useLocale: () => ({ t: (key: string) => key }),
+  useLocale: () => ({ t: (key: string) => key === "employees.form.partialFailure" ? "تعذّر حفظ بعض الأجزاء: {list}" : key }),
 }))
 
 vi.mock("@/hooks/use-employee-mutations", () => ({
@@ -59,6 +59,7 @@ vi.mock("@/lib/api/branches", () => ({
   fetchBranches: mocks.fetchBranches,
 }))
 
+import { toast } from "sonner"
 import { useEmployeeForm } from "@/components/features/employees/use-employee-form"
 import { createEmployeeEmailSchema } from "@/lib/schemas/employee.schema"
 
@@ -174,6 +175,15 @@ describe("employee edit email", () => {
     await act(async () => { await result.current.onSubmit() })
     expect(mocks.updateEmployee.mock.calls[0][0].avatarUrl).toBeUndefined()
     if (file) expect(mocks.uploadEmployeeAvatar).toHaveBeenCalledWith("emp-1", file)
+  })
+
+  it("includes the actionable avatar error in the partial-save notice", async () => {
+    mocks.uploadEmployeeAvatar.mockRejectedValueOnce(new Error("الصورة أكبر من 5 ميجابايت؛ اختر صورة أصغر"))
+    const form = makeForm({ avatarFile: new File(["image"], "photo.png", { type: "image/png" }), isActive: true })
+    const { result } = renderHook(() => useEmployeeForm({ ...baseOptions, employee: undefined, form: form as never }))
+    await act(async () => { await result.current.onSubmit() })
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("اختر صورة أصغر"))
+    expect(mocks.routerPush).not.toHaveBeenCalled()
   })
 
   it("rejects a non-empty invalid email while allowing an empty edit value", () => {

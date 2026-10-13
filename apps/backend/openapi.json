@@ -33049,7 +33049,7 @@
               "schema": {
                 "properties": {
                   "file": {
-                    "description": "Avatar image (JPEG/PNG/WebP)",
+                    "description": "Avatar image (JPEG/PNG/WebP), up to 5 MiB",
                     "format": "binary",
                     "type": "string"
                   }
@@ -33150,7 +33150,7 @@
               "schema": {
                 "properties": {
                   "file": {
-                    "description": "Public profile image (JPEG/PNG/WebP)",
+                    "description": "Public profile image (JPEG/PNG/WebP), up to 5 MiB",
                     "format": "binary",
                     "type": "string"
                   }

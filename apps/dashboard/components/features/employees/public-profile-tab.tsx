@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, startTransition } from "react"
 import { useEmployeeMutations } from "@/hooks/use-employee-mutations"
-import { AvatarUpload, Card, CardContent } from "@sawaa/ui"
+import { Card, CardContent } from "@sawaa/ui"
+import { EmployeeImageUpload } from "./employee-image-upload"
 import { toast } from "sonner"
 import { Label } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
@@ -87,7 +88,7 @@ export function PublicProfileTab({ employee }: Props) {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>{t("employees.public.imageUrl")}</Label>
-            <AvatarUpload
+            <EmployeeImageUpload
               key={image.value}
               value={image.value || undefined}
               onChange={(file, preview) => replacePreview(preview, file)}
