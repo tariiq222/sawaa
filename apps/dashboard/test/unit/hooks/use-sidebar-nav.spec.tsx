@@ -30,6 +30,7 @@ const { navGroups } = vi.hoisted(() => ({
       items: [
         { titleKey: "nav.bookings", href: "/bookings", icon: {} },
         { titleKey: "nav.clients", href: "/clients", icon: {}, permission: "clients:read" },
+        { titleKey: "nav.settings", href: "/settings", icon: {}, anyPermissions: ["setting:read", "content:read", "providerconfig:read"] },
       ],
     },
   ],
@@ -99,6 +100,16 @@ describe("useSidebarNav", () => {
     await waitFor(() => expect(result.current.filteredGroups).toBeDefined())
     const items = result.current.filteredGroups[0].items
     expect(items.some((i) => i.href === "/clients")).toBe(true)
+  })
+
+  it.each(["setting:read", "content:read", "providerconfig:read"])("shows Settings for %s without requiring the other subjects", (permission) => {
+    useAuth.mockReturnValue({ user: null, canDo: (module, action) => `${module}:${action}` === permission })
+    const { result } = renderHook(() => useSidebarNav(), { wrapper: makeWrapper() })
+    expect(result.current.filteredGroups.flatMap((group) => group.items).some((item) => item.href === "/settings")).toBe(true)
+  })
+  it("hides Settings without any of its read permissions", () => {
+    const { result } = renderHook(() => useSidebarNav(), { wrapper: makeWrapper() })
+    expect(result.current.filteredGroups.flatMap((group) => group.items).some((item) => item.href === "/settings")).toBe(false)
   })
 
   it("returns user display info from auth", async () => {

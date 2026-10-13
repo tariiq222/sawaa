@@ -9,7 +9,7 @@ import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function ContactMessagesPage() {
   return (
-    <PermissionGuard module="setting" action="read">
+    <PermissionGuard module="personaldata" action="read">
       <ContactMessagesPageInner />
     </PermissionGuard>
   )

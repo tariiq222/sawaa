@@ -9,7 +9,7 @@ const allow = (perms: string[]) => (m: string, a: string) =>
 const OWNER = allow(['*'])
 const ADMIN = allow([
   'booking:*', 'client:*', 'employee:*', 'invoice:*',
-  'payment:*', 'report:*', 'setting:*', 'branding:*',
+  'payment:*', 'report:*', 'setting:*', 'providerconfig:*', 'refund:*', 'personaldata:*', 'content:*', 'branding:*',
 ])
 const RECEPTIONIST = allow(['booking:*', 'client:*', 'employee:read', 'invoice:read'])
 const ACCOUNTANT = allow(['invoice:*', 'payment:*', 'booking:read', 'report:read'])

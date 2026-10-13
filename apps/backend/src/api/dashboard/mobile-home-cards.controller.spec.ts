@@ -7,13 +7,13 @@ import { DashboardMobileHomeCardsController } from './mobile-home-cards.controll
 describe('DashboardMobileHomeCardsController permissions', () => {
   it('requires read Setting permission only for listing', () => {
     const permissions = Reflect.getMetadata(CHECK_PERMISSIONS_KEY, DashboardMobileHomeCardsController.prototype.listEndpoint);
-    expect(permissions).toEqual([{ action: 'read', subject: 'Setting' }]);
+    expect(permissions).toEqual([{ action: 'read', subject: 'Content' }]);
   });
 
-  it('requires update Setting permission for every mutation', () => {
+  it('requires update Content permission for every mutation', () => {
     for (const method of ['createEndpoint', 'updateEndpoint', 'reorderEndpoint']) {
       const permissions = Reflect.getMetadata(CHECK_PERMISSIONS_KEY, (DashboardMobileHomeCardsController.prototype as any)[method]);
-      expect(permissions).toEqual([{ action: 'update', subject: 'Setting' }]);
+      expect(permissions).toEqual([{ action: 'update', subject: 'Content' }]);
     }
   });
 });

@@ -58,6 +58,7 @@ describe("SidebarConfig — persona groups", () => {
 
   it("systemNav contains settings", () => {
     expect(allHrefs).toContain("/settings")
+    expect(systemNav.find((item) => item.href === "/settings")).toMatchObject({ anyPermissions: ["setting:read", "content:read", "providerconfig:read"] })
   })
 
   it("practiceNav contains practitioner ops items", () => {

@@ -137,19 +137,29 @@ describe('CaslAbilityFactory', () => {
     expect(ability.can('update', 'Conversation')).toBe(expected);
   });
 
-  describe('sensitive-money operations (R-16) are gated on manage:Setting', () => {
-    it('OWNER and ADMIN hold manage:Setting (can approve refunds / rotate keys)', () => {
+  describe('sensitive-money operations (R-16) are gated on manage:Refund / manage:ProviderConfig', () => {
+    const SPLIT = ['Content', 'PersonalData', 'ProviderConfig', 'Refund'];
+
+    it('OWNER and ADMIN hold manage on Setting and every split subject', () => {
       for (const role of ['OWNER', 'ADMIN']) {
         const ability = factory.buildForUser({ role, customRole: null });
         expect(ability.can('manage', 'Setting')).toBe(true);
+        for (const subject of SPLIT) expect(ability.can('manage', subject)).toBe(true);
       }
     });
 
-    it('ACCOUNTANT cannot manage Setting but keeps routine manage:Payment', () => {
+    it('ACCOUNTANT cannot manage Setting or the split subjects but keeps routine manage:Payment', () => {
       const ability = factory.buildForUser({ role: 'ACCOUNTANT', customRole: null });
       expect(ability.can('manage', 'Setting')).toBe(false);
+      for (const subject of SPLIT) expect(ability.can('manage', subject)).toBe(false);
       expect(ability.can('manage', 'Payment')).toBe(true);
       expect(ability.can('manage', 'Invoice')).toBe(true);
+    });
+
+    it('RECEPTIONIST cannot issue gateway refunds (manage:Refund)', () => {
+      const ability = factory.buildForUser({ role: 'RECEPTIONIST', customRole: null });
+      expect(ability.can('manage', 'Refund')).toBe(false);
+      expect(ability.can('update', 'Payment')).toBe(true);
     });
   });
 
