@@ -1,0 +1,165 @@
+{
+  "observedAt": "2026-10-13T08:17:59.038Z",
+  "appId": "6815632181",
+  "version": "1.0.0",
+  "state": "WAITING_FOR_REVIEW",
+  "build": "44",
+  "buildId": "cd1531e0-3a68-4284-9cd8-75cc0fda85ee",
+  "releaseType": "MANUAL",
+  "submissionId": "657d6671-25c3-4ea4-a592-6270bcc5de7b",
+  "environment": "production",
+  "apiBaseUrl": "https://api.sawaa.sa/api/v1",
+  "sourceSha": "dc93436620d3f90c69019355cf93db0a0a31638c",
+  "productionHealthHttp": 200,
+  "productionHealthSha": "dc93436620d3f90c69019355cf93db0a0a31638c",
+  "appleWorkflowRun": 38316806350,
+  "physicalDevice": {
+    "model": "iPhone 15 Pro Max",
+    "os": "27.0.1",
+    "installedVersion": "1.0.0",
+    "installedBuild": "44",
+    "evidence": "Device inspection and owner screen recording"
+  },
+  "video": {
+    "fileName": "Sawaa-build44-device-evidence.mp4",
+    "durationSeconds": 170.9,
+    "sha256": "f1e264b600255381579bdc501c387a8946d4b3241eab48e315e3382b13542fa8",
+    "deliveryState": "COMPLETE",
+    "edits": "Unrelated personal email-inbox segment removed; audio omitted; app interactions retained at original timing"
+  },
+  "reviewerAccess": [
+    {
+      "role": "client",
+      "http": 200,
+      "sessionKind": "client",
+      "tokensIssued": true,
+      "verifiedAt": "2026-10-13T08:08:26.386Z"
+    },
+    {
+      "role": "practitioner",
+      "http": 200,
+      "sessionKind": "staff",
+      "tokensIssued": true,
+      "verifiedAt": "2026-10-13T08:08:26.873Z"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "iphone-01-home.png",
+      "state": "COMPLETE",
+      "width": 1290,
+      "height": 2796
+    },
+    {
+      "file": "iphone-02-practitioners.png",
+      "state": "COMPLETE",
+      "width": 1290,
+      "height": 2796
+    },
+    {
+      "file": "iphone-03-confirm.png",
+      "state": "COMPLETE",
+      "width": 1290,
+      "height": 2796
+    },
+    {
+      "file": "ipad-01-home.png",
+      "state": "COMPLETE",
+      "width": 2064,
+      "height": 2752
+    }
+  ],
+  "screenshotsProvenance": {
+    "iphone": "Frames from physical-device build 44 recording",
+    "ipad": "Native iPad 13 simulator running archived release source against production; development notice hidden only for capture in temporary copy"
+  },
+  "appleReply": {
+    "sent": true,
+    "messageCountAfterReply": 2,
+    "answers": 6,
+    "credentialsLocation": "Private App Review Sign-In Information and Notes"
+  },
+  "providerEvidence": {
+    "officialWebsite": "https://sawaa.sa",
+    "contractAttached": false,
+    "regulatoryLicenseAttached": false
+  },
+  "changes": [
+    "Selected build 44 for review",
+    "Confirmed email for the existing synthetic client with owner approval; password unchanged",
+    "Created hidden synthetic practitioner with no real client or appointment assignments with owner approval",
+    "Saved six-part review notes and replied to Apple",
+    "Replaced old screenshots and uploaded physical-device video",
+    "Resubmitted original review request"
+  ],
+  "repositoryChanges": "Initial 08:17 UTC submission phase: documentation only, no backend code publication in that phase; later changes are recorded in postSubmissionUpdate",
+  "limitations": [
+    "WAITING_FOR_REVIEW is submission success, not Apple approval or App Store release",
+    "Live online payments and push delivery are disabled; no payment or notification delivery acceptance claimed",
+    "No physical iPad flow verified; iPad screenshot uses simulator",
+    "Provider website is identity evidence, not a government license; Apple may request additional authorization documents"
+  ],
+  "appleSourcesCheckedOn": "2026-10-13",
+  "appleSources": [
+    "https://developer.apple.com/app-store/review/guidelines/",
+    "https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-app",
+    "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications"
+  ],
+  "evidenceScreenshot": "/Users/tariq/.codex/visualizations/2026/10/13/01a133d4-cb2c-74f1-966b-193800f64865/app-review-submitted.png",
+  "measurement": {
+    "agentsSpawned": 0,
+    "inputTokens": null,
+    "outputTokens": null,
+    "attribution": "unknown",
+    "reason": "Prior task work and resumed sessions do not have a complete comparable token baseline",
+    "acceptanceEvidence": "Apple API WAITING_FOR_REVIEW and saved submission screenshot"
+  },
+  "recordScope": "Initial submission snapshot; postSubmissionUpdate records the later production fix without changing the build source",
+  "postSubmissionUpdate": {
+    "observedAt": "2026-10-13T12:02:40.426Z",
+    "acceptedStagingSha": "f22ff198da509dbe72dafb463e5f60e7fefdb973",
+    "stagingDeploymentId": "dep_-s8xBKVLGPMIykn5",
+    "productionBackendSha": "3b1a53ca3fcf33a924b1c70e994bf5cf01bf1e9d",
+    "productionDeploymentId": "dep_PomPSX2-xbAqwBCg",
+    "productionWorkflowRun": 38391702158,
+    "releasePr": 224,
+    "migration": "20261013000000_expand_setting_permission_subjects",
+    "migrationAuthorization": "Owner explicitly approved the f22 candidate and this production migration",
+    "grantsAdded": 4,
+    "migrationCount": 121,
+    "failedMigrations": 0,
+    "counts": {
+      "Client": 2221,
+      "Booking": 5277,
+      "Payment": 175
+    },
+    "infrastructurePreserved": true,
+    "allSixHealthy": true,
+    "backendStartupErrors": 0,
+    "clientPasswordLogin": 200,
+    "clientFixedOtpLogin": 200,
+    "clientProfile": 200,
+    "wrongOtp": 401,
+    "consumedChallengeReplay": 400,
+    "otherIdentityDenied": 401,
+    "staffPasswordLogin": 200,
+    "fixedOtpScope": "One synthetic client only; not staff, real clients or six-digit registration",
+    "fixedOtpExpiresOnUtc": "2026-10-27",
+    "credentialsLocation": "Private App Review Sign-In Information and Notes; secret values excluded from repository",
+    "appleNotesSavedAt": "2026-10-13T12:02:24.018Z",
+    "appleNotesExactReadback": true,
+    "appleStatus": "WAITING_FOR_REVIEW",
+    "selectedBuild": "44",
+    "releaseType": "MANUAL",
+    "binarySourceUnchanged": true,
+    "newProductionFixPhysicalDeviceTested": false,
+    "providerWebsite": "https://sawaa.sa",
+    "signedAuthorizationUploaded": false,
+    "providerRelationshipExplanation": "Center provides counseling services; Tariq is responsible for technical development, maintenance and publication",
+    "backupPath": "/var/backups/sawaa/pre-production-20261013T113656Z/",
+    "isolatedBackupRestoreSucceeded": true,
+    "originalPermissionsPreserved": true,
+    "productionDataRestored": false,
+    "receipt": "../../operations/deployments/2026-10-13-production-dep_PomPSX2-xbAqwBCg.json"
+  }
+}
