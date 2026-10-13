@@ -16,6 +16,7 @@ import { NotificationChannelRegistry } from '../../comms/notification-channel/no
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { RequestOtpDto } from './request-otp.dto';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
+import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MIN = 1000;
@@ -36,6 +37,7 @@ export class RequestOtpHandler {
     private readonly config: ConfigService,
     private readonly cls: ClsService,
     private readonly redisService: RedisService,
+    private readonly reviewOtp: ReviewOtpHandler,
   ) {}
 
   async execute(dto: RequestOtpCommand): Promise<{ success: boolean }> {
@@ -78,10 +80,14 @@ export class RequestOtpHandler {
       // randomInt(min, max) returns an int in [min, max); with [1000, 10000)
       // every result is exactly 4 digits, so no zero-padding is needed.
       const rawCode = randomInt(OTP_MIN, OTP_MAX).toString();
-      const codeHash = await bcrypt.hash(rawCode, 10);
-      const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+      const randomHash = await bcrypt.hash(rawCode, 10);
+      let reviewChallenge = false;
 
       const created = await this.rlsTransaction.withTransaction(async (tx) => {
+        const review = await this.reviewOtp.execute(dto, tx);
+        reviewChallenge = review !== null;
+        const codeHash = review?.codeHash ?? randomHash;
+        const expiresAt = new Date(Math.min(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000, review?.expiresAt.getTime() ?? Infinity));
         // bypassRls: OTP codes are verified in system context; organizationId is legacy-only.
         await tx.otpCode.updateMany({
           where: {
@@ -104,6 +110,9 @@ export class RequestOtpHandler {
           select: { id: true },
         });
       });
+
+      // The configured code is supplied privately to App Review, never sent to a provider.
+      if (reviewChallenge) return { success: true };
 
       try {
         const channel = this.channelRegistry.resolve(dto.channel);

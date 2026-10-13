@@ -831,3 +831,28 @@ describe('optional mobile review account deployment configuration', () => {
     expect(invalid.error?.details[0].path).toEqual(['MOBILE_REVIEW_CLIENT_ID']);
   });
 });
+
+
+describe('private expiring mobile review OTP configuration', () => {
+  const review = {
+    MOBILE_REVIEW_CLIENT_ID: '97e32394-5ec7-441c-a090-af4ffb187fb8',
+    MOBILE_REVIEW_OTP_HASH: '$2b$10$' + 'a'.repeat(53),
+    MOBILE_REVIEW_OTP_EXPIRES_AT: '2026-11-01T00:00:00Z',
+  };
+  it('accepts a complete private configuration and leaves existing environments disabled', () => {
+    expect(envValidationSchema.validate({ ...baseValidEnv, ...review }).error).toBeUndefined();
+    expect(envValidationSchema.validate(baseValidEnv).error).toBeUndefined();
+  });
+  it.each(['MOBILE_REVIEW_CLIENT_ID', 'MOBILE_REVIEW_OTP_HASH', 'MOBILE_REVIEW_OTP_EXPIRES_AT'])('rejects partial enabled configuration missing %s', key => {
+    const incomplete: Record<string, string> = { ...review };
+    delete incomplete[key];
+    expect(envValidationSchema.validate({ ...baseValidEnv, ...incomplete }).error).toBeDefined();
+  });
+  it.each([
+    { MOBILE_REVIEW_OTP_HASH: '4837' },
+    { MOBILE_REVIEW_OTP_HASH: '$2b$31$' + 'a'.repeat(53) },
+    { MOBILE_REVIEW_OTP_EXPIRES_AT: 'invalid' },
+  ])('rejects malformed or excessively costly configuration %j', invalid => {
+    expect(envValidationSchema.validate({ ...baseValidEnv, ...review, ...invalid }).error).toBeDefined();
+  });
+});
