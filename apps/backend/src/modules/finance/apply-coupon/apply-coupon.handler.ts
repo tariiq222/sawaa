@@ -88,51 +88,6 @@ export class ApplyCouponHandler {
       }
     }
 
-    const existing = await this.prisma.couponRedemption.findUnique({
-      where: { couponId_invoiceId: { couponId: coupon.id, invoiceId: cmd.invoiceId } },
-    });
-    if (existing) throw new BadRequestException(`Coupon already applied to this invoice`);
-
-    const invoiceSubtotal = new Prisma.Decimal(invoice.subtotal.toString());
-    const invoiceDiscountAmt = new Prisma.Decimal(invoice.discountAmt.toString());
-    const invoiceVatRate = new Prisma.Decimal(invoice.vatRate.toString());
-    const couponDiscountValue = new Prisma.Decimal(coupon.discountValue.toString());
-
-    // All amounts are integer halalas — use toDecimalPlaces(0, ROUND_HALF_UP) for every rounding step.
-    const rawDiscountDecimal: Prisma.Decimal =
-      coupon.discountType === 'PERCENTAGE'
-        ? invoiceSubtotal
-            .times(couponDiscountValue)
-            .div(100)
-            .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
-        : Prisma.Decimal.min(couponDiscountValue, invoiceSubtotal);
-
-    // P1-5: Stacked coupons must never push the cumulative discount above the
-    // subtotal. The naive `existingDiscount + thisCoupon` overflows when a prior
-    // coupon already consumed part of the subtotal, leaving discountAmt > subtotal
-    // on the invoice while the redemption row records the un-clamped value — an
-    // inconsistent invoice (sum(redemptions) != invoice.discountAmt). Clamp the
-    // CUMULATIVE discount to the subtotal first, then derive THIS coupon's actual
-    // contribution as the delta the clamp allowed. That keeps both invariants:
-    //   invoice.discountAmt <= subtotal  AND  sum(redemptions) == invoice.discountAmt.
-    const newDiscountAmtDec = Prisma.Decimal.min(
-      invoiceDiscountAmt.plus(rawDiscountDecimal),
-      invoiceSubtotal,
-    ).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-    // The redemption row records only what this coupon actually subtracted after
-    // the clamp (never negative — a prior coupon may already cover the subtotal).
-    const discountDecimal = Prisma.Decimal.max(
-      newDiscountAmtDec.minus(invoiceDiscountAmt),
-      new Prisma.Decimal(0),
-    );
-
-    const newVatBase = Prisma.Decimal.max(invoiceSubtotal.minus(newDiscountAmtDec), new Prisma.Decimal(0));
-    const newVatAmt = newVatBase.times(invoiceVatRate).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-    const newTotal = newVatBase.plus(newVatAmt).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-
-    // Convert to number only at the boundary for Prisma writes.
-    const discountHalalas = discountDecimal.toNumber();
-
     return this.rlsTransaction.withTransaction(async (tx) => {
       // Re-read under the invoice lock. The initial read is only for ownership
       // and coupon eligibility; payment state may change while the request is
@@ -165,6 +120,51 @@ export class ApplyCouponHandler {
           'Cannot apply a coupon while a payment is pending completion or verification',
         );
       }
+
+      const existing = await tx.couponRedemption.findUnique({
+        where: { couponId_invoiceId: { couponId: coupon.id, invoiceId: cmd.invoiceId } },
+      });
+      if (existing) throw new BadRequestException(`Coupon already applied to this invoice`);
+
+      const invoiceSubtotal = new Prisma.Decimal(lockedInvoice.subtotal.toString());
+      const invoiceDiscountAmt = new Prisma.Decimal(lockedInvoice.discountAmt.toString());
+      const invoiceVatRate = new Prisma.Decimal(lockedInvoice.vatRate.toString());
+      const couponDiscountValue = new Prisma.Decimal(coupon.discountValue.toString());
+
+      // All amounts are integer halalas — use toDecimalPlaces(0, ROUND_HALF_UP) for every rounding step.
+      const rawDiscountDecimal: Prisma.Decimal =
+        coupon.discountType === 'PERCENTAGE'
+          ? invoiceSubtotal
+              .times(couponDiscountValue)
+              .div(100)
+              .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+          : Prisma.Decimal.min(couponDiscountValue, invoiceSubtotal);
+
+      // P1-5: Stacked coupons must never push the cumulative discount above the
+      // subtotal. The naive `existingDiscount + thisCoupon` overflows when a prior
+      // coupon already consumed part of the subtotal, leaving discountAmt > subtotal
+      // on the invoice while the redemption row records the un-clamped value — an
+      // inconsistent invoice (sum(redemptions) != invoice.discountAmt). Clamp the
+      // CUMULATIVE discount to the subtotal first, then derive THIS coupon's actual
+      // contribution as the delta the clamp allowed. That keeps both invariants:
+      //   invoice.discountAmt <= subtotal  AND  sum(redemptions) == invoice.discountAmt.
+      const newDiscountAmtDec = Prisma.Decimal.min(
+        invoiceDiscountAmt.plus(rawDiscountDecimal),
+        invoiceSubtotal,
+      ).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+      // The redemption row records only what this coupon actually subtracted after
+      // the clamp (never negative — a prior coupon may already cover the subtotal).
+      const discountDecimal = Prisma.Decimal.max(
+        newDiscountAmtDec.minus(invoiceDiscountAmt),
+        new Prisma.Decimal(0),
+      );
+
+      const newVatBase = Prisma.Decimal.max(invoiceSubtotal.minus(newDiscountAmtDec), new Prisma.Decimal(0));
+      const newVatAmt = newVatBase.times(invoiceVatRate).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+      const newTotal = newVatBase.plus(newVatAmt).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+
+      // Convert to number only at the boundary for Prisma writes.
+      const discountHalalas = discountDecimal.toNumber();
 
       if (coupon.maxUses !== null) {
         const { count } = await tx.coupon.updateMany({

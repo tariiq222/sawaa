@@ -123,7 +123,8 @@ describe('ResetPasswordHandler', () => {
   ])('creates a password and verifies only the proven $channel identity; replay cannot write again', async ({ channel, identifier, verifiedField, untouchedField }) => {
     const client: Record<string, unknown> = {
       id: 'passwordless-client', email: 'a@b.com', phone: '+966501234567',
-      passwordHash: null, emailVerified: null, phoneVerified: null,
+      passwordHash: null, phoneVerified: null,
+      emailVerified: channel === OtpChannel.EMAIL ? new Date('2026-01-01') : null,
       tokenVersion: 3, loginAttempts: 2, lockoutUntil: new Date(),
     };
     otpSession.verifySession.mockReturnValue({
@@ -254,11 +255,37 @@ describe('ResetPasswordHandler email identity resolution', () => {
     users = [];
     clients[0].userId = null;
     clients[0].email = 'Customer@Example.com';
+    clients[0].emailVerified = verified;
     await handler.execute({ sessionToken: 'email-proof', newPassword: 'NewPassword123' });
     expect(clients[0].passwordHash).toBe('new-password-hash');
     expect(clients[0].email).toBe('Customer@Example.com');
     expect(clients[0].emailVerified).toBeInstanceOf(Date);
     expect(clients[0].phoneVerified).toEqual(verified);
+  });
+
+  // SEC-AUTH-01: an address that was only added to the profile must not unlock
+  // the account. Whoever can read that mailbox would otherwise reset the
+  // password without ever proving they own the account.
+  it('rejects a standalone Client email that was never verified', async () => {
+    users = [];
+    clients[0].userId = null;
+    clients[0].email = 'Customer@Example.com';
+    clients[0].emailVerified = null;
+    await expect(
+      handler.execute({ sessionToken: 'email-proof', newPassword: 'NewPassword123' }),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(clients[0].passwordHash).toBeNull();
+    expect(clients[0].emailVerified).toBeNull();
+  });
+
+  it('rejects an unverified Client email even when the linked User email is unverified too', async () => {
+    users[0].emailVerifiedAt = null;
+    clients[0].email = 'customer@example.com';
+    clients[0].emailVerified = null;
+    await expect(
+      handler.execute({ sessionToken: 'email-proof', newPassword: 'NewPassword123' }),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(clients[0].passwordHash).toBeNull();
   });
 
   it.each([

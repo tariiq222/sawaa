@@ -266,6 +266,58 @@ describe('VerifyMobileOtpHandler', () => {
     expect(Object.keys(out)).toEqual(['tokens', 'sessionKind']);
   });
 
+  // SEC-AUTH-01: the generic public OTP grant can be requested for any address,
+  // so acceptance here must prove the address was verified through the dedicated
+  // email-entry flow. Otherwise whoever reads that mailbox logs in as the owner.
+  it('login: rejects an unverified email address instead of minting a session', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u-email', role: 'CLIENT', email: 'user@example.com', phone: null,
+      isActive: true, phoneVerifiedAt: null, emailVerifiedAt: null,
+      customRoleId: null, customRole: null,
+    });
+    prismaMock.client.findMany.mockResolvedValue([{
+      id: 'c-email', userId: 'u-email', email: 'user@example.com', phone: null,
+      isActive: true, deletedAt: null, phoneVerified: null, emailVerified: null, tokenVersion: 1,
+    }]);
+    prismaMock.otpCode.findFirst.mockResolvedValue({
+      id: 'o-email', codeHash: goodCodeHash, expiresAt: new Date(Date.now() + 60000),
+      attempts: 0, maxAttempts: 5, lockedUntil: null, consumedAt: null,
+    });
+
+    await expect(
+      handler.execute({ identifier: 'user@example.com', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(prismaMock.otpCode.updateMany).not.toHaveBeenCalled();
+    expect(clientTokensMock.issueTokenPair).not.toHaveBeenCalled();
+    expect(tokensMock.issueTokenPair).not.toHaveBeenCalled();
+  });
+
+  it('login: accepts a verified email address', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u-email', role: 'CLIENT', email: 'user@example.com', phone: null,
+      isActive: true, phoneVerifiedAt: null, emailVerifiedAt: new Date(),
+      customRoleId: null, customRole: null,
+    });
+    prismaMock.client.findMany.mockResolvedValue([{
+      id: 'c-email', userId: 'u-email', email: 'user@example.com', phone: null,
+      isActive: true, deletedAt: null, phoneVerified: null, emailVerified: new Date(), tokenVersion: 1,
+    }]);
+    prismaMock.otpCode.findFirst.mockResolvedValue({
+      id: 'o-email', codeHash: goodCodeHash, expiresAt: new Date(Date.now() + 60000),
+      attempts: 0, maxAttempts: 5, lockedUntil: null, consumedAt: null,
+    });
+    prismaMock.otpCode.updateMany.mockResolvedValue({ count: 1 });
+    clientTokensMock.issueTokenPair.mockResolvedValue({ rawRefresh: 'r', accessToken: 'client-access' });
+
+    const out = await handler.execute({
+      identifier: 'user@example.com', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN,
+    });
+
+    expect(out.sessionKind).toBe('client');
+    expect(clientTokensMock.issueTokenPair).toHaveBeenCalled();
+  });
+
   describe('staff mobile sign-in', () => {
     const staffUser = (isSuperAdmin: boolean) => ({
       id: 'u-staff', role: 'ADMIN', isSuperAdmin, email: 'admin@b.com', phone: '+966500000000',

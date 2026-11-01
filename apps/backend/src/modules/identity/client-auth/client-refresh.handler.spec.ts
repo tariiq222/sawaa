@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { ClientTokenService } from '../shared/client-token.service';
 import { ClientRefreshHandler } from './client-refresh.handler';
 
@@ -18,13 +18,19 @@ describe('ClientRefreshHandler', () => {
     prisma = {
       clientRefreshToken: { findMany: jest.fn(), updateMany: jest.fn() },
       client: { findFirst: jest.fn() },
+      // The handler locks the Client row inside the rotation transaction.
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
     clientTokens = { issueTokenPair: jest.fn() };
+    const rlsTransaction = {
+      withTransaction: (callback: (tx: unknown) => unknown) => callback(prisma),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
         ClientRefreshHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
         { provide: ClientTokenService, useValue: clientTokens },
       ],
     }).compile();
@@ -117,6 +123,30 @@ describe('ClientRefreshHandler', () => {
       id: 'c1',
       email: 'a@b.com',
       tokenVersion: 3,
-    }, { channel: 'web' });
+    }, { channel: 'web' }, prisma);
+  });
+
+  // SEC-AUTH-02: rotation, the session read, and the replacement insert must
+  // share one transaction under the Client lock; otherwise a password reset can
+  // land between the consume and the insert and the revoked session survives.
+  it('locks the Client and rotates inside one transaction', async () => {
+    prisma.clientRefreshToken.findMany.mockResolvedValue([
+      { id: 't1', clientId: 'c1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+    ]);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
+    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 3 });
+    clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
+
+    await handler.execute('rawToken123', 'c1');
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.clientRefreshToken.updateMany).toHaveBeenCalledWith({
+      where: { id: 't1', revokedAt: null, expiresAt: { gt: expect.any(Date) } },
+      data: { revokedAt: expect.any(Date) },
+    });
+    const lockOrder = prisma.$queryRaw.mock.invocationCallOrder[0];
+    const consumeOrder = prisma.clientRefreshToken.updateMany.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(consumeOrder);
   });
 });

@@ -85,10 +85,11 @@ describe('MoyasarWebhookDataDto', () => {
     }
   });
 
-  it('rejects an unknown status', async () => {
+  // PAY-02: the provider owns this enum — an unknown future status must not be
+  // a validation error, or the webhook 400s and the provider retries forever.
+  it('tolerates an unknown status for documentation-only validation', async () => {
     const dto = plainToInstance(MoyasarWebhookDataDto, { status: 'pending' });
-    const errors = await validate(dto);
-    expect(errors.some((e) => e.property === 'status')).toBe(true);
+    expect(await validate(dto)).toHaveLength(0);
   });
 
   describe('amount (IsInt + Min(1))', () => {
@@ -104,12 +105,11 @@ describe('MoyasarWebhookDataDto', () => {
     });
   });
 
-  it('accepts only SAR as the currency value', async () => {
+  it('tolerates a non-SAR currency (the handler compares it to the invoice)', async () => {
     const ok = plainToInstance(MoyasarWebhookDataDto, { currency: 'SAR' });
     expect(await validate(ok)).toHaveLength(0);
-    const bad = plainToInstance(MoyasarWebhookDataDto, { currency: 'KWD' });
-    const errors = await validate(bad);
-    expect(errors.some((e) => e.property === 'currency')).toBe(true);
+    const other = plainToInstance(MoyasarWebhookDataDto, { currency: 'KWD' });
+    expect(await validate(other)).toHaveLength(0);
   });
 
   it('validates a nested metadata object', async () => {
@@ -220,9 +220,8 @@ describe('MoyasarWebhookDto', () => {
     expect(errors.some((e) => e.property === 'type')).toBe(true);
   });
 
-  it('rejects an unknown status at the root (flat shape)', async () => {
+  it('tolerates an unknown status at the root (flat shape)', async () => {
     const dto = plainToInstance(MoyasarWebhookDto, { status: 'pending' });
-    const errors = await validate(dto);
-    expect(errors.some((e) => e.property === 'status')).toBe(true);
+    expect(await validate(dto)).toHaveLength(0);
   });
 });
