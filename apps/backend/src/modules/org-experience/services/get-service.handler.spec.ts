@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
@@ -24,6 +25,23 @@ describe('GetServiceHandler', () => {
     handler = module.get<GetServiceHandler>(GetServiceHandler);
     prisma = module.get<PrismaService>(PrismaService);
     storage = module.get(MinioService);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('contains a synchronous signing exception and still signs the embedded category', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    storage.getSignedUrl.mockImplementationOnce(() => { throw new Error('cannot sign'); });
+    (prisma.service.findFirst as jest.Mock).mockResolvedValue({
+      id: 'svc-1', imageUrl: 'org/service.png', category: { id: 'cat-1', imageUrl: 'org/category.png' },
+    });
+
+    const result = await handler.execute({ serviceId: 'svc-1' });
+
+    expect(result.imageUrl).toBeNull();
+    expect(result.category?.imageUrl).toBe('signed:sawaa-media/org/category.png');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('Failed to sign media image URL', { bucket: 'sawaa-media', key: 'org/service.png' });
   });
 
   it('should be defined', () => {
