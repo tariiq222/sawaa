@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { Test } from '@nestjs/testing';
-import { DocumentBuilder, SwaggerModule, type SchemaObject } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import type { SerializedClient } from '../../../modules/people/clients/client.serializer';
 import {
   ClientResponseDto,
