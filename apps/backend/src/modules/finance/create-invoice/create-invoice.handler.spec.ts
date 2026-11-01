@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateInvoiceHandler } from './create-invoice.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
@@ -217,6 +217,33 @@ describe('CreateInvoiceHandler', () => {
 
     // subtotal is now passed as Prisma.Decimal — compare via Number() or string
     expect(Number(result.subtotal)).toBe(15000);
+  });
+
+  // PAY-03: a discount above the subtotal used to persist a negative total.
+  it('rejects a discount larger than the subtotal instead of storing a negative total', async () => {
+    await expect(handler.execute({
+      bookingId: 'book-1',
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      subtotal: 1000,
+      discountAmt: 5000,
+    })).rejects.toThrow(BadRequestException);
+
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts a discount exactly equal to the subtotal (zero total)', async () => {
+    const result = await handler.execute({
+      bookingId: 'book-1',
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      subtotal: 1000,
+      discountAmt: 1000,
+    });
+
+    expect(Number(result.total)).toBe(0);
   });
 
   it('computes VAT correctly on package purchase invoice', async () => {
