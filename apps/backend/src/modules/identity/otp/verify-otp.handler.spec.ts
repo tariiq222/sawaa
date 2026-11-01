@@ -117,17 +117,15 @@ describe('VerifyOtpHandler', () => {
     expect(result.sessionToken).toBe('token-123');
   });
 
-  it('should verify EMAIL OTP and mark email verified', async () => {
+  it('should not promote an email to verified from a generic OTP grant', async () => {
     prisma.otpCode.findFirst.mockResolvedValue({ ...otpRecord, channel: 'EMAIL' });
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.otpCode.updateMany.mockResolvedValue({ count: 1 });
     prisma.client.updateMany.mockResolvedValue({});
 
+    // SEC-AUTH-01: only the dedicated email-entry flow may set emailVerified.
     await handler.execute({ identifier: 'test@test.com', code: '123456', purpose: 'CLIENT_LOGIN' } as any);
-    expect(prisma.client.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { email: 'test@test.com' },
-      data: { emailVerified: expect.any(Date) },
-    }));
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
   });
 
   it('should skip client update for non-SMS non-EMAIL channels', async () => {

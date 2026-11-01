@@ -84,15 +84,13 @@ export class VerifyOtpHandler {
         throw new BadRequestException('OTP already used or expired');
       }
 
-      // Verification marks the client as verified for the single-tenant deployment.
-      if (otpRecord.channel === 'EMAIL') {
-        await this.prisma.client.updateMany({
-          where: {
-            email: dto.identifier,
-          },
-          data: { emailVerified: new Date() },
-        });
-      } else if (otpRecord.channel === 'SMS') {
+      // Email verification is owned by the dedicated email-entry flow
+      // (`verify-client-email`), which proves ownership against an authenticated
+      // session and releases unverified copies held by other accounts. This
+      // generic grant must never promote an address to verified: doing so let a
+      // mailbox the account owner never proved unlock password reset
+      // (SEC-AUTH-01). Phone-first accounts still verify their number here.
+      if (otpRecord.channel === 'SMS') {
         await this.prisma.client.updateMany({
           where: {
             phone: dto.identifier,
