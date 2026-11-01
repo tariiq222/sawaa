@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
@@ -48,6 +49,31 @@ describe('ListCategoriesHandler', () => {
     }).compile();
 
     handler = module.get(ListCategoriesHandler);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('keeps other categories when signing one legacy image URL fails without logging its signature', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    storage.getSignedUrl.mockRejectedValueOnce(new Error('signer error including sensitive details'));
+    rls.withTransaction.mockImplementationOnce((cb: any) => cb({
+      serviceCategory: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'c1', imageUrl: 'https://legacy.example/sawaa-media/org/bad.png?X-Amz-Signature=secret', _count: { services: 1 } },
+          { id: 'c2', imageUrl: 'org/good.png', _count: { services: 1 } },
+        ]),
+        count: jest.fn().mockResolvedValue(2),
+      },
+    }));
+
+    const result = await handler.execute({} as never);
+
+    expect(result.items[0].imageUrl).toBeNull();
+    expect(result.items[1].imageUrl).toBe('https://signed.example.com/sawaa-media/org/good.png?sig=test');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('Failed to sign media image URL', { bucket: 'sawaa-media', key: 'org/bad.png' });
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret');
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('sensitive');
   });
 
   it('signs a non-null category imageUrl into a fresh presigned URL at read time', async () => {

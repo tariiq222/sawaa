@@ -17,6 +17,7 @@ import {
 } from "@/lib/package-validation"
 import {
   firstPackageStep,
+  packageEditPath,
   packageStepForPath,
 } from "@/lib/package-editor-navigation"
 import {
@@ -32,7 +33,8 @@ import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { usePackageMutations } from "@/hooks/use-packages"
-import { uploadPackageImage } from "@/lib/api/packages"
+import { usePackageImageSave } from "@/hooks/use-package-image-save"
+import { useSubmitLock } from "@/hooks/use-submit-lock"
 import { queryKeys } from "@/lib/query-keys"
 import { buildItemPayload } from "./package-form-helpers"
 import { PackageFormFields } from "./package-form-fields"
@@ -58,8 +60,14 @@ export function PackageFormPage(props: Props) {
   const { createMut, updateMut } = usePackageMutations()
   const state = usePackageEditorState(packageId)
   const { form, t } = state
+  const imageSave = usePackageImageSave(t)
   const [step, setStep] = useState<PackageStep>(1)
-  const isPending = isEdit ? updateMut.isPending : createMut.isPending
+  // Same whole-flow submit lock as the grouped form (t12): the mutation's
+  // isPending alone does not cover the upload + attach stage.
+  const { isSubmitting, start: startSubmit, end: endSubmit, isLocked: isSubmitLocked } =
+    useSubmitLock()
+  const isPending =
+    isSubmitting || (isEdit ? updateMut.isPending : createMut.isPending)
 
   const focusLater = (path: string) => {
     if (typeof window !== "undefined")
@@ -111,6 +119,9 @@ export function PackageFormPage(props: Props) {
         packageIssuePaths(strictResult.error.issues)
       )
     }
+    // The lock is taken once the payload is valid and held until the whole
+    // save + upload + attach flow exits (t12).
+    if (!startSubmit()) return
     try {
       const strictData = strictResult.data
       const items = (strictData.items ?? []).map((item, index) =>
@@ -132,31 +143,42 @@ export function PackageFormPage(props: Props) {
         ownerEmployeeId: strictData.ownerEmployeeId ?? null,
         items,
       }
-      let id: string
-      if (isEdit) {
-        await updateMut.mutateAsync({ id: state.pkg!.id, ...common } satisfies {
-          id: string
-        } & UpdateSessionPackagePayload)
-        id = state.pkg!.id
-        toast.success(t("packages.edit.success"))
-      } else {
-        const created = await createMut.mutateAsync(
-          common satisfies CreateSessionPackagePayload
-        )
-        id = created.id
-        toast.success(t("packages.create.success"))
-      }
-      if (state.pendingAvatarFile.current) {
-        try {
-          await uploadPackageImage(id, state.pendingAvatarFile.current)
-        } catch {
-          toast.warning(t("packages.errors.uploadWarning"))
-        } finally {
-          state.pendingAvatarFile.current = null
-        }
-      }
-      qc.invalidateQueries({ queryKey: queryKeys.packages.all })
-      router.push("/packages")
+      // Same shared flow as GroupedPackageFormPage (audit T11-F1/F2): no
+      // success toast or navigation until the image upload + attach succeeds.
+      // The staged file is uploaded only while the form still points at its
+      // blob URL, so a cleared/replaced avatar can never be resurrected (t12).
+      const uploadFile = strictData.imageUrl?.startsWith("blob:")
+        ? state.pendingAvatarFile.current
+        : null
+      let savedId: string | null = null
+      const saved = await imageSave.saveWithImage({
+        save: async () => {
+          if (isEdit) {
+            await updateMut.mutateAsync({ id: state.pkg!.id, ...common } satisfies {
+              id: string
+            } & UpdateSessionPackagePayload)
+            savedId = state.pkg!.id
+            return state.pkg!.id
+          }
+          const created = await createMut.mutateAsync(
+            common satisfies CreateSessionPackagePayload
+          )
+          savedId = created.id
+          return created.id
+        },
+        file: uploadFile,
+        finish: () => {
+          toast.success(t(isEdit ? "packages.edit.success" : "packages.create.success"))
+          qc.invalidateQueries({ queryKey: queryKeys.packages.all })
+          router.push("/packages")
+        },
+      })
+      // Image stage failed after the package was persisted (t15): move to the
+      // edit screen of the created package instead of leaving a create form
+      // whose in-memory created id a page refresh would lose. The departure
+      // guard is asked through the hook — a left form must never push.
+      if (!saved && !isEdit && savedId && imageSave.canNavigate())
+        router.push(packageEditPath(savedId))
     } catch (err) {
       const key =
         err instanceof Error
@@ -177,6 +199,9 @@ export function PackageFormPage(props: Props) {
         fallback: t(isEdit ? "packages.edit.error" : "packages.create.error"),
         t,
       })
+    } finally {
+      // Released on every exit path so a failed attempt stays retryable (t12).
+      endSubmit()
     }
   }, onInvalid)
 
@@ -212,6 +237,10 @@ export function PackageFormPage(props: Props) {
               event.preventDefault()
               return
             }
+            if (isSubmitLocked()) {
+              event.preventDefault()
+              return
+            }
             void onSubmit(event)
           }}
           className="flex flex-col gap-6 pb-24"
@@ -220,6 +249,7 @@ export function PackageFormPage(props: Props) {
             form={form}
             onLineChange={state.onLineChange}
             onImageSelect={state.onImageSelect}
+            onImageClear={state.onImageClear}
             lineItems={state.lineItems}
             breakdown={state.breakdown}
             translateError={state.translateError}

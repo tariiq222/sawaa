@@ -59,19 +59,53 @@ export async function deletePackage(id: string): Promise<void> {
   await api.delete(`/dashboard/organization/packages/${id}`)
 }
 
+/** Stable storage key returned by the media upload endpoint. */
+export interface PackageMediaUpload {
+  id: string
+  storageKey: string
+}
+
+/**
+ * Step 1 of the package image flow: upload the file and return its stable
+ * storage key. The upload is intentionally separate from the package write —
+ * the callers (both package forms) write the package first, then attach the
+ * key, so a failed upload never loses the rest of the form.
+ */
+export async function uploadPackageMedia(file: File): Promise<PackageMediaUpload> {
+  const formData = new FormData()
+  formData.append("file", file)
+  return api.postForm<PackageMediaUpload>("/dashboard/media/upload", formData)
+}
+
+/** Step 2: persist the storage key on the package (image-only PATCH). */
+export async function attachPackageImage(
+  packageId: string,
+  storageKey: string,
+): Promise<SessionPackage> {
+  return api.patch<SessionPackage>(
+    `/dashboard/organization/packages/${packageId}`,
+    { imageUrl: storageKey },
+  )
+}
+
+/**
+ * Best-effort removal of an uploaded media record that never got attached to a
+ * package (attach PATCH failed). Deletion is by media id — the media endpoints
+ * are id-based. Callers must swallow its rejection: cleanup can never replace
+ * the attach error the user needs to see.
+ */
+export async function deletePackageMedia(mediaId: string): Promise<void> {
+  await api.delete(`/dashboard/media/${mediaId}`)
+}
+
 /**
  * Uploads an image and attaches its stable storage key to the package.
  * Package readers mint a fresh signed URL whenever the entity is read.
  */
-export async function uploadPackageImage(packageId: string, file: File): Promise<SessionPackage> {
-  const formData = new FormData()
-  formData.append("file", file)
-
-  const uploaded = await api.postForm<{ id: string; storageKey: string }>(
-    "/dashboard/media/upload",
-    formData,
-  )
-  return api.patch<SessionPackage>(`/dashboard/organization/packages/${packageId}`, {
-    imageUrl: uploaded.storageKey,
-  })
+export async function uploadPackageImage(
+  packageId: string,
+  file: File,
+): Promise<SessionPackage> {
+  const uploaded = await uploadPackageMedia(file)
+  return attachPackageImage(packageId, uploaded.storageKey)
 }

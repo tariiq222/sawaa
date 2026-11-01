@@ -13,7 +13,7 @@ import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../common/auth/current-user.decorator';
 import { ApiStandardResponses } from '../../common/swagger';
-import { UploadFileHandler } from '../../modules/media/files/upload-file.handler';
+import { UploadFileHandler, MAX_FILE_SIZE_BYTES, ALLOWED_MEDIA_MIME_TYPES } from '../../modules/media/files/upload-file.handler';
 import { UploadFileDto } from '../../modules/media/files/upload-file.dto';
 import { GetFileHandler } from '../../modules/media/files/get-file.handler';
 import { DeleteFileHandler } from '../../modules/media/files/delete-file.handler';
@@ -36,19 +36,9 @@ export class DashboardMediaController {
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: MAX_FILE_SIZE_BYTES },
     fileFilter: (_req, file, cb) => {
-      const allowed = [
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-        'image/gif',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain',
-      ];
-      if (allowed.includes(file.mimetype)) {
+      if (ALLOWED_MEDIA_MIME_TYPES.includes(file.mimetype)) {
         cb(null, true);
       } else {
         cb(new BadRequestException(`Unsupported file type: ${file.mimetype}`), false);
@@ -61,7 +51,7 @@ export class DashboardMediaController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary', description: 'File to upload' },
+        file: { type: 'string', format: 'binary', description: `Image to upload (${ALLOWED_MEDIA_MIME_TYPES.join(', ')}), at most ${MAX_FILE_SIZE_BYTES} bytes` },
         visibility: { type: 'string', enum: ['PUBLIC', 'PRIVATE'], description: 'Storage visibility', example: 'PUBLIC' },
         ownerType: { type: 'string', description: 'Entity type that owns the file', example: 'Employee' },
         ownerId: { type: 'string', format: 'uuid', description: 'UUID of the owning entity', example: 'b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f' },
@@ -75,6 +65,7 @@ export class DashboardMediaController {
       type: 'object',
       properties: {
         id: { type: 'string', format: 'uuid' },
+        storageKey: { type: 'string' },
         url: { type: 'string' },
         filename: { type: 'string' },
         mimetype: { type: 'string' },

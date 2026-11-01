@@ -11,21 +11,19 @@ import { UploadFileDto } from './upload-file.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
-export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-
-const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
+// Shared HTTP/handler policy: current generic-media callers upload catalog,
+// package/family and mobile-home-card images only (the last accepts GIF too).
+// No document/CSV/XLSX intake or attachment upload uses this endpoint; bank
+// receipts have their own policy. Keep the existing 10 MiB HTTP ceiling rather
+// than expanding it to 25 MiB. This also lowers the shared employee transport
+// ceiling; its UI (5 MiB) and self-avatar (1 MiB) limits remain stricter.
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const ALLOWED_MEDIA_MIME_TYPES: readonly string[] = Object.freeze([
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-  'text/csv',
 ]);
-
-const ALLOWED_MIME_ARRAY = [...ALLOWED_MIME_TYPES] as const;
 
 export type UploadFileCommand = UploadFileDto & {
   filename: string;
@@ -58,11 +56,11 @@ export class UploadFileHandler {
     if (buffer.length > MAX_FILE_SIZE_BYTES) {
       throw new BadRequestException(`File exceeds maximum size of ${MAX_FILE_SIZE_BYTES} bytes`);
     }
-    if (!ALLOWED_MIME_TYPES.has(cmd.mimetype)) {
+    if (!ALLOWED_MEDIA_MIME_TYPES.includes(cmd.mimetype)) {
       throw new BadRequestException(`Mime type not allowed: ${cmd.mimetype}`);
     }
 
-    const check = await validateMagicBytes(buffer, cmd.mimetype, ALLOWED_MIME_ARRAY);
+    const check = await validateMagicBytes(buffer, cmd.mimetype, ALLOWED_MEDIA_MIME_TYPES);
     if (!check.ok) {
       throw new BadRequestException(
         `File content validation failed: ${check.reason ?? 'content does not match declared type'}`,

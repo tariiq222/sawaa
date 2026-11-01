@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { CacheService } from '../../../infrastructure/cache';
 import { PrismaService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
@@ -34,6 +35,22 @@ describe('GetPublicCatalogHandler', () => {
       storage as unknown as MinioService,
       { getOrThrow: jest.fn().mockReturnValue('sawaa-media') } as unknown as ConfigService,
     );
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('keeps the public catalog available when one image cannot be signed', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    storage.getSignedUrl.mockRejectedValueOnce(new Error('cannot sign'));
+    prisma.serviceCategory.findMany.mockResolvedValue([{ id: 'cat-1', imageUrl: 'org/category.png' }]);
+    prisma.service.findMany.mockResolvedValue([{ id: 'svc-1', imageUrl: 'org/service.png' }]);
+
+    const result = await handler.execute();
+
+    expect(result.categories[0].imageUrl).toBeNull();
+    expect(result.services[0].imageUrl).toBe('https://signed.example.com/sawaa-media/org/service.png?sig=test');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('Failed to sign media image URL', { bucket: 'sawaa-media', key: 'org/category.png' });
   });
 
   it('preserves the public response while hiding price flags and signing images', async () => {

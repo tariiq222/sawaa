@@ -12,3 +12,12 @@ export function packageStepForPath(path: string): PackageStep {
 export function firstPackageStep(paths: string[]): PackageStep {
   return paths.reduce<PackageStep>((step, path) => Math.min(step, packageStepForPath(path)) as PackageStep, 4)
 }
+
+/**
+ * The real dashboard route for editing a created package (t15).
+ * Matches `app/(dashboard)/packages/[id]/edit/page.tsx`, which renders the
+ * editor for both LEGACY and GROUPED_V2 packages and picks the model itself.
+ */
+export function packageEditPath(packageId: string): string {
+  return `/packages/${encodeURIComponent(packageId)}/edit`
+}

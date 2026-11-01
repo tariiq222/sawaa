@@ -63,6 +63,31 @@ describe('UploadFileHandler', () => {
     await expect(handler.execute({ ...cmd, size: 50 }, Buffer.alloc(100))).rejects.toThrow('Declared size does not match');
   });
 
+  it('caps generic media uploads at the existing HTTP limit of 10 MiB', () => {
+    expect(MAX_FILE_SIZE_BYTES).toBe(10 * 1024 * 1024);
+  });
+
+  it('accepts a file exactly at the shared size limit', async () => {
+    await expect(handler.execute({ ...cmd, size: MAX_FILE_SIZE_BYTES }, Buffer.alloc(MAX_FILE_SIZE_BYTES))).resolves.toHaveProperty('storageKey', 'key');
+  });
+
+  it.each(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])('accepts the current image upload type %s', async (mimetype) => {
+    await expect(handler.execute({ ...cmd, mimetype }, Buffer.alloc(100))).resolves.toHaveProperty('storageKey', 'key');
+  });
+
+  it.each([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+    'image/svg+xml',
+  ])('rejects types not used by generic media callers: %s', async (mimetype) => {
+    await expect(handler.execute({ ...cmd, mimetype }, Buffer.alloc(100))).rejects.toThrow('Mime type not allowed');
+    expect(storage.uploadFile).not.toHaveBeenCalled();
+  });
+
   it('throws when file exceeds max size', async () => {
     await expect(handler.execute({ ...cmd, size: MAX_FILE_SIZE_BYTES + 1 }, Buffer.alloc(MAX_FILE_SIZE_BYTES + 1))).rejects.toThrow('exceeds maximum size');
   });

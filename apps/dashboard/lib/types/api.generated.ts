@@ -28022,7 +28022,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description File to upload
+                     * @description Image to upload (image/jpeg, image/png, image/webp, image/gif), at most 10485760 bytes
                      */
                     file: string;
                     /**
@@ -28060,6 +28060,7 @@ export interface operations {
                         id?: string;
                         mimetype?: string;
                         size?: number;
+                        storageKey?: string;
                         url?: string;
                         /** @enum {string} */
                         visibility?: "PUBLIC" | "PRIVATE";
