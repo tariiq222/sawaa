@@ -38,6 +38,11 @@ import type { CreateServiceFormData } from "./form-schema"
 interface BasicInfoTabProps {
   form: UseFormReturn<CreateServiceFormData>
   onImageSelect?: (file: File) => void
+  /**
+   * Dropping the pending upload: the image was cleared or replaced by an icon,
+   * so the parent must forget the queued file instead of uploading it on save.
+   */
+  onImageClear?: () => void
   serviceId?: string
   isEdit?: boolean
   isInternalService?: boolean
@@ -49,7 +54,7 @@ interface BasicInfoTabProps {
 
 /* ─── Component ─── */
 
-export function BasicInfoTab({ form, onImageSelect, serviceId, isEdit = false, isInternalService = false, internalCategoryName, savedCategoryId, savedCategoryName, clinicManagementHref = "/categories" }: BasicInfoTabProps) {
+export function BasicInfoTab({ form, onImageSelect, onImageClear, serviceId, isEdit = false, isInternalService = false, internalCategoryName, savedCategoryId, savedCategoryName, clinicManagementHref = "/categories" }: BasicInfoTabProps) {
   const { t, locale } = useLocale()
   const { data: categories = [], isLoading: loadingCategories, isError: categoriesError } = useServiceFormCategories()
   const { options: departments } = useDepartmentOptions()
@@ -108,6 +113,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId, isEdit = false, i
                 form.setValue("iconName", name)
                 form.setValue("iconBgColor", color)
                 form.setValue("imageUrl", null)
+                onImageClear?.()
               }}
               onImageChange={(file) => {
                 const url = URL.createObjectURL(file)
@@ -120,6 +126,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId, isEdit = false, i
                 form.setValue("iconName", null)
                 form.setValue("iconBgColor", null)
                 form.setValue("imageUrl", null)
+                onImageClear?.()
               }}
             />
             <div className="flex flex-col gap-1 min-w-0">

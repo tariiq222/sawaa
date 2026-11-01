@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as HugeIcons from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
@@ -30,14 +31,21 @@ export function ServiceAvatar({
   const s = sizes[size]
   const initial = name?.trim()?.[0]?.toUpperCase() ?? "S"
 
-  // Priority 1: image
-  if (imageUrl) {
+  // Remember *which* URL failed rather than a bare boolean: when `imageUrl`
+  // changes the state no longer matches and the new image is attempted.
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null)
+  const hasImage = imageUrl !== null && imageUrl !== undefined && imageUrl !== ""
+  const showImage = hasImage && imageUrl !== failedImageUrl
+
+  // Priority 1: image (falls back to icon/placeholder on load error)
+  if (showImage) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={imageUrl}
         alt={name ?? "service"}
         className={cn("rounded-full object-cover shrink-0", s.outer, className)}
+        onError={() => setFailedImageUrl(imageUrl)}
       />
     )
   }

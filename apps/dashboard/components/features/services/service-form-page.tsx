@@ -34,23 +34,25 @@ import {
   useServiceMutations,
   useServiceBookingTypesMutation,
   useServiceBookingTypes,
+  useServiceImageUpload,
 } from "@/hooks/use-services"
 import { useServiceCreateCategoryContext } from "@/components/features/services/use-service-create-category-context"
+import { useServiceFormHydration } from "@/components/features/services/use-service-form-hydration"
 import { createResumableSave } from "@/lib/catalog-creation"
 import type { Service } from "@/lib/types/service"
 import { fetchService } from "@/lib/api/services"
 import { formatRef } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { queryKeys } from "@/lib/query-keys"
+import { signedImageQueryOptions } from "@/lib/signed-url-policy"
 import {
   buildPayload,
   buildServiceEditPayload,
   saveBookingTypesApi,
   saveBookingTypesMutation,
 } from "@/components/features/services/service-form-helpers"
-import { uploadServiceImage } from "@/lib/api/services"
 import { saveCreatedServiceEmployees } from "@/lib/service-creation"
-import { sarToHalalas, halalasToSar } from "@/lib/money"
+import { sarToHalalas } from "@/lib/money"
 import { isDirectClinicBookingService } from "@/lib/service-catalog"
 import { canSubmitCreateCategoryContext, categoryServicesReturnPath } from "@/components/features/services/service-form-context"
 
@@ -75,11 +77,15 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const [activeTab, setActiveTab] = useState(initialTab)
 
   /* ── Data fetching (edit only) ── */
+  // signedImageQueryOptions: the detail payload carries a presigned imageUrl
+  // that expires after 300s; the provider defaults (staleTime 5min, no mount/
+  // focus refetch) would serve a dead link inside the edit form (T10-F2).
   const { data: service, isLoading, isError } = useQuery({
     queryKey: queryKeys.services.detail(serviceId ?? ""),
     queryFn: () => fetchService(serviceId!),
     enabled: isEdit && !!serviceId,
     retry: false,
+    ...signedImageQueryOptions,
   })
 
   // Canonical UUID resolved from the fetched record — the route param may be a
@@ -92,6 +98,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   /* ── Mutations ── */
   const { createMut, updateMut } = useServiceMutations()
   const bookingTypesMutation = useServiceBookingTypesMutation(apiServiceId)
+  const { mutateAsync: uploadServiceImageMut } = useServiceImageUpload()
 
   /* ── Local state ── */
   const [bookingTypes, setBookingTypes] = useState<DraftBookingType[]>(EMPTY_BOOKING_TYPES)
@@ -116,28 +123,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   )
 
   /* ── Populate form on edit ── */
-  useEffect(() => {
-    if (!service || !isEdit) return
-    form.reset({
-      nameEn: service.nameEn ?? "",
-      nameAr: service.nameAr,
-      descriptionEn: service.descriptionEn ?? "",
-      descriptionAr: service.descriptionAr ?? "",
-      categoryId: service.categoryId ?? "",
-      isActive: service.isActive,
-      isHidden: service.isHidden,
-      hidePriceOnBooking: service.hidePriceOnBooking,
-      hideDurationOnBooking: service.hideDurationOnBooking,
-      iconName: service.iconName ?? null,
-      iconBgColor: service.iconBgColor ?? null,
-      imageUrl: service.imageUrl ?? null,
-      bufferMinutes: service.bufferMinutes ?? undefined,
-      depositEnabled: service.depositEnabled,
-      depositAmount: service.depositAmount != null ? halalasToSar(service.depositAmount) : null,
-      minLeadMinutes: service.minLeadMinutes ?? null,
-      maxAdvanceDays: service.maxAdvanceDays ?? null,
-    })
-  }, [service, isEdit, form])
+  useServiceFormHydration(form, service, isEdit, pendingAvatarFile)
 
   /* ── Populate booking types on edit ── */
   useEffect(() => {
@@ -169,8 +155,11 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
           durationMins: firstEnabled ? firstEnabled.durationMins : undefined,
         })
 
-        if (pendingAvatarFile.current) {
-          await uploadServiceImage(service.id, pendingAvatarFile.current)
+        const avatarFile = pendingAvatarFile.current
+        // Upload only while the form still points at the local blob preview; a
+        // cleared image or a chosen icon must never re-upload a removed file.
+        if (avatarFile && data.imageUrl?.startsWith("blob:")) {
+          await uploadServiceImageMut({ serviceId: service.id, file: avatarFile, detailId: serviceId ?? service.id })
           pendingAvatarFile.current = null
         }
 
@@ -190,8 +179,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
           create: () => createMut.mutateAsync(payload),
           resume: (record) => updateMut.mutateAsync({id: record.id, ...payload}),
           complete: async (record) => {
-            if (pendingAvatarFile.current) {
-              await uploadServiceImage(record.id, pendingAvatarFile.current)
+            if (pendingAvatarFile.current && data.imageUrl?.startsWith("blob:")) {
+              await uploadServiceImageMut({ serviceId: record.id, file: pendingAvatarFile.current, detailId: record.id })
               pendingAvatarFile.current = null
             }
             await saveBookingTypesApi(record.id, bookingTypes)
@@ -287,6 +276,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
             <BasicInfoTab
               form={form}
               onImageSelect={(file) => { pendingAvatarFile.current = file }}
+              onImageClear={() => { pendingAvatarFile.current = null }}
               serviceId={service?.id}
               isEdit={isEdit}
               isInternalService={isInternalService}

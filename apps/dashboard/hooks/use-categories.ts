@@ -13,17 +13,26 @@ import {
   uploadCategoryImage,
 } from "@/lib/api/services"
 import type { CategoryListQuery } from "@/lib/types/service"
+import { signedImageQueryOptions } from "@/lib/signed-url-policy"
 
 export function useCategories() {
   return useQuery({
     queryKey: [...queryKeys.services.categories(), "complete-options"],
     queryFn: () => fetchAllCategories(),
-    staleTime: 5 * 60 * 1000,
+    // Category payloads carry presigned image URLs — see
+    // lib/signed-url-policy.ts.
+    ...signedImageQueryOptions,
   })
 }
 
 export function useCategory(id: string | undefined) {
-  return useQuery({ queryKey: ["services", "categories", "detail", id], queryFn: () => fetchCategory(id!), enabled: Boolean(id), staleTime: 5 * 60 * 1000 })
+  return useQuery({
+    queryKey: ["services", "categories", "detail", id],
+    queryFn: () => fetchCategory(id!),
+    enabled: Boolean(id),
+    // Same presigned image URL as the category lists.
+    ...signedImageQueryOptions,
+  })
 }
 
 export function useCategoriesList() {
@@ -47,7 +56,9 @@ export function useCategoriesList() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.services.categories(query),
     queryFn: () => fetchCategories(query),
-    staleTime: 5 * 60 * 1000,
+    // Category payloads carry presigned image URLs — see
+    // lib/signed-url-policy.ts.
+    ...signedImageQueryOptions,
   })
 
   const resetFilters = useCallback(() => {

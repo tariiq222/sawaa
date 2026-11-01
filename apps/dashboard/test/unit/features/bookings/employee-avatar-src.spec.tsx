@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -7,9 +7,17 @@ import {
 } from "@/components/features/bookings/wizard-steps/step-employee"
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => (
+  default: ({
+    alt,
+    src,
+    onError,
+  }: {
+    alt: string
+    src: string
+    onError?: () => void
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img alt={alt} data-testid="employee-avatar-image" src={src} />
+    <img alt={alt} data-testid="employee-avatar-image" src={src} onError={onError} />
   ),
 }))
 
@@ -64,6 +72,67 @@ describe("EmployeeAvatar", () => {
     expect(screen.getByTestId("employee-avatar-image")).toHaveAttribute(
       "src",
       "/uploads/avatar.jpg",
+    )
+  })
+
+  it("shows the fallback when the image fails to load", () => {
+    render(<EmployeeAvatar avatarUrl="/uploads/broken.jpg" name="أحمد" />)
+
+    fireEvent.error(screen.getByTestId("employee-avatar-image"))
+
+    expect(screen.queryByTestId("employee-avatar-image")).toBeNull()
+    expect(screen.queryByAltText("أحمد")).toBeNull()
+  })
+
+  it("retries and shows the new image after a failed load", () => {
+    const { rerender } = render(
+      <EmployeeAvatar avatarUrl="/uploads/old.jpg" name="أحمد" />,
+    )
+
+    fireEvent.error(screen.getByTestId("employee-avatar-image"))
+    expect(screen.queryByTestId("employee-avatar-image")).toBeNull()
+
+    rerender(<EmployeeAvatar avatarUrl="/uploads/new.jpg" name="أحمد" />)
+
+    expect(screen.getByTestId("employee-avatar-image")).toHaveAttribute(
+      "src",
+      "/uploads/new.jpg",
+    )
+  })
+
+  it("keeps the fallback while the same failing src is unchanged", () => {
+    const { rerender } = render(
+      <EmployeeAvatar avatarUrl="/uploads/broken.jpg" name="أحمد" />,
+    )
+
+    fireEvent.error(screen.getByTestId("employee-avatar-image"))
+    rerender(<EmployeeAvatar avatarUrl="/uploads/broken.jpg" name="أحمد" />)
+
+    expect(screen.queryByTestId("employee-avatar-image")).toBeNull()
+  })
+
+  it("shows the fallback for a remote image that fails to load", () => {
+    render(<EmployeeAvatar avatarUrl="https://cdn.test/broken.jpg" name="أحمد" />)
+
+    fireEvent.error(screen.getByAltText("أحمد"))
+
+    expect(screen.queryByAltText("أحمد")).toBeNull()
+    expect(screen.queryByTestId("employee-avatar-image")).toBeNull()
+  })
+
+  it("recovers a remote image after its src changes", () => {
+    const { rerender } = render(
+      <EmployeeAvatar avatarUrl="https://cdn.test/old.jpg" name="أحمد" />,
+    )
+
+    fireEvent.error(screen.getByAltText("أحمد"))
+    expect(screen.queryByAltText("أحمد")).toBeNull()
+
+    rerender(<EmployeeAvatar avatarUrl="https://cdn.test/new.jpg" name="أحمد" />)
+
+    expect(screen.getByAltText("أحمد")).toHaveAttribute(
+      "src",
+      "https://cdn.test/new.jpg",
     )
   })
 })

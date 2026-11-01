@@ -444,15 +444,26 @@ export function useEmployeeForm({
           })
         )
       }
-    } catch {
+    } catch (setupError) {
+      let cleanupError: unknown = undefined
       try {
         await deleteEmployee(newId)
-      } catch {
-        // The original setup failure is the user-facing error; cleanup failure
-        // should not turn a failed create into a partial-success success path.
+      } catch (err) {
+        // Cleanup failed: the employee record from the failed create is left
+        // behind. Log it with the full context and tell the user the cleanup
+        // did not complete instead of swallowing it silently.
+        cleanupError = err
+        console.error(
+          "[use-employee-form] employee created but a later setup step failed and the cleanup delete also failed — the partially-created employee was left behind",
+          { employeeId: newId, setupError, cleanupError: err },
+        )
       }
       setIsSubmitting(false)
-      toast.error(t("employees.create.error"))
+      toast.error(
+        cleanupError === undefined
+          ? t("employees.create.error")
+          : `${t("employees.create.error")}${t("common.listSep")}${t("employees.delete.error")}`,
+      )
       return
     }
 

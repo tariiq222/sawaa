@@ -10,10 +10,12 @@ import type { GroupedPackageFormData } from "@/lib/schemas/package-groups.schema
 interface Props {
   form: UseFormReturn<GroupedPackageFormData>
   onImageSelect: (file: File) => void
+  /** Drops the staged file in the parent when the image is removed (t12). */
+  onImageClear?: () => void
   translateError: (message?: string) => string | undefined
 }
 
-export function GroupedPackageDetails({ form, onImageSelect, translateError }: Props) {
+export function GroupedPackageDetails({ form, onImageSelect, onImageClear, translateError }: Props) {
   const { t } = useLocale()
   const errors = form.formState.errors
   const value = form.watch()
@@ -29,6 +31,7 @@ export function GroupedPackageDetails({ form, onImageSelect, translateError }: P
             form.setValue("iconName", name, { shouldDirty: true })
             form.setValue("iconBgColor", color, { shouldDirty: true })
             form.setValue("imageUrl", null, { shouldDirty: true })
+            onImageClear?.()
           }}
           onImageChange={(file) => {
             form.setValue("imageUrl", URL.createObjectURL(file), { shouldDirty: true })
@@ -40,6 +43,7 @@ export function GroupedPackageDetails({ form, onImageSelect, translateError }: P
             form.setValue("iconName", null, { shouldDirty: true })
             form.setValue("iconBgColor", null, { shouldDirty: true })
             form.setValue("imageUrl", null, { shouldDirty: true })
+            onImageClear?.()
           }}
         />
         <div className="flex min-w-0 flex-col gap-1">

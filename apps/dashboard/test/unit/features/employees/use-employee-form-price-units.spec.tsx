@@ -282,6 +282,43 @@ describe("useEmployeeForm service price units", () => {
     expect(mocks.toastWarning).not.toHaveBeenCalled()
     expect(mocks.routerPush).not.toHaveBeenCalled()
   })
+
+  it("logs and reports an incomplete cleanup when the rollback delete also fails", async () => {
+    mocks.assignEmployeeToBranch.mockRejectedValueOnce(new Error("branch assignment failed"))
+    mocks.deleteEmployee.mockRejectedValueOnce(new Error("delete failed"))
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    try {
+      const form = makeForm(employeeFormData)
+      const { result } = renderHook(() =>
+        useEmployeeForm({
+          ...baseOptions,
+          isEdit: false,
+          branchIds: ["branch-1"],
+          draftServices: [],
+          form: form as never,
+        }),
+      )
+
+      await act(async () => {
+        await result.current.onSubmit()
+      })
+
+      expect(mocks.deleteEmployee).toHaveBeenCalledWith("emp-new")
+      // The leftover employee is logged with its id and both failures.
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining("left behind"),
+        expect.objectContaining({ employeeId: "emp-new" }),
+      )
+      // The user is told the cleanup did not complete instead of a silent swallow.
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        "employees.create.errorcommon.listSepemployees.delete.error",
+      )
+      expect(mocks.routerPush).not.toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
   it("hydrates the real English name rather than the Arabic display name", () => {
     const form = makeForm(employeeFormData)
     renderHook(() => useEmployeeForm({...baseOptions, isEdit:true, employeeId:"emp-1", employee: {nameEn:"Dana Smith", nameAr:"دانا سميث", user:{firstName:"دانا",lastName:"سميث"},isActive:true} as never, form:form as never}))

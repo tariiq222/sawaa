@@ -9,9 +9,11 @@ import {
   createService,
   updateService,
   deleteService,
+  uploadServiceImage,
   DEFAULT_SERVICES_LIST_QUERY,
 } from "@/lib/api/services"
 import type { ServiceListQuery } from "@/lib/types/service"
+import { signedImageQueryOptions } from "@/lib/signed-url-policy"
 
 // Re-exports from split files (kept for backward compatibility).
 // New code should import from the dedicated hook files directly:
@@ -59,7 +61,9 @@ export function useServices() {
     queryKey: queryKeys.services.list(query),
     queryFn: () => fetchServices(query),
     placeholderData: (previousData) => previousData,
-    staleTime: 5 * 60 * 1000,
+    // Response payloads carry presigned image URLs (service + category) that
+    // expire after 5 minutes — see lib/signed-url-policy.ts.
+    ...signedImageQueryOptions,
   })
 
   const resetFilters = useCallback(() => {
@@ -102,12 +106,14 @@ export function useAllServices() {
     // Package items must be able to reference direct-booking clinics, which
     // book through a hidden internal service.
     queryFn: () => fetchServices({ page: 1, limit: 100, includeHidden: true }),
-    staleTime: 5 * 60 * 1000,
+    // Same presigned image URLs as the services list.
+    ...signedImageQueryOptions,
   })
   return { data: data?.items ?? [], isLoading, error }
 }
 
 export function useServicesListStats() {
+  // No signed URLs in this payload (counts only) — keep provider defaults.
   return useQuery({
     queryKey: queryKeys.services.listStats(),
     queryFn: () => fetchServicesListStats(),
@@ -139,4 +145,44 @@ export function useServiceMutations() {
   })
 
   return { createMut, updateMut, deleteMut }
+}
+
+/* ─── Service Image Upload ─── */
+
+export interface ServiceImageUploadVariables {
+  serviceId: string
+  file: File
+  /**
+   * Id used by the *detail* query key of the open edit screen. The edit route
+   * param may be a readable ref (e.g. `SVC-12`) while the API needs the UUID.
+   */
+  detailId?: string
+}
+
+/**
+ * Uploads a service image and reconciles every cache that showed the old one.
+ *
+ * The PATCH inside `uploadServiceImage` returns the refreshed Service (with a
+ * freshly presigned `imageUrl`), so we seed the open detail cache directly
+ * instead of hoping a list refetch lands after the upload. The edit form's own
+ * `updateMut` invalidation can complete *before* the upload even starts
+ * (T8-F1), which is why this post-upload pass is what actually carries the new
+ * image; remounting the page must never be required (T10-F3).
+ */
+export function useServiceImageUpload() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ serviceId, file }: ServiceImageUploadVariables) =>
+      uploadServiceImage(serviceId, file),
+    onSuccess: (updatedService, variables) => {
+      queryClient.setQueryData(
+        queryKeys.services.detail(variables.detailId ?? updatedService.id),
+        updatedService,
+      )
+      queryClient.invalidateQueries({ queryKey: queryKeys.services.all, refetchType: "all" })
+      // Package screens embed service rows in their item pickers.
+      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all, refetchType: "all" })
+    },
+  })
 }

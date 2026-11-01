@@ -32,12 +32,42 @@ export function usePackageEditorState(packageId: string | null) {
   const onImageSelect = useCallback((file: File) => {
     pendingAvatarFile.current = file
   }, [])
+  /** Clear/icon selection drops the staged file so it can never be uploaded (t12). */
+  const onImageClear = useCallback(() => {
+    pendingAvatarFile.current = null
+  }, [])
   const [lineDetails, setLineDetails] = useState<
     Record<number, PackageLineDetail>
   >({})
+  // Which package the form has already been hydrated from. The signed-image
+  // policy refetches the detail query every ~4 minutes and each response is a
+  // brand-new object, so an identity-based reset would wipe unsaved edits.
+  const hydratedPackageId = useRef<string | null>(null)
 
   useEffect(() => {
     if (!pkg) return
+    if (hydratedPackageId.current === pkg.id) {
+      // Same package, fresh response (presigned URL rotation): refresh only
+      // the image link and leave every edited field and lineDetails intact —
+      // but never overwrite an image the user owns (t14). A staged file, a
+      // local blob preview, or an explicit removal must survive the rotation,
+      // otherwise the submit handler sees a server URL and uploads nothing,
+      // silently saving the package without the picture the user picked.
+      const formImageUrl = form.getValues("imageUrl")
+      const userOwnsImage =
+        pendingAvatarFile.current !== null ||
+        formImageUrl === null ||
+        !!formImageUrl?.startsWith("blob:")
+      if (!userOwnsImage) {
+        form.setValue("imageUrl", pkg.imageUrl ?? null, {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+      }
+      return
+    }
+    hydratedPackageId.current = pkg.id
     form.reset({
       nameAr: pkg.nameAr,
       nameEn: pkg.nameEn ?? "",
@@ -107,6 +137,7 @@ export function usePackageEditorState(packageId: string | null) {
     form,
     pendingAvatarFile,
     onImageSelect,
+    onImageClear,
     onLineChange,
     lineItems,
     breakdown,
