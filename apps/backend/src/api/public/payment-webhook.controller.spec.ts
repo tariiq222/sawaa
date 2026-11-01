@@ -67,20 +67,33 @@ describe('PublicPaymentWebhookController (e2e)', () => {
         .expect(200);
     });
 
-    it('returns 400 for invalid status', async () => {
-      return request(app.getHttpServer())
+    // PAY-02: every 4xx makes the provider retry forever, so an unknown or
+    // future status must reach the handler (which decides from the authoritative
+    // provider fetch) instead of being rejected by the validation pipe.
+    it('acks an out-of-enum provider status instead of returning 400', async () => {
+      mockHandler.execute.mockResolvedValue({ received: true });
+
+      await request(app.getHttpServer())
         .post('/public/payments/webhook')
         .set('X-Moyasar-Signature', 'sig')
-        .send({ id: 'pay_abc123', status: 'invalid_status', amount: 10000, currency: 'SAR' })
-        .expect(400);
+        .send({ id: 'pay_abc123', status: 'initiated', amount: 10000, currency: 'SAR' })
+        .expect(200);
+
+      expect(mockHandler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ status: 'initiated' }),
+        }),
+      );
     });
 
-    it('returns 400 for invalid currency', async () => {
-      return request(app.getHttpServer())
+    it('acks a non-SAR currency instead of returning 400', async () => {
+      mockHandler.execute.mockResolvedValue({ received: true });
+
+      await request(app.getHttpServer())
         .post('/public/payments/webhook')
         .set('X-Moyasar-Signature', 'sig')
         .send({ id: 'pay_abc123', status: 'paid', amount: 10000, currency: 'USD' })
-        .expect(400);
+        .expect(200);
     });
 
     it('acks with 200 for missing amount', async () => {
@@ -93,8 +106,10 @@ describe('PublicPaymentWebhookController (e2e)', () => {
         .expect(200);
     });
 
-    it('returns 400 for unknown fields', async () => {
-      return request(app.getHttpServer())
+    it('acks unknown provider fields instead of returning 400', async () => {
+      mockHandler.execute.mockResolvedValue({ received: true });
+
+      await request(app.getHttpServer())
         .post('/public/payments/webhook')
         .set('X-Moyasar-Signature', 'sig')
         .send({
@@ -102,9 +117,10 @@ describe('PublicPaymentWebhookController (e2e)', () => {
           status: 'paid',
           amount: 10000,
           currency: 'SAR',
-          extra: 'bad',
+          source: { type: 'creditcard', company: 'visa' },
+          new_provider_field: 'whatever',
         })
-        .expect(400);
+        .expect(200);
     });
   });
 });
