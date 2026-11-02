@@ -3,7 +3,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { AuthenticaClient } from '../../../infrastructure/authentica';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import { EmailChannelAdapter } from './email-channel.adapter';
-import { SmsChannelAdapter } from './sms-channel.adapter';
+import { SmsChannelAdapter, SmsChannelNotConfiguredError } from './sms-channel.adapter';
 import { NotificationChannelRegistry } from './notification-channel-registry';
 import { OtpChannel } from '@prisma/client';
 
@@ -95,9 +95,11 @@ describe('SmsChannelAdapter', () => {
     });
   });
 
-  it('skips when Authentica is not configured', async () => {
+  it('fails closed when Authentica is not configured', async () => {
     authentica.isConfigured.mockReturnValue(false);
-    await adapter.send('+966500000000', '1234');
+    await expect(adapter.send('+966500000000', '1234')).rejects.toBeInstanceOf(
+      SmsChannelNotConfiguredError,
+    );
     expect(authentica.sendOtp).not.toHaveBeenCalled();
   });
 });
