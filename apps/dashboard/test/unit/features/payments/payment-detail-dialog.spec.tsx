@@ -152,9 +152,12 @@ describe("PaymentDetailDialog", () => {
       expect.objectContaining({ message: "refund rejected" }),
       expect.objectContaining({ fallback: "refund.errorToast" }),
     ))
+    // PAY-05: every manual refund carries a retry key so a double submit
+    // cannot pay the client twice.
     expect(manualRefundPaymentMock).toHaveBeenCalledWith("pay-target", {
       reason: "Correction",
       amount: undefined,
+      idempotencyKey: expect.any(String),
     })
     expect(screen.getByRole("button", { name: "refund.submit" })).toBeInTheDocument()
   })

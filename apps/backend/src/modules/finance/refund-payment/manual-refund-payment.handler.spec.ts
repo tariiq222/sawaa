@@ -56,6 +56,38 @@ function build(paymentOverrides: Partial<typeof basePaymentRow> = {}, invoiceOve
 }
 
 describe('ManualRefundPaymentHandler', () => {
+  // PAY-05: a retried cash payout must not hand the client cash twice.
+  it('replays the original completion for a repeated idempotency key without moving money again', async () => {
+    const { handler, tx } = build();
+    tx.refundRequest.findUnique.mockResolvedValue({
+      id: 'rr-prior', status: 'COMPLETED', paymentId: 'pay-1',
+    });
+
+    const result = await handler.execute({
+      paymentId: 'pay-1', reason: 'returned', amount: 5000, idempotencyKey: 'attempt-1',
+    });
+
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.refundRequest.create).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+    expect(result).toEqual(expect.objectContaining({ id: 'pay-1' }));
+    expect(tx.refundRequest.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { idempotencyKey: 'manual-refund:attempt-1' } }),
+    );
+  });
+
+  it('rejects a retry key that belongs to another payment', async () => {
+    const { handler, tx } = build();
+    tx.refundRequest.findUnique.mockResolvedValue({
+      id: 'rr-prior', status: 'COMPLETED', paymentId: 'pay-other',
+    });
+
+    await expect(handler.execute({
+      paymentId: 'pay-1', reason: 'returned', amount: 5000, idempotencyKey: 'attempt-1',
+    })).rejects.toThrow('another payment');
+  });
+
   it('serializes direct manual accounting by locking the invoice before its payment', async () => {
     const { handler, tx } = build();
     await handler.execute({ paymentId: 'pay-1', reason: 'returned' });

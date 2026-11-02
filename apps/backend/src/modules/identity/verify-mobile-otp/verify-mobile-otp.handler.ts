@@ -100,6 +100,17 @@ export class VerifyMobileOtpHandler {
           }
         }
 
+        // Email proof boundary: possession of a mailbox is not ownership of the
+        // account. An address stored on the profile but never verified must not
+        // mint a session — otherwise whoever reads that mailbox logs in as the
+        // account holder (SEC-AUTH-01). The dedicated email-entry flow owns
+        // verification; the generic public OTP grant must not substitute for it.
+        if (cmd.purpose === MobileOtpPurposeDto.LOGIN && channel === 'EMAIL') {
+          const emailProven =
+            user?.emailVerifiedAt != null || client?.emailVerified != null;
+          if (!emailProven) throw new UnauthorizedException('Invalid credentials');
+        }
+
         const otpRecord = await tx.otpCode.findFirst({
           where: { identifier, channel: otpChannel, purpose: otpPurpose, consumedAt: null },
           orderBy: { createdAt: 'desc' },

@@ -16,6 +16,12 @@ export interface ManualRefundPaymentCommand {
   performedBy?: string;
   /** Settle this reviewed off-gateway request in place, exactly once. */
   refundRequestId?: string;
+  /**
+   * Client-generated retry key for a direct (unreviewed) cash refund. Retries
+   * of the same payout reuse it so a double submit cannot hand cash back twice
+   * (PAY-05). Ignored when `refundRequestId` already identifies the attempt.
+   */
+  idempotencyKey?: string;
 }
 
 /**
@@ -124,6 +130,32 @@ export class ManualRefundPaymentHandler {
           if (requestedAmount > outstanding - reserved) throw new ConflictException('Other refund requests reserve this payment balance');
         }
         const refundRequestId = reviewed?.id ?? randomUUID();
+
+        // A cash payout has no gateway idempotency: replaying the identical
+        // request used to pass the outstanding clamp and pay the client a second
+        // time (PAY-05). The Payment row is already locked FOR UPDATE, so this
+        // check serialises with any concurrent attempt on the same payment.
+        const refundKey = reviewed
+          ? null
+          : cmd.idempotencyKey
+            ? `manual-refund:${cmd.idempotencyKey}`
+            : null;
+        if (refundKey) {
+          const prior = await tx.refundRequest.findUnique({
+            where: { idempotencyKey: refundKey },
+            select: { id: true, status: true, paymentId: true },
+          });
+          if (prior) {
+            if (prior.paymentId !== cmd.paymentId) {
+              throw new ConflictException('This refund attempt key belongs to another payment');
+            }
+            if (prior.status === RefundStatus.COMPLETED) {
+              // Idempotent replay: return the payment as it stands, no new money.
+              return { updatedPayment: await tx.payment.findUniqueOrThrow({ where: { id: row.id } }) };
+            }
+            throw new ConflictException('This refund attempt is already being processed');
+          }
+        }
         const accounting = computeRefundAccounting({
           invoiceTotal: invoice.total,
           invoiceVatAmt: invoice.vatAmt,
@@ -149,6 +181,7 @@ export class ManualRefundPaymentHandler {
             amount: requestedAmount,
             reason: cmd.reason,
             status: RefundStatus.COMPLETED,
+            idempotencyKey: refundKey,
             processedAt: new Date(),
             processedBy: cmd.performedBy ?? 'system',
           },

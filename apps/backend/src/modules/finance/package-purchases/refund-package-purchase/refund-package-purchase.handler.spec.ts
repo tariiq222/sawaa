@@ -180,6 +180,58 @@ describe('RefundPackagePurchaseHandler', () => {
     expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
   });
 
+  // PAY-01: a gateway refund on the payment/invoice never writes the purchase
+  // ledger. Reading the purchase alone reported the full balance as outstanding
+  // and paid the client twice. The clamp must honour the other two ledgers.
+  it('400 when the payment was already refunded outside the package flow', async () => {
+    const tx = buildTx({
+      purchaseRow: activePurchase({ refundAmount: null }),
+    });
+    tx.invoice.findFirst.mockResolvedValue({
+      id: INVOICE_ID,
+      total: 50_000,
+      vatAmt: 0,
+      refundedAmount: 50_000,
+      currency: 'SAR',
+      clientId: CLIENT_ID,
+      payments: [{ id: PAYMENT_ID, refundedAmount: 50_000 }],
+    });
+    const { handler } = buildHandler({ tx });
+
+    await expect(handler.execute(cmd({ refundAmount: 50_000 }))).rejects.toThrow(BadRequestException);
+    expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
+    expect(tx.refundRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('clamps a partial package refund against the invoice ledger, not just the purchase row', async () => {
+    const tx = buildTx({
+      purchaseRow: activePurchase({ refundAmount: null }),
+    });
+    tx.invoice.findFirst.mockResolvedValue({
+      id: INVOICE_ID,
+      total: 50_000,
+      vatAmt: 0,
+      refundedAmount: 30_000,
+      refundedVatAmt: 0,
+      currency: 'SAR',
+      clientId: CLIENT_ID,
+      payments: [{ id: PAYMENT_ID, refundedAmount: 30_000 }],
+    });
+    const { handler } = buildHandler({ tx });
+
+    await expect(handler.execute(cmd({ refundAmount: 30_000 }))).rejects.toThrow(BadRequestException);
+    expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
+
+    // Exactly the remaining 20_000 is still allowed and is written back as the
+    // cumulative total so the purchase ledger stops under-reporting.
+    await handler.execute(cmd({ refundAmount: 20_000 }));
+    const args = tx.packagePurchase.updateMany.mock.calls.at(-1)![0] as {
+      data: { status: string; refundAmount: { toString(): string } };
+    };
+    expect(args.data.status).toBe('REFUNDED');
+    expect(Number(args.data.refundAmount.toString())).toBe(50_000);
+  });
+
   it('rejects every refund when a package credit funds a future non-cancelled booking', async () => {
     const tx = buildTx();
     tx.packageCreditUsage.findMany.mockResolvedValue([

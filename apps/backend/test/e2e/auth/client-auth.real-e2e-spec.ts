@@ -298,6 +298,12 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
     email?: string;
     phone?: string;
     password: string;
+    // The fixture writes Prisma directly, so it starts from the weakest state a
+    // real row can be in: an address on the profile that was never proven. Tests
+    // that depend on a proven address (password reset — SEC-AUTH-01) opt in by
+    // passing a timestamp, so this fixture can never quietly hide the
+    // unverified-address path.
+    emailVerified?: Date | null;
   }): Promise<{ id: string; email: string | null; phone: string | null }> {
     const bcrypt = await import("bcryptjs");
     const passwordHash = await bcrypt.hash(opts.password, 4); // low cost — not a security test
@@ -307,6 +313,7 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
         phone: opts.phone ?? null,
         name: opts.email ?? opts.phone ?? "seeded",
         passwordHash,
+        emailVerified: opts.emailVerified === undefined ? null : opts.emailVerified,
         accountType: "FULL",
         claimedAt: new Date(),
         isActive: true,
@@ -933,7 +940,13 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
       const oldPassword = "OldPass1";
       const newPassword = "NewPass2";
 
-      const seeded = await seedClientWithPassword({ email, password: oldPassword });
+      // A reset is only authorized for an address whose ownership was proven
+      // (SEC-AUTH-01), so this account carries a verified address.
+      const seeded = await seedClientWithPassword({
+        email,
+        password: oldPassword,
+        emailVerified: new Date(),
+      });
 
       // Establish a refresh-token row (login first to mint one).
       const loginRes = await api()
@@ -1003,6 +1016,65 @@ describeRealE2e("Client Auth — real-DB e2e (register, login, refresh, OTP, res
         .post("/api/v1/public/auth/login")
         .send({ email, password: oldPassword });
       expect(oldLogin.status).toBe(401);
+    });
+
+    // SEC-AUTH-01: the public OTP grant is requestable for any address, so a
+    // verified session token alone must not authorize a password change. An
+    // address that was pasted into a profile but never confirmed is exactly the
+    // takeover path this guards: whoever reads that mailbox could otherwise
+    // reset the password of an account they do not own.
+    it("rejects a reset when the address was never verified, even with a valid OTP session", async () => {
+      const email = uniqueEmail("reset-unverified");
+      ctx.createdClientEmails.add(email);
+      const oldPassword = "OldPass1";
+      const newPassword = "NewPass2";
+
+      const seeded = await seedClientWithPassword({
+        email,
+        password: oldPassword,
+        emailVerified: null,
+      });
+
+      const reqRes = await requestOtp(
+        OtpChannel.EMAIL,
+        email,
+        OtpPurpose.CLIENT_PASSWORD_RESET,
+      );
+      expect(reqRes.status).toBe(200);
+
+      const code = lastOtpCode(
+        OtpChannel.EMAIL,
+        email,
+        OtpPurpose.CLIENT_PASSWORD_RESET,
+      );
+      const sessionToken = await verifyOtp(
+        OtpChannel.EMAIL,
+        email,
+        OtpPurpose.CLIENT_PASSWORD_RESET,
+        code,
+      );
+
+      const resetRes = await api()
+        .post("/api/v1/public/auth/reset-password")
+        .send({ sessionToken, newPassword });
+      expect(resetRes.status).toBe(401);
+
+      // Nothing on the row may move: same hash, same tokenVersion (no session
+      // invalidation), and the old password still works.
+      const after = await prisma.client.findUnique({
+        where: { id: seeded.id },
+        select: { passwordHash: true, tokenVersion: true },
+      });
+      expect(after!.tokenVersion).toBe(0);
+
+      const bcrypt = await import("bcryptjs");
+      expect(await bcrypt.compare(oldPassword, after!.passwordHash!)).toBe(true);
+      expect(await bcrypt.compare(newPassword, after!.passwordHash!)).toBe(false);
+
+      const oldLogin = await api()
+        .post("/api/v1/public/auth/login")
+        .send({ email, password: oldPassword });
+      expect(oldLogin.status).toBe(200);
     });
   });
 });

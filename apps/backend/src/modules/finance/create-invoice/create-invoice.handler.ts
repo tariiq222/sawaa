@@ -50,6 +50,15 @@ export class CreateInvoiceHandler {
 
     const subtotalDec = new Prisma.Decimal(dto.subtotal.toString());
     const discountAmtDec = new Prisma.Decimal((dto.discountAmt ?? 0).toString());
+    // A discount larger than the subtotal used to persist a negative total,
+    // which every downstream payment path rejects — the invoice became
+    // permanently unpayable and the client balance was silently floored to 0
+    // (PAY-03). The update path already refused this; the create path did not.
+    if (discountAmtDec.greaterThan(subtotalDec)) {
+      throw new BadRequestException(
+        'discountAmt cannot exceed subtotal',
+      );
+    }
     // vatBase = subtotal minus discount (stays Decimal, no float conversion)
     const vatBaseDec = subtotalDec.minus(discountAmtDec);
 

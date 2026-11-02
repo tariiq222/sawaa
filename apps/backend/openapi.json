@@ -8823,6 +8823,12 @@
             "example": 5000,
             "type": "number"
           },
+          "idempotencyKey": {
+            "description": "Client-generated idempotency key for this refund attempt; retries must reuse it",
+            "example": "refund-attempt-6f1c2b7e",
+            "maxLength": 120,
+            "type": "string"
+          },
           "reason": {
             "description": "Reason for the refund",
             "example": "Service not delivered",
@@ -9158,14 +9164,6 @@
           },
           "status": {
             "description": "Payment status reported by Moyasar",
-            "enum": [
-              "paid",
-              "failed",
-              "refunded",
-              "authorized",
-              "captured",
-              "voided"
-            ],
             "example": "paid",
             "type": "string"
           },
@@ -9317,14 +9315,6 @@
           },
           "status": {
             "description": "Payment status reported by Moyasar",
-            "enum": [
-              "paid",
-              "failed",
-              "refunded",
-              "authorized",
-              "captured",
-              "voided"
-            ],
             "example": "paid",
             "type": "string"
           },
@@ -11951,6 +11941,12 @@
       },
       "RefundPackagePurchaseDto": {
         "properties": {
+          "idempotencyKey": {
+            "description": "Client-generated idempotency key for this refund attempt; retries must reuse it",
+            "example": "package-refund-6f1c2b7e",
+            "maxLength": 120,
+            "type": "string"
+          },
           "notes": {
             "description": "Reason / note for the manual refund (appended to the purchase notes)",
             "example": "Client moved abroad",

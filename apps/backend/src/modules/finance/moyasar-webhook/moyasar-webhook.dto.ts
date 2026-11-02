@@ -1,6 +1,5 @@
 import {
   IsArray,
-  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -28,8 +27,6 @@ export class MoyasarWebhookMetadataDto {
   @IsOptional() @IsString() packagePurchaseId?: string;
 }
 
-type MoyasarPaymentStatus = 'paid' | 'failed' | 'refunded' | 'authorized' | 'captured' | 'voided';
-
 /**
  * Fields shared by Moyasar's nested payment object and the supported flat
  * payment shape. Auxiliary provider fields are validated only by their outer
@@ -42,9 +39,13 @@ export class MoyasarWebhookPaymentFieldsDto {
   @ApiPropertyOptional({ description: 'Moyasar hosted-checkout invoice ID', example: 'inv_abc123' })
   @IsOptional() @IsString() invoice_id?: string;
 
-  @ApiPropertyOptional({ description: 'Payment status reported by Moyasar', enum: ['paid', 'failed', 'refunded', 'authorized', 'captured', 'voided'], example: 'paid' })
-  @IsOptional() @IsIn(['paid', 'failed', 'refunded', 'authorized', 'captured', 'voided'])
-  status?: MoyasarPaymentStatus;
+  // Documentation only: the webhook controller reads the raw body and never
+  // runs this DTO through the global ValidationPipe (PAY-02). Provider values
+  // are not an enum we control — `initiated` already exists outside the list —
+  // and every field is re-verified against a fresh provider fetch downstream.
+  @ApiPropertyOptional({ description: 'Payment status reported by Moyasar', example: 'paid' })
+  @IsOptional() @IsString()
+  status?: string;
 
   @ApiPropertyOptional({ description: 'Amount in the smallest currency unit (halalas)', example: 10000 })
   @IsOptional() @IsInt() @Min(1) @Transform(({ value }) => (typeof value === 'string' ? Number.parseInt(value, 10) : value))
@@ -83,8 +84,11 @@ export class MoyasarWebhookPaymentFieldsDto {
   @ApiPropertyOptional({ description: 'Formatted captured amount with currency', example: '100.00 SAR' })
   @IsOptional() @IsString() captured_format?: string;
 
+  // Documentation only — see the status note above. A non-SAR currency is
+  // rejected by the handler against the invoice after the authoritative fetch,
+  // not by the pipe (a 400 here would make the provider retry forever).
   @ApiPropertyOptional({ description: 'ISO 4217 currency code', example: 'SAR' })
-  @IsOptional() @IsString() @IsIn(['SAR']) currency?: string;
+  @IsOptional() @IsString() currency?: string;
 
   @ApiPropertyOptional({ description: 'Payer IP address reported by Moyasar', example: '127.0.0.1' })
   @IsOptional() @IsString() ip?: string;

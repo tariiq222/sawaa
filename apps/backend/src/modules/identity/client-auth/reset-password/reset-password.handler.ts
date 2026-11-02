@@ -150,9 +150,15 @@ export class ResetPasswordHandler {
     } else if (client.userId) {
       throw new UnauthorizedException('Invalid session');
     }
-    // A new email OTP alone must not promote an unverified User-only email:
-    // that identity still needs the existing email-entry phone proof flow.
-    if (!client.email && !user?.emailVerifiedAt) throw new UnauthorizedException('Invalid session');
+    // Proof of mailbox ownership is required on every path. An address that was
+    // added to the profile but never verified must not authorize a reset:
+    // whoever can read that mailbox would otherwise take the account over.
+    // Verification belongs to the dedicated email-entry flow, which releases
+    // unverified copies from other accounts before claiming the address.
+    const emailProven =
+      (client.email !== null && client.emailVerified !== null) ||
+      user?.emailVerifiedAt != null;
+    if (!emailProven) throw new UnauthorizedException('Invalid session');
     return client;
   }
 }
