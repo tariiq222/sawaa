@@ -25,6 +25,7 @@ function makeHandler(overrides: {
   uploadResult?: typeof MOCK_FILE_ROW;
   throwOnUpload?: Error;
   employee?: { avatarUrl: string | null; publicImageUrl: string | null };
+  resolveImage?: (query: { reference?: string | null }) => Promise<string | null>;
 } = {}) {
   const employeeFindUnique = jest.fn().mockResolvedValue(
     overrides.employeeExists === false ? null : { id: EMPLOYEE_ID, ...overrides.employee },
@@ -42,7 +43,9 @@ function makeHandler(overrides: {
     : jest.fn().mockResolvedValue(overrides.uploadResult ?? MOCK_FILE_ROW);
   const uploadFile = { execute: uploadFileExecute } as unknown as UploadFileHandler;
 
-  const handler = new UploadAvatarHandler(prisma, uploadFile, { getSignedUrl: jest.fn().mockResolvedValue(EXPECTED_URL) } as unknown as MinioService, { execute: async (q: { reference?: string | null }) => q.reference ?? null } as unknown as ResolveEmployeeImageHandler);
+  const resolveImage = overrides.resolveImage
+    ?? (async (q: { reference?: string | null }) => q.reference ?? null);
+  const handler = new UploadAvatarHandler(prisma, uploadFile, { getSignedUrl: jest.fn().mockResolvedValue(EXPECTED_URL) } as unknown as MinioService, { execute: resolveImage } as unknown as ResolveEmployeeImageHandler);
   return { handler, employeeFindUnique, employeeUpdate, uploadFileExecute };
 }
 
@@ -91,6 +94,20 @@ describe('UploadAvatarHandler', () => {
     const { handler, employeeUpdate } = makeHandler({ employee: { avatarUrl: 'http://minio:9000/sawaa/old.jpg', publicImageUrl: 'a.png' } });
     await handler.execute(validCmd, Buffer.alloc(1024));
     expect(employeeUpdate.mock.calls[0][0].data.publicImageUrl).toBe('org/new.png');
+  });
+
+  it('replaces a public portrait whose stored reference no longer resolves', async () => {
+    // The imported value answers 404 on the public image endpoint; keeping it would
+    // leave the website without a photo after a successful avatar upload.
+    const { handler, employeeUpdate } = makeHandler({
+      employee: { avatarUrl: 'legacy/dead.jpg', publicImageUrl: 'legacy/dead.jpg' },
+      resolveImage: async () => null,
+    });
+    await handler.execute(validCmd, Buffer.alloc(1024));
+    expect(employeeUpdate.mock.calls[0][0].data).toEqual({
+      avatarUrl: MOCK_FILE_ROW.storageKey,
+      publicImageUrl: MOCK_FILE_ROW.storageKey,
+    });
   });
 
   it('on happy path: calls uploadFile then updates employee.avatarUrl', async () => {
