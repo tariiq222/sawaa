@@ -32,10 +32,14 @@ interface EmployeeAvatarProps {
 }
 
 export function EmployeeAvatar({ avatarUrl, name, className }: EmployeeAvatarProps) {
-  const [failed, setFailed] = useState(false)
+  // Track the exact src that failed, not a bare boolean: a new `avatarUrl`
+  // no longer matches, so the next image is attempted instead of being
+  // permanently suppressed by the first failure.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const safeAvatarUrl = normalizeEmployeeAvatarSrc(avatarUrl)
+  const showImage = safeAvatarUrl !== null && safeAvatarUrl !== failedSrc
 
-  if (safeAvatarUrl && !failed) {
+  if (showImage) {
     const isRemote = /^https?:\/\//i.test(safeAvatarUrl)
     return (
       <div className={cn("relative size-9 shrink-0 overflow-hidden rounded-full", className)}>
@@ -46,7 +50,7 @@ export function EmployeeAvatar({ avatarUrl, name, className }: EmployeeAvatarPro
             src={safeAvatarUrl}
             alt={name}
             className="size-full object-cover"
-            onError={() => setFailed(true)}
+            onError={() => setFailedSrc(safeAvatarUrl)}
           />
         ) : (
           <Image
@@ -55,7 +59,7 @@ export function EmployeeAvatar({ avatarUrl, name, className }: EmployeeAvatarPro
             fill
             className="object-cover"
             sizes="36px"
-            onError={() => setFailed(true)}
+            onError={() => setFailedSrc(safeAvatarUrl)}
           />
         )}
       </div>

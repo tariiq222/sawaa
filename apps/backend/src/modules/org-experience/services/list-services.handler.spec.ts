@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
@@ -49,6 +50,34 @@ describe('ListServicesHandler', () => {
       },
       employeeService: { groupBy: jest.fn().mockResolvedValue([]) },
     };
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('contains a signing rejection per image without losing other services or category images', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    storageProvider.useValue.getSignedUrl.mockRejectedValueOnce(new Error('signing failed'));
+    tx.service.findMany.mockResolvedValue([
+      { id: 's1', imageUrl: 'org/failing.png', category: { id: 'c1', imageUrl: 'org/category.png' } },
+      { id: 's2', imageUrl: 'org/healthy.png', category: null },
+    ]);
+    tx.service.count.mockResolvedValue(2);
+    await buildModule();
+
+    const result = await handler.execute({});
+
+    expect(result.items).toEqual([
+      expect.objectContaining({ id: 's1', imageUrl: null, category: expect.objectContaining({ imageUrl: 'signed:sawaa-media/org/category.png' }) }),
+      expect.objectContaining({ id: 's2', imageUrl: 'signed:sawaa-media/org/healthy.png' }),
+    ]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('Failed to sign media image URL', { bucket: 'sawaa-media', key: 'org/failing.png' });
+  });
+
+  it('does not swallow database failures unrelated to image signing', async () => {
+    tx.service.findMany.mockRejectedValue(new Error('database failed'));
+    await buildModule();
+    await expect(handler.execute({})).rejects.toThrow('database failed');
   });
 
   it('historical catalog admits archived inactive bound services', async () => {

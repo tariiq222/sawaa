@@ -1,6 +1,18 @@
 # سواء — ملخص الإصدارات والتشغيل
 
 
+## تحديث أمني ونشر الإنتاج — 31 أكتوبر 2026، 21:26 UTC
+
+اختبر المالك الاستيج `dep_0HOXZqN4N0VaPyBL` عند `83ea9ae3747ac8a844ca3691b749dafcbd31cbb9` وأمر بالنشر. رُقّي `release/2026-10-31` عبر [PR #233](https://github.com/tariiq222/sawaa/pull/233) إلى `main` عند `33beaa87334eb22adff62bf902572232b012c9aa`، بعد نجاح `gate` و`critical-real-e2e` على رأس الطلب.
+
+- [PR #232](https://github.com/tariiq222/sawaa/pull/232) عالج نتائج Trivy: `next` 15.5.28 و`undici` 7.30.1 و`body-parser` 2.4.0 و`multer` 2.5.0 و`joi` 17.13.9 و`@modelcontextprotocol/sdk` 1.32.2، وفي الجوال `node-forge` 1.4.2 و`follow-redirects` 1.16.2 و`re2js` 2.8.7. لا تغيير في كود التطبيق ولا ترحيلات.
+- أعاد البناء صور التطبيقات إلى Node 22.23.4 (CVE-2026-111497)؛ كان الإنتاج على 22.23.3 لأن الوسم `node:22-bookworm-slim` غير مثبت وصور 13 أكتوبر أقدم من الإصلاح.
+- استثناء مؤقت بموافقة المالك: CVE-2026-118664 لـ`decode-uri-component@0.2.2` حتى 2026-11-30. الإصدار 0.5.1 ESM فقط و`query-string` 7 يتطلب CommonJS، والرقعة المحلية تحمل الفك أحادي المرور.
+- النشر `dep_bU7zyyi8kkOgjYNT` جاهز والخدمات الست healthy، و`gitSha` الحي يطابق الدمج. API والموقع واللوحة والملفات أعادت 200، وحاويات PostgreSQL/Redis/MinIO لم تتغير. [إيصال النشر](deployments/2026-10-31-production-dep_bU7zyyi8kkOgjYNT.json).
+- النسخة قبل النشر: `/var/backups/sawaa/pre-production-20261031T204514Z/`، شملت PostgreSQL والأدوار وRedis وMinIO. تحققت SHA256SUMS، ونجحت الاستعادة بلا شبكة وطابقت الأعداد: 121 ترحيلة، 2246 عميلًا، 5323 حجزًا، 200 دفعة. بعد النشر 121 ترحيلة وصفر معلقة، و5324 حجزًا لنشاط حي، وصفر أسطر ` ERROR ` في سجل backend.
+- نقطة الرجوع بالكود: `3b1a53ca3fcf33a924b1c70e994bf5cf01bf1e9d` والنشر `dep_PomPSX2-xbAqwBCg`. الرجوع أو استعادة بيانات إنتاج يتطلب إذنًا مستقلًا.
+- لم تُختبر مدفوعات حقيقية ولا حجز إنتاج اصطناعي في هذا الرصد. الدمج أطلق Apple TestFlight على `develop` و`main`، ولا يُعد ذلك قبول App Review.
+
 ## إصلاح دخول مراجع Apple ونشر الإنتاج — 13 أكتوبر 2026، 12:02 UTC
 
 اعتمد المالك `f22ff198da509dbe72dafb463e5f60e7fefdb973` بعد اختباره على الاستيج الجاهز `dep_-s8xBKVLGPMIykn5`، وأذن صراحة بترحيل الصلاحيات والنشر للإنتاج. رُقّي الفرع المجمد `release/2026-10-13` عبر [PR #224](https://github.com/tariiq222/sawaa/pull/224) إلى `main` عند `3b1a53ca3fcf33a924b1c70e994bf5cf01bf1e9d`، بشجرة مطابقة للمرشح المعتمد. نجح `gate` و`critical-real-e2e` على رأس طلب الإنتاج في [CI 38388497795](https://github.com/tariiq222/sawaa/actions/runs/38388497795)، ونجح الفحص المحلي المعزول على f22 (4 smoke وحجزان محفوظان).

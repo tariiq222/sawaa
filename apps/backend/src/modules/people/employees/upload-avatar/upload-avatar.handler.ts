@@ -67,7 +67,11 @@ export class UploadAvatarHandler {
     ]);
     const followsAvatar = !employee.publicImageUrl || employee.publicImageUrl === employee.avatarUrl
       || (!!previousAvatar && previousAvatar === previousPublic)
-      || employee.publicImageUrl === cmd.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+      || employee.publicImageUrl === cmd.filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+      // A stored public portrait that resolves to nothing is already dead on the
+      // public site (its image endpoint answers 404). A new avatar must replace it
+      // instead of preserving a reference no browser can load.
+      || (!!employee.publicImageUrl && previousPublic === null);
 
     await this.prisma.employee.update({
       where: { id: cmd.employeeId },

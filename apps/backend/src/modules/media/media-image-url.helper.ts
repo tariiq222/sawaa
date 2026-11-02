@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { MinioService } from '../../infrastructure/storage/minio.service';
 import { extractMediaKey } from './media-key.helper';
 
@@ -5,6 +6,8 @@ import { extractMediaKey } from './media-key.helper';
 // the dashboard (D.1). The persisted value stays a bare object key; a fresh URL
 // is minted on every read so links never outlive their signature.
 export const MEDIA_IMAGE_URL_EXPIRY_SECONDS = 300;
+
+const logger = new Logger('MediaImageUrl');
 
 /**
  * Mints a short-lived presigned URL for a stored media `imageUrl`.
@@ -20,9 +23,14 @@ export async function signMediaImageUrl(
   imageUrl: string | null,
 ): Promise<string | null> {
   if (!imageUrl) return null;
-  return storage.getSignedUrl(
-    bucket,
-    extractMediaKey(imageUrl, bucket),
-    MEDIA_IMAGE_URL_EXPIRY_SECONDS,
-  );
+  const key = extractMediaKey(imageUrl, bucket);
+  try {
+    return await storage.getSignedUrl(bucket, key, MEDIA_IMAGE_URL_EXPIRY_SECONDS);
+  } catch {
+    // One broken image must not reject an entire Promise.all read response.
+    // Never log the stored URL or signer error: either may contain signatures
+    // or credentials. Only the bucket and signature-free object key are safe.
+    logger.warn('Failed to sign media image URL', { bucket, key: key.split(/[?#]/, 1)[0] });
+    return null;
+  }
 }

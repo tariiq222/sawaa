@@ -28,10 +28,13 @@ export async function verifyPayment(
 /**
  * Manually refund a cash/bank-transfer payment (off-gateway). Reception-allowed.
  * amount in integer halalas; omit for a full refund. Reason required.
+ * `idempotencyKey` makes a retried attempt return the original completion
+ * instead of paying the client a second time (PAY-05); reuse it for retries of
+ * the same logical payout.
  */
 export async function manualRefundPayment(
   id: string,
-  payload: { reason: string; amount?: number; refundRequestId?: string },
+  payload: { reason: string; amount?: number; refundRequestId?: string; idempotencyKey?: string },
 ): Promise<Payment> {
   return api.patch<Payment>(`/dashboard/finance/payments/${id}/manual-refund`, payload)
 }

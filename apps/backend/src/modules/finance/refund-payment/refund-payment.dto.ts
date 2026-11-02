@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsInt, IsOptional, Min, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsOptional, Min, IsUUID, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RefundPaymentDto {
@@ -19,4 +19,23 @@ export class ManualRefundPaymentDto extends RefundPaymentDto {
   @IsOptional()
   @IsUUID()
   refundRequestId?: string;
+
+  /**
+   * Client-generated retry key. Cash refunds are settled at the counter, so a
+   * browser retry or a double-tap used to pay the client twice: the second
+   * request saw a still-positive outstanding balance and created a second
+   * COMPLETED refund (PAY-05). Send the same key for every retry of the same
+   * logical payout; the stored unique key makes the replay return the original
+   * completion instead of moving more money.
+   */
+  @ApiPropertyOptional({
+    description: 'Client-generated idempotency key for this refund attempt; retries must reuse it',
+    example: 'refund-attempt-6f1c2b7e',
+    maxLength: 120,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  idempotencyKey?: string;
 }

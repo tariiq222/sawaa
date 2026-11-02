@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import request from 'supertest';
 import { DashboardMediaController } from './media.controller';
 import { UploadFileHandler } from '../../modules/media/files/upload-file.handler';
@@ -56,13 +57,58 @@ describe('DashboardMediaController (e2e)', () => {
   const fileId = '00000000-0000-4000-a000-000000000001';
 
   describe('POST /dashboard/media/upload', () => {
+    it('documents storageKey in the generated upload response contract', () => {
+      const document = SwaggerModule.createDocument(app, new DocumentBuilder().build());
+      const response = document.paths['/dashboard/media/upload'].post!.responses['201'] as unknown as {
+        content: { 'application/json': { schema: { properties: Record<string, unknown> } } };
+      };
+      expect(response.content['application/json'].schema.properties.storageKey).toEqual({ type: 'string' });
+    });
+
+    it.each(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])('passes supported %s uploads to the handler', async (contentType) => {
+      mockUpload.execute.mockResolvedValue({ id: fileId, storageKey: 'org/image' });
+      await request(app.getHttpServer())
+        .post('/dashboard/media/upload')
+        .attach('file', Buffer.from('test'), { filename: 'image', contentType })
+        .expect(201);
+      expect(mockUpload.execute).toHaveBeenCalledWith(expect.objectContaining({ mimetype: contentType }), expect.any(Buffer));
+    });
+
+    it.each([
+      'application/pdf', 'application/msword', 'text/plain', 'text/csv',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/svg+xml',
+    ])('rejects unused %s uploads before invoking the handler', async (contentType) => {
+      await request(app.getHttpServer())
+        .post('/dashboard/media/upload')
+        .attach('file', Buffer.from('test'), { filename: 'file', contentType })
+        .expect(400);
+      expect(mockUpload.execute).not.toHaveBeenCalled();
+    });
+
+    it('rejects a file larger than 10 MiB at the HTTP boundary', async () => {
+      await request(app.getHttpServer())
+        .post('/dashboard/media/upload')
+        .attach('file', Buffer.alloc(10 * 1024 * 1024 + 1), { filename: 'large.png', contentType: 'image/png' })
+        .expect(413);
+      expect(mockUpload.execute).not.toHaveBeenCalled();
+    });
+
+    it('accepts a file immediately below the 10 MiB HTTP limit', async () => {
+      mockUpload.execute.mockResolvedValue({ id: fileId, storageKey: 'org/image' });
+      await request(app.getHttpServer())
+        .post('/dashboard/media/upload')
+        .attach('file', Buffer.alloc(10 * 1024 * 1024 - 1), { filename: 'large.png', contentType: 'image/png' })
+        .expect(201);
+    });
+
     it('returns 201 on file upload', async () => {
-      mockUpload.execute.mockResolvedValue({ id: fileId, url: 'https://cdn.example.com/file.png' });
+      mockUpload.execute.mockResolvedValue({ id: fileId, storageKey: 'org/image', url: 'https://cdn.example.com/file.png' });
 
       const res = await request(app.getHttpServer())
         .post('/dashboard/media/upload')
         .set('Authorization', 'Bearer fake-jwt')
-        .attach('file', Buffer.from('test content'), 'test.txt')
+        .attach('file', Buffer.from('test content'), 'test.png')
         .field('visibility', 'PUBLIC')
         .field('ownerType', 'Employee')
         .field('ownerId', '00000000-0000-4000-a000-000000000002')
@@ -85,7 +131,7 @@ describe('DashboardMediaController (e2e)', () => {
       return request(app.getHttpServer())
         .post('/dashboard/media/upload')
         .set('Authorization', 'Bearer fake-jwt')
-        .attach('file', Buffer.from('test'), 'test.txt')
+        .attach('file', Buffer.from('test'), 'test.png')
         .field('visibility', 'SECRET')
         .expect(400);
     });
@@ -94,7 +140,7 @@ describe('DashboardMediaController (e2e)', () => {
       return request(app.getHttpServer())
         .post('/dashboard/media/upload')
         .set('Authorization', 'Bearer fake-jwt')
-        .attach('file', Buffer.from('test'), 'test.txt')
+        .attach('file', Buffer.from('test'), 'test.png')
         .field('ownerId', 'not-a-uuid')
         .expect(400);
     });

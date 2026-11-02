@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { queryKeys } from "@/lib/query-keys"
 import { invalidateMutationImpact } from "@/lib/query-invalidation"
 import {
@@ -83,10 +83,27 @@ export function usePaymentMutations() {
   })
 
   // Off-gateway (cash/bank-transfer) refund issued from the bookings list.
+  // A cash refund is settled at the counter, so the same attempt must carry a
+  // stable retry key: a double submit would otherwise hand the client cash
+  // twice (PAY-05). The key is derived from the attempt signature and cleared
+  // on success, so a genuinely new refund gets a new key.
+  const manualRefundKey = useRef<{ signature: string; key: string } | null>(null)
   const manualRefundMut = useMutation({
-    mutationFn: ({ id, reason, amount }: PaymentMutationVariables & { reason: string; amount?: number }) =>
-      manualRefundPayment(id, { reason, amount }),
-    onSuccess: (payment, variables) => invalidatePaymentResult(queryClient, "payment-refunded", payment, variables),
+    mutationFn: ({ id, reason, amount }: PaymentMutationVariables & { reason: string; amount?: number }) => {
+      const signature = `${id}:${amount ?? 'full'}:${reason}`
+      if (manualRefundKey.current?.signature !== signature) {
+        manualRefundKey.current = { signature, key: crypto.randomUUID() }
+      }
+      return manualRefundPayment(id, {
+        reason,
+        amount,
+        idempotencyKey: manualRefundKey.current.key,
+      })
+    },
+    onSuccess: (payment, variables) => {
+      manualRefundKey.current = null
+      invalidatePaymentResult(queryClient, "payment-refunded", payment, variables)
+    },
   })
 
   return { refundMut, verifyMut, manualRefundMut }

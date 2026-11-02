@@ -175,14 +175,49 @@ export class RefundPackagePurchaseHandler {
       // client paid the invoice total, which includes VAT when enabled, so
       // refunds are measured against that gross amount. refundAmount on the
       // purchase therefore accumulates gross money returned.
+      // PAY-05: replay the original completion for a retried attempt instead of
+      // moving money again. The purchase row is already locked FOR UPDATE, so
+      // this check serialises with a concurrent duplicate.
+      const refundKey = cmd.idempotencyKey ? `package-refund:${cmd.idempotencyKey}` : null;
+      if (refundKey) {
+        const prior = await tx.refundRequest.findUnique({
+          where: { idempotencyKey: refundKey },
+          select: { id: true, invoiceId: true, paymentId: true, processedAt: true },
+        });
+        if (prior) {
+          return {
+            refundedAt: prior.processedAt ?? new Date(),
+            recordedInvoiceId: prior.invoiceId,
+            recordedPaymentId: prior.paymentId,
+            recordedCurrency: invoice?.currency ?? 'SAR',
+            isFullRefund: false,
+            newCumulativeRefund: decimalToHalalas(purchase.refundAmount ?? 0),
+            purchaseStatus: purchase.status,
+            replayed: true,
+          };
+        }
+      }
+
       const amountPaid = invoice
         ? decimalToHalalas(invoice.total)
         : decimalToHalalas(purchase.amountPaid);
-      const alreadyRefunded = decimalToHalalas(purchase.refundAmount ?? 0);
+      // Three ledgers describe the same money: this purchase, its invoice, and
+      // the gateway payment. A payment-level refund (refund-payment handler)
+      // writes the invoice/payment ledgers but never this purchase, so reading
+      // purchase.refundAmount alone reported the full balance as outstanding and
+      // paid the client a second time (PAY-01). Take the largest returned
+      // amount — the ledgers are parallel views, never additive — and write the
+      // cumulative total back below so the purchase ledger self-heals.
+      const purchaseRefunded = decimalToHalalas(purchase.refundAmount ?? 0);
+      const invoiceRefunded = invoice ? decimalToHalalas(invoice.refundedAmount ?? 0) : 0;
+      const paymentRefunded = invoice?.payments[0]
+        ? decimalToHalalas(invoice.payments[0].refundedAmount ?? 0)
+        : 0;
+      const alreadyRefunded = Math.max(purchaseRefunded, invoiceRefunded, paymentRefunded);
       // P1 (money-safety): clamp the refund to the outstanding (un-refunded)
       // balance, read under the same FOR UPDATE lock. A caller can never
       // over-refund — refund more than was paid, or stack partials past it.
-      const outstanding = amountPaid - alreadyRefunded;
+      const outstanding = Math.max(0, amountPaid - alreadyRefunded);
       if (refundAmount > outstanding) {
         throw new BadRequestException(
           `Refund amount ${refundAmount} exceeds the outstanding balance of ${outstanding} halalas`,
@@ -298,6 +333,7 @@ export class RefundPackagePurchaseHandler {
                 amount: new Prisma.Decimal(refundAmount),
                 reason: cmd.notes ?? 'Manual package-purchase refund',
                 status: RefundStatus.COMPLETED,
+                idempotencyKey: refundKey,
                 processedAt: refundedAt,
                 processedBy: cmd.userId ?? 'system',
               },
@@ -371,13 +407,14 @@ export class RefundPackagePurchaseHandler {
         isFullRefund,
         newCumulativeRefund,
         purchaseStatus: isFullRefund ? PackagePurchaseStatus.REFUNDED : purchase.status,
+        replayed: false,
       };
     });
 
     // 3. Publish the refund-completed event after commit (package refund →
     // bookingId is null). Only meaningful when a real invoice refund was
     // recorded; skip the event for a zero/ledger-less refund.
-    if (result.recordedInvoiceId && result.recordedPaymentId && refundAmount > 0) {
+    if (!result.replayed && result.recordedInvoiceId && result.recordedPaymentId && refundAmount > 0) {
       const event = new RefundCompletedEvent({
         refundRequestId: cmd.purchaseId,
         organizationId: DEFAULT_ORG_ID,

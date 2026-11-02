@@ -11,6 +11,7 @@ import {
   deletePackage,
 } from "@/lib/api/packages"
 import type { PackageListQuery } from "@/lib/types/package"
+import { signedImageQueryOptions } from "@/lib/signed-url-policy"
 
 /* ─── Packages List ─── */
 
@@ -35,7 +36,9 @@ export function usePackagesList() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.packages.list(query),
     queryFn: () => fetchPackages(query),
-    staleTime: 5 * 60 * 1000,
+    // Package payloads carry presigned image URLs — see
+    // lib/signed-url-policy.ts.
+    ...signedImageQueryOptions,
   })
 
   const resetFilters = useCallback(() => {
@@ -68,7 +71,8 @@ export function usePackage(id: string | null) {
     queryKey: queryKeys.packages.detail(id ?? ""),
     queryFn: () => fetchPackage(id!),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    // Same presigned image URL as the packages list.
+    ...signedImageQueryOptions,
   })
 }
 

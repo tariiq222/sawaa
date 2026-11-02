@@ -4,13 +4,26 @@
  * and no longer exposes a Save button in its footer.
  */
 
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import React from "react"
 
-const { useServiceEmployees, useEmployeeServiceMutations } = vi.hoisted(() => ({
+const {
+  useServiceEmployees,
+  useEmployeeServiceMutations,
+  toast,
+  lastToggleCustomPricing,
+  lastSaveDurations,
+} = vi.hoisted(() => ({
   useServiceEmployees: vi.fn(),
   useEmployeeServiceMutations: vi.fn(),
+  toast: { success: vi.fn(), error: vi.fn() },
+  lastToggleCustomPricing: {
+    current: null as null | ((next: boolean) => Promise<void>),
+  },
+  lastSaveDurations: {
+    current: null as null | ((payload: unknown) => Promise<void>),
+  },
 }))
 
 const { useLocale } = vi.hoisted(() => ({
@@ -25,24 +38,33 @@ vi.mock("@/hooks/use-employee-mutations", () => ({ useEmployeeServiceMutations }
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
 
 vi.mock("@/components/features/shared/employee-service-toggles", () => ({
-  EmployeeServiceToggles: (props: { item: { id: string } }) => (
-    <div data-testid="employee-service-toggles" data-item-id={props.item.id} />
-  ),
+  EmployeeServiceToggles: (props: {
+    item: { id: string }
+    onToggleCustomPricing?: (next: boolean) => Promise<void>
+  }) => {
+    lastToggleCustomPricing.current = props.onToggleCustomPricing ?? null
+    return <div data-testid="employee-service-toggles" data-item-id={props.item.id} />
+  },
 }))
 
 vi.mock("@/components/features/shared/employee-custom-pricing-row", () => ({
-  EmployeeCustomPricingRow: (props: { item: { id: string }; employeeId: string }) => (
-    <div
-      data-testid="employee-custom-pricing-row"
-      data-item-id={props.item.id}
-      data-employee-id={props.employeeId}
-    />
-  ),
+  EmployeeCustomPricingRow: (props: {
+    item: { id: string }
+    employeeId: string
+    onSave: (payload: unknown) => Promise<void>
+  }) => {
+    lastSaveDurations.current = props.onSave
+    return (
+      <div
+        data-testid="employee-custom-pricing-row"
+        data-item-id={props.item.id}
+        data-employee-id={props.employeeId}
+      />
+    )
+  },
 }))
 
-vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
-}))
+vi.mock("sonner", () => ({ toast }))
 
 vi.mock("@sawaa/ui", () => ({
   Sheet: ({
@@ -99,6 +121,8 @@ function makeEmployeeService(): EmployeeService {
 describe("EditEmployeeServiceSheet", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    lastToggleCustomPricing.current = null
+    lastSaveDurations.current = null
 
     useEmployeeServiceMutations.mockReturnValue({
       updateMut: {
@@ -218,5 +242,96 @@ describe("EditEmployeeServiceSheet", () => {
     expect(screen.queryByTestId("employee-service-toggles")).not.toBeInTheDocument()
     expect(screen.queryByTestId("employee-custom-pricing-row")).not.toBeInTheDocument()
     expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0)
+  })
+
+  it("surfaces a failure when enabling custom pricing, keeps the section open, and does not mark the mode as persisted", async () => {
+    const pricingModeMut = {
+      isPending: false,
+      variables: undefined,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockRejectedValue(new Error("400 Bad Request")),
+    }
+    useEmployeeServiceMutations.mockReturnValue({
+      updateMut: { isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() },
+      durationsMut: { isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() },
+      pricingModeMut,
+    })
+
+    render(
+      <EditEmployeeServiceSheet
+        employeeId="emp-1"
+        employeeService={makeEmployeeService()}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+
+    await act(async () => {
+      await lastToggleCustomPricing.current?.(true)
+    })
+
+    // Explicit failure via t(), never a silent success.
+    expect(toast.error).toHaveBeenCalledWith("services.employees.durations.saveError", {
+      id: "emp-save-emp-1-svc-1",
+    })
+    expect(toast.success).not.toHaveBeenCalled()
+
+    // The sheet section stays open so the user can add a custom duration.
+    expect(screen.getByTestId("sheet")).toBeInTheDocument()
+    expect(screen.getByTestId("employee-custom-pricing-row")).toBeInTheDocument()
+  })
+
+  it("re-applies the pricing mode on a later duration save instead of assuming the failed enable succeeded", async () => {
+    const pricingModeMut = {
+      isPending: false,
+      variables: undefined,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockRejectedValueOnce(new Error("400 Bad Request")),
+    }
+    const durationsMut = {
+      isPending: false,
+      variables: undefined,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue(undefined),
+    }
+    useEmployeeServiceMutations.mockReturnValue({
+      updateMut: { isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() },
+      durationsMut,
+      pricingModeMut,
+    })
+
+    render(
+      <EditEmployeeServiceSheet
+        employeeId="emp-1"
+        employeeService={makeEmployeeService()}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+
+    await act(async () => {
+      await lastToggleCustomPricing.current?.(true)
+    })
+    expect(pricingModeMut.mutateAsync).toHaveBeenCalledTimes(1)
+
+    // Now the pricing mode write succeeds on the explicit duration save.
+    pricingModeMut.mutateAsync.mockResolvedValueOnce(undefined)
+    await act(async () => {
+      await lastSaveDurations.current?.({ durations: [] })
+    })
+
+    expect(durationsMut.mutateAsync).toHaveBeenCalledWith({
+      serviceId: "svc-1",
+      payload: { durations: [] },
+    })
+    // The unsaved mode is re-applied on save — the failed step is never assumed to have succeeded.
+    expect(pricingModeMut.mutateAsync).toHaveBeenCalledTimes(2)
+    expect(pricingModeMut.mutateAsync).toHaveBeenLastCalledWith({
+      serviceId: "svc-1",
+      isCustom: true,
+    })
+    expect(toast.success).toHaveBeenCalledWith("services.employees.durations.saved", {
+      id: "emp-save-emp-1-svc-1",
+    })
   })
 })

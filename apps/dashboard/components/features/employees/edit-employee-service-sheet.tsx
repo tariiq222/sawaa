@@ -124,6 +124,12 @@ function SheetServiceBody({
   const [customPricing, setCustomPricing] = useState<boolean>(
     serviceEmployee.useCustomPricing ?? false,
   )
+  // Whether the *server* confirmed the current custom-pricing mode. A failed
+  // enable is surfaced to the user and leaves this false, so a later duration
+  // save re-applies the mode instead of assuming the previous step succeeded.
+  const [pricingModePersisted, setPricingModePersisted] = useState<boolean>(
+    serviceEmployee.useCustomPricing ?? false,
+  )
   const toastId = `emp-save-${serviceEmployee.employee.id}-${serviceId}`
 
   const toggleCustomPricing = async (next: boolean) => {
@@ -131,14 +137,17 @@ function SheetServiceBody({
     setCustomPricing(next)
     try {
       await pricingModeMut.mutateAsync({ serviceId, isCustom: next })
+      setPricingModePersisted(next)
       toast.success(t("services.employees.durations.saved"), { id: toastId })
     } catch {
+      // Never leave a failed write recorded as persisted.
+      setPricingModePersisted(false)
       // Turning ON can be rejected until a custom duration exists — keep the
       // section open so the user can add one; pricing-mode persists on save.
       if (!next) {
         setCustomPricing(prev)
-        toast.error(t("services.employees.durations.saveError"), { id: toastId })
       }
+      toast.error(t("services.employees.durations.saveError"), { id: toastId })
     }
   }
 
@@ -160,8 +169,12 @@ function SheetServiceBody({
         onSave={async (payload) => {
           try {
             await durationsMut.mutateAsync({ serviceId, payload })
-            if (customPricing && !serviceEmployee.useCustomPricing) {
+            // Re-apply the mode whenever the server has not confirmed it yet
+            // (e.g. the earlier enable was rejected) instead of assuming the
+            // previous step succeeded.
+            if (customPricing && !pricingModePersisted) {
               await pricingModeMut.mutateAsync({ serviceId, isCustom: true })
+              setPricingModePersisted(true)
             }
             toast.success(t("services.employees.durations.saved"), { id: toastId })
           } catch (err) {

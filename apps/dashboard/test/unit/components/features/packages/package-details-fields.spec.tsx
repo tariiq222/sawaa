@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   useEffect,
@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react"
 import { useForm } from "react-hook-form"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({
@@ -26,7 +26,41 @@ vi.mock("@/hooks/use-employees", () => ({
 }))
 
 vi.mock("@/components/features/shared/service-avatar-picker", () => ({
-  ServiceAvatarPicker: () => null,
+  // The picker is the only piece stubbed: its callbacks are the real trigger
+  // points for clearing the staged package avatar (t12).
+  ServiceAvatarPicker: ({
+    onIconChange,
+    onImageChange,
+    onClear,
+  }: {
+    iconName?: string | null
+    iconBgColor?: string | null
+    imageUrl?: string | null
+    serviceName?: string
+    onIconChange: (name: string, color: string) => void
+    onImageChange: (file: File) => void
+    onClear: () => void
+  }) => (
+    <>
+      <input
+        type="file"
+        aria-label="avatar file"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) onImageChange(file)
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => onIconChange("Clock01Icon", "#123456")}
+      >
+        choose icon
+      </button>
+      <button type="button" onClick={onClear}>
+        clear avatar
+      </button>
+    </>
+  ),
 }))
 
 vi.mock("@sawaa/ui", async (importOriginal) => {
@@ -133,5 +167,57 @@ describe("PackageDetailsFields owner hydration", () => {
     )
     expect(screen.getByTestId("owner-revision")).toHaveTextContent("0")
     expect(screen.getByTestId("form-dirty")).toHaveTextContent("false")
+  })
+})
+
+function AvatarHarness({ imageClear }: { imageClear: () => void }) {
+  const form = useForm<PackageFormData>({
+    defaultValues: DEFAULT_PACKAGE_EDITOR_VALUES,
+  })
+  return (
+    <>
+      <PackageDetailsFields
+        form={form}
+        onImageClear={imageClear}
+        translateError={(message) => message}
+      />
+      <output data-testid="image-url">{String(form.watch("imageUrl"))}</output>
+      <output data-testid="icon-name">{String(form.watch("iconName"))}</output>
+    </>
+  )
+}
+
+describe("PackageDetailsFields pending avatar reset (t12)", () => {
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:package-avatar")
+  })
+
+  it("clears the staged file when the avatar image is removed", () => {
+    const imageClear = vi.fn()
+    render(<AvatarHarness imageClear={imageClear} />)
+
+    fireEvent.change(screen.getByLabelText("avatar file"), {
+      target: { files: [new File(["image"], "package.png", { type: "image/png" })] },
+    })
+    expect(screen.getByTestId("image-url")).toHaveTextContent("blob:package-avatar")
+    expect(imageClear).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "clear avatar" }))
+    expect(imageClear).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId("image-url")).toHaveTextContent("null")
+  })
+
+  it("clears the staged file when an icon replaces the avatar", () => {
+    const imageClear = vi.fn()
+    render(<AvatarHarness imageClear={imageClear} />)
+
+    fireEvent.change(screen.getByLabelText("avatar file"), {
+      target: { files: [new File(["image"], "package.png", { type: "image/png" })] },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "choose icon" }))
+
+    expect(imageClear).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId("image-url")).toHaveTextContent("null")
+    expect(screen.getByTestId("icon-name")).toHaveTextContent("Clock01Icon")
   })
 })

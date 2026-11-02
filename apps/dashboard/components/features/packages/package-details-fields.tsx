@@ -33,12 +33,15 @@ import { packageEmployeeLabel } from "@/lib/package-editor-labels"
 interface Props {
   form: UseFormReturn<PackageFormData>
   onImageSelect?: (file: File) => void
+  /** Drops the staged file in the parent when the image is removed (t12). */
+  onImageClear?: () => void
   translateError: (msg?: string) => string | undefined
 }
 
 export function PackageDetailsFields({
   form,
   onImageSelect,
+  onImageClear,
   translateError,
 }: Props) {
   const { t } = useLocale()
@@ -78,6 +81,7 @@ export function PackageDetailsFields({
               form.setValue("iconName", name)
               form.setValue("iconBgColor", color)
               form.setValue("imageUrl", null)
+              onImageClear?.()
             }}
             onImageChange={(file) => {
               form.setValue("imageUrl", URL.createObjectURL(file))
@@ -89,6 +93,7 @@ export function PackageDetailsFields({
               form.setValue("iconName", null)
               form.setValue("iconBgColor", null)
               form.setValue("imageUrl", null)
+              onImageClear?.()
             }}
           />
           <div className="flex min-w-0 flex-col gap-1">
