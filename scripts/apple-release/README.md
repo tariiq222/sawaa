@@ -30,6 +30,12 @@ The intent is saved to GitHub before altool. An uncertain transport result queri
 
 `apple-release-evidence-*` artifacts contain sanitized deployment/binary/Apple receipts. They exclude IPA, sourcemap, raw server metadata, build logs and signing files. Success means TestFlight availability; device acceptance, provider tests, App Review and public release remain separate.
 
+## Ruby build dependencies
+
+Run `ruby scripts/apple-release/prepare-cocoapods-core.rb` before running Bundler directly against this directory. The iOS build does this automatically. The helper verifies the RubyGems archive against the previously locked CocoaPods Core 1.17.0 checksum, then changes its ActiveSupport requirement locally while preserving its source files. Bundler installs the locked ActiveSupport 8.1.4.1 package with its normal checksum verification. This addresses [GHSA-8474-xrp6-wh69](https://github.com/advisories/GHSA-8474-xrp6-wh69).
+
+Replace the compatibility helper when upstream CocoaPods Core accepts a patched ActiveSupport release. Regenerate the Bundler lockfile and verify Pod installation and Trivy when changing either pin.
+
 ## Checks
 
 `bash scripts/apple-release/test.sh`; `pnpm --dir apps/mobile test --runInBand`; mobile typecheck/lint; actionlint on the workflow. Native archive/export must also be proven using `build-ios.sh` and verified output before release delivery is claimed.

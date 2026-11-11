@@ -29,7 +29,6 @@ export async function SawaaTherapistsPage({ initialSpecialty = null }: SawaaTher
             labels={{
               filterAll: t('therapists.filterAll'),
               viewProfile: t('therapists.viewProfile'),
-              noBio: t('therapists.noBio'),
               empty: t('therapists.empty'),
             }}
           />
