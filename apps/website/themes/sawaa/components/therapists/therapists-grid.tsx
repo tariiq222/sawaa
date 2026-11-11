@@ -7,7 +7,6 @@ import { TherapistCardSawaa } from './therapist-card';
 export interface TherapistsGridLabels {
   filterAll: string;
   viewProfile: string;
-  noBio: string;
   empty: string;
 }
 
@@ -107,7 +106,7 @@ export function TherapistsGrid({ therapists, locale, labels, initialSpecialty = 
             key={therapist.id}
             therapist={therapist}
             locale={locale}
-            labels={{ viewProfile: labels.viewProfile, noBio: labels.noBio }}
+            labels={{ viewProfile: labels.viewProfile }}
           />
         ))}
       </div>

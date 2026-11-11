@@ -7,7 +7,7 @@ import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { listPublicEmployees, getPublicEmployee } from '@/features/therapists/public';
 import { getPublicCatalog, selectBookableClinicServices } from '@/features/public-catalog/public';
 import { TherapistCardSawaa } from '../components/therapists/therapist-card';
-import { safeImageSrc } from '@/lib/image-url';
+import { therapistPortraitSrc } from '../components/therapists/portrait-src';
 
 interface PageProps {
   slug: string;
@@ -38,7 +38,8 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
 
   const name = (locale === 'ar' ? therapist.nameAr : therapist.nameEn) ?? therapist.nameAr ?? '—';
   const role = (locale === 'ar' ? therapist.specialtyAr : therapist.specialty) ?? therapist.title ?? '';
-  const bio = (locale === 'ar' ? therapist.publicBioAr : therapist.publicBioEn) ?? '';
+  const bio = (locale === 'ar' ? therapist.publicBioAr : therapist.publicBioEn)?.trim();
+  const portraitSrc = therapistPortraitSrc(therapist);
 
   const others = all.filter((e) => e.id !== therapist.id).slice(0, 4);
 
@@ -78,10 +79,10 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                 className="relative aspect-square w-full max-w-[320px] mx-auto md:mx-0 rounded-[24px] overflow-hidden bg-[color:var(--sw-primary-50)]"
                 style={{ boxShadow: 'var(--sw-shadow-md)' }}
               >
-                {safeImageSrc(therapist.publicImageUrl) ? (
+                {portraitSrc ? (
                   <Image
-                    src={safeImageSrc(therapist.publicImageUrl)!}
-                    alt={name}
+                    src={portraitSrc}
+                    alt=""
                     fill
                     sizes="(min-width: 1024px) 280px, (min-width: 768px) 32vw, 80vw"
                     priority
@@ -242,10 +243,7 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                   key={e.id}
                   therapist={e}
                   locale={locale}
-                  labels={{
-                    viewProfile: t('therapists.viewProfile'),
-                    noBio: t('therapists.noBio'),
-                  }}
+                  labels={{ viewProfile: t('therapists.viewProfile') }}
                 />
               ))}
             </div>
