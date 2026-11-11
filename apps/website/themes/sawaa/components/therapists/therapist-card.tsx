@@ -4,11 +4,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { PublicEmployee } from '@sawaa/api-client';
-import { safeImageSrc } from '@/lib/image-url';
+import { therapistPortraitSrc } from './portrait-src';
 
 export interface TherapistCardLabels {
   viewProfile: string;
-  noBio: string;
 }
 
 interface Props {
@@ -24,19 +23,13 @@ function initials(name: string | null | undefined): string {
   return parts.map((p) => p.charAt(0)).join('') || '·';
 }
 
-function clampBio(bio: string | null | undefined, limit = 140): string | null {
-  if (!bio) return null;
-  const trimmed = bio.trim();
-  if (trimmed.length <= limit) return trimmed;
-  const cut = trimmed.slice(0, limit);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trim()}…`;
-}
+// The 3:2 portraits need 1.5 times the square slot's width to cover its height.
+const PORTRAIT_SIZES = '(min-width: 1280px) 400px, (min-width: 768px) calc(37.5vw - 46px), (min-width: 640px) calc(50vw - 40px), calc(75vw - 42px)';
 
 export function TherapistCardSawaa({ therapist, locale, labels }: Props) {
   const name = (locale === 'ar' ? therapist.nameAr : therapist.nameEn) ?? therapist.nameAr ?? '—';
   const role = (locale === 'ar' ? therapist.specialtyAr : therapist.specialty) ?? therapist.title ?? '';
-  const bio = clampBio(locale === 'ar' ? therapist.publicBioAr : therapist.publicBioEn);
+  const portraitSrc = therapistPortraitSrc(therapist);
   const href = therapist.slug ? `/therapists/${therapist.slug}` : '/therapists';
 
   return (
@@ -60,12 +53,12 @@ export function TherapistCardSawaa({ therapist, locale, labels }: Props) {
       <article className="flex flex-col h-full">
         {/* Portrait area — square-ish, compact */}
         <div className="relative aspect-square w-full overflow-hidden bg-[color:var(--sw-primary-50)]">
-          {safeImageSrc(therapist.publicImageUrl) ? (
+          {portraitSrc ? (
             <Image
-              src={safeImageSrc(therapist.publicImageUrl)!}
-              alt={name}
+              src={portraitSrc}
+              alt=""
               fill
-              sizes="(min-width: 1280px) 220px, (min-width: 768px) 22vw, (min-width: 640px) 30vw, 45vw"
+              sizes={PORTRAIT_SIZES}
               className="object-cover transition-transform duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
             />
           ) : (
@@ -81,16 +74,6 @@ export function TherapistCardSawaa({ therapist, locale, labels }: Props) {
               </span>
             </div>
           )}
-
-          {/* warm wash overlay — bottom only, ~25% opacity, gives unified color grading */}
-          <div
-            aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--sw-secondary-900) 35%, transparent) 100%)',
-            }}
-          />
         </div>
 
         {/* Text block */}
@@ -111,22 +94,6 @@ export function TherapistCardSawaa({ therapist, locale, labels }: Props) {
               </p>
             ) : null}
           </header>
-
-          {bio ? (
-            <p
-              className="text-[0.8125rem] leading-[1.65] line-clamp-3"
-              style={{ color: 'var(--sw-body)' }}
-            >
-              {bio}
-            </p>
-          ) : (
-            <p
-              className="text-[0.75rem] italic leading-relaxed"
-              style={{ color: 'var(--sw-neutral-400)' }}
-            >
-              {labels.noBio}
-            </p>
-          )}
 
           <div className="flex items-center justify-between mt-auto pt-3">
             <span

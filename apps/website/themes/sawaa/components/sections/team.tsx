@@ -7,7 +7,7 @@ import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
 import { getLocale } from '@/features/locale/public';
-import { safeImageSrc } from '@/lib/image-url';
+import { therapistPortraitSrc } from '../therapists/portrait-src';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 
 interface Props {
@@ -53,6 +53,7 @@ export async function Team({ therapists, intro, totalCount }: Props) {
                 ? member.nameEn ?? member.nameAr
                 : member.nameAr ?? member.nameEn) ?? '—';
             const role = member.specialtyAr ?? member.title ?? '';
+            const portraitSrc = therapistPortraitSrc(member);
             return (
               <AnimatedSection key={member.id} delay={i * 30}>
                 <Link
@@ -75,13 +76,13 @@ export async function Team({ therapists, intro, totalCount }: Props) {
                       boxShadow: '0 0 0 3px var(--surface), var(--sw-shadow-md)',
                     }}
                   >
-                    {safeImageSrc(member.publicImageUrl) ? (
+                    {portraitSrc ? (
                       <Image
-                        src={safeImageSrc(member.publicImageUrl)!}
-                        alt={name}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
+                        src={portraitSrc}
+                        alt=""
+                        fill
+                        sizes="96px"
+                        className="object-cover"
                       />
                     ) : (
                       <span

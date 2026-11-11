@@ -51,7 +51,6 @@ export const dictionary = {
     'therapists.filterAll': 'الكل',
     'therapists.viewProfile': 'تعرّف على المعالج',
     'therapists.book': 'احجز معه',
-    'therapists.noBio': 'سيُضاف نبذة قريباً.',
     'therapists.notSure.title': 'ما زلت متردداً في الاختيار؟',
     'therapists.notSure.body':
       'تواصل معنا، وسنرشّح لك المعالج الأنسب لحالتك بعد محادثة قصيرة مع فريق الاستقبال. بدون التزام.',
@@ -830,7 +829,6 @@ export const dictionary = {
     'therapists.filterAll': 'All',
     'therapists.viewProfile': 'View profile',
     'therapists.book': 'Book with them',
-    'therapists.noBio': 'A short bio is coming soon.',
     'therapists.notSure.title': 'Still unsure who to choose?',
     'therapists.notSure.body':
       'Reach out and our front desk will suggest the right therapist after a brief conversation. No commitment.',
