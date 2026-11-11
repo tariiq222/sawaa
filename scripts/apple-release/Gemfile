@@ -1,3 +1,7 @@
 source 'https://rubygems.org'
 gem 'cocoapods', '1.17.0'
 gem 'xcodeproj', '1.28.1'
+
+# GHSA-8474-xrp6-wh69. Prepare the checksum-pinned CocoaPods Core package before bundling.
+gem 'activesupport', '8.1.4.1'
+gem 'cocoapods-core', path: 'vendor/cocoapods-core'

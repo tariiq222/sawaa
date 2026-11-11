@@ -59,6 +59,7 @@ pnpm install --frozen-lockfile
 pnpm --dir apps/mobile install --frozen-lockfile
 pnpm --filter @sawaa/shared build
 pnpm --dir apps/mobile exec expo prebuild --clean --platform ios --no-install
+ruby "$SCRIPT/prepare-cocoapods-core.rb"
 export BUNDLE_GEMFILE="$SCRIPT/Gemfile" BUNDLE_FROZEN=true
 bundle install
 (cd apps/mobile/ios && bundle exec pod install --no-repo-update)
