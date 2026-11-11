@@ -87,7 +87,7 @@ function altool(ipa){return new Promise((resolve,reject)=>{
 async function cli(){
  const command=process.argv[2],out=process.env.APPLE_OUTPUT_DIR;
  assert.ok(['allocate','intent','upload','resume'].includes(command),'Unknown Apple command');assert.ok(out,'Output directory required');
- const target=releaseTarget(process.env.GITHUB_REF_NAME);const sha=process.env.GITHUB_SHA;assert.match(sha,/^[a-f0-9]{40}$/);
+ const target=releaseTarget(process.env.GITHUB_REF_NAME, process.env.SAWAA_APPLE_TARGET, process.env.GITHUB_EVENT_NAME);const sha=process.env.GITHUB_SHA;assert.match(sha,/^[a-f0-9]{40}$/);
  const version=JSON.parse(await readFile(new URL('../../apps/mobile/package.json',import.meta.url),'utf8')).version;
  const expected={sourceSha:sha,environment:target.profile,version};
  await assertCurrentSource(target,sha,process.env.GITHUB_TOKEN);

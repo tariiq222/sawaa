@@ -4,7 +4,7 @@ A code release and a successfully observed deployment are different events. `rel
 
 ## Collection and recording
 
-1. Obtain the expected full Git commit from the frozen release candidate, and independently resolve the active OpenShip deployment's source commit. Do not substitute current `main`, a tag, an image name, or a requested commit for an observed running commit.
+1. Obtain the expected full Git commit from the manually accepted staging revision, and independently resolve the active OpenShip deployment's source commit. Do not substitute current `main`, a tag, an image name, or a requested commit for an observed running commit.
 2. Verify the intended OpenShip project/environment and active deployment status. Check all six service identities, their deployment IDs and Docker health; collect backend readiness and dashboard/website HTTP 200 results from that same environment. Do not mix observations across concurrent deployments.
 3. Save only the fields in `evidence.example.json` to a private local evidence file. Replace every placeholder, use canonical UTC time including milliseconds, and identify the operator. Keep raw provider payloads, URLs with tokens, container environment dumps and credentials out of Git.
 4. Run from the repository root:

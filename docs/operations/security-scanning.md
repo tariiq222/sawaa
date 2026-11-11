@@ -1,9 +1,10 @@
 # Security scanning
 
-This repository uses a private GitHub repository, so the former CodeQL workflow
-is retained at `.github/workflows/codeql.yml` as a clearly named Semgrep CE
-workflow. GitHub Code Scanning results are unavailable on the current account;
-the Semgrep job and its private Actions artifacts are the review surface.
+The archived standalone Semgrep CE workflow is preserved in
+`.github/retired-workflows/codeql.yml`. Its historical configuration and command
+examples are documented below. The active required PR checks are defined by
+[`merge-gate.yml`](../../.github/workflows/merge-gate.yml) and the
+[deployment policy](deployment-policy.md).
 
 Semgrep CE is a TypeScript/JavaScript source scan and is not equivalent to CodeQL.
 It does not provide full security assurance, dependency vulnerability coverage,
@@ -11,9 +12,9 @@ secret detection, runtime verification, penetration testing, or a complete revie
 of every language or artifact outside the selected TypeScript/JavaScript scope. The existing Gitleaks and Trivy jobs in the
 other CI workflows remain in place.
 
-## Coverage and enforcement
+## Historical standalone coverage
 
-The workflow runs a full TypeScript/JavaScript scope scan with Semgrep's `p/ci` rules on:
+The retired workflow ran a full TypeScript/JavaScript scope scan with Semgrep's `p/ci` rules on:
 
 - pull requests targeting `main` or `develop`;
 - pushes to `main` or `develop`;
@@ -86,7 +87,7 @@ report generation, private artifact retention, and blocking scanner behavior.
 Repository-level settings are not verified here: confirm that Actions are
 enabled, workflow runs from the intended branches are allowed, artifacts are
 restricted to repository readers, and the Semgrep job is a required check for
-the protected `main` and `develop` branches. Confirm the weekly schedule and a
+the protected branches from that historical workflow. When restoring the scanner, target `main` and confirm the weekly schedule and a
 manual run after publication. These checks are operational settings, not proof
 that Semgrep CE provides CodeQL-equivalent coverage.
 

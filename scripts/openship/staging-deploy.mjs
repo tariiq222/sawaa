@@ -36,7 +36,7 @@ export function buildImageRefs(sha, manifests) {
   }));
 }
 
-export function assertStagingProject(project, sourceRef = 'develop') {
+export function assertStagingProject(project, sourceRef = 'main') {
   assert.equal(project.id, PROJECT_ID, 'Wrong OpenShip project');
   assert.equal(project.gitBranch, sourceRef);
   assert.equal(project.autoDeploy, false, 'Git push auto-deploy must stay disabled');
@@ -102,7 +102,7 @@ export const MIGRATION_READ_COMMAND = `node --no-warnings -e '${MIGRATION_READ.r
 export async function deployStaging({ sha, branch, enabled, manifests, hookId, writeToken, hookToken, githubToken,
   request = fetch, sleep = delay, migrations, attempts = 80, runtimeAttempts = 20, intervalMs = 15000, onProgress = () => {},
 }) {
-  assert.equal(branch, 'develop', 'Only develop may publish staging');
+  assert.equal(branch, 'main', 'Only main may publish staging');
   assert.equal(enabled, 'true', 'STAGING_PREBUILT_DEPLOY must be true; publication is not silently skipped');
   for (const value of [writeToken, hookToken, githubToken, hookId]) assert.ok(value, 'Missing staging deployment credentials');
   assert.match(hookId, /^[A-Za-z0-9_-]+$/);
@@ -116,7 +116,7 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
     return response.json();
   };
   const assertCurrentSource = async () => {
-    const response = await request('https://api.github.com/repos/tariiq222/sawaa/git/ref/heads/develop', {
+    const response = await request('https://api.github.com/repos/tariiq222/sawaa/git/ref/heads/main', {
       headers: { Authorization: `Bearer ${githubToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' });
     if (!response.ok) throw new Error(`Source check HTTP ${response.status}`);
     assert.equal((await response.json()).object?.sha, sha, 'Deployment source was superseded');
@@ -151,7 +151,7 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
   let publicationError;
   try {
     // GitHub content/commit APIs accept an immutable full SHA as their ref.
-    // The scoped hook snapshots this ref, so a simultaneous develop push cannot
+    // The scoped hook snapshots this ref, so a simultaneous main push cannot
     // mix its Compose source with this workflow's previously built image set.
     await json(`/api/projects/${PROJECT_ID}/branch`, 'POST', { branch: sha });
     const { data: pinned } = await json(`/api/projects/${PROJECT_ID}`);
@@ -181,7 +181,7 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
     // This cleanup runs independently even if image compensation failed.
     try {
       const { data: selected } = await json(`/api/projects/${PROJECT_ID}`);
-      if (selected.gitBranch === sha) await json(`/api/projects/${PROJECT_ID}/branch`, 'POST', { branch: 'develop' });
+      if (selected.gitBranch === sha) await json(`/api/projects/${PROJECT_ID}/branch`, 'POST', { branch: 'main' });
       else assertStagingProject(selected); // Never overwrite somebody else's ref.
     } catch (error) { cleanupErrors.push(error); }
     if (cleanupErrors.length) throw new AggregateError([publicationError, ...cleanupErrors].filter(Boolean), 'Staging publication cleanup failed; inspect configuration before retrying');
@@ -249,7 +249,7 @@ export async function deployStaging({ sha, branch, enabled, manifests, hookId, w
   const { data: finalProject } = await json(`/api/projects/${PROJECT_ID}`);
   assertStagingProject(finalProject);
   assert.equal(finalProject.activeDeploymentId, ready.id);
-  const finalSource = await request('https://api.github.com/repos/tariiq222/sawaa/git/ref/heads/develop', {
+  const finalSource = await request('https://api.github.com/repos/tariiq222/sawaa/git/ref/heads/main', {
     headers: { Authorization: `Bearer ${githubToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' });
   if (!finalSource.ok) throw new Error(`Final source check HTTP ${finalSource.status}`);
   const sourceSuperseded = (await finalSource.json()).object?.sha !== sha;

@@ -6,14 +6,10 @@ name: build-images
 
 on:
   push:
-    branches: [develop, main]
-    paths-ignore:
-      - "docs/**"
-      - "*.md"
-      - "apps/mobile/**"
+    branches: [main]
   # Dry run: proves the images build on GitHub without publishing anything.
   pull_request:
-    branches: [develop]
+    branches: [main]
     paths:
       - ".github/workflows/build-images.yml"
       - "docker/openship/**"
@@ -22,21 +18,50 @@ on:
       - "apps/dashboard/Dockerfile"
       - "apps/website/Dockerfile"
   workflow_dispatch:
-
-# Serialize builds and staging deployment. Runtime references change only
-# after every build succeeds; a partial tag set cannot enter the deploy job.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+    inputs:
+      target:
+        description: Deployment environment
+        required: true
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
+      accepted_sha:
+        description: Full SHA accepted on staging (required for production)
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/tariiq222/sawaa
-  # develop -> staging images, main -> production images.
-  TARGET_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
 
 jobs:
+  route:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      target: ${{ steps.target.outputs.target }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Resolve deployment target
+        id: target
+        env:
+          SAWAA_TARGET: ${{ inputs.target }}
+          SAWAA_REQUESTED_SHA: ${{ inputs.accepted_sha }}
+        run: node scripts/openship/deployment-target.mjs
+
   build:
+    needs: route
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    env:
+      TARGET_ENV: ${{ needs.route.outputs.target }}
     name: image-${{ matrix.image }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -127,7 +152,7 @@ jobs:
           # staging deploys the emitted digest, never the moving tag.
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:${{ env.TARGET_ENV }}-${{ github.sha }}
-            ${{ (github.ref_name == 'develop' || github.ref_name == 'main') && format('{0}-{1}:{2}', env.IMAGE_PREFIX, matrix.image, env.TARGET_ENV) || '' }}
+            ${{ github.ref_name == 'main' && format('{0}-{1}:{2}', env.IMAGE_PREFIX, matrix.image, env.TARGET_ENV) || '' }}
           cache-from: type=gha,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ env.TARGET_ENV }}
           provenance: false
@@ -163,11 +188,14 @@ jobs:
   # Staging only: trigger the OpenShip deploy once all four images are pushed,
   # then pin digests, fire the existing scoped hook and prove the exact runtime.
   # Missing activation/credentials FAIL instead of silently skipping publication.
-  # Manual reruns on develop use this same job. Production is never targeted here.
+  # Manual staging dispatch and main merges use the same serialized publisher.
   deploy-staging:
     name: deploy-staging
-    needs: build
-    if: github.ref_name == 'develop' && github.event_name != 'pull_request'
+    needs: [route, build]
+    if: github.ref == 'refs/heads/main' && needs.route.outputs.target == 'staging' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'staging'))
+    concurrency:
+      group: sawaa-openship-publication
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # Records each verified run as a GitHub deployment, so the repository's
@@ -211,8 +239,11 @@ jobs:
 
   deploy-production:
     name: deploy-production
-    needs: build
-    if: github.ref_name == 'main' && github.event_name != 'pull_request'
+    needs: [route, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.target == 'production' && needs.route.outputs.target == 'production'
+    concurrency:
+      group: sawaa-openship-publication
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
@@ -220,6 +251,7 @@ jobs:
       url: https://sawaa.sa
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -233,20 +265,39 @@ jobs:
           pattern: image-*-${{ github.sha }}
           path: image-manifests
           merge-multiple: true
+      - name: Download the accepted staging deployment evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: staging-deployment-${{ github.sha }}
+          run-id: ${{ fromJSON(vars.SAWAA_PRODUCTION_ACCEPTANCE || '{}').stagingRunId }}
+          github-token: ${{ github.token }}
+          path: accepted-staging
+
       - name: Publish the explicitly accepted release and verify production
         env:
           PRODUCTION_PREBUILT_DEPLOY: ${{ vars.PRODUCTION_PREBUILT_DEPLOY }}
-          PRODUCTION_RELEASE_AUTHORIZATION: ${{ vars.PRODUCTION_RELEASE_AUTHORIZATION }}
+          SAWAA_REQUESTED_SHA: ${{ inputs.accepted_sha }}
+          SAWAA_TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          SAWAA_PRODUCTION_ACTOR: ${{ vars.SAWAA_PRODUCTION_ACTOR }}
+          SAWAA_PRODUCTION_ACCEPTANCE: ${{ vars.SAWAA_PRODUCTION_ACCEPTANCE }}
           PRODUCTION_BACKUP_EVIDENCE: ${{ vars.PRODUCTION_BACKUP_EVIDENCE }}
           OPENSHIP_PRODUCTION_HOOK_ID: ${{ vars.OPENSHIP_PRODUCTION_HOOK_ID }}
           OPENSHIP_PRODUCTION_DEPLOY_TOKEN: ${{ secrets.OPENSHIP_PRODUCTION_DEPLOY_TOKEN }}
           OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN: ${{ secrets.OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN }}
           OPENSHIP_STAGING_READ_TOKEN: ${{ secrets.OPENSHIP_STAGING_READ_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/openship/production-deploy.mjs image-manifests production-deployment.json
+        run: node scripts/openship/production-deploy.mjs image-manifests production-deployment.json accepted-staging/staging-deployment.json
       - uses: actions/upload-artifact@v7
         with:
           name: production-deployment-${{ github.sha }}
           path: production-deployment.json
           if-no-files-found: error
           retention-days: 90
+
+  release-metadata:
+    needs: deploy-production
+    uses: ./.github/workflows/production-release-metadata.yml
+    permissions:
+      contents: write
+    with:
+      source_sha: ${{ github.sha }}

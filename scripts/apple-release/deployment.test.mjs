@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const sha = 'a'.repeat(40);
-const target = { profile: 'staging', branch: 'develop', projectId: 'proj_7M0RNj59nQnafh1m' };
+const target = { profile: 'staging', branch: 'main', projectId: 'proj_7M0RNj59nQnafh1m' };
 function fixture() {
   return {
-    project: { id: target.projectId, gitBranch: 'develop', activeDeploymentId: 'dep_current' },
-    deployment: { id: 'dep_current', projectId: target.projectId, branch: 'develop', commitSha: sha, status: 'ready' },
+    project: { id: target.projectId, gitBranch: 'main', activeDeploymentId: 'dep_current' },
+    deployment: { id: 'dep_current', projectId: target.projectId, branch: 'main', commitSha: sha, status: 'ready' },
     containers: ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio'].map((serviceName) => ({ serviceName, containerId: serviceName, status: 'running', duplicates: [], imageRef: 'image/' + serviceName })),
   };
 }
@@ -35,7 +35,7 @@ test('a ready deployment must be active, from the requested SHA and project', as
     f => { f.deployment.status = 'partial_failure'; },
     f => { f.project.activeDeploymentId = 'dep_old'; },
     f => { f.project.id = 'proj_production'; },
-    f => { f.deployment.branch = 'main'; },
+    f => { f.deployment.branch = 'develop'; },
   ]) { const f = fixture(); change(f); assert.throws(() => verifyDeployment(target, sha, f)); }
 });
 
@@ -93,7 +93,7 @@ test('staging accepts only its exact frozen deployment ref; production stays bra
 
 test('staging gate waits for its temporary SHA source selection to return to develop', async () => {
  const {waitForDeployment}=await import('./deployment.mjs'); const f=fixture();f.deployment.branch=sha;let clock=0;
- const request=async url=>({ok:true,status:200,json:async()=>url.includes('api.github.com')?{object:{sha}}:url.includes('/services/containers')?{success:true,containers:f.containers}:url.includes('/projects/')?{data:{...f.project,gitBranch:clock===0?sha:'develop'}}:{data:f.deployment}});
+ const request=async url=>({ok:true,status:200,json:async()=>url.includes('api.github.com')?{object:{sha}}:url.includes('/services/containers')?{success:true,containers:f.containers}:url.includes('/projects/')?{data:{...f.project,gitBranch:clock===0?sha:'main'}}:{data:f.deployment}});
  const result=await waitForDeployment(target,sha,'read',{githubToken:'read',timeoutMs:20,intervalMs:10,now:()=>clock,sleep:async ms=>{clock+=ms},request});
  assert.equal(result.deploymentId,'dep_current');assert.equal(clock,10);
 });
@@ -119,7 +119,7 @@ test('image-only staging metadata requires a frozen ref, digest refs and indepen
   f.deployment.commitSha = null;
   f.containers[0].imageRef = 'backend:staging';
   assert.throws(() => verifyDeployment(target, sha, { ...f, backendGitSha: sha }), /digest/);
-  f.deployment.branch = 'develop';
+  f.deployment.branch = 'main';
   assert.throws(() => verifyDeployment(target, sha, { ...f, backendGitSha: sha }));
   const prod = { profile: 'production', branch: 'main', projectId: 'proj_tsxe0sAW3u2AMSGO' };
   const p = prebuiltFixture();

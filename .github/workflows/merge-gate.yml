@@ -6,7 +6,7 @@ name: merge-gate
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
@@ -27,7 +27,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    # `edited` is included so a PR retargeted to develop/main gets a fresh
+    # `edited` is included so a PR retargeted to main gets a fresh
     # gate. Every edit reruns the full gate on purpose: a skipped job would
     # report success and could mask an earlier failure on the same SHA.
 
@@ -86,12 +86,12 @@ jobs:
         run: node --test docker/openship/otp-relay.test.mjs
 
       - name: OpenShip prebuilt compose parity and deploy verifier
-        run: node --test scripts/openship/*.test.mjs scripts/apple-release/target.test.mjs
+        run: node --test scripts/openship/*.test.mjs scripts/apple-release/target.test.mjs scripts/sync-main.test.mjs
 
       - name: Deploy-state consistency
         # Verifies that the candidate merge target is at-or-after the
         # latest tagged code release on main; does not verify deployment. Catches the
-        # stale/divergent candidate scenario where develop was
+        # stale/divergent candidate scenario where main was
         # force-pushed or someone re-targeted a stale PR.
         run: node scripts/check-deploy-state.mjs origin/main HEAD
 
@@ -136,8 +136,7 @@ jobs:
 
       - name: Prisma migration immutability
         if: github.event_name == 'pull_request'
-        # Diff against the PR's own base so develop-only migrations are
-        # protected too (origin/main would report them as additions).
+        # Diff against the PR's actual base to protect existing migration files.
         run: node scripts/check-prisma-migration-immutability.mjs origin/${{ github.base_ref }}
 
       - name: Secret scan (gitleaks)

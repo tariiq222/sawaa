@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { waitForGitSha } from './verify-prebuilt-deploy.mjs';
@@ -26,4 +27,16 @@ test('fails when the running backend keeps reporting another commit', async () =
 
 test('rejects a malformed expected commit', async () => {
   await assert.rejects(waitForGitSha('https://x/api/v1', 'main', { request: reply({}), sleep: noSleep }));
+});
+
+test('the read-only verifier accepts an explicit environment on main', () => {
+  for (const target of ['staging', 'production']) {
+    const result = spawnSync(process.execPath, ['scripts/openship/verify-prebuilt-deploy.mjs'], {
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_REF_NAME: 'main', GITHUB_SHA: SHA, SAWAA_TARGET: target,
+        GITHUB_TOKEN: '', OPENSHIP_READ_TOKEN: '' },
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /OpenShip and GitHub read credentials are required/);
+  }
 });

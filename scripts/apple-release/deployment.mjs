@@ -9,7 +9,7 @@ const SERVICES = ['backend', 'dashboard', 'website', 'postgres', 'redis', 'minio
 const APPLICATIONS = ['backend', 'dashboard', 'website'];
 
 function frozenPrebuiltRef(target, ref, sha) {
-  const knownTarget = (target.profile === 'staging' && target.branch === 'develop' && target.projectId === 'proj_7M0RNj59nQnafh1m')
+  const knownTarget = (target.profile === 'staging' && target.branch === 'main' && target.projectId === 'proj_7M0RNj59nQnafh1m')
     || (target.profile === 'production' && target.branch === 'main' && target.projectId === 'proj_tsxe0sAW3u2AMSGO');
   return knownTarget && /^[a-f0-9]{40}$/.test(sha) && ref === sha;
 }
@@ -140,7 +140,7 @@ export async function waitForDeployment(target, sha, token, {
         throw new Error(`Matching deployment failed: ${deployment.status}`);
       }
       let noChanges;
-      if (deployedSha !== sha && deployment?.status === 'ready') {
+      if (target.profile === 'staging' && deployedSha !== sha && deployment?.status === 'ready') {
         const history = await getJson(`${OPENSHIP}/api/projects/${target.projectId}/deployments?perPage=20`, token, request);
         if (!Array.isArray(history.data)) throw new Error('OpenShip deployment history response is malformed');
         const matching = history.data.find(d => d.projectId === target.projectId && deploymentSourceSha(target, d) === sha && deploymentRefMatches(target, d));
@@ -184,7 +184,7 @@ export async function waitForDeployment(target, sha, token, {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const target = releaseTarget(process.env.GITHUB_REF_NAME);
+  const target = releaseTarget(process.env.GITHUB_REF_NAME, process.env.SAWAA_APPLE_TARGET, process.env.GITHUB_EVENT_NAME);
   const evidence = await waitForDeployment(target, process.env.GITHUB_SHA, process.env.OPENSHIP_READ_TOKEN);
   await writeFile(process.argv[2], JSON.stringify(evidence, null, 2) + '\n', { mode: 0o600 });
   console.log(`Verified ${target.profile} deployment ${evidence.deploymentId}`);

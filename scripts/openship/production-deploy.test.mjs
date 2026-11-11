@@ -3,8 +3,20 @@ import assert from 'node:assert/strict';
 import { buildImageRefs, assertMigrationState, assertProductionProject, assertHookScope, assertRuntime, deployProduction, migrationManifest, PROJECT_ID, APP_SERVICES } from './production-deploy.mjs';
 
 const SHA = 'a'.repeat(40);
-const ACCEPTED = 'c'.repeat(40);
-const authorization = { acceptedSha: ACCEPTED, releaseBranch: 'release/2026-10-11', stagingDeploymentId: 'dep_stage', ownerAcceptedAt: new Date().toISOString() };
+const authorization = {
+  acceptedSha: SHA, stagingDeploymentId: 'dep_stage', stagingRunId: 12345, owner: 'release-owner',
+  stagingVerifiedAt: new Date(Date.now() - 2000).toISOString(),
+  ownerAcceptedAt: new Date(Date.now() - 1000).toISOString(),
+};
+const stagingEvidence = {
+  environment: 'staging', projectId: 'proj_7M0RNj59nQnafh1m', deploymentId: 'dep_stage',
+  sourceSha: SHA, backendGitSha: SHA, sourceSuperseded: false, observedAt: authorization.stagingVerifiedAt,
+};
+const stagingRun = {
+  id: 12345, path: '.github/workflows/build-images.yml', head_branch: 'main', head_sha: SHA,
+  event: 'push', status: 'completed', conclusion: 'success',
+  head_repository: { full_name: 'tariiq222/sawaa' },
+};
 const backup = { projectId: 'proj_tsxe0sAW3u2AMSGO', deploymentId: 'dep_old', sourceSha: 'd'.repeat(40), createdAt: new Date().toISOString(), path: '/var/backups/sawaa/pre-production-20261011T000000Z/', checksumVerified: true, databaseRestoreSucceeded: true, network: 'none', sourceCounts: { migrations: 119, Client: 1, Booking: 2, Payment: 3 }, restoredCounts: { migrations: 119, Client: 1, Booking: 2, Payment: 3 }, minioArchiveReadable: true, redisRdbValid: true };
 const manifests = ['backend', 'dashboard', 'website'].map((service, i) => ({ service, sha: SHA, environment: 'production', digest: `sha256:${String(i + 1).repeat(64)}` }));
 const services = ['postgres', 'redis', 'minio', 'backend', 'dashboard', 'website'].map(name => ({ id: `svc_${name}`, name, enabled: true, commandArgv: name === 'backend' ? ['node', 'dist/src/main.js'] : null }));
@@ -60,7 +72,7 @@ test('runtime verification rejects stale application images and replaced infrast
   assert.throws(() => assertRuntime(before, after.map(c => c.serviceName === 'postgres' ? { ...c, containerId: 'replaced' } : c), refs));
 });
 
-function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceBeforeHook = false, compensationFails = false, recordedCommit = SHA, healthSha = SHA, runtimeState } = {}) {
+function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceAtHook = false, compensationFails = false, recordedCommit = SHA, healthSha = SHA, runtimeState } = {}) {
   const calls = [];
   const refs = buildImageRefs(SHA, manifests);
   let fired = false; let pinned = 'main'; let advanced = false; let runtimeReads = 0;
@@ -68,11 +80,10 @@ function fixture({ superseded = false, missingMigration = false, disabled = fals
     const u = new URL(url); const method = opts.method ?? 'GET';
     calls.push({ url, method, body: opts.body && JSON.parse(opts.body) });
     let body;
-    if (u.hostname === 'api.github.com' && u.pathname.includes('/git/commits/')) body = { tree: { sha: 'e'.repeat(40) } };
-    else if (u.hostname === 'api.github.com' && u.pathname.includes('/heads/release/')) body = { object: { sha: ACCEPTED } };
-    else if (u.hostname === 'api.github.com') body = { object: { sha: superseded || advanced ? 'b'.repeat(40) : SHA } };
-    else if (u.pathname.endsWith('/projects/proj_7M0RNj59nQnafh1m')) body = { data: { id: 'proj_7M0RNj59nQnafh1m', gitBranch: 'develop', activeDeploymentId: 'dep_stage' } };
-    else if (u.pathname.endsWith('/deployments/dep_stage')) body = { data: { id: 'dep_stage', projectId: 'proj_7M0RNj59nQnafh1m', branch: ACCEPTED, commitSha: null, status: 'ready' } };
+    if (u.hostname === 'api.github.com' && u.pathname.endsWith('/actions/runs/12345')) body = stagingRun;
+    else if (u.hostname === 'api.github.com' && u.pathname.endsWith('/git/ref/heads/main')) body = { object: { sha: superseded || advanced ? 'b'.repeat(40) : SHA } };
+    else if (u.pathname.endsWith('/projects/proj_7M0RNj59nQnafh1m')) body = { data: { id: 'proj_7M0RNj59nQnafh1m', gitBranch: 'main', activeDeploymentId: 'dep_stage' } };
+    else if (u.pathname.endsWith('/deployments/dep_stage')) body = { data: { id: 'dep_stage', projectId: 'proj_7M0RNj59nQnafh1m', branch: SHA, commitSha: null, status: 'ready' } };
     else if (u.pathname.endsWith('/incoming-webhooks')) body = { data: [hook] };
     else if (u.pathname.endsWith('/services/containers')) {
       let containers = fired ? before.map(c => APP_SERVICES.includes(c.serviceName) ? { ...c, containerId: `new_${c.serviceName}`, imageRef: refs[c.serviceName] } : c) : before;
@@ -84,15 +95,15 @@ function fixture({ superseded = false, missingMigration = false, disabled = fals
     else if (u.pathname.endsWith('/exec')) body = { success: true, exitCode: 0, output: JSON.stringify(missingMigration ? [] : migrationRows) };
     else if (u.pathname.endsWith('/branch')) { pinned = JSON.parse(opts.body).branch; body = { success: true }; }
     else if (u.pathname.endsWith('/env')) { if (method === 'PATCH' && advanced && compensationFails) return { ok: false, status: 503 }; if (method === 'PATCH' && advanceDuringPatch) advanced = true; body = { data: APP_SERVICES.map(name => ({ key: `${name.toUpperCase()}_IMAGE`, value: `old:${name}` })) }; }
-    else if (u.pathname.endsWith('/incoming/hook1')) { assert.equal(pinned, SHA); if (advanceBeforeHook) advanced = true; fired = true; body = { data: { action: 'deploy', ref: 'dep_new' } }; }
+    else if (u.pathname.endsWith('/incoming/hook1')) { assert.equal(pinned, SHA); if (advanceAtHook) advanced = true; fired = true; body = { data: { action: 'deploy', ref: 'dep_new' } }; }
     else if (u.pathname.endsWith('/deployments/dep_old')) body = { data: { id: 'dep_old', projectId: PROJECT_ID, branch: 'main', commitSha: 'd'.repeat(40), status: 'ready' } };
     else if (u.pathname.endsWith('/deployments/dep_new')) body = { data: { id: 'dep_new', projectId: PROJECT_ID, branch: SHA, commitSha: recordedCommit, status: 'ready', meta: { strictServiceScope: true, targetServiceIds: hook.actionConfig.serviceIds } } };
     else if (u.pathname.endsWith(`/projects/${PROJECT_ID}`)) body = { data: { ...project, gitBranch: pinned, activeDeploymentId: fired ? 'dep_new' : 'dep_old' } };
-    else if (u.pathname.endsWith('/health')) body = { gitSha: u.hostname === 'staging.sawaa.sa' ? ACCEPTED : healthSha };
+    else if (u.pathname.endsWith('/health')) body = { gitSha: u.hostname === 'staging.sawaa.sa' ? SHA : healthSha };
     else body = {};
     return { ok: true, status: 200, json: async () => body, body: { cancel: async () => {} } };
   };
-  return { calls, options: { sha: SHA, branch: 'main', enabled: disabled ? 'false' : 'true', manifests, hookId: 'hook1', writeToken: 'test', hookToken: 'test', githubToken: 'test', stagingReadToken: 'test', authorization, backup, request, sleep: async () => {}, migrations: expectedMigration, attempts: 1 } };
+  return { calls, options: { sha: SHA, branch: 'main', event: 'workflow_dispatch', requestedSha: SHA, actor: 'release-owner', triggeringActor: 'release-owner', owner: 'release-owner', enabled: disabled ? 'false' : 'true', manifests, hookId: 'hook1', writeToken: 'test', hookToken: 'test', githubToken: 'test', stagingReadToken: 'test', authorization, stagingEvidence, backup, request, sleep: async () => {}, migrations: expectedMigration, attempts: 1 } };
 }
 
 test('deployment pins images only after read-only schema and scope gates, then verifies its returned deployment', async () => {
@@ -144,8 +155,10 @@ test('HEAD advancing during image publication restores main and old refs without
 });
 
 test('HEAD advancing at the hook still deploys the immutable checked source and restores main', async () => {
-  const f = fixture({ advanceBeforeHook: true });
-  await assert.rejects(deployProduction(f.options), /superseded/);
+  const f = fixture({ advanceAtHook: true });
+  const result = await deployProduction(f.options);
+  assert.equal(result.sourceSuperseded, true);
+  assert.equal(result.backendGitSha, SHA);
   assert.deepEqual(f.calls.filter(c => c.url.endsWith('/branch')).map(c => c.body.branch), [SHA, 'main']);
 });
 
@@ -192,7 +205,9 @@ test('missing approval, stale or incomplete restore evidence blocks all producti
   for (const changed of [
     { authorization: null },
     { authorization: { ...authorization, acceptedSha: 'bad' } },
-    { authorization: { ...authorization, releaseBranch: 'develop' } },
+    { authorization: { ...authorization, acceptedSha: 'b'.repeat(40) } },
+    { authorization: { ...authorization, owner: 'somebody-else' } },
+    { authorization: { ...authorization, ownerAcceptedAt: authorization.stagingVerifiedAt } },
     { backup: { ...backup, createdAt: '2020-01-01T00:00:00Z' } },
     { backup: { ...backup, restoredCounts: { ...backup.restoredCounts, Payment: 4 } } },
     { backup: { ...backup, deploymentId: 'dep_other' } },
@@ -205,13 +220,61 @@ test('missing approval, stale or incomplete restore evidence blocks all producti
   }
 });
 
-test('main application content differing from the accepted release is rejected before mutation', async () => {
+test('production rejects automatic events, a changed SHA or an unauthorized dispatcher or rerunner without requests', async () => {
+  for (const changed of [
+    { event: 'push' }, { event: undefined }, { requestedSha: 'b'.repeat(40) },
+    { actor: 'somebody-else' }, { triggeringActor: 'somebody-else' }, { owner: '' },
+  ]) {
+    const f = fixture();
+    await assert.rejects(deployProduction({ ...f.options, ...changed }), /manual|SHA|actor/i);
+    assert.deepEqual(f.calls, []);
+  }
+});
+
+test('production refuses a backdated acceptance or staging evidence for another deployment', async () => {
+  for (const changed of [
+    { authorization: { ...authorization, stagingVerifiedAt: '2020-01-01T00:00:00Z', ownerAcceptedAt: '2020-01-01T00:00:01Z' } },
+    { stagingEvidence: { ...stagingEvidence, deploymentId: 'dep_other' } },
+    { stagingEvidence: { ...stagingEvidence, sourceSuperseded: true } },
+    { stagingEvidence: null },
+  ]) {
+    const f = fixture();
+    await assert.rejects(deployProduction({ ...f.options, ...changed }), /staging evidence/i);
+    assert.ok(f.calls.every(call => call.method === 'GET'));
+  }
+});
+
+test('production refuses evidence from a different workflow, a fork, a PR or an unsuccessful run', async () => {
+  for (const changed of [
+    { path: '.github/workflows/changelog.yml' },
+    { head_repository: { full_name: 'another/sawaa' } },
+    { event: 'pull_request' },
+    { conclusion: 'failure' },
+  ]) {
+    const f = fixture();
+    const real = f.options.request;
+    const request = async (url, opts) => url.endsWith('/actions/runs/12345')
+      ? { ok: true, json: async () => ({ ...stagingRun, ...changed }) } : real(url, opts);
+    await assert.rejects(deployProduction({ ...f.options, request }), /staging workflow/i);
+    assert.ok(f.calls.every(call => call.method === 'GET'));
+  }
+});
+
+test('production rechecks staging before firing the hook and compensates if staging changed', async () => {
   const f = fixture();
   const real = f.options.request;
-  const request = async (url, opts) => url.includes('/git/commits/' + SHA)
-    ? { ok: true, json: async () => ({ tree: { sha: 'f'.repeat(40) } }) } : real(url, opts);
-  await assert.rejects(deployProduction({ ...f.options, request }), /tree|content/);
-  assert.equal(f.calls.filter(c => c.method !== 'GET').length, 0);
+  let stagingReads = 0;
+  const request = async (url, opts) => {
+    if (url.endsWith('/projects/proj_7M0RNj59nQnafh1m') && ++stagingReads === 2) {
+      const response = await real(url, opts);
+      const { data } = await response.json();
+      return { ...response, json: async () => ({ data: { ...data, activeDeploymentId: 'dep_other' } }) };
+    }
+    return real(url, opts);
+  };
+  await assert.rejects(deployProduction({ ...f.options, request }), /staging deployment changed/i);
+  assert.equal(f.calls.filter(c => c.url.endsWith('/incoming/hook1')).length, 0);
+  assert.equal(f.calls.filter(c => c.method === 'PATCH').length, 2);
 });
 
 test('lost hook response is never retried and never resets submitted images', async () => {

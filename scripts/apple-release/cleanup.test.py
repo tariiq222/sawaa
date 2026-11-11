@@ -16,7 +16,7 @@ if args[0]=='find-identity':print('''+repr(hashlib.sha1(b'certificate').hexdiges
 if args[0]=='list-keychains' and '-s' not in args:print('"/original.keychain"')
 ''');security.chmod(0o755)
    pnpm=mock/'pnpm';pnpm.write_text('#!/bin/sh\nexit 23\n');pnpm.chmod(0o755)
-   env=dict(os.environ,PATH=str(mock)+':'+os.environ['PATH'],MOCK_ROOT=d,TMPDIR=d,GITHUB_SHA='a'*40,GITHUB_REF_NAME='develop',IOS_BUILD_NUMBER='36',APPLE_P12_PATH=str(r/'fake.p12'),APPLE_P12_PASSWORD_FILE=str(r/'password'),APPLE_PROFILE_PATH=str(r/'input.mobileprovision'),FIREBASE_IOS_GOOGLE_SERVICES_FILE=str(r/'firebase'),APPLE_OUTPUT_DIR=str(r/'output'),APPLE_PROFILE_DIRECTORY=str(profile))
+   env=dict(os.environ,PATH=str(mock)+':'+os.environ['PATH'],MOCK_ROOT=d,TMPDIR=d,GITHUB_SHA='a'*40,GITHUB_REF_NAME='main',GITHUB_EVENT_NAME='push',SAWAA_APPLE_TARGET='staging',IOS_BUILD_NUMBER='36',APPLE_P12_PATH=str(r/'fake.p12'),APPLE_P12_PASSWORD_FILE=str(r/'password'),APPLE_PROFILE_PATH=str(r/'input.mobileprovision'),FIREBASE_IOS_GOOGLE_SERVICES_FILE=str(r/'firebase'),APPLE_OUTPUT_DIR=str(r/'output'),APPLE_PROFILE_DIRECTORY=str(profile))
    result=subprocess.run(['bash',str(pathlib.Path(__file__).with_name('build-ios.sh'))],env=env,capture_output=True)
    self.assertEqual(result.returncode,23,result.stderr.decode());self.assertEqual(old.read_text(),'original');self.assertEqual(list(r.glob('sawaa-signing.*')),[])
    calls=[json.loads(x) for x in (r/'calls.jsonl').read_text().splitlines()]

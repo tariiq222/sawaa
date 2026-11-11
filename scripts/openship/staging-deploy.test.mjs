@@ -5,7 +5,7 @@ import { buildImageRefs, assertMigrationState, assertStagingProject, assertHookS
 const SHA = 'a'.repeat(40);
 const manifests = ['backend', 'dashboard', 'website'].map((service, i) => ({ service, sha: SHA, environment: 'staging', digest: `sha256:${String(i + 1).repeat(64)}` }));
 const services = ['postgres', 'redis', 'minio', 'backend', 'dashboard', 'website'].map(name => ({ id: `svc_${name}`, name, enabled: true, commandArgv: name === 'backend' ? ['node', 'dist/src/main.js'] : null }));
-const project = { id: 'proj_7M0RNj59nQnafh1m', gitBranch: 'develop', autoDeploy: false, composePath: 'docker/openship/compose.prebuilt.yml', activeDeploymentId: 'dep_old' };
+const project = { id: 'proj_7M0RNj59nQnafh1m', gitBranch: 'main', autoDeploy: false, composePath: 'docker/openship/compose.prebuilt.yml', activeDeploymentId: 'dep_old' };
 const hook = { id: 'hook1', enabled: true, authMode: 'token', actionType: 'deploy', requiresReauthorization: false, actionConfig: { serviceIds: services.filter(s => ['backend', 'dashboard', 'website'].includes(s.name)).map(s => s.id) } };
 const before = services.map(s => ({ serviceName: s.name, containerId: `old_${s.name}`, imageRef: `old:${s.name}`, status: 'running', duplicates: [] }));
 const expectedMigration = [{ name: 'migration1', checksum: 'c'.repeat(64) }];
@@ -26,7 +26,7 @@ test('only accepts a complete same-SHA staging digest set', () => {
 
 test('rejects production or push auto-deploy before mutation', () => {
   assertStagingProject(project);
-  for (const p of [{ ...project, id: 'proj_tsxe0sAW3u2AMSGO' }, { ...project, gitBranch: 'main' }, { ...project, autoDeploy: true }, { ...project, composePath: 'docker/openship/compose.yml' }]) assert.throws(() => assertStagingProject(p));
+  for (const p of [{ ...project, id: 'proj_tsxe0sAW3u2AMSGO' }, { ...project, gitBranch: 'develop' }, { ...project, autoDeploy: true }, { ...project, composePath: 'docker/openship/compose.yml' }]) assert.throws(() => assertStagingProject(p));
 });
 
 test('hook must target exactly the three application services', () => {
@@ -60,7 +60,7 @@ test('runtime verification rejects stale application images and replaced infrast
 function fixture({ superseded = false, missingMigration = false, disabled = false, advanceDuringPatch = false, advanceBeforeHook = false, compensationFails = false, recordedCommit = SHA, healthSha = SHA, runtimeState } = {}) {
   const calls = [];
   const refs = buildImageRefs(SHA, manifests);
-  let fired = false; let pinned = 'develop'; let advanced = false; let runtimeReads = 0;
+  let fired = false; let pinned = 'main'; let advanced = false; let runtimeReads = 0;
   const request = async (url, opts = {}) => {
     const u = new URL(url); const method = opts.method ?? 'GET';
     calls.push({ url, method, body: opts.body && JSON.parse(opts.body) });
@@ -84,7 +84,7 @@ function fixture({ superseded = false, missingMigration = false, disabled = fals
     else body = {};
     return { ok: true, status: 200, json: async () => body, body: { cancel: async () => {} } };
   };
-  return { calls, options: { sha: SHA, branch: 'develop', enabled: disabled ? 'false' : 'true', manifests, hookId: 'hook1', writeToken: 'test', hookToken: 'test', githubToken: 'test', request, sleep: async () => {}, migrations: expectedMigration, attempts: 1 } };
+  return { calls, options: { sha: SHA, branch: 'main', enabled: disabled ? 'false' : 'true', manifests, hookId: 'hook1', writeToken: 'test', hookToken: 'test', githubToken: 'test', request, sleep: async () => {}, migrations: expectedMigration, attempts: 1 } };
 }
 
 test('deployment pins images only after read-only schema and scope gates, then verifies its returned deployment', async () => {
@@ -124,29 +124,29 @@ test('superseded SHA, disabled automation and pending schema never change image 
   }
 });
 
-test('HEAD advancing during image publication restores develop and old refs without invoking hook', async () => {
+test('HEAD advancing during image publication restores main and old refs without invoking hook', async () => {
   const f = fixture({ advanceDuringPatch: true });
   await assert.rejects(deployStaging(f.options), /superseded/);
   assert.equal(f.calls.filter(c => c.url.endsWith('/incoming/hook1')).length, 0);
   const branches = f.calls.filter(c => c.url.endsWith('/branch'));
-  assert.deepEqual(branches.map(c => c.body.branch), [SHA, 'develop']);
+  assert.deepEqual(branches.map(c => c.body.branch), [SHA, 'main']);
   const patches = f.calls.filter(c => c.method === 'PATCH');
   assert.equal(patches.length, 2);
   assert.ok(patches[1].body.upserts.every(v => v.value.startsWith('old:')));
 });
 
-test('HEAD advancing at the hook still deploys the immutable checked source and restores develop', async () => {
+test('HEAD advancing at the hook still deploys the immutable checked source and restores main', async () => {
   const f = fixture({ advanceBeforeHook: true });
   const result = await deployStaging(f.options);
   assert.equal(result.sourceSha, SHA);
   assert.equal(result.sourceSuperseded, true);
-  assert.deepEqual(f.calls.filter(c => c.url.endsWith('/branch')).map(c => c.body.branch), [SHA, 'develop']);
+  assert.deepEqual(f.calls.filter(c => c.url.endsWith('/branch')).map(c => c.body.branch), [SHA, 'main']);
 });
 
 test('branch restoration is attempted even if image compensation fails', async () => {
  const f=fixture({advanceDuringPatch:true,compensationFails:true});
  await assert.rejects(deployStaging(f.options), /cleanup failed/);
- assert.deepEqual(f.calls.filter(c=>c.url.endsWith('/branch')).map(c=>c.body.branch),[SHA,'develop']);
+ assert.deepEqual(f.calls.filter(c=>c.url.endsWith('/branch')).map(c=>c.body.branch),[SHA,'main']);
 });
 
 const startingWebsite = containers => containers.map(c => c.serviceName === 'website' ? { ...c, status: 'starting' } : c);

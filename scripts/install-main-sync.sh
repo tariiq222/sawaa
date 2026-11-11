@@ -1,21 +1,30 @@
 #!/bin/bash
-# Install (or reinstall) the launchd agent that runs scripts/sync-develop.sh
+# Install (or reinstall) the launchd agent that runs scripts/sync-main.sh
 # every 5 minutes. The script is copied out of the repo so switching branches
 # or removing a worktree never breaks the agent.
 #
-# Usage: scripts/install-develop-sync.sh [repo-path]
-#        scripts/install-develop-sync.sh --uninstall
+# Usage: scripts/install-main-sync.sh [repo-path]
+#        scripts/install-main-sync.sh --uninstall
+#        scripts/install-main-sync.sh --uninstall-legacy
 
 set -euo pipefail
 
-LABEL="sa.sawaa.develop-sync"
+LABEL="sa.sawaa.main-sync"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-INSTALL_DIR="$HOME/Library/Application Support/sawaa-develop-sync"
-LOG="$HOME/Library/Logs/sawaa-develop-sync.log"
+INSTALL_DIR="$HOME/Library/Application Support/sawaa-main-sync"
+LOG="$HOME/Library/Logs/sawaa-main-sync.log"
+
+if [ "${1:-}" = "--uninstall-legacy" ]; then
+  legacy="sa.sawaa.develop-sync"
+  launchctl bootout "gui/$(id -u)/$legacy" 2>/dev/null || true
+  rm -f "$HOME/Library/LaunchAgents/$legacy.plist" "$HOME/Library/Application Support/sawaa-develop-sync/sync-develop.sh"
+  echo "Uninstalled $legacy"
+  exit 0
+fi
 
 if [ "${1:-}" = "--uninstall" ]; then
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-  rm -f "$PLIST" "$INSTALL_DIR/sync-develop.sh"
+  rm -f "$PLIST" "$INSTALL_DIR/sync-main.sh"
   echo "Uninstalled $LABEL"
   exit 0
 fi
@@ -24,7 +33,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="${1:-$HOME/code/sawaa}"
 
 mkdir -p "$INSTALL_DIR" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
-install -m 0755 "$SCRIPT_DIR/sync-develop.sh" "$INSTALL_DIR/sync-develop.sh"
+install -m 0755 "$SCRIPT_DIR/sync-main.sh" "$INSTALL_DIR/sync-main.sh"
 
 cat >"$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -35,7 +44,7 @@ cat >"$PLIST" <<EOF
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>$INSTALL_DIR/sync-develop.sh</string>
+    <string>$INSTALL_DIR/sync-main.sh</string>
     <string>$REPO</string>
   </array>
   <key>EnvironmentVariables</key>
