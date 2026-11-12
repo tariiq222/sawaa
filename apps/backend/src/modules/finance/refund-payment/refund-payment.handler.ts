@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PaymentStatus, RefundStatus, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
@@ -72,7 +72,7 @@ export class RefundPaymentHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     _eventBus: EventBusService,
     private readonly moyasar: MoyasarApiClient,
   ) {}

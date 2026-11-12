@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { PasswordService } from '../shared/password.service';
 import { assertCanAssignRole } from '../shared/role-rank';
 import { CreateUserDto } from './create-user.dto';
@@ -13,7 +13,7 @@ export type CreateUserCommand = CreateUserDto & { actorUserId: string };
 export class CreateUserHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly password: PasswordService,
   ) {}
 

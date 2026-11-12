@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { ListEmployeeRatingsHandler } from './list-employee-ratings.handler';
 
 describe('ListEmployeeRatingsHandler', () => {
@@ -26,7 +26,7 @@ describe('ListEmployeeRatingsHandler', () => {
       providers: [
         ListEmployeeRatingsHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

@@ -1,5 +1,5 @@
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { BullMqService } from '../../../../infrastructure/queue/bull-mq.service';
 import { AdministrativeAssistantRecoveryWorker } from './administrative-assistant-recovery.worker';
 
@@ -36,7 +36,7 @@ describe('AdministrativeAssistantRecoveryWorker', () => {
     };
     worker = new AdministrativeAssistantRecoveryWorker(
       prisma as unknown as PrismaService,
-      { withTransaction: jest.fn((work) => work(tx)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(tx)) } as unknown as TransactionService,
       bullMq as unknown as BullMqService,
     );
   });

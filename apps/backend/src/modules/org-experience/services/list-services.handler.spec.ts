@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { ListServicesHandler } from './list-services.handler';
@@ -25,7 +25,7 @@ describe('ListServicesHandler', () => {
         ListServicesHandler,
         { provide: PrismaService, useValue: { $transaction: jest.fn(), employeeService: tx.employeeService } },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: { withTransaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)) },
         },
         {

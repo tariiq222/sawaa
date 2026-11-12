@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { ListCategoriesHandler } from './list-categories.handler';
@@ -41,7 +41,7 @@ describe('ListCategoriesHandler', () => {
       providers: [
         ListCategoriesHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rls },
+        { provide: TransactionService, useValue: rls },
         { provide: CacheService, useValue: cache },
         { provide: MinioService, useValue: storage },
         { provide: ConfigService, useValue: { getOrThrow: jest.fn(() => 'sawaa-media') } },

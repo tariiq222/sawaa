@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { LogoutHandler } from './logout.handler';
 
 describe('LogoutHandler', () => {
@@ -10,7 +10,7 @@ describe('LogoutHandler', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LogoutHandler,
-        RlsTransactionService,
+        TransactionService,
         { provide: PrismaService, useValue: {
     refreshToken: { updateMany: jest.fn() },
     user: { update: jest.fn() }

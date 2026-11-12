@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ListBranchesHandler } from './list-branches.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 
 describe('ListBranchesHandler', () => {
@@ -20,7 +20,7 @@ describe('ListBranchesHandler', () => {
       providers: [
         ListBranchesHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: CacheService, useValue: cache },
       ],
     }).compile();

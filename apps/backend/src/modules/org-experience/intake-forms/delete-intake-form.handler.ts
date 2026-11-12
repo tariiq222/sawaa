@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService, RlsTransactionService } from "../../../infrastructure/database";
+import { PrismaService, TransactionService } from "../../../infrastructure/database";
 import { toIntakeRevisionData } from "../../../common/database/intake-response-history.helper";
 
 export interface DeleteIntakeFormCommand {
@@ -15,7 +15,7 @@ const DELETE_INTAKE_FORM_MESSAGES = {
 export class DeleteIntakeFormHandler {
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly rlsTransaction: RlsTransactionService,
+		private readonly rlsTransaction: TransactionService,
 	) {}
 
 	async execute({ formId }: DeleteIntakeFormCommand): Promise<void> {

@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 
 export interface RequestAccountDeletionCommand {
   clientId: string;
@@ -20,7 +20,7 @@ export interface RequestAccountDeletionResult {
  */
 @Injectable()
 export class RequestAccountDeletionHandler {
-  constructor(private readonly rlsTransaction: RlsTransactionService) {}
+  constructor(private readonly rlsTransaction: TransactionService) {}
 
   async execute(cmd: RequestAccountDeletionCommand): Promise<RequestAccountDeletionResult> {
     await this.rlsTransaction.withTransaction(async (tx) => {

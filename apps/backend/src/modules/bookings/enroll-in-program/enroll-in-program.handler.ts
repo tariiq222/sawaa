@@ -12,7 +12,7 @@ import {
 } from '@prisma/client';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { ProgramMinReachedEvent } from '../events/program-min-reached.event';
@@ -63,7 +63,7 @@ const TERMINAL_ENROLLMENT_BOOKING_STATUSES = new Set<BookingStatus>([
 export class EnrollInProgramHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 

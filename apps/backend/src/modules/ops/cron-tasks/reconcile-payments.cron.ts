@@ -6,7 +6,7 @@ import {
   PaymentStatus,
   Prisma,
 } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import {
   MoyasarApiClient,
   MoyasarPaymentStatus,
@@ -60,7 +60,7 @@ export class ReconcilePaymentsCron {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly moyasar: MoyasarApiClient,
     @Optional() private readonly appMetrics: AppMetricsService | null = null,
   ) {}

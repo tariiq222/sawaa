@@ -12,7 +12,7 @@ import {
   Prisma,
   type ChatOperation,
 } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { assertOperationOwnership, lockChatOperation } from './acknowledge-existing-booking.handler';
 import { ChatAuditService } from '../chat-audit.service';
@@ -26,7 +26,7 @@ export interface DeclineOperationCommand {
 @Injectable()
 export class DeclineOperationHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly audit: ChatAuditService,
   ) {}
 

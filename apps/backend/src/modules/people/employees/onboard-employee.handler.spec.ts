@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { OnboardEmployeeHandler } from './onboard-employee.handler';
 
 describe('OnboardEmployeeHandler', () => {
@@ -21,7 +21,7 @@ describe('OnboardEmployeeHandler', () => {
       providers: [
         OnboardEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

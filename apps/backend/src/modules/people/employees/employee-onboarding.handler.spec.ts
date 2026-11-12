@@ -2,7 +2,7 @@ import { CacheService } from '../../../infrastructure/cache';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { EmployeeOnboardingHandler } from './employee-onboarding.handler';
 
 const OnboardingStatus = {
@@ -45,7 +45,7 @@ describe('EmployeeOnboardingHandler', () => {
         { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         EmployeeOnboardingHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
+        { provide: TransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
       ],
     }).compile();
 

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ChangePasswordHandler } from './change-password.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { PasswordService } from '../shared/password.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
@@ -25,7 +25,7 @@ describe('ChangePasswordHandler', () => {
       providers: [
         ChangePasswordHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: PasswordService, useValue: passwordService },
       ],
     }).compile();

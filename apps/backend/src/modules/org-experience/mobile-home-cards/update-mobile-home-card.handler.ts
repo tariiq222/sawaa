@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { UpdateMobileHomeCardDto } from './mobile-home-cards.dto';
 import { assertArabicAlt, requirePublicImage, toAdminMobileHomeCards } from './mobile-home-card.helpers';
@@ -8,7 +8,7 @@ import { assertArabicAlt, requirePublicImage, toAdminMobileHomeCards } from './m
 export class UpdateMobileHomeCardHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly storage: MinioService,
   ) {}
 

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SetEmployeeDurationsHandler, resolveEffectiveDurations } from './set-employee-durations.handler';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 
 describe('SetEmployeeDurationsHandler', () => {
   let handler: SetEmployeeDurationsHandler;
@@ -38,7 +38,7 @@ describe('SetEmployeeDurationsHandler', () => {
       providers: [
         SetEmployeeDurationsHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

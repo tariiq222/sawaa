@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PaymentStatus, Prisma, RefundStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { assertValidTransition } from '../payment-state-machine';
@@ -44,7 +44,7 @@ export class ManualRefundPaymentHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 

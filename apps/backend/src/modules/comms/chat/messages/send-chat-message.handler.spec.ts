@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConversationStatus, MessageSenderType, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { SendChatMessageHandler } from './send-chat-message.handler';
 
@@ -69,7 +69,7 @@ describe('SendChatMessageHandler', () => {
       prisma as unknown as PrismaService,
       access as unknown as ChatAccessService,
       { getOrThrow: jest.fn().mockReturnValue(10) } as unknown as ConfigService,
-      rlsTransaction as unknown as RlsTransactionService,
+      rlsTransaction as unknown as TransactionService,
       limits as never,
     );
   });
@@ -91,7 +91,7 @@ describe('SendChatMessageHandler', () => {
       prisma as unknown as PrismaService,
       access as unknown as ChatAccessService,
       { getOrThrow: jest.fn().mockReturnValue(4000) } as unknown as ConfigService,
-      rlsTransaction as unknown as RlsTransactionService,
+      rlsTransaction as unknown as TransactionService,
       limits as never,
     );
 

@@ -3,7 +3,7 @@ import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { UpdateEmployeeHandler } from './update-employee.handler';
 
@@ -54,7 +54,7 @@ describe('UpdateEmployeeHandler', () => {
         { provide: ResolveEmployeeImageHandler, useValue: { execute: jest.fn(async (q: { reference?: string | null }) => q.reference ?? null) } },
         UpdateEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();

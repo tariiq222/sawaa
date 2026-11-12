@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 
 /**
  * ProgramCapacityService
@@ -16,7 +16,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 export class ProgramCapacityService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   /**

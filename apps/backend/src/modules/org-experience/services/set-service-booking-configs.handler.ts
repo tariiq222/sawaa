@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { SetServiceBookingConfigsDto } from './set-service-booking-configs.dto';
 import { normalizeDeliveryTypeInput } from './delivery-type-input.helper';
 
@@ -37,7 +37,7 @@ export function dedupeDurationOptions<
 export class SetServiceBookingConfigsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: SetServiceBookingConfigsCommand) {

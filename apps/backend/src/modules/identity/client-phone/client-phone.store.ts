@@ -1,10 +1,10 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 
 @Injectable()
 export class ClientPhoneStore {
-  constructor(private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly transactions: TransactionService) {}
 
   transaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.transactions.withTransaction(run, { timeout: 15000 });

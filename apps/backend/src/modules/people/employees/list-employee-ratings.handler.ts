@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import type { Rating } from '@prisma/client';
 import { toListResponse, type ListResponse } from '../../../common/dto';
 
@@ -13,7 +13,7 @@ export interface ListEmployeeRatingsQuery {
 export class ListEmployeeRatingsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(query: ListEmployeeRatingsQuery): Promise<ListResponse<Rating> & {starCounts: Record<number, number>}> {

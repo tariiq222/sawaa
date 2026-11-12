@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, UserRole, type ChatConversation } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAuditService } from '../chat-audit.service';
 
 export interface ReleaseConversationCommand {
@@ -12,7 +12,7 @@ export interface ReleaseConversationCommand {
 @Injectable()
 export class ReleaseConversationHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly audit: ChatAuditService,
   ) {}
 

@@ -13,7 +13,7 @@ import type {
 } from "@sawaa/shared/types";
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from "../../../../infrastructure/database";
 import { GetNativePaymentConfigHandler } from "../get-native-payment-config/get-native-payment-config.handler";
 import { ReconcileNativePaymentHandler } from "../reconcile-native-payment/reconcile-native-payment.handler";
@@ -35,7 +35,7 @@ const conflict = (
 export class InitNativePaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly transactions: RlsTransactionService,
+    private readonly transactions: TransactionService,
     private readonly configurations: GetNativePaymentConfigHandler,
     private readonly reconcile: ReconcileNativePaymentHandler,
     private readonly moyasar: MoyasarApiClient,

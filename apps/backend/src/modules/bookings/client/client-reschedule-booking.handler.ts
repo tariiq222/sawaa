@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import type { DeliveryType, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
@@ -42,7 +42,7 @@ type RescheduleResult = {
 export class ClientRescheduleBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     _zoomMeetingService: ZoomMeetingService,
     private readonly availabilityHandler: CheckAvailabilityHandler,

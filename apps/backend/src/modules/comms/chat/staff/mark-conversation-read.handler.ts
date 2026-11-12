@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { lockChatConversation } from '../conversation-lock.helper';
 
 export interface MarkConversationReadCommand {
@@ -12,7 +12,7 @@ export interface MarkConversationReadCommand {
 
 @Injectable()
 export class MarkConversationReadHandler {
-  constructor(private readonly transaction: RlsTransactionService) {}
+  constructor(private readonly transaction: TransactionService) {}
 
   async execute(command: MarkConversationReadCommand) {
     if (command.throughMessageId && command.throughSequence) {

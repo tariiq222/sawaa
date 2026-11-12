@@ -16,7 +16,7 @@ import {
   Prisma,
   RefundStatus,
 } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { EventBusService } from '../../../../infrastructure/events';
 import { RefundCompletedEvent } from '../../events/refund-completed.event';
 import { computeRefundAccounting } from '../../refund-payment/refund-vat.helper';
@@ -77,7 +77,7 @@ export class RefundPackagePurchaseHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 

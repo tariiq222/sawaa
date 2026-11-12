@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { createHash } from 'crypto';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 
 export interface VerifyEmailCommand {
@@ -18,7 +18,7 @@ export class VerifyEmailHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly cls: ClsService,
   ) {}
 

@@ -12,7 +12,7 @@ import { UpdateSessionPackageHandler } from '../../../src/modules/org-experience
 import { CreatePackagePurchaseHandler } from '../../../src/modules/finance/package-purchases/create-package-purchase/create-package-purchase.handler';
 import { BookFromCreditHandler } from '../../../src/modules/bookings/book-from-credit/book-from-credit.handler';
 import { GetBookingSettingsHandler } from '../../../src/modules/bookings/get-booking-settings/get-booking-settings.handler';
-import { PrismaService, RlsTransactionService } from '../../../src/infrastructure/database';
+import { PrismaService, TransactionService } from '../../../src/infrastructure/database';
 import { createRealE2eApp } from '../../helpers/create-real-e2e-app';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
@@ -50,7 +50,7 @@ describeRealE2e('package practitioner editor — real DB', () => {
     // fixtures obscuring the package-credit assertions.
     bookFromCredit = new BookFromCreditHandler(
       prisma,
-      app.get(RlsTransactionService),
+      app.get(TransactionService),
       app.get(GetBookingSettingsHandler),
     );
 

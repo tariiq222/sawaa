@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InvoiceStatus, PaymentStatus, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 
 import { ApplyCouponDto } from './apply-coupon.dto';
 
@@ -19,7 +19,7 @@ export class ApplyCouponHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: ApplyCouponCommand) {

@@ -9,7 +9,7 @@ import {
 } from '@prisma/client';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
@@ -52,7 +52,7 @@ export class MoyasarPaymentSettlementHandler {
   private readonly logger = new Logger(MoyasarPaymentSettlementHandler.name);
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     @Optional() private readonly appMetrics: AppMetricsService | null = null,
   ) {}
   async execute(

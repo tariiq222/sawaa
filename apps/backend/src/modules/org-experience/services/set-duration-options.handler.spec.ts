@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { SetDurationOptionsHandler } from './set-duration-options.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 
 describe('SetDurationOptionsHandler', () => {
   let handler: SetDurationOptionsHandler;
@@ -20,7 +20,7 @@ describe('SetDurationOptionsHandler', () => {
 
     const rlsTransaction = { withTransaction: jest.fn().mockImplementation(async (fn: any) => fn(txMock)) };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SetDurationOptionsHandler, { provide: PrismaService, useValue: prisma }, { provide: RlsTransactionService, useValue: rlsTransaction }],
+      providers: [SetDurationOptionsHandler, { provide: PrismaService, useValue: prisma }, { provide: TransactionService, useValue: rlsTransaction }],
     }).compile();
 
     handler = module.get<SetDurationOptionsHandler>(SetDurationOptionsHandler);

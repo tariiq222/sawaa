@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing";
 import { NotFoundException, ConflictException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { DeleteClientHandler } from "./delete-client.handler";
-import { PrismaService, RlsTransactionService } from "../../../infrastructure/database";
+import { PrismaService, TransactionService } from "../../../infrastructure/database";
 import { ACTIVE_BOOKING_STATUSES } from "../../bookings/active-booking-statuses";
 
 describe("DeleteClientHandler", () => {
@@ -34,7 +34,7 @@ describe("DeleteClientHandler", () => {
 			providers: [
 				DeleteClientHandler,
 				{ provide: PrismaService, useValue: prisma },
-				{ provide: RlsTransactionService, useValue: rlsTransaction },
+				{ provide: TransactionService, useValue: rlsTransaction },
 			],
 		}).compile();
 

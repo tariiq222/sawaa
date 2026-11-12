@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EmbeddingAdapter } from '../../../infrastructure/ai';
 import { EmbedDocumentDto } from './embed-document.dto';
 
@@ -24,7 +24,7 @@ function chunkText(text: string): string[] {
 export class EmbedDocumentHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly embedding: EmbeddingAdapter,
   ) {}
 

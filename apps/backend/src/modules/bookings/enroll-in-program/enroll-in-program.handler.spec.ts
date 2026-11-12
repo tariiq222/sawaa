@@ -7,7 +7,7 @@ import {
 } from './enroll-in-program.handler';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 
@@ -88,7 +88,7 @@ describe('EnrollInProgramHandler', () => {
       providers: [
         EnrollInProgramHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();

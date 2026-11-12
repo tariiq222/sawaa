@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, type ChatConversation } from '@prisma/client';
 import { SAUDI_PHONE_REGEX } from '@sawaa/shared/validators/phone';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { ChatAuditService } from '../chat-audit.service';
 import { parseHandoffSummary, type HandoffSummary } from '../assistant/administrative-tools.service';
@@ -28,7 +28,7 @@ export type RequestHandoffCommand =
 @Injectable()
 export class RequestHandoffHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly access: ChatAccessService,
     private readonly audit: ChatAuditService,
   ) {}

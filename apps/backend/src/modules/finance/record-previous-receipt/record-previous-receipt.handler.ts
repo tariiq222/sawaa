@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Payment, PaymentMethod, Prisma } from "@prisma/client";
-import { RlsTransactionService } from "../../../infrastructure/database";
+import { TransactionService } from "../../../infrastructure/database";
 import { DEFAULT_ORG_ID } from "../../../common/constants";
 import { decimalToHalalas } from "../money.helper";
 import { PreviousReceiptRecordedEvent } from "../events/previous-receipt-recorded.event";
@@ -23,7 +23,7 @@ export interface RecordPreviousReceiptCommand {
 }
 @Injectable()
 export class RecordPreviousReceiptHandler {
-  constructor(private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly transactions: TransactionService) {}
   async execute(cmd: RecordPreviousReceiptCommand): Promise<Payment> {
     const run = async (tx: Prisma.TransactionClient) => {
       const existing = await tx.payment.findUnique({

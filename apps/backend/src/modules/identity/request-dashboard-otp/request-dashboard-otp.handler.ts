@@ -8,7 +8,7 @@ import {
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
@@ -32,7 +32,7 @@ export class RequestDashboardOtpHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly channelRegistry: NotificationChannelRegistry,
     private readonly redis: RedisService,
     private readonly settings: PlatformSettingsService,

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { calculateClientCancellation, type ClientCancellationSettings, type ClientCancellationPreview } from './client-cancellation-policy';
 
@@ -19,7 +19,7 @@ export async function readCancellationPayments(tx: Prisma.TransactionClient, boo
 
 @Injectable()
 export class ClientCancellationPreviewHandler {
-  constructor(private readonly rls: RlsTransactionService, private readonly settings: GetBookingSettingsHandler) {}
+  constructor(private readonly rls: TransactionService, private readonly settings: GetBookingSettingsHandler) {}
 
   async execute(bookingId: string, clientId: string): Promise<ClientCancellationPreview> {
     return this.rls.withTransaction(async tx => {

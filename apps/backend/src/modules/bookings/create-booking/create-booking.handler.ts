@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, type DeliveryType } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { EventBusService } from '../../../infrastructure/events';
@@ -59,7 +59,7 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
 export class CreateBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly eventBus: EventBusService,

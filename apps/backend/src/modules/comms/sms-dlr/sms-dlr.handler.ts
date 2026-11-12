@@ -15,7 +15,7 @@ import {
 } from '../../../common/constants';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 
@@ -34,7 +34,7 @@ export class SmsDlrHandler {
     private readonly prisma: PrismaService,
     private readonly factory: SmsProviderFactory,
     private readonly cls: ClsService,
-    private readonly transaction: RlsTransactionService,
+    private readonly transaction: TransactionService,
   ) {}
 
   async execute(req: SmsDlrRequest): Promise<{ skipped?: boolean }> {

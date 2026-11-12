@@ -8,7 +8,7 @@ import { MobileOtpPurposeDto } from './verify-mobile-otp.dto';
 import { PrismaService } from '../../../infrastructure/database';
 import { TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 
 const prismaMock = {
@@ -56,7 +56,7 @@ describe('VerifyMobileOtpHandler', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: TokenService, useValue: tokensMock },
         { provide: ClientTokenService, useValue: clientTokensMock },
-        { provide: RlsTransactionService, useValue: rlsMock },
+        { provide: TransactionService, useValue: rlsMock },
         { provide: ClsService, useValue: clsMock },
         { provide: PlatformSettingsService, useValue: settingsMock },
       ],

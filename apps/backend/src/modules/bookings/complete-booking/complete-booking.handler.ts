@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
@@ -20,7 +20,7 @@ export type CompleteBookingCommand = CompleteBookingDto & {
 export class CompleteBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: CompleteBookingCommand) {

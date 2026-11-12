@@ -6,7 +6,7 @@ import {
 import { ProgramStatus, Prisma } from '@prisma/client';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { UpdateProgramDto } from './update-program.dto';
 import { isProgramTerminalStatus } from '../program/program-state-machine';
@@ -31,7 +31,7 @@ import { lockPersonReferences } from '../../../common/database/person-reference-
 export class UpdateProgramHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(programId: string, dto: UpdateProgramDto) {

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, RefundType } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { stableEventId } from '../../../common/events';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -32,7 +32,7 @@ export interface ApproveCancelBookingCommand {
 export class ApproveCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     _eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly groupSessionCapacity: ProgramCapacityService,

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus, DeliveryType, Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
@@ -33,7 +33,7 @@ export class DepositPaidEventHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
   ) {}

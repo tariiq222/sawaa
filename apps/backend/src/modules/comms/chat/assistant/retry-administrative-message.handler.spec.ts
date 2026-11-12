@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { RetryAdministrativeMessageHandler } from './retry-administrative-message.handler';
 
@@ -29,7 +29,7 @@ describe('RetryAdministrativeMessageHandler', () => {
     const rls = { withTransaction: jest.fn((work) => work(transaction)) };
     handler = new RetryAdministrativeMessageHandler(
       access as unknown as ChatAccessService,
-      rls as unknown as RlsTransactionService,
+      rls as unknown as TransactionService,
     );
   });
 

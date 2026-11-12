@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, type ChatConversation } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAuditService } from '../chat-audit.service';
 
 export interface ClaimConversationCommand {
@@ -11,7 +11,7 @@ export interface ClaimConversationCommand {
 @Injectable()
 export class ClaimConversationHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly audit: ChatAuditService,
   ) {}
 

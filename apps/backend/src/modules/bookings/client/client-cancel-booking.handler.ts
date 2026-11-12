@@ -12,7 +12,7 @@ import {
   RefundType,
 } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { stableEventId } from '../../../common/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -52,7 +52,7 @@ type CancelResult = {
 export class ClientCancelBookingHandler {
   constructor(
     _prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     _eventBus: EventBusService,
     private readonly refundHandler: RefundPaymentHandler,

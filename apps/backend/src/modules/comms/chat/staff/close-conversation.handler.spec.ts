@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { CloseConversationHandler } from './close-conversation.handler';
 
 describe('staff CloseConversationHandler', () => {
@@ -12,7 +12,7 @@ describe('staff CloseConversationHandler', () => {
       },
     };
     const handler = new CloseConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
     await handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' });
@@ -36,7 +36,7 @@ describe('staff CloseConversationHandler', () => {
       },
     };
     const handler = new CloseConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
     await handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-a', actorRole: 'RECEPTIONIST' });

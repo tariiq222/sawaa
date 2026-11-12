@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { ClientTokenService } from '../shared/client-token.service';
 import { ClientRefreshHandler } from './client-refresh.handler';
 
@@ -30,7 +30,7 @@ describe('ClientRefreshHandler', () => {
       providers: [
         ClientRefreshHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: ClientTokenService, useValue: clientTokens },
       ],
     }).compile();

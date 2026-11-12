@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { toChatMessageResponse, type ChatMessageResponse } from './chat-message.mapper';
@@ -17,7 +17,7 @@ export interface ListChatMessagesResult {
 export class ListChatMessagesHandler {
   constructor(
     private readonly access: ChatAccessService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(command: ListChatMessagesCommand): Promise<ListChatMessagesResult> {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListCouponsDto } from './list-coupons.dto';
 
@@ -9,7 +9,7 @@ export type ListCouponsQuery = ListCouponsDto;
 export class ListCouponsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(query: ListCouponsQuery) {

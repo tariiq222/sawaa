@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { IntakeFieldInputDto } from './create-intake-form.dto';
 import { fieldsSemanticallyEqual, mapIntakeFormResult } from './intake-form.helpers';
 
@@ -12,7 +12,7 @@ export interface SetIntakeFieldsCommand {
 export class SetIntakeFieldsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   /**

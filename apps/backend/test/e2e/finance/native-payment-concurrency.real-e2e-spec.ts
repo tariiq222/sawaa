@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { AppModule } from '../../../src/app.module';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../src/infrastructure/database';
 import { InitNativePaymentHandler } from '../../../src/modules/finance/native-payments/init-native-payment/init-native-payment.handler';
 import { ReconcileNativePaymentHandler } from '../../../src/modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
@@ -22,7 +22,7 @@ describeRealE2e(
     jest.setTimeout(60_000);
     let app: INestApplication;
     let prisma: PrismaService;
-    let rls: RlsTransactionService;
+    let rls: TransactionService;
     const invoiceIds: string[] = [];
     const paymentIds: string[] = [];
     const clientId = `native-race-${randomUUID()}`;
@@ -41,7 +41,7 @@ describeRealE2e(
       app = module.createNestApplication();
       await app.init();
       prisma = app.get(PrismaService);
-      rls = app.get(RlsTransactionService);
+      rls = app.get(TransactionService);
     });
     afterAll(async () => {
       if (prisma) {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { toListResponse } from '../../../common/dto';
 import { ListDepartmentsDto } from './list-departments.dto';
@@ -11,7 +11,7 @@ export type ListDepartmentsQuery = ListDepartmentsDto;
 export class ListDepartmentsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly cache: CacheService,
   ) {}
 

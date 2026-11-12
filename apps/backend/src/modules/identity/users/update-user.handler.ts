@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserGender } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { assertCanManageUser } from '../shared/role-rank';
 
 export interface UpdateUserCommand {
@@ -20,7 +20,7 @@ export interface UpdateUserCommand {
 export class UpdateUserHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: UpdateUserCommand) {

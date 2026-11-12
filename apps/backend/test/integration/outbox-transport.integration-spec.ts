@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import type { Queue, Processor, Worker, WorkerOptions } from 'bullmq';
-import { PrismaService, RlsTransactionService } from '../../src/infrastructure/database';
+import { PrismaService, TransactionService } from '../../src/infrastructure/database';
 import { BullMqService } from '../../src/infrastructure/queue/bull-mq.service';
 import { EventBusService } from '../../src/infrastructure/events';
 import type { EventHandler } from '../../src/infrastructure/events/event-bus.service';
@@ -182,7 +182,7 @@ describe('real outbox publisher and payment consumer transport', () => {
     const eventBus = new RecordingEventBus(bullmq, cls, receipts, interruptAfterHandler);
     const handler = new PaymentCompletedEventHandler(
       prisma,
-      new RlsTransactionService(prisma),
+      new TransactionService(prisma),
       eventBus,
       cls,
     );

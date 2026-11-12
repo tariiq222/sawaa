@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
@@ -31,7 +31,7 @@ describe('CreateCategoryHandler', () => {
         CreateCategoryHandler,
         { provide: PrismaService, useValue: prisma },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) },
         },
         { provide: CacheService, useValue: cache },

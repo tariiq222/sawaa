@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { CloseConversationHandler } from './close-conversation.handler';
 import { ChatAuditService } from './chat-audit.service';
 
@@ -23,7 +23,7 @@ describe('CloseConversationHandler', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CloseConversationHandler,
-        { provide: RlsTransactionService, useValue: { withTransaction: (work: (tx: unknown) => unknown) => work(prisma) } },
+        { provide: TransactionService, useValue: { withTransaction: (work: (tx: unknown) => unknown) => work(prisma) } },
         { provide: ChatAuditService, useValue: audit },
       ],
     }).compile();
