@@ -27,12 +27,14 @@
 - [audits/2026-06-29-website-integration-audit.md](./audits/2026-06-29-website-integration-audit.md) — تدقيق تكامل الـ Website (يونيو 2026).
 - [audits/2026-06-29-project-audit.md](./audits/2026-06-29-project-audit.md) — تقرير التدقيق التنفيذي المنقول من الجذر.
 - [audits/2026-09-26-booking-performance.md](./audits/2026-09-26-booking-performance.md) — تدقيق أولي لأداء الحجز؛ حدود القياس موضحة في التقرير.
+- [audits/2026-11-12-system-maintainability-audit.md](./audits/2026-11-12-system-maintainability-audit.md) — تدقيق قابلية الصيانة والتطوير (نوفمبر 2026)؛ مرجع خط الأساس لخطة الإصلاح.
 - [audits/chat-integration/](./audits/chat-integration/) — تقارير المهام 10 و11 و12 الخاصة بتكامل المحادثات.
 - [security-test-report-service-module.md](./security-test-report-service-module.md) — تقرير اختبار أمان الـ Service module.
 - [system-analysis-report-2026-07-09.md](./system-analysis-report-2026-07-09.md) — تحليل تاريخي للنظام بتاريخ 9 يوليو 2026.
 
 ## الخطط (Plans)
 
+- [plans/maintainability-roadmap.md](./plans/maintainability-roadmap.md) — الخطة الحيّة لإصلاحات قابلية الصيانة والتطوير (MNT-01 إلى MNT-26) وجدول حالتها.
 - [plans/session-packages-rebuild.md](./plans/session-packages-rebuild.md) — خطة إعادة بناء حزم الجلسات.
 - [plans/employee-email-payments-remediation.md](./plans/employee-email-payments-remediation.md) — خطة محفوظة من `PLAN.md` السابق؛ ليست إثباتًا للحالة الحالية.
 - [plans/page-auth-architecture-remediation.md](./plans/page-auth-architecture-remediation.md) — خطة بنية الصفحات وحالات الضيف والمستخدم المسجّل، من مجلد `plans/` السابق.

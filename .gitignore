@@ -136,6 +136,7 @@ docs/performance/*
 docs/plans/*
 !docs/plans/employee-email-payments-remediation.md
 !docs/plans/page-auth-architecture-remediation.md
+!docs/plans/maintainability-roadmap.md
 !docs/archive/
 docs/archive/*
 !docs/archive/project-memory.md
