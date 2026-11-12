@@ -6,7 +6,9 @@ name: merge-gate
 
 on:
   pull_request:
-    branches: [main, develop]
+    # integration/** collects long-running work before it targets develop.
+    # Checks only: nothing in this workflow builds images or deploys.
+    branches: [main, develop, 'integration/**']
     types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
