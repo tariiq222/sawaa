@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
       - name: Publish release tag only
         id: tag
         run: node scripts/tag-release.mjs "$GITHUB_SHA"

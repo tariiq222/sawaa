@@ -2,6 +2,9 @@
   "name": "sawa-family-counseling",
   "private": true,
   "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=26 <27"
+  },
   "scripts": {
     "prepare": "lefthook install || true",
     "changelog": "node -e \"require('node:fs').mkdirSync('build/changelog', { recursive: true })\" && pnpm dlx git-cliff@2.14.2 --config cliff.toml --output build/changelog/CHANGELOG.md",

@@ -29,7 +29,7 @@ Single-tenant family counseling platform for one counseling center (مركز س�
 
 ## Stack
 
-pnpm workspaces + Turborepo. Node ≥ 20.
+pnpm workspaces + Turborepo. Node 26 LTS (pinned in `.nvmrc`, CI and Docker images).
 
 ```
 apps/

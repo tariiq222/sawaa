@@ -8,9 +8,10 @@
 # Stage 4 (runner):       minimal runtime — only standalone/ + static assets
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm.
+RUN npm install -g pnpm@10.10.0 && pnpm --version
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY patches/ ./patches/
@@ -23,9 +24,10 @@ RUN pnpm install --frozen-lockfile
 # ── Stage 2: shared-build ────────────────────────────────────────────────────
 # Compiles packages/shared → dist/ so consuming apps can resolve its exports.
 # Does NOT install arch-native CSS binaries — those are only needed by next build.
-FROM node:22-bookworm-slim AS shared-build
+FROM node:26-bookworm-slim AS shared-build
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm.
+RUN npm install -g pnpm@10.10.0 && pnpm --version
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY patches/ ./patches/
@@ -56,10 +58,11 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && test -f /app/node_modules/@sawaa/shared/dist/constants/index.js
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS app-build
+FROM node:26-bookworm-slim AS app-build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm.
+RUN npm install -g pnpm@10.10.0 && pnpm --version
 
 COPY --from=shared-build /app/node_modules ./node_modules
 COPY --from=shared-build /app/packages     ./packages
@@ -93,7 +96,7 @@ ENV NEXT_PUBLIC_WEB_CHAT_ENABLED=$NEXT_PUBLIC_WEB_CHAT_ENABLED
 RUN pnpm --filter=website run build
 
 # ── Stage 4: runner ──────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5105
