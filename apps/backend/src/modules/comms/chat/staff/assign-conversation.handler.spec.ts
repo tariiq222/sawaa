@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { AssignConversationHandler } from './assign-conversation.handler';
 
 describe('AssignConversationHandler', () => {
@@ -16,7 +16,7 @@ describe('AssignConversationHandler', () => {
       },
     };
     handler = new AssignConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
   });

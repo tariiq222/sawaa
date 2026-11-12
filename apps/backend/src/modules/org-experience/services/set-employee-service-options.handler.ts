@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { SetEmployeeServiceOptionsDto } from './set-employee-service-options.dto';
 import { normalizeDeliveryTypeInput } from './delivery-type-input.helper';
 
@@ -12,7 +12,7 @@ export type SetEmployeeServiceOptionsCommand = SetEmployeeServiceOptionsDto & {
 export class SetEmployeeServiceOptionsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(dto: SetEmployeeServiceOptionsCommand) {

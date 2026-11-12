@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 
 export interface GetClientChatConversationCommand {
   clientId: string;
@@ -8,7 +8,7 @@ export interface GetClientChatConversationCommand {
 
 @Injectable()
 export class GetClientChatConversationHandler {
-  constructor(private readonly rlsTransaction: RlsTransactionService) {}
+  constructor(private readonly rlsTransaction: TransactionService) {}
 
   async execute(command: GetClientChatConversationCommand) {
     return this.rlsTransaction.withTransaction(async (tx) => {

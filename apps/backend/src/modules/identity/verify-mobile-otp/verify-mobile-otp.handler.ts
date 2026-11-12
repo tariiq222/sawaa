@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Logger, UnauthorizedException, Conflic
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose, Prisma, RefreshTokenSource } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { TokenService, TokenPair } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
@@ -33,7 +33,7 @@ export class VerifyMobileOtpHandler {
     private readonly tokens: TokenService,
     private readonly clientTokens: ClientTokenService,
     private readonly cls: ClsService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly settings: PlatformSettingsService,
     private readonly reviewOtp: ReviewOtpHandler,
   ) {}

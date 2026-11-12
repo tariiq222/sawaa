@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { DeleteIntakeFormHandler } from './delete-intake-form.handler';
 
 describe('DeleteIntakeFormHandler', () => {
@@ -23,7 +23,7 @@ describe('DeleteIntakeFormHandler', () => {
     intakeForm: { findFirst: jest.fn(), delete: jest.fn() },
     intakeResponse: { findMany: jest.fn() },
         } },
-        { provide: RlsTransactionService, useValue: rls },
+        { provide: TransactionService, useValue: rls },
       ],
     }).compile();
 

@@ -1,7 +1,7 @@
 import { CacheService } from '../../../infrastructure/cache';
 import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { Injectable, ConflictException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 
 import { EmployeeCreatedEvent } from '../events/employee-created.event';
@@ -15,7 +15,7 @@ export type CreateEmployeeCommand = CreateEmployeeDto & { actorUserId?: string }
 export class CreateEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
     private readonly cache: CacheService,
   ) {}

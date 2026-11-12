@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 import { BranchDeactivatedEvent } from '../events/branch-deactivated.event';
@@ -13,7 +13,7 @@ export type UpdateBranchCommand = UpdateBranchDto & { branchId: string };
 export class UpdateBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
     private readonly cache: CacheService,
   ) {}

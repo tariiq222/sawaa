@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { BookingStatus, CancellationReason, Prisma, RefundType } from "@prisma/client";
 import {
 	PrismaService,
-	RlsTransactionService,
+	TransactionService,
 } from "../../../infrastructure/database";
 import { RefundPaymentHandler } from "../../finance/refund-payment/refund-payment.handler";
 import { DEFAULT_ORG_ID } from "../../../common/constants";
@@ -24,7 +24,7 @@ export interface ExpireBookingCommand {
 export class ExpireBookingHandler {
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly rlsTransaction: RlsTransactionService,
+		private readonly rlsTransaction: TransactionService,
 		private readonly refundHandler: RefundPaymentHandler,
 		private readonly groupSessionCapacity: ProgramCapacityService,
 	) {}

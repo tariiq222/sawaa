@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ConversationStatus } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ReleaseConversationHandler } from './release-conversation.handler';
 
 describe('ReleaseConversationHandler', () => {
@@ -16,7 +16,7 @@ describe('ReleaseConversationHandler', () => {
       },
     };
     const handler = new ReleaseConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
     await handler.execute({ conversationId: 'conv-1', ...actor });
@@ -46,7 +46,7 @@ describe('ReleaseConversationHandler', () => {
       },
     };
     const handler = new ReleaseConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'admin-a', actorRole: 'ADMIN' })).rejects.toThrow(ConflictException);
@@ -61,7 +61,7 @@ describe('ReleaseConversationHandler', () => {
       },
     };
     const handler = new ReleaseConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-a', actorRole: 'RECEPTIONIST' })).rejects.toThrow(ConflictException);
@@ -78,7 +78,7 @@ describe('ReleaseConversationHandler', () => {
       },
     };
     const handler = new ReleaseConversationHandler(
-      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(prisma)) } as unknown as TransactionService,
       { record: jest.fn().mockResolvedValue(undefined) } as never,
     );
     await expect(handler.execute({ conversationId: 'conv-1', actorUserId: 'staff-b', actorRole: 'RECEPTIONIST' })).rejects.toThrow(ForbiddenException);

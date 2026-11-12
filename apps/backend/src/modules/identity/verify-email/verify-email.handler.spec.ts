@@ -3,7 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { createHash } from 'crypto';
 import { VerifyEmailHandler } from './verify-email.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 
 describe('VerifyEmailHandler', () => {
   let handler: VerifyEmailHandler;
@@ -37,7 +37,7 @@ describe('VerifyEmailHandler', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: ClsService, useValue: cls },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: {
             withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
             withBypassTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),

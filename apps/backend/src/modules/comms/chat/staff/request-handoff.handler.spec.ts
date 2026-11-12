@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { ChatMessageKind, ConversationStatus, MessageSenderType } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { RequestHandoffHandler } from './request-handoff.handler';
 
@@ -47,7 +47,7 @@ describe('RequestHandoffHandler', () => {
     audit = { record: jest.fn().mockResolvedValue(undefined) };
     rlsTransaction = { withTransaction: jest.fn().mockImplementation((work) => work(prisma)) };
     handler = new RequestHandoffHandler(
-      rlsTransaction as unknown as RlsTransactionService,
+      rlsTransaction as unknown as TransactionService,
       access as unknown as ChatAccessService,
       audit as never,
     );

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CreateBookingHandler } from './create-booking.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler, DEFAULT_BOOKING_SETTINGS } from '../get-booking-settings/get-booking-settings.handler';
 import { EventBusService } from '../../../infrastructure/events';
@@ -169,7 +169,7 @@ describe('CreateBookingHandler', () => {
       providers: [
         CreateBookingHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction = { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
+        { provide: TransactionService, useValue: rlsTransaction = { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: PriceResolverService, useValue: priceResolver },
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: EventBusService, useValue: eventBus },
@@ -342,7 +342,7 @@ describe('CreateBookingHandler', () => {
       providers: [
         CreateBookingHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: PriceResolverService, useValue: priceResolver },
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: EventBusService, useValue: eventBus },

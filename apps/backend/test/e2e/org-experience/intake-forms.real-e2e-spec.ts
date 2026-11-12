@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../src/infrastructure/database';
+import { PrismaService, TransactionService } from '../../../src/infrastructure/database';
 import { CreateIntakeFormHandler } from '../../../src/modules/org-experience/intake-forms/create-intake-form.handler';
 import { UpdateIntakeFormHandler } from '../../../src/modules/org-experience/intake-forms/update-intake-form.handler';
 import { SetIntakeFieldsHandler } from '../../../src/modules/org-experience/intake-forms/set-intake-fields.handler';
@@ -13,7 +13,7 @@ const describeReal = process.env.REAL_E2E_DATABASE_URL ? describe : describe.ski
 
 describeReal('Intake form persistence and locking (real PostgreSQL)', () => {
   let prisma: PrismaService;
-  let transaction: RlsTransactionService;
+  let transaction: TransactionService;
   const formIds: string[] = [];
   const bookingIds: string[] = [];
 
@@ -24,7 +24,7 @@ describeReal('Intake form persistence and locking (real PostgreSQL)', () => {
     }
     process.env.DATABASE_URL = url.toString();
     prisma = new PrismaService();
-    transaction = new RlsTransactionService(prisma);
+    transaction = new TransactionService(prisma);
     await prisma.$connect();
   });
 
@@ -120,7 +120,7 @@ describeReal('Intake form persistence and locking (real PostgreSQL)', () => {
     let ready!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });
     const acquired = new Promise<void>((resolve) => { ready = resolve; });
-    const gatedTransaction = new RlsTransactionService(prisma);
+    const gatedTransaction = new TransactionService(prisma);
     jest.spyOn(gatedTransaction, 'withTransaction').mockImplementation((callback) =>
       prisma.$transaction(async (tx) => {
         const result = await callback(tx);
@@ -164,7 +164,7 @@ describeReal('Intake form persistence and locking (real PostgreSQL)', () => {
     let ready!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });
     const acquired = new Promise<void>((resolve) => { ready = resolve; });
-    const gatedTransaction = new RlsTransactionService(prisma);
+    const gatedTransaction = new TransactionService(prisma);
     jest.spyOn(gatedTransaction, 'withTransaction').mockImplementation((callback) =>
       prisma.$transaction(async (tx) => {
         const result = await callback(tx);

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { DenyRefundHandler } from './deny-refund.handler';
 
 describe('DenyRefundHandler', () => {
@@ -11,7 +11,7 @@ describe('DenyRefundHandler', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DenyRefundHandler,
-        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn(work => work(tx)) } },
+        { provide: TransactionService, useValue: { withTransaction: jest.fn(work => work(tx)) } },
       ],
     }).compile();
     handler = module.get<DenyRefundHandler>(DenyRefundHandler);

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { signMediaImageUrl } from '../../media/media-image-url.helper';
@@ -17,7 +17,7 @@ export class UpdateCategoryHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly cache: CacheService,
     private readonly storage: MinioService,
     config: ConfigService,

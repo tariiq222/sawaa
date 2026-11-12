@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Prisma, RefreshTokenSource } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { TokenPair, TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { NativeSessionLookup } from './native-session.lookup';
@@ -10,7 +10,7 @@ import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 @Injectable()
 export class NativeRefreshHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly tokens: TokenService,
     private readonly clientTokens: ClientTokenService,
     private readonly lookup: NativeSessionLookup,

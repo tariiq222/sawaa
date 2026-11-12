@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { EmbeddingAdapter } from '../../../infrastructure/ai';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import {
   KNOWLEDGE_REINDEX_REQUESTED_EVENT,
@@ -49,7 +49,7 @@ export class KnowledgeIndexingWorker {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rls: RlsTransactionService,
+    private readonly rls: TransactionService,
     private readonly embedding: EmbeddingAdapter,
     private readonly eventBus: EventBusService,
   ) {}

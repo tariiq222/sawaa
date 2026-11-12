@@ -19,7 +19,7 @@ import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashb
 import { RequestDashboardOtpDto } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.dto';
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { VerifyDashboardOtpDto } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.dto';
-import { PrismaService, RlsTransactionService } from '../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../infrastructure/database';
 import { TokenService } from '../../modules/identity/shared/token.service';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { JwtGuard } from '../../common/guards/jwt.guard';
@@ -72,7 +72,7 @@ export class AuthController {
     private readonly verifyDashboardOtp: VerifyDashboardOtpHandler,
     private readonly authResponseBuilder: AuthResponseBuilder,
     private readonly lookupUser: LookupUserHandler,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   // SECURITY (P1): tight per-IP throttle on staff login. The handler already

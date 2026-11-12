@@ -77,10 +77,10 @@ export default defineConfig([
       "sawaa/require-api-operation": "error",
 
       // Single-tenant: Postgres RLS and the `$allTenants` / `$allTenantsUnsafe`
-      // escape hatches were removed (see src/common/database/rls-transaction.ts).
+      // escape hatches were removed (see src/common/database/transaction.service.ts).
       // The first rule below is kept so those removed names cannot be reintroduced.
       //
-      // `RlsTransactionService.withTransaction()` is now a thin wrapper over
+      // `TransactionService.withTransaction()` is a thin wrapper over
       // `prisma.$transaction()`. The second rule keeps transactions flowing through
       // that single wrapper; the wrapper file itself is exempt below.
       "no-restricted-syntax": [
@@ -93,7 +93,7 @@ export default defineConfig([
         {
           selector: "CallExpression[callee.property.name='$transaction']:not([callee.object.property.name='$allTenants'])",
           message:
-            "Use RlsTransactionService.withTransaction() instead of calling prisma.$transaction() directly, so transactions go through the one shared wrapper (RLS itself was removed; the service name is historical).",
+            "Use TransactionService.withTransaction() instead of calling prisma.$transaction() directly, so transactions go through the one shared wrapper.",
         },
       ],
     },
@@ -124,7 +124,7 @@ export default defineConfig([
     // Infrastructure-internal files that implement the $transaction wrappers are
     // exempt from the no-restricted-syntax/$transaction rule — they ARE the wrapper.
     files: [
-      "src/common/database/rls-transaction.ts",
+      "src/common/database/transaction.service.ts",
     ],
     rules: { "no-restricted-syntax": "off" },
   },

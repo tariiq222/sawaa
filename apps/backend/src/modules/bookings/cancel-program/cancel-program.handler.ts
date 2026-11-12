@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { BookingStatus, CancellationReason, Prisma, RefundType } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { stableEventId } from '../../../common/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
@@ -14,7 +14,7 @@ const cancellableStatuses: BookingStatus[] = ['PENDING', 'AWAITING_PAYMENT', 'CO
 /** Commit cancellation and its frozen financial intent together; finance executes after commit. */
 @Injectable()
 export class CancelProgramHandler {
-  constructor(private readonly prisma: PrismaService, private readonly rlsTransaction: RlsTransactionService) {}
+  constructor(private readonly prisma: PrismaService, private readonly rlsTransaction: TransactionService) {}
 
   async preview(programId: string) {
     return this.transaction(async tx => (await this.snapshot(tx, programId)).preview);

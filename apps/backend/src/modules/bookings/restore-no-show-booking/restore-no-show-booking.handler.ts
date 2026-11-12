@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { BookingStatus, BookingType, ProgramStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 import { reclaimPackageCreditForBooking } from '../package-credit-return.helper';
@@ -43,7 +43,7 @@ export interface RestoreNoShowBookingCommand {
 export class RestoreNoShowBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: RestoreNoShowBookingCommand) {

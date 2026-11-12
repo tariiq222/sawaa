@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { SetEmployeeServiceOptionsHandler } from './set-employee-service-options.handler';
 
 describe('SetEmployeeServiceOptionsHandler', () => {
@@ -16,7 +16,7 @@ describe('SetEmployeeServiceOptionsHandler', () => {
     serviceDurationOption: { findMany: jest.fn() },
     employeeServiceOption: { findMany: jest.fn() }
     } },
-    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } }
+    { provide: TransactionService, useValue: { withTransaction: jest.fn() } }
       ],
     }).compile();
 

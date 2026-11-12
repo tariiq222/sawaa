@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { UpdateBranchHandler } from './update-branch.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 
@@ -24,7 +24,7 @@ describe('UpdateBranchHandler', () => {
       providers: [
         UpdateBranchHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: CacheService, useValue: cache },
         { provide: EventBusService, useValue: eventBus },
       ],

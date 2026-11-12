@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { areIntakeAnswersEqual, toIntakeRevisionData } from '../../../common/database/intake-response-history.helper';
 
 export interface SubmitIntakeResponseCommand {
@@ -92,7 +92,7 @@ function toPublicResponse(response: {
 export class SubmitIntakeResponseHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(command: SubmitIntakeResponseCommand) {

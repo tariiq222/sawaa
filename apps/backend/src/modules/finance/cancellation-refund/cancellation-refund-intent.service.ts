@@ -1,7 +1,7 @@
 import type { StaffCancellationIntent } from './staff-cancellation-refund';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { stableEventId } from '../../../common/events';
 import { RefundPaymentHandler } from '../refund-payment/refund-payment.handler';
 import { RESERVED_REFUND_STATUSES, type ClientCancellationIntent } from '../../bookings/client/client-cancellation-policy';
@@ -10,7 +10,7 @@ import { decimalToHalalas } from '../money.helper';
 /** Financial follow-up only. Cancellation is already committed. */
 @Injectable()
 export class CancellationRefundIntentService {
-  constructor(private readonly rls: RlsTransactionService, private readonly refunds: RefundPaymentHandler) {}
+  constructor(private readonly rls: TransactionService, private readonly refunds: RefundPaymentHandler) {}
 
   async execute(eventId: string, bookingId: string, clientId: string, intent: ClientCancellationIntent | StaffCancellationIntent): Promise<void> {
     if (intent.version !== 1) throw new ConflictException('Unsupported cancellation refund intent');

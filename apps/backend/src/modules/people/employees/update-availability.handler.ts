@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { AvailabilityWindow, UpdateAvailabilityDto } from './update-availability.dto';
 
 export { AvailabilityWindow, AvailabilityException } from './update-availability.dto';
@@ -35,7 +35,7 @@ function validateWindows(windows: AvailabilityWindow[]): void {
 export class UpdateAvailabilityHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: UpdateAvailabilityCommand) {

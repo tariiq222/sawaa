@@ -2,7 +2,7 @@ import { ConflictException, Logger } from '@nestjs/common';
 import { InvoiceStatus, PaymentStatus, Prisma } from '@prisma/client';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
@@ -107,7 +107,7 @@ export async function reconcileOrDiscardInFlightPayment(
 }
 
 export async function replaceTerminalInFlightPayment<T>(
-  rlsTransaction: RlsTransactionService,
+  rlsTransaction: TransactionService,
   invoiceId: string,
   expected: ReplaceablePaymentRow,
   createReplacement: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -139,7 +139,7 @@ export async function replaceTerminalInFlightPayment<T>(
  * payment finalizer; the status/reference CAS detects a winner that ran first.
  */
 export async function persistPendingGatewayRef(
-  rlsTransaction: RlsTransactionService,
+  rlsTransaction: TransactionService,
   invoiceId: string,
   expected: ReplaceablePaymentRow,
   gatewayRef: string,

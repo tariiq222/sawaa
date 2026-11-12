@@ -1,5 +1,5 @@
 import { ChatOperationStatus, ChatOperationType, Prisma, type ChatOperation } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { assertAssistantOperationFence, type AssistantOperationFence } from './assistant-operation-fence';
 
 export interface PreparedOperationData {
@@ -17,7 +17,7 @@ export interface PreparedOperationData {
 
 export async function createOrGetPreparedOperation(
   prisma: PrismaService,
-  rlsTransaction: RlsTransactionService,
+  rlsTransaction: TransactionService,
   data: PreparedOperationData,
 ): Promise<ChatOperation> {
   try {

@@ -16,7 +16,7 @@ import {
 } from "@prisma/client";
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from "../../../../infrastructure/database";
 import { ComputePackagePriceService } from "../../../org-experience/compute-package-price.service";
 import { MoyasarApiClient } from "../../moyasar-api/moyasar-api.client";
@@ -120,7 +120,7 @@ export class InitPackagePurchaseHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly pricing: ComputePackagePriceService,
     private readonly moyasar: MoyasarApiClient,
     private readonly nativePayment: InitNativePaymentHandler = undefined!,

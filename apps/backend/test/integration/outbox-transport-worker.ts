@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { ConfigService } from '@nestjs/config';
 import type { Processor, Queue, Worker, WorkerOptions } from 'bullmq';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService, RlsTransactionService } from '../../src/infrastructure/database';
+import { PrismaService, TransactionService } from '../../src/infrastructure/database';
 import { BullMqService } from '../../src/infrastructure/queue/bull-mq.service';
 import { EventBusService } from '../../src/infrastructure/events';
 import type { EventHandler } from '../../src/infrastructure/events/event-bus.service';
@@ -100,7 +100,7 @@ describe('outbox transport worker harness', () => {
     );
     const handler = new PaymentCompletedEventHandler(
       prisma,
-      new RlsTransactionService(prisma),
+      new TransactionService(prisma),
       eventBus,
       cls,
     );

@@ -1,7 +1,7 @@
 import { CacheService } from '../../../infrastructure/cache';
 import { Test } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { CreateEmployeeHandler } from './create-employee.handler';
 
@@ -28,7 +28,7 @@ describe('CreateEmployeeHandler', () => {
         { provide: CacheService, useValue: { invalidatePrefix: jest.fn().mockResolvedValue(undefined) } },
         CreateEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
+        { provide: TransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();

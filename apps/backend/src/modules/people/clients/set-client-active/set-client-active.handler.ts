@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ActivityAction } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { EventBusService } from '../../../../infrastructure/events';
 import { LogActivityHandler } from '../../../ops/log-activity/log-activity.handler';
 import { ClientAccountToggledEvent } from '../../events/client-account-toggled.event';
@@ -20,7 +20,7 @@ export interface SetClientActiveResult {
 export class SetClientActiveHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
     private readonly logActivity: LogActivityHandler,
   ) {}

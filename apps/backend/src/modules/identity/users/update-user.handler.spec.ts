@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { UpdateUserHandler } from './update-user.handler';
 
 const ACTOR_ID = '00000000-0000-0000-0000-0000000000aa';
@@ -28,7 +28,7 @@ describe('UpdateUserHandler', () => {
       providers: [
         UpdateUserHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

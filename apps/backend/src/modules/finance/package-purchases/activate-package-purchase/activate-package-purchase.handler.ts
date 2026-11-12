@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PackagePurchaseStatus, Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { EventBusService, type DomainEventEnvelope } from '../../../../infrastructure/events';
 import { DEFAULT_ORG_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../../common/constants';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
@@ -46,7 +46,7 @@ export class ActivatePackagePurchaseHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
     private readonly pricing: ComputePackagePriceService,

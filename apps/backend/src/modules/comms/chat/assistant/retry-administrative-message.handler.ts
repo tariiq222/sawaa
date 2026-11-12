@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType, Prisma, type CommsChatMessage } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { queuedAdministrativeMessageState, readAdministrativeMessageState, readNonNegativeInteger } from './administrative-message-state';
@@ -16,7 +16,7 @@ export type RetryAdministrativeMessageCommand =
 export class RetryAdministrativeMessageHandler {
   constructor(
     private readonly access: ChatAccessService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(command: RetryAdministrativeMessageCommand): Promise<CommsChatMessage> {

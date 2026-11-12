@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
 import { CreateBranchHandler } from './create-branch.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 
@@ -26,7 +26,7 @@ describe('CreateBranchHandler', () => {
       providers: [
         CreateBranchHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: CacheService, useValue: cache },
         { provide: EventBusService, useValue: eventBus },
       ],

@@ -4,7 +4,7 @@ import { ProgramStatus } from '@prisma/client';
 import { ScheduleProgramHandler } from './schedule-program.handler';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 
 describe('ScheduleProgramHandler', () => {
@@ -37,7 +37,7 @@ describe('ScheduleProgramHandler', () => {
       providers: [
         ScheduleProgramHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

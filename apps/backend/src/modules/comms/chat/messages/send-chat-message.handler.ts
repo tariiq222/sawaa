@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConversationStatus, MessageSenderType, Prisma, type CommsChatMessage } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from '../guest/chat-access.service';
 import { lockChatConversation } from '../conversation-lock.helper';
 import type { SendChatMessageDto } from './send-chat-message.dto';
@@ -21,7 +21,7 @@ export class SendChatMessageHandler {
     private readonly prisma: PrismaService,
     private readonly access: ChatAccessService,
     private readonly config: ConfigService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly limits: ChatUsageLimitsService,
   ) {}
 

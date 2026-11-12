@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { NativeSessionLookup } from './native-session.lookup';
 
 @Injectable()
 export class NativeLogoutHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly lookup: NativeSessionLookup,
   ) {}
 

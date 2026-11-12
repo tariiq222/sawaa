@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateInvoiceHandler } from './create-invoice.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 
 const buildPrisma = () => ({
@@ -40,7 +40,7 @@ describe('CreateInvoiceHandler', () => {
       providers: [
         CreateInvoiceHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();

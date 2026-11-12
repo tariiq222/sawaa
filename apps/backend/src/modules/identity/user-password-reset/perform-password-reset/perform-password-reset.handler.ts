@@ -1,6 +1,6 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { PasswordService } from '../../shared/password.service';
 import { PerformPasswordResetDto } from './perform-password-reset.dto';
 
@@ -10,7 +10,7 @@ export class PerformPasswordResetHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly passwords: PasswordService,
   ) {}
 

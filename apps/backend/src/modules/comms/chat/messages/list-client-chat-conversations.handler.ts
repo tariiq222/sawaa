@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { ChatMessageKind, ConversationStatus, MessageSenderType, Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 
 export interface ListClientChatConversationsCommand {
   clientId: string;
@@ -37,7 +37,7 @@ const CLIENT_CONVERSATION_SELECT: Prisma.ChatConversationSelect = {
 
 @Injectable()
 export class ListClientChatConversationsHandler {
-  constructor(private readonly rlsTransaction: RlsTransactionService) {}
+  constructor(private readonly rlsTransaction: TransactionService) {}
 
   async execute(command: ListClientChatConversationsCommand): Promise<ListClientChatConversationsResult> {
     return this.rlsTransaction.withTransaction(async (tx) => {

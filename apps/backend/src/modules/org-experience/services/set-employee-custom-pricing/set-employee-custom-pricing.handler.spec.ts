@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { SetEmployeeCustomPricingHandler } from './set-employee-custom-pricing.handler';
 
 const EMPLOYEE_ID = '00000000-0000-0000-0000-000000000001';
@@ -47,7 +47,7 @@ describe('SetEmployeeCustomPricingHandler', () => {
       providers: [
         SetEmployeeCustomPricingHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

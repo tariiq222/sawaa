@@ -4,7 +4,7 @@ import { CreateProgramHandler } from './create-program.handler';
 import { CreateProgramDto } from './create-program.dto';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 
 const buildBaseDto = (): CreateProgramDto => ({
@@ -49,7 +49,7 @@ describe('CreateProgramHandler', () => {
       providers: [
         CreateProgramHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

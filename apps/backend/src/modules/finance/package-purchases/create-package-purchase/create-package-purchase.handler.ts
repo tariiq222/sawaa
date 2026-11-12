@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PackagePurchaseStatus, PaymentMethod, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { EventBusService } from '../../../../infrastructure/events';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { ProcessPaymentHandler } from '../../process-payment/process-payment.handler';
@@ -78,7 +78,7 @@ export function packagePurchaseRequestFingerprint(
 export class CreatePackagePurchaseHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly pricing: ComputePackagePriceService,
     private readonly processPayment: ProcessPaymentHandler,
     private readonly eventBus: EventBusService,

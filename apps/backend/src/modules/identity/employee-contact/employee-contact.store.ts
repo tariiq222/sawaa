@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { isEmail } from 'class-validator';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { normalizePhone } from '../shared/identifier-detector';
 
 @Injectable()
 export class EmployeeContactStore {
-  constructor(private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly transactions: TransactionService) {}
   transaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>) { return this.transactions.withTransaction(run, { timeout: 15000 }); }
   normalize(channel: 'EMAIL' | 'SMS', value: string) {
     if (channel === 'SMS') return normalizePhone(value);

@@ -3,7 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { captureCancellationRefundOutcome } from '../cancellation-refund/capture-cancellation-refund-outcome';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 
 export interface DenyRefundCommand {
   refundRequestId: string;
@@ -13,7 +13,7 @@ export interface DenyRefundCommand {
 
 @Injectable()
 export class DenyRefundHandler {
-  constructor(private readonly rls: RlsTransactionService) {}
+  constructor(private readonly rls: TransactionService) {}
 
   async execute(cmd: DenyRefundCommand) {
     return this.rls.withTransaction(async tx => {

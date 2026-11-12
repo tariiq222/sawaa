@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MobilePhoneEntryFlow, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../common/database/rls-transaction';
+import { TransactionService } from '../../../common/database/transaction.service';
 import { hashContinuation } from '../mobile-email-entry/mobile-email-flow.store';
 
 export { codeHash, newCode, newContinuation, hashContinuation } from '../mobile-email-entry/mobile-email-flow.store';
@@ -12,7 +12,7 @@ const MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class MobilePhoneFlowStore {
-  constructor(private readonly prisma: PrismaService, private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly prisma: PrismaService, private readonly transactions: TransactionService) {}
 
   transaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.transactions.withTransaction(run, { timeout: 15000 });

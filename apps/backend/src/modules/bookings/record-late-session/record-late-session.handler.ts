@@ -1,6 +1,6 @@
 import { ConflictException, Injectable } from "@nestjs/common";
 import { Booking, Prisma } from "@prisma/client";
-import { RlsTransactionService } from "../../../infrastructure/database";
+import { TransactionService } from "../../../infrastructure/database";
 import { JwtUser } from "../../../common/auth/current-user.decorator";
 import { retrySerializableTransaction } from "../../../common/database/person-reference-lock.helper";
 import { ProcessPaymentHandler } from "../../finance/process-payment/process-payment.handler";
@@ -26,7 +26,7 @@ import { lateSessionResult } from "./late-session-result.helper";
 @Injectable()
 export class RecordLateSessionHandler {
   constructor(
-    private readonly transactions: RlsTransactionService,
+    private readonly transactions: TransactionService,
     private readonly previousReceipt: RecordPreviousReceiptHandler,
     private readonly processPayment: ProcessPaymentHandler,
   ) {}

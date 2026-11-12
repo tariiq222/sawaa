@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { BUSINESS_HOURS_CACHE_PREFIX } from './business-hours.cache';
 import { SetBusinessHoursHandler } from './set-business-hours.handler';
@@ -22,7 +22,7 @@ describe('SetBusinessHoursHandler', () => {
         SetBusinessHoursHandler,
         { provide: PrismaService, useValue: prisma },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) },
         },
         { provide: CacheService, useValue: cache },

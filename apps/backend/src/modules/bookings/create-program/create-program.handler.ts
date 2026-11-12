@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { ProgramStatus, Prisma } from '@prisma/client';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { CreateProgramDto } from './create-program.dto';
 import { lockPersonReferences } from '../../../common/database/person-reference-lock.helper';
@@ -15,7 +15,7 @@ export interface CreateProgramCommand extends CreateProgramDto {
 export class CreateProgramHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: CreateProgramCommand) {

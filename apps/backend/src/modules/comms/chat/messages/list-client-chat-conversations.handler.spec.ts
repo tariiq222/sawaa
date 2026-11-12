@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ListClientChatConversationsHandler } from './list-client-chat-conversations.handler';
 
 describe('ListClientChatConversationsHandler', () => {
@@ -25,7 +25,7 @@ describe('ListClientChatConversationsHandler', () => {
         messages: [],
       },
     ]);
-    const handler = new ListClientChatConversationsHandler(transaction as unknown as RlsTransactionService);
+    const handler = new ListClientChatConversationsHandler(transaction as unknown as TransactionService);
 
     const result = await handler.execute({ clientId: 'client-a', limit: 20 });
 
@@ -56,7 +56,7 @@ describe('ListClientChatConversationsHandler', () => {
 
   it('requires the cursor to belong to the same client before using it', async () => {
     tx.chatConversation.findFirst.mockResolvedValue(null);
-    const handler = new ListClientChatConversationsHandler(transaction as unknown as RlsTransactionService);
+    const handler = new ListClientChatConversationsHandler(transaction as unknown as TransactionService);
 
     await expect(handler.execute({ clientId: 'client-a', cursor: 'conversation-b', limit: 20 }))
       .rejects.toThrow(NotFoundException);

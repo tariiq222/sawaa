@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { RescheduleBookingHandler } from './reschedule-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
@@ -691,7 +691,7 @@ describe('RescheduleBookingHandler', () => {
       providers: [
         RescheduleBookingHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: buildRlsTransaction(prisma) },
+        { provide: TransactionService, useValue: buildRlsTransaction(prisma) },
         { provide: GetBookingSettingsHandler, useValue: buildSettingsHandler() },
         { provide: ZoomMeetingService, useValue: buildZoomService() },
       ],

@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { CollectBookingPaymentDto } from './collect-booking-payment.dto';
 import { EnsureBookingInvoiceHandler } from '../ensure-booking-invoice/ensure-booking-invoice.handler';
 import { ApplyInvoiceDiscountHandler } from '../apply-invoice-discount/apply-invoice-discount.handler';
@@ -102,7 +102,7 @@ export class CollectBookingPaymentHandler {
     private readonly ensureBookingInvoice: EnsureBookingInvoiceHandler,
     private readonly applyInvoiceDiscount: ApplyInvoiceDiscountHandler,
     private readonly processPayment: ProcessPaymentHandler,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: CollectBookingPaymentCommand): Promise<CollectBookingPaymentResult> {

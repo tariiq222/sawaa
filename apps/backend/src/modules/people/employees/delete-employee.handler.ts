@@ -6,7 +6,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { RlsTransactionService } from "../../../infrastructure/database";
+import { TransactionService } from "../../../infrastructure/database";
 import { lockPersonReferences } from "../../../common/database/person-reference-lock.helper";
 import { ACTIVE_BOOKING_STATUSES } from "../../bookings/active-booking-statuses";
 
@@ -29,7 +29,7 @@ const DELETE_EMPLOYEE_MESSAGES = {
 
 @Injectable()
 export class DeleteEmployeeHandler {
-	constructor(private readonly rlsTransaction: RlsTransactionService, private readonly cache: CacheService) {}
+	constructor(private readonly rlsTransaction: TransactionService, private readonly cache: CacheService) {}
 
 	async execute(cmd: DeleteEmployeeCommand): Promise<void> {
 		await this.rlsTransaction.withTransaction(

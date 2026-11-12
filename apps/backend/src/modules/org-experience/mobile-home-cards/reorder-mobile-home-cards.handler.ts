@@ -1,6 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { ReorderMobileHomeCardsDto } from './mobile-home-cards.dto';
 import { conflictOnSerialization, toAdminMobileHomeCards } from './mobile-home-card.helpers';
@@ -9,7 +9,7 @@ import { conflictOnSerialization, toAdminMobileHomeCards } from './mobile-home-c
 export class ReorderMobileHomeCardsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly storage: MinioService,
   ) {}
 

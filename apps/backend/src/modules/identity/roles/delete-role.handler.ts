@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from "../../../infrastructure/database";
 
 export interface DeleteRoleCommand {
@@ -17,7 +17,7 @@ const DELETE_ROLE_MESSAGES = {
 export class DeleteRoleHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: DeleteRoleCommand): Promise<void> {

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { SetServiceBookingConfigsHandler, dedupeDurationOptions } from './set-service-booking-configs.handler';
 
 describe('dedupeDurationOptions', () => {
@@ -55,13 +55,13 @@ describe('SetServiceBookingConfigsHandler', () => {
     serviceDurationOption: { findMany: jest.fn() },
     serviceAvailabilityWindow: { findMany: jest.fn() }
     } },
-    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } }
+    { provide: TransactionService, useValue: { withTransaction: jest.fn() } }
       ],
     }).compile();
 
     handler = module.get<SetServiceBookingConfigsHandler>(SetServiceBookingConfigsHandler);
     prisma = module.get<PrismaService>(PrismaService);
-    rlsTransaction = module.get(RlsTransactionService);
+    rlsTransaction = module.get(TransactionService);
   });
 
   it('should be defined', () => {

@@ -4,7 +4,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { AiProviderClientService } from '../../../infrastructure/ai/ai-provider-client.service';
 import { AiProviderCredentialsService } from '../../../infrastructure/ai/ai-provider-credentials.service';
 import { AiConnectionStatus, assertProviderModel } from './ai-provider-config.types';
-import { RlsTransactionService } from '../../../common/database/rls-transaction';
+import { TransactionService } from '../../../common/database/transaction.service';
 import { TestAiProviderConfigDto } from './provider-config.dto';
 
 const timeoutCode = (error: unknown): string => {
@@ -18,7 +18,7 @@ const timeoutCode = (error: unknown): string => {
 
 @Injectable()
 export class TestAiProviderConfigHandler {
-  constructor(private readonly prisma: PrismaService, private readonly clients: AiProviderClientService, private readonly credentials: AiProviderCredentialsService, private readonly rls: RlsTransactionService) {}
+  constructor(private readonly prisma: PrismaService, private readonly clients: AiProviderClientService, private readonly credentials: AiProviderCredentialsService, private readonly rls: TransactionService) {}
 
   async execute(dto: TestAiProviderConfigDto, actor?: { id?: string; email?: string }) {
     try { assertProviderModel(dto.provider, dto.model); } catch { throw new BadRequestException('Invalid provider or model'); }

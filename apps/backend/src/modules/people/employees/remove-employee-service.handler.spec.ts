@@ -1,12 +1,12 @@
 import { CacheService } from '../../../infrastructure/cache';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { RemoveEmployeeServiceHandler } from './remove-employee-service.handler';
 
 describe('RemoveEmployeeServiceHandler', () => {
   let handler: RemoveEmployeeServiceHandler;
   let prisma: PrismaService;
-  let rlsTransaction: RlsTransactionService;
+  let rlsTransaction: TransactionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -18,7 +18,7 @@ describe('RemoveEmployeeServiceHandler', () => {
     employeeServiceOption: { deleteMany: jest.fn() },
     serviceDurationOption: { deleteMany: jest.fn() },
         } },
-        { provide: RlsTransactionService, useValue: {
+        { provide: TransactionService, useValue: {
     withTransaction: jest.fn(),
         } },
       ],
@@ -26,7 +26,7 @@ describe('RemoveEmployeeServiceHandler', () => {
 
     handler = module.get<RemoveEmployeeServiceHandler>(RemoveEmployeeServiceHandler);
     prisma = module.get<PrismaService>(PrismaService);
-    rlsTransaction = module.get<RlsTransactionService>(RlsTransactionService);
+    rlsTransaction = module.get<TransactionService>(TransactionService);
     (rlsTransaction.withTransaction as jest.Mock).mockImplementation(
       (fn: (tx: PrismaService) => Promise<unknown>) => fn(prisma),
     );

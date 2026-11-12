@@ -9,7 +9,7 @@ import { ComputePackagePriceService } from '../../../src/modules/org-experience/
 import { CreatePackagePurchaseHandler } from '../../../src/modules/finance/package-purchases/create-package-purchase/create-package-purchase.handler';
 import { InitPackagePurchaseHandler } from '../../../src/modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
 import { ActivatePackagePurchaseHandler } from '../../../src/modules/finance/package-purchases/activate-package-purchase/activate-package-purchase.handler';
-import { RlsTransactionService } from '../../../src/infrastructure/database';
+import { TransactionService } from '../../../src/infrastructure/database';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 
@@ -51,7 +51,7 @@ describeRealE2e('grouped package purchase snapshots (real DB)', () => {
     }));
     initPackagePurchase = new InitPackagePurchaseHandler(
       prisma,
-      app.get(RlsTransactionService),
+      app.get(TransactionService),
       app.get(ComputePackagePriceService),
       {
         createCheckoutInvoice: gatewayCreateCheckout,

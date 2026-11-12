@@ -1,5 +1,5 @@
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { MarkConversationReadHandler } from './mark-conversation-read.handler';
 
 describe('MarkConversationReadHandler', () => {
@@ -17,7 +17,7 @@ describe('MarkConversationReadHandler', () => {
       },
     };
     const transaction: any = { withTransaction: jest.fn().mockImplementation((work) => work(tx)) };
-    const handler = new MarkConversationReadHandler(transaction as RlsTransactionService);
+    const handler = new MarkConversationReadHandler(transaction as TransactionService);
 
     await handler.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', throughSequence: '42' });
 
@@ -60,7 +60,7 @@ describe('MarkConversationReadHandler', () => {
       },
     };
     const transaction: any = { withTransaction: jest.fn().mockImplementation((work) => work(tx)) };
-    const handler = new MarkConversationReadHandler(transaction as RlsTransactionService);
+    const handler = new MarkConversationReadHandler(transaction as TransactionService);
 
     await handler.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', throughMessageId: 'message-9' });
     expect(tx.commsChatMessage.findFirst).toHaveBeenCalledWith({
@@ -86,7 +86,7 @@ describe('MarkConversationReadHandler', () => {
       chatConversation: { findFirst: jest.fn().mockResolvedValue({ id: 'conv-1' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
     const transaction: any = { withTransaction: jest.fn().mockImplementation((work) => work(tx)) };
-    const handler = new MarkConversationReadHandler(transaction as RlsTransactionService);
+    const handler = new MarkConversationReadHandler(transaction as TransactionService);
     await handler.execute({ conversationId: 'conv-1', staffUserId: 'staff-a', throughSequence: '5' });
     expect(tx.commsChatMessage.count).toHaveBeenCalledWith({
       where: { conversationId: 'conv-1', senderType: { in: [MessageSenderType.VISITOR, MessageSenderType.CLIENT] }, isRead: false },

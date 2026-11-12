@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { Prisma } from '@prisma/client';
 import { UpdateSelfProfileDto } from './self-profile.dto';
 import { OwnedImageResolver } from '../../../media/owned-image.resolver';
@@ -30,7 +30,7 @@ export class GetSelfProfileHandler {
 }
 @Injectable()
 export class UpdateSelfProfileHandler {
-  constructor(private readonly transactions: RlsTransactionService, private readonly read: GetSelfProfileHandler) {}
+  constructor(private readonly transactions: TransactionService, private readonly read: GetSelfProfileHandler) {}
   async execute(userId: string, input: UpdateSelfProfileDto) {
     await this.transactions.withTransaction(async tx => {
       const { employee } = await ownEmployee(tx, userId);

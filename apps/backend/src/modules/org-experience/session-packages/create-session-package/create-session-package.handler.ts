@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { DiscountType, Prisma } from '@prisma/client';
 import { toHalalas } from '../../../finance/money.helper';
 import { CreateSessionPackageDto } from './create-session-package.dto';
@@ -50,7 +50,7 @@ export type CreateSessionPackageCommand = CreateSessionPackageDto;
 export class CreateSessionPackageHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly pricing: ComputePackagePriceService,
     private readonly cache: CacheService,
     @Optional() private readonly priceResolver?: PriceResolverService,

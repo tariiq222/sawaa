@@ -1,5 +1,5 @@
 import { PackagePurchaseStatus, Prisma, RefundStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import {
   type CompletedRequestRow,
   type ExistingEventRow,
@@ -296,7 +296,7 @@ export async function buildRefundedPackagesReport(
   prisma: PrismaService,
   params: RefundedPackagesReportParams,
 ): Promise<RefundedPackagesReportResult> {
-  const transaction = new RlsTransactionService(prisma);
+  const transaction = new TransactionService(prisma);
   return transaction.withTransaction(
     (tx) => buildFromSnapshot(tx, params),
     { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },

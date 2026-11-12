@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, InternalServerErrorException, N
 import { Test } from '@nestjs/testing';
 import { PaymentStatus, Prisma, RefundStatus } from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { stableEventId } from '../../../common/events';
@@ -83,7 +83,7 @@ describe('RefundPaymentHandler', () => {
         RefundPaymentHandler,
         { provide: PrismaService, useValue: prisma },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: {
             withTransaction: (work: (tx: typeof prisma) => Promise<unknown>) => prisma.$transaction(work),
             withBypassTransaction: (work: (tx: typeof prisma) => Promise<unknown>) => prisma.$transaction(work),

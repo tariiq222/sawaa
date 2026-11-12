@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ListDepartmentsHandler } from './list-departments.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 
 describe('ListDepartmentsHandler', () => {
@@ -20,7 +20,7 @@ describe('ListDepartmentsHandler', () => {
       providers: [
         ListDepartmentsHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
         { provide: CacheService, useValue: cache },
       ],
     }).compile();

@@ -2,7 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { AuthController } from './auth.controller';
-import { RlsTransactionService } from '../../infrastructure/database';
+import { TransactionService } from '../../infrastructure/database';
 
 describe('AuthController (unit)', () => {
   let controller: AuthController;
@@ -68,7 +68,7 @@ describe('AuthController (unit)', () => {
       mockVerifyDashboardOtp,
       mockAuthResponseBuilder,
       mockLookupUser,
-      new RlsTransactionService(mockPrisma),
+      new TransactionService(mockPrisma),
     );
   });
 

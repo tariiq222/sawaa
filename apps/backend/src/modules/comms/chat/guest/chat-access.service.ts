@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, Prisma, type ChatConversation } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { GuestChatTokenService } from './guest-chat-token.service';
 import { ChatOperationsResumeRequestedEvent } from '../operations/events/chat-operations-resume-requested.event';
 import { lockChatConversation } from '../conversation-lock.helper';
@@ -17,7 +17,7 @@ export class ChatAccessService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: GuestChatTokenService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly audit: ChatAuditService,
   ) {}
 

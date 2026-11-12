@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ChatOperationStatus, Prisma, type ChatOperation } from '@prisma/client';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ChatAuditService } from '../chat-audit.service';
 
 const TERMINAL_STATUSES = new Set<ChatOperationStatus>([
@@ -41,7 +41,7 @@ export function assertOperationOwnership(
 @Injectable()
 export class AcknowledgeExistingBookingHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly audit: ChatAuditService,
   ) {}
 
