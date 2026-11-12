@@ -4,7 +4,7 @@
 // Verifies that the candidate commit (default HEAD) is at-or-after the
 // most recent tagged code release on the target branch (default origin/main). This checks Git ancestry only, not deployment or merge approval.
 //
-// Catches the class of bug where develop was force-pushed or someone
+// Catches the class of bug where the target branch was force-pushed or someone
 // retargeted a stale PR — the merge target would otherwise be considered
 // "ahead" of the last deployed commit, but in reality it might be missing
 // hotfixes that shipped to main.
@@ -75,7 +75,7 @@ try {
 } catch (e) {
   fail(
     `No common ancestor between ${latestRelease} and ${candidate}. ` +
-      `This usually means develop was force-pushed or the PR is ` +
+      `This usually means the target branch was force-pushed or the PR is ` +
       `cherry-picked from a divergent branch. Investigate before merging.`,
   );
 }

@@ -2,28 +2,11 @@
 
 ## Mandatory deployment policy for all AI tools
 
-Read and follow [the approved deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. «انشر» / «ننشر» means **develop + staging only**, followed by the owner's manual test. Only an explicit «انشر للإنتاج» / «انشر للبرودكشن» authorizes **frozen `release/<date>` → main → production**, after verifying the manually accepted release content and required checks. This policy supersedes older deployment guidance.
+Read and follow [the deployment policy](docs/operations/deployment-policy.md) before any commit, push, merge or deployment. On «انشر» / «انشر للاستيج» / «انشر على الاستيج» / «ننشر», merge the scoped task PR into `main` after required checks and verify the automatic staging deployment. Production requires an explicit «ادمج في الإنتاج» / «انشر في الإنتاج» / «انشر للإنتاج» / «انشر للبرودكشن» and a manual dispatch for the exact SHA accepted on staging.
 
-### Local `develop` and release rules (owner-approved 2026-10-10)
+`main` is the sole permanent GitHub branch after [cutover](docs/operations/single-main-cutover.md). Use short task branches and merge commits. Preserve local commits and edits, and never push directly to `main`. Run `scripts/sync-main.sh` after merging and report divergence.
 
-These are project law for every AI tool; details in [the deployment policy](docs/operations/deployment-policy.md).
-
-- The owner works directly on local `develop`. Never reset, rebase, force-update or discard it or its uncommitted changes, and never push `develop` directly (lefthook blocks it).
-- Publish local commits on «انشر» via `git push origin develop:refs/heads/publish/<topic>` and a PR into `develop`. Merge PRs with a **merge commit** only; squash and rebase merges are disabled on GitHub.
-- Local `develop` is auto-synced every 5 minutes by `scripts/sync-develop.sh` (launchd `sa.sawaa.develop-sync`, installed with `scripts/install-develop-sync.sh`). After any merge you perform, run `scripts/sync-develop.sh` and confirm local `develop` matches `origin/develop`; report divergence instead of resolving it silently.
-- Production promotes a frozen `release/<YYYY-MM-DD>` branch cut from the exact SHA the owner accepted on staging (observed `ready` on OpenShip). Never open the production PR from `develop`. A `cancelled` check counts as failed.
-
-The step-by-step release procedure (staging automation, production backup/restore test, merge, verification, main→develop sync, receipt) lives in [the sawaa-release skill](.claude/skills/sawaa-release/SKILL.md). Follow it for every publish.
-
-### Fixed staging mechanism — owner-approved 2026-10-11
-
-Staging always uses `build-images.yml` → all images built on GitHub → `scripts/openship/staging-deploy.mjs` → the existing application-scoped OpenShip hook → verified image digests and backend SHA. Manual publication uses `gh workflow run build-images.yml --ref develop` through that same path. Never improvise a different deploy path, enable OpenShip git auto-deploy, use mutable tags for runtime selection, or replace containers by SSH as a fallback. Failure stops publication and requires repair of this mechanism.
-
-Production follows the separately owner-approved prebuilt image path in `scripts/openship/production-deploy.mjs` after an accepted frozen release, verified backup/restore receipt and separately authorized migration work; see the production section of the deployment policy. Production git auto-deploy stays disabled.
-
-Application deploys target backend/dashboard/website only; preserve PostgreSQL/Redis/MinIO containers and volumes. The prebuilt backend starts without migrations; read-only migration compatibility and unchanged migration metadata are required. A pending migration blocks publication until separately authorized. Production is outside staging authorization and retains its current runtime until explicit production approval. See the deployment policy for fixed project IDs, secrets, activation and evidence requirements.
-
-
+Staging and production use the verified prebuilt-image workflow and distinct application-scoped OpenShip hooks. Both keep Git auto-deploy disabled. Preserve PostgreSQL, Redis and MinIO. Pending Prisma migrations require separate authorization. See the [release procedure](.claude/skills/sawaa-release/SKILL.md) for checks, runtime evidence and manual production admission.
 
 Single-tenant family counseling platform for one counseling center (مركز سواء).
 
@@ -46,7 +29,7 @@ packages/
 
 ## Automatic changelog
 
-Git-cliff generates the project changelog automatically on pushes to `develop` and `main` through `.github/workflows/changelog.yml`. Each run saves `CHANGELOG.md` with its source SHA as an artifact; the release workflow publishes the current tagged release's notes. Configuration and usage: [docs/operations/changelog.md](docs/operations/changelog.md).
+Git-cliff generates the project changelog automatically on pushes to `main` through `.github/workflows/changelog.yml`. Each run saves `CHANGELOG.md` with its source SHA as an artifact; the release workflow publishes notes after verified manual production. Configuration and usage: [docs/operations/changelog.md](docs/operations/changelog.md).
 
 On authorized commit, merge or publication requests, write clear commit subjects (for example `fix(mobile): correct appointment times`). For a local preview after the operation, run `pnpm changelog`; this generates an ignored file and does not stage, commit, push, tag or deploy anything. Do not commit generated changelogs back to protected branches. Code changelogs do not establish deployment success; keep observed deployment evidence separate under the approved deployment policy.
 

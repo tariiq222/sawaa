@@ -1,19 +1,20 @@
 # Release metadata only. A tag or GitHub Release is not proof of deployment.
-name: release
+name: production-release-metadata
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "*.md"
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: sawaa-production-release-metadata
+  queue: max
 
 jobs:
   tag:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha
     name: tag
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -22,14 +23,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Publish release tag only
         id: tag
-        run: node scripts/tag-release.mjs "$GITHUB_SHA"
+        env:
+          RELEASE_SHA: ${{ inputs.source_sha }}
+        run: node scripts/tag-release.mjs "$RELEASE_SHA"
       - name: Generate release changelog
         if: steps.tag.outputs.skipped == 'false'
         uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4

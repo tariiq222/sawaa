@@ -19,11 +19,14 @@ test('each release accepts its fixed public API', () => {
   assert.equal(resolveApiUrl({ easBuildProfile: 'production', configuredApiUrl: 'https://api.sawaa.sa/api/v1' }), 'https://api.sawaa.sa/api/v1');
 });
 
-test('only long-lived branches can choose a release target', async () => {
+test('main automatically targets staging and only manual production can select the live API', async () => {
   const { releaseTarget } = await import('./target.mjs');
-  assert.equal(releaseTarget('develop').profile, 'staging');
-  assert.equal(releaseTarget('main').apiUrl, 'https://api.sawaa.sa/api/v1');
-  assert.throws(() => releaseTarget('feature/example'), /branch/);
+  assert.equal(releaseTarget('main', 'staging', 'push').apiUrl, 'https://staging.sawaa.sa/api/v1');
+  assert.equal(releaseTarget('main', 'production', 'workflow_dispatch').apiUrl, 'https://api.sawaa.sa/api/v1');
+  assert.throws(() => releaseTarget('main', 'production', 'push'), /manual/);
+  assert.throws(() => releaseTarget('main', 'staging', 'pull_request'), /event/);
+  assert.throws(() => releaseTarget('main', 'unknown', 'workflow_dispatch'), /target/);
+  assert.throws(() => releaseTarget('feature/example', 'production', 'workflow_dispatch'), /branch/);
 });
 
 test('CI build numbers reject malformed and overflowing Apple numbers', () => {

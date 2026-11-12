@@ -8,7 +8,7 @@ node -e 'if(!/^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA)||! /^[1-9]\d{0,3}$/.t
 export EXPO_NO_DOTENV=1 CI=1 SENTRY_ALLOW_FAILURE=true SENTRY_DISABLE_AUTO_UPLOAD=true
 export EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID=merchant.sa.sawa.app
 # Dynamic import keeps the path separate from source and shell quoting.
-TARGET=$(TARGET_MODULE="$SCRIPT/target.mjs" node --input-type=module -e 'const {releaseTarget}=await import(process.env.TARGET_MODULE);const t=releaseTarget(process.env.GITHUB_REF_NAME);console.log(t.profile+" "+t.apiUrl)')
+TARGET=$(TARGET_MODULE="$SCRIPT/target.mjs" node --input-type=module -e 'const {releaseTarget}=await import(process.env.TARGET_MODULE);const t=releaseTarget(process.env.GITHUB_REF_NAME, process.env.SAWAA_APPLE_TARGET, process.env.GITHUB_EVENT_NAME);console.log(t.profile+" "+t.apiUrl)')
 read -r EAS_BUILD_PROFILE EXPO_PUBLIC_API_URL <<< "$TARGET"
 export EAS_BUILD_PROFILE EXPO_PUBLIC_API_URL EXPO_PUBLIC_RELEASE_ENVIRONMENT="$EAS_BUILD_PROFILE"
 mkdir -p "$APPLE_OUTPUT_DIR"

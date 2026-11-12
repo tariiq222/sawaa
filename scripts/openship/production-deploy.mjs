@@ -99,10 +99,26 @@ export async function migrationManifest(root = resolve(import.meta.dirname, '../
 const MIGRATION_READ = `const {Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});try{await c.connect();await c.query('BEGIN READ ONLY');const r=await c.query('SELECT migration_name, checksum, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY migration_name');await c.query('COMMIT');console.log(JSON.stringify(r.rows));}finally{await c.end();}})().catch(()=>{console.error('Migration metadata read failed');process.exit(1);});`;
 export const MIGRATION_READ_COMMAND = `node --no-warnings -e '${MIGRATION_READ.replaceAll("'", "'\\''")}'`;
 
-export async function deployProduction({ sha, branch, enabled, manifests, hookId, writeToken, hookToken, githubToken,
-  authorization, backup, stagingReadToken, now = Date.now, request = fetch, sleep = delay, migrations, attempts = 80, runtimeAttempts = 20, intervalMs = 15000, onProgress = () => {},
+export async function deployProduction({ sha, branch, event, requestedSha, actor, triggeringActor, owner, enabled, manifests, hookId, writeToken, hookToken, githubToken,
+  authorization, stagingEvidence, backup, stagingReadToken, now = Date.now, request = fetch, sleep = delay, migrations, attempts = 80, runtimeAttempts = 20, intervalMs = 15000, onProgress = () => {},
 }) {
   assert.equal(branch, 'main', 'Only main may publish production');
+  assert.equal(event, 'workflow_dispatch', 'Production requires manual dispatch');
+  assert.match(requestedSha ?? '', /^[a-f0-9]{40}$/, 'A full accepted SHA is required');
+  assert.equal(requestedSha, sha, 'Requested SHA does not match the checked-out main SHA');
+  assert.ok(owner && actor === owner && triggeringActor === owner, 'Production GitHub actor is not authorized');
+  assert.ok(authorization, 'Explicit production authorization required');
+  assert.equal(authorization.acceptedSha, sha, 'Owner accepted a different SHA');
+  assert.equal(authorization.owner, owner, 'Acceptance owner does not match the configured GitHub actor');
+  assert.match(authorization.stagingDeploymentId, /^dep_[A-Za-z0-9_-]+$/);
+  assert.ok(Number.isSafeInteger(authorization.stagingRunId) && authorization.stagingRunId > 0, 'Verified staging workflow run ID required');
+  assert.ok(stagingEvidence?.environment === 'staging' && stagingEvidence.projectId === 'proj_7M0RNj59nQnafh1m'
+    && stagingEvidence.deploymentId === authorization.stagingDeploymentId && stagingEvidence.sourceSha === sha
+    && stagingEvidence.backendGitSha === sha && stagingEvidence.sourceSuperseded === false
+    && stagingEvidence.observedAt === authorization.stagingVerifiedAt, 'Staging evidence does not match the accepted deployment');
+  const stagingVerifiedAt = Date.parse(stagingEvidence.observedAt);
+  const ownerAcceptedAt = Date.parse(authorization.ownerAcceptedAt);
+  assert.ok(stagingVerifiedAt < ownerAcceptedAt && ownerAcceptedAt <= now(), 'Owner acceptance must follow staging verification');
   assert.equal(enabled, 'true', 'PRODUCTION_PREBUILT_DEPLOY must be true; publication is not silently skipped');
   for (const value of [writeToken, hookToken, githubToken, hookId, stagingReadToken]) assert.ok(value, 'Missing production deployment credentials');
   assert.match(hookId, /^[A-Za-z0-9_-]+$/);
@@ -122,38 +138,34 @@ export async function deployProduction({ sha, branch, enabled, manifests, hookId
     assert.equal((await response.json()).object?.sha, sha, 'Deployment source was superseded');
   };
   await assertCurrentSource();
-  assert.ok(authorization, 'Explicit production authorization required');
-  assert.match(authorization.acceptedSha, /^[a-f0-9]{40}$/);
-  assert.match(authorization.releaseBranch, /^release\/\d{4}-\d{2}-\d{2}$/);
-  assert.match(authorization.stagingDeploymentId, /^dep_[A-Za-z0-9_-]+$/);
-  assert.ok(Number.isFinite(Date.parse(authorization.ownerAcceptedAt)), 'Owner acceptance time required');
-  const github = async path => {
-    const response = await request('https://api.github.com/repos/tariiq222/sawaa' + path, {
-      headers: { Authorization: `Bearer ${githubToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' });
-    if (!response.ok) throw new Error(`Release admission HTTP ${response.status}`);
-    return response.json();
-  };
-  const release = await github('/git/ref/heads/' + authorization.releaseBranch);
-  assert.equal(release.object?.sha, authorization.acceptedSha, 'Frozen release changed');
-  const mainCommit = await github('/git/commits/' + sha);
-  const acceptedCommit = await github('/git/commits/' + authorization.acceptedSha);
-  assert.match(acceptedCommit.tree?.sha, /^[a-f0-9]{40}$/);
-  assert.equal(mainCommit.tree?.sha, acceptedCommit.tree.sha, 'Main tree differs from accepted release content');
+  const stagingRunResponse = await request(
+    'https://api.github.com/repos/tariiq222/sawaa/actions/runs/' + authorization.stagingRunId,
+    { headers: { Authorization: `Bearer ${githubToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' },
+  );
+  assert.ok(stagingRunResponse.ok, 'Could not verify the staging workflow run');
+  const stagingRun = await stagingRunResponse.json();
+  assert.ok(stagingRun.id === authorization.stagingRunId && stagingRun.path === '.github/workflows/build-images.yml'
+    && stagingRun.head_repository?.full_name === 'tariiq222/sawaa' && stagingRun.head_branch === 'main'
+    && stagingRun.head_sha === sha && ['push', 'workflow_dispatch'].includes(stagingRun.event)
+    && stagingRun.status === 'completed' && stagingRun.conclusion === 'success', 'Expected a successful staging workflow from main');
   const stagingGet = async path => {
     const response = await request(BASE + path, { headers: { Authorization: `Bearer ${stagingReadToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' });
     if (!response.ok) throw new Error(`Accepted staging read HTTP ${response.status}`);
     return response.json();
   };
-  const { data: staging } = await stagingGet('/api/projects/proj_7M0RNj59nQnafh1m');
-  assert.equal(staging.id, 'proj_7M0RNj59nQnafh1m');
-  assert.equal(staging.gitBranch, 'develop');
-  assert.equal(staging.activeDeploymentId, authorization.stagingDeploymentId, 'Accepted staging deployment changed');
-  const { data: acceptedDeployment } = await stagingGet('/api/deployments/' + authorization.stagingDeploymentId);
-  assert.equal(acceptedDeployment.projectId, staging.id);
-  assert.equal(acceptedDeployment.status, 'ready');
-  assert.equal(acceptedDeployment.branch, authorization.acceptedSha);
-  if (acceptedDeployment.commitSha != null) assert.equal(acceptedDeployment.commitSha, authorization.acceptedSha);
-  await waitForGitSha('https://staging.sawaa.sa/api/v1', authorization.acceptedSha, { request, sleep, attempts: 1 });
+  const assertAcceptedStaging = async () => {
+    const { data: staging } = await stagingGet('/api/projects/proj_7M0RNj59nQnafh1m');
+    assert.equal(staging.id, 'proj_7M0RNj59nQnafh1m');
+    assert.equal(staging.gitBranch, 'main');
+    assert.equal(staging.activeDeploymentId, authorization.stagingDeploymentId, 'Accepted staging deployment changed');
+    const { data: acceptedDeployment } = await stagingGet('/api/deployments/' + authorization.stagingDeploymentId);
+    assert.equal(acceptedDeployment.projectId, staging.id);
+    assert.equal(acceptedDeployment.status, 'ready');
+    assert.equal(acceptedDeployment.branch, authorization.acceptedSha);
+    if (acceptedDeployment.commitSha != null) assert.equal(acceptedDeployment.commitSha, authorization.acceptedSha);
+    await waitForGitSha('https://staging.sawaa.sa/api/v1', authorization.acceptedSha, { request, sleep, attempts: 1 });
+  };
+  await assertAcceptedStaging();
   assertBackupEvidence(backup, now());
   const { data: project } = await json(`/api/projects/${PROJECT_ID}`);
   assertProductionProject(project);
@@ -190,7 +202,7 @@ export async function deployProduction({ sha, branch, enabled, manifests, hookId
   let publicationError;
   try {
     // GitHub content/commit APIs accept an immutable full SHA as their ref.
-    // The scoped hook snapshots this ref, so a simultaneous develop push cannot
+    // The scoped hook snapshots this ref, so a simultaneous main push cannot
     // mix its Compose source with this workflow's previously built image set.
     await json(`/api/projects/${PROJECT_ID}/branch`, 'POST', { branch: sha });
     const { data: pinned } = await json(`/api/projects/${PROJECT_ID}`);
@@ -200,6 +212,7 @@ export async function deployProduction({ sha, branch, enabled, manifests, hookId
     imagePatchAttempted = true;
     await json(`/api/projects/${PROJECT_ID}/env`, 'PATCH', { environment: 'production',
       upserts: APP_SERVICES.map(name => ({ key: `${name.toUpperCase()}_IMAGE`, value: refs[name], isSecret: false })), deletes: [] });
+    await assertAcceptedStaging();
     await assertCurrentSource();
     hookAttempted = true;
     const response = await request(`${BASE}/api/webhooks/incoming/${hookId}`, { method: 'POST',
@@ -292,7 +305,6 @@ export async function deployProduction({ sha, branch, enabled, manifests, hookId
     headers: { Authorization: `Bearer ${githubToken}` }, signal: AbortSignal.timeout(15000), redirect: 'error' });
   if (!finalSource.ok) throw new Error(`Final source check HTTP ${finalSource.status}`);
   const sourceSuperseded = (await finalSource.json()).object?.sha !== sha;
-  assert.equal(sourceSuperseded, false, 'Production source was superseded during verification');
   return { authorization, backup, sourceSuperseded, environment: 'production', projectId: PROJECT_ID, sourceSha: sha, backendGitSha: health.gitSha,
     deploymentId: ready.id, observedAt: new Date().toISOString(), images: refs, httpChecks,
     migrations: { count: expectedMigrations.length, applied: false, verifiedReadOnly: true },
@@ -318,11 +330,15 @@ function hookIds(hooks, id) { return hooks.find(h => h.id === id).actionConfig.s
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const manifests = await Promise.all(APP_SERVICES.map(async name => JSON.parse(await readFile(resolve(process.argv[2], `${name}.json`), 'utf8'))));
   const evidence = await deployProduction({ sha: process.env.GITHUB_SHA, branch: process.env.GITHUB_REF_NAME,
+    event: process.env.GITHUB_EVENT_NAME, requestedSha: process.env.SAWAA_REQUESTED_SHA,
+    actor: process.env.GITHUB_ACTOR, triggeringActor: process.env.SAWAA_TRIGGERING_ACTOR, owner: process.env.SAWAA_PRODUCTION_ACTOR,
     enabled: process.env.PRODUCTION_PREBUILT_DEPLOY, manifests, hookId: process.env.OPENSHIP_PRODUCTION_HOOK_ID,
     writeToken: process.env.OPENSHIP_PRODUCTION_DEPLOY_TOKEN, hookToken: process.env.OPENSHIP_PRODUCTION_DEPLOY_HOOK_TOKEN,
     githubToken: process.env.GITHUB_TOKEN, stagingReadToken: process.env.OPENSHIP_STAGING_READ_TOKEN,
-    authorization: JSON.parse(process.env.PRODUCTION_RELEASE_AUTHORIZATION || 'null'),
+    authorization: JSON.parse(process.env.SAWAA_PRODUCTION_ACCEPTANCE || 'null'),
+    stagingEvidence: JSON.parse(await readFile(process.argv[4], 'utf8')),
     backup: JSON.parse(process.env.PRODUCTION_BACKUP_EVIDENCE || 'null'), onProgress: console.log });
   await writeFile(process.argv[3], JSON.stringify(evidence, null, 2) + '\n', { mode: 0o600 });
+  if (evidence.sourceSuperseded) console.log('Main advanced after dispatch. Evidence records the verified, immutable production deployment.');
   console.log(`Verified production deployment ${evidence.deploymentId} runs ${evidence.sourceSha}; infrastructure preserved`);
 }

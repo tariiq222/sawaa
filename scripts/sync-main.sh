@@ -1,23 +1,23 @@
 #!/bin/bash
-# Keep the local `develop` branch identical to `origin/develop`.
+# Keep the local `main` branch identical to `origin/main`.
 #
-# Runs every few minutes from launchd (see scripts/install-develop-sync.sh) and
+# Runs every few minutes from launchd (see scripts/install-main-sync.sh) and
 # can also be run by hand. It only ever fast-forwards and never discards work:
-#   - local develop behind origin  -> fast-forward (git refuses if it would
+#   - local main behind origin  -> fast-forward (git refuses if it would
 #     overwrite uncommitted changes, in which case nothing changes)
-#   - local develop ahead of origin -> leave it; the commits are published
+#   - local main ahead of origin -> leave it; the commits are published
 #     through a PR under docs/operations/deployment-policy.md
-#   - local develop diverged         -> leave it and notify the owner
+#   - local main diverged         -> leave it and notify the owner
 #   - a git operation in progress    -> skip this run
 #
-# Usage: sync-develop.sh [repo-path]   (default: $SAWAA_REPO or ~/code/sawaa)
+# Usage: sync-main.sh [repo-path]   (default: $SAWAA_REPO or ~/code/sawaa)
 
 set -u
 
 REPO="${1:-${SAWAA_REPO:-$HOME/code/sawaa}}"
-BRANCH="develop"
+BRANCH="main"
 REMOTE="origin"
-STATE_DIR="$HOME/Library/Application Support/sawaa-develop-sync"
+STATE_DIR="${SAWAA_SYNC_STATE_DIR:-$HOME/Library/Application Support/sawaa-main-sync}"
 STATE_FILE="$STATE_DIR/last-state"
 
 mkdir -p "$STATE_DIR"
@@ -30,7 +30,7 @@ notify() {
   local previous=""
   [ -f "$STATE_FILE" ] && previous="$(cat "$STATE_FILE")"
   if [ "$state" != "$previous" ]; then
-    /usr/bin/osascript -e "display notification \"$message\" with title \"Sawaa develop sync\"" >/dev/null 2>&1 || true
+    /usr/bin/osascript -e "display notification \"$message\" with title \"Sawaa main sync\"" >/dev/null 2>&1 || true
   fi
   printf '%s' "$state" >"$STATE_FILE"
 }
@@ -42,9 +42,9 @@ if ! git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! git -C "$REPO" fetch --quiet --prune "$REMOTE" 2>/tmp/sawaa-sync-fetch.err; then
-  log "fetch failed: $(tr '\n' ' ' </tmp/sawaa-sync-fetch.err)"
-  notify "fetch-failed" "Could not fetch from GitHub. Local develop was not changed."
+if ! fetch_output="$(git -C "$REPO" fetch --quiet --prune "$REMOTE" 2>&1)"; then
+  log "fetch failed: $(printf '%s' "$fetch_output" | tr '\n' ' ')"
+  notify "fetch-failed" "Could not fetch from GitHub. Local main was not changed."
   exit 0
 fi
 
@@ -71,13 +71,13 @@ fi
 
 if ! git -C "$REPO" merge-base --is-ancestor "$local_sha" "$remote_sha"; then
   log "local $BRANCH diverged from $REMOTE/$BRANCH; manual merge needed"
-  notify "diverged-$remote_sha" "Local develop diverged from GitHub. Merge origin/develop by hand."
+  notify "diverged-$remote_sha" "Local main diverged from GitHub. Merge origin/main by hand."
   exit 0
 fi
 
 behind="$(git -C "$REPO" rev-list --count "$local_sha..$remote_sha")"
 
-# Find the worktree (if any) that has develop checked out.
+# Find the worktree (if any) that has main checked out.
 worktree=""
 current=""
 while IFS= read -r line; do
@@ -111,5 +111,5 @@ if output="$(git -C "$worktree" merge --ff-only --quiet "$remote_sha" 2>&1)"; th
   clear_state
 else
   log "fast-forward blocked in $worktree: $(printf '%s' "$output" | tr '\n' ' ')"
-  notify "blocked-$remote_sha" "develop is $behind commit(s) behind; local changes touch the same files. Commit or stash, then run the sync."
+  notify "blocked-$remote_sha" "main is $behind commit(s) behind; local changes touch the same files. Commit or stash, then run the sync."
 fi

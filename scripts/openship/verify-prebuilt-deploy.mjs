@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { writeFile } from 'node:fs/promises';
-import { releaseTarget } from '../apple-release/target.mjs';
+import { resolveReleaseTarget } from '../apple-release/target.mjs';
 import { waitForDeployment } from '../apple-release/deployment.mjs';
 
 export async function waitForGitSha(apiUrl, sha, {
@@ -30,7 +30,7 @@ export async function waitForGitSha(apiUrl, sha, {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const sha = process.env.GITHUB_SHA;
-  const target = releaseTarget(process.env.GITHUB_REF_NAME);
+  const target = resolveReleaseTarget(process.env.GITHUB_REF_NAME, process.env.SAWAA_TARGET);
   const evidence = await waitForDeployment(target, sha, process.env.OPENSHIP_READ_TOKEN);
   const health = await waitForGitSha(target.apiUrl, sha);
   evidence.backendGitSha = health.gitSha;

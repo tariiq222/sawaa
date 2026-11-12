@@ -1,6 +1,6 @@
 # Sawaa Apple release
 
-One bundle (`sa.sawa.app`), existing team/signing and one Apple build-number sequence. `develop` produces a staging build; `main` produces a production build. Installing another environment replaces the existing app. Log out before switching and sign in with that environment's account.
+One bundle (`sa.sawa.app`), existing team/signing and one Apple build-number sequence. Pushes to `main` build for staging when mobile inputs change. A production-profile TestFlight build is manually dispatched on main with `target=production` and requires the exact SHA running on production. Installing another environment replaces the existing app. Log out before switching and sign in with that environment's account.
 
 `.github/workflows/apple-testflight.yml` runs on relevant pushes and manual dispatch from those two branches. It waits for OpenShip, builds on standard GitHub macOS with pinned Xcode 26.2, verifies the signed IPA, uploads once and verifies Apple `VALID` plus `Sawaa Internal` availability. It never submits App Review. Main promotion remains subject to the owner's production approval and deployment policy.
 

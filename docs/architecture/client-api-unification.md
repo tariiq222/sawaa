@@ -223,7 +223,7 @@ Mobile builds in the field cannot be force-upgraded, so the old URLs must keep w
 
 ## 5. Migration plan
 
-Each phase is independently shippable through the normal develop → staging → manual acceptance path. Phases 1 and 3 touch owner-only tiers (payments, `create-booking`, cancellation and refund behaviour) and need explicit approval plus a Moyasar sandbox run before staging.
+Each phase is independently shippable through the normal main → staging → manual acceptance path. Phases 1 and 3 touch owner-only tiers (payments, `create-booking`, cancellation and refund behaviour) and need explicit approval plus a Moyasar sandbox run before staging.
 
 | Phase | Content | Risk | Owner approval |
 |---|---|---|---|
@@ -289,7 +289,7 @@ Impact extent, by system:
 - **Website + `packages/api-client`**: 7 source files, 5 tests. The dashboard shares `api-client` but not the client modules, so it is unaffected.
 - **Mobile**: 18 source files, 7 tests, one store release; old builds keep working only because legacy prefixes keep legacy shapes.
 - **Dashboard**: no code change; reception sees unified cancellation behaviour; regenerated OpenAPI types change names for client routes the dashboard does not call.
-- **Operations**: one new Prometheus counter, no new env vars, normal develop → staging → acceptance path per phase; the alias period spans at least one app release cycle.
+- **Operations**: one new Prometheus counter, no new env vars, normal main → staging → acceptance path per phase; the alias period spans at least one app release cycle.
 
 ---
 
@@ -308,7 +308,7 @@ Still owed before «انشر» (owner-visible checklist):
 1. Live smoke with local infra up: `scripts/dev/client-api-live-smoke.sh` (boots the branch build on port 5201; needs `pnpm docker:up`).
 2. End-to-end on web and simulator: login → book → pay (Moyasar sandbox, both channels) → cancel (early and late) → rate → account closure on web.
 3. Apply `20261013000000_expand_setting_permission_subjects` **before** the new image starts; a pending migration blocks publication until separately authorised.
-4. Publish via `git push origin task/client-api-unification:refs/heads/publish/client-api-unification` and a merge-commit PR into `develop`; staging through `build-images.yml` only.
+4. Publish via `git push origin task/client-api-unification:refs/heads/publish/client-api-unification` and a merge-commit PR into `main`; staging through `build-images.yml` only.
 5. Sunset (Phase 5) only when `sawaa_client_api_legacy_prefix_requests_total` stays at zero for a month after the app release.
 Known unrelated: 5 website test files fail on a clean checkout with a localStorage "reading 'clear'" environment error.
 

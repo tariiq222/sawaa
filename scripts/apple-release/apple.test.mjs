@@ -69,7 +69,7 @@ test('a source superseded during Apple processing cannot be distributed', async 
     return new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json'}});
    };
   `);
-  const result=spawnSync(process.execPath,['--import',join(dir,'fake-fetch.mjs'),'scripts/apple-release/apple.mjs','resume'],{encoding:'utf8',env:{...process.env,APPLE_OUTPUT_DIR:dir,GITHUB_REF_NAME:'develop',GITHUB_SHA:sourceSha,GITHUB_TOKEN:'test',APPLE_ASC_KEY_ID:'TESTKEY123',APPLE_ASC_ISSUER_ID:'test',APPLE_ASC_PRIVATE_KEY_PATH:join(dir,'key.p8')}});
+  const result=spawnSync(process.execPath,['--import',join(dir,'fake-fetch.mjs'),'scripts/apple-release/apple.mjs','resume'],{encoding:'utf8',env:{...process.env,APPLE_OUTPUT_DIR:dir,GITHUB_REF_NAME:'main',GITHUB_EVENT_NAME:'push',SAWAA_APPLE_TARGET:'staging',GITHUB_SHA:sourceSha,GITHUB_TOKEN:'test',APPLE_ASC_KEY_ID:'TESTKEY123',APPLE_ASC_ISSUER_ID:'test',APPLE_ASC_PRIVATE_KEY_PATH:join(dir,'key.p8')}});
   assert.notEqual(result.status,0,'superseded source must fail before distribution');
   assert.match(result.stderr,/superseded/);
   assert.deepEqual(JSON.parse(await readFile(join(dir,'writes.json'),'utf8')),[]);

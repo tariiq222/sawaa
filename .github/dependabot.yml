@@ -4,17 +4,14 @@
 # but Dependabot adds a second, continuous signal — PRs land weekly so we
 # notice transitive bumps without re-running pnpm audit by hand.
 #
-# Every ecosystem targets `develop`: the deployment policy forbids PRs straight
-# into `main` (docs/operations/deployment-policy.md). There is no
-# github-actions ecosystem because GitHub Actions is disabled for this repo,
-# so workflow bumps would only pile up PRs.
+# Dependency pull requests target main and run the standard merge checks.
 
 version: 2
 
 updates:
   - package-ecosystem: "npm"
     directory: "/"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -40,7 +37,7 @@ updates:
 
   - package-ecosystem: "pip"
     directory: "/scripts/security"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
