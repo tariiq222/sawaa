@@ -40,7 +40,7 @@ apps/
 
 packages/
 ├── shared/       cross-app types + zod schemas
-├── api-client/   hand-written typed API client (NOT generated — see packages/api-client/AGENTS.md)
+├── api-client/   hand-written typed API client (NOT generated — see packages/api-client/CLAUDE.md)
 └── ui/           shadcn primitives for dashboard only today; website and mobile excluded
 ```
 

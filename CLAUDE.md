@@ -99,7 +99,7 @@ Sawa serves exactly one counseling center. There is no organization switching an
 
 Everything from the multi-tenant era is gone: `memberships`, `tenant-switch`, the mobile membership query hook, `OrganizationSwitcherSection.tsx`, the dashboard's `hooks/use-terminology.ts`, and the mobile's `hooks/useTerminology.ts` were all deleted (verified 2026-09-21 — the files do not exist and the backend exposes no `/public/verticals/:slug/terminology` endpoint). Do not reintroduce any of them.
 
-The only surviving artifact is `apps/mobile/services/organization.ts`, which exists solely as a comment-only stub (`export {}`) pointing callers at the `/public/branding` endpoint and the `useBranding` hook. Keep it a stub; do not add behaviour.
+`apps/mobile/services/organization.ts` (formerly a comment-only stub) is also deleted — the file does not exist. Public branding comes from the `/public/branding` endpoint and the `useBranding` hook. Do not recreate it.
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 

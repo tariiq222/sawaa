@@ -12,7 +12,7 @@ Higher-priority platform instructions still apply.
    rename, reorder, squash, or delete it — even to fix a typo. Add a new migration instead.
    Enforced by `scripts/check-prisma-migration-immutability.mjs`, which accepts **additions
    only** (`A`) under `apps/backend/prisma/migrations/` versus the base ref, and runs in
-   `ci.yml` and `merge-gate.yml`.
+   `merge-gate.yml` (pull requests only).
 2. **`prisma migrate deploy` is the only production command** (wired as `pnpm db:migrate`).
    Never `db push` against any shared database. `migrate reset` and `db push` are local-dev
    tools against disposable data only.
@@ -87,8 +87,8 @@ Before any production promotion that includes migrations:
 
 ## 6. Enforcement status
 
-Automated today: the immutability check (additions-only diff) runs in `ci.yml` and
-`merge-gate.yml`; the OpenShip deployment flow is governed by the deployment policy.
+Automated today: the immutability check (additions-only diff) runs in
+`merge-gate.yml` on pull requests; the OpenShip deployment flow is governed by the deployment policy.
 Not automated — procedural and mandatory: hot-table lock review (§3), owner confirmation for
 destructive statements (§2), and backup verification (§4). This charter records approved
 process; it does not itself configure any automation.

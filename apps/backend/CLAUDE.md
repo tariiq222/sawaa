@@ -9,13 +9,14 @@ The backend is a **Modular Monolith** organized as **domain clusters**, each con
 ```
 src/
 ├── api/                      ← HTTP layer (thin controllers, audience-scoped)
-│   ├── dashboard/            ← Admin controllers — one per cluster
+│   ├── client/               ← Website client-portal controllers
+│   ├── dashboard/            ← Admin controllers
 │   ├── mobile/{client,employee}/
 │   └── public/               ← Unauthenticated (webhooks, healthcheck)
 ├── modules/                  ← Domain code (clusters of vertical slices)
-│   ├── ai/                   bookings/   comms/        content/
-│   ├── dashboard/            finance/    identity/     integrations/
-│   ├── media/                ops/        org-config/   org-experience/
+│   ├── ai/                   bookings/   comms/        dashboard/
+│   ├── finance/              identity/   integrations/ media/
+│   ├── ops/                  org-config/ org-experience/
 │   ├── people/               platform/
 ├── infrastructure/           ← Shared tech: database, cache, queue, mail, storage, ai, events
 ├── common/                   ← Guards, filters, interceptors, pipes, base events
@@ -28,17 +29,16 @@ src/
 | Cluster | Slices inside |
 |---|---|
 | `identity/` | login, logout, refresh-token, get-current-user, client-auth, otp, users, roles, casl |
-| `people/` | clients, employees, specialties |
-| `bookings/` | create-/cancel-/confirm-/check-in-/reschedule-/complete-/no-show-/expire-booking, check-availability, waitlist, walk-in, create-zoom-meeting, retry-zoom-meeting |
+| `people/` | clients, employees |
+| `bookings/` | create-/cancel-/confirm-/check-in-/reschedule-/complete-/no-show-/expire-booking, check-availability, create-zoom-meeting, retry-zoom-meeting |
 | `finance/` | payments, moyasar-api, moyasar-webhook, refunds, coupons, bank-transfer-upload |
 | `comms/` | notifications, fcm-tokens, email-templates, send-email, send-sms, send-push, org-sms-config, sms-dlr, contact-messages, chat |
 | `ai/` | chatbot RAG (streaming), knowledge-base, pgvector embeddings, semantic-search |
 | `media/` | uploads, MinIO presigned URLs |
 | `ops/` | health-check, cron-tasks (BullMQ), generate-report, log-activity |
-| `content/` | site-settings |
 | `org-config/` | branches, categories, departments, business-hours |
 | `org-experience/` | branding, intake-forms, ratings, services, org-settings |
-| `integrations/` | zoom (encrypted creds get/upsert/test), public branding |
+| `integrations/` | zoom (encrypted creds get/upsert/test) |
 | `platform/` | problem-reports |
 | `dashboard/` | get-dashboard-stats |
 
@@ -91,7 +91,7 @@ When adding an endpoint: add or extend the slice in `src/modules/<cluster>/<use-
 npm run dev                          # Watch mode, :5200
 npm run typecheck                    # tsc --noEmit
 npm run test                         # Jest unit tests
-npm run test:cov                     # Coverage (thresholds: 65% branch, 70% fn, 85% line/stmt)
+npm run test:cov                     # Coverage (thresholds: 70% branch, 80% fn, 88% line/stmt)
 npm run test:e2e                     # E2E (test/jest-e2e.json)
 npx jest path/to/file.spec.ts        # Single test file
 npx jest -t "partial test name"      # By test name
@@ -128,7 +128,7 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 
 - **Zoom** (`modules/integrations/zoom/`) owns the encrypted-credentials lifecycle: get/upsert/test of `accountId`, `clientId`, `clientSecret`. Credentials are AES-256-GCM encrypted with `DEFAULT_ORG_ID` as AAD (single-tenant) — the `Get*` handler never returns ciphertext.
 - The bookings cluster (`bookings/create-zoom-meeting/`, `bookings/retry-zoom-meeting/`) **consumes** integrations via `ZoomMeetingService`. Never reach into Zoom credentials from a booking handler — go through the integrations slice.
-- Public branding read endpoints also live here (used by unauthenticated mobile/website surfaces).
+- Public branding read endpoints are not in this cluster: the slice is `modules/org-experience/branding/` and the controller is `src/api/public/branding.controller.ts`.
 
 ## Conventions that catch new contributors
 
