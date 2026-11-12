@@ -6,7 +6,7 @@ import {
   type ChatOperation,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import {
   ListClientBookingsHandler,
   type ListClientBookingsResult,
@@ -28,7 +28,7 @@ export type ListOwnAppointmentsResult =
 export class ListOwnAppointmentsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly listBookings: ListClientBookingsHandler,
   ) {}
 

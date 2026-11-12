@@ -1,5 +1,5 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { CacheService } from '../../../../infrastructure/cache';
 import { PriceResolverService } from '../../services/price-resolver.service';
 import { PUBLIC_PACKAGES_CACHE_KEY } from '../../session-packages/list-public-packages/public-packages.cache';
@@ -10,7 +10,7 @@ import { writeGroupedFamilyOption } from '../package-family-write.helper';
 export class CreatePackageFamilyHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     @Optional() private readonly priceResolver?: PriceResolverService,
     @Optional() private readonly cache?: CacheService,
   ) {}

@@ -6,7 +6,7 @@ import { BookingStatus, DeliveryType, Prisma } from '@prisma/client';
 import { stableEventId } from '../../../common/events';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { BookingZoomCreateRequestedEvent } from '../events/booking-zoom-create-requested.event';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRejectedEvent } from '../events/booking-cancel-rejected.event';
 import { assertTransition } from '../booking-state-machine';
@@ -23,7 +23,7 @@ export interface RejectCancelBookingCommand {
 export class RejectCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 

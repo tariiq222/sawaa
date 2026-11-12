@@ -21,7 +21,7 @@ import {
 } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { AppModule } from "../../../src/app.module";
-import { RlsTransactionService } from "../../../src/common/database/rls-transaction";
+import { TransactionService } from "../../../src/common/database/transaction.service";
 import { PrismaService } from "../../../src/infrastructure/database";
 import { EventBusService } from "../../../src/infrastructure/events";
 import { MoyasarApiClient } from "../../../src/modules/finance/moyasar-api/moyasar-api.client";
@@ -298,7 +298,7 @@ describeRealE2e("Package refund ledger — real DB", () => {
       prisma.packageRefundEvent.count({ where: { purchaseId: seeded.purchaseId } }),
     ]);
 
-    const realRls = app.get(RlsTransactionService);
+    const realRls = app.get(TransactionService);
     const failingRls = {
       withTransaction: (fn: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
         realRls.withTransaction((tx) => {

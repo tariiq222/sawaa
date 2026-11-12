@@ -5,7 +5,7 @@ import { UpdateProgramHandler } from './update-program.handler';
 import { UpdateProgramDto } from './update-program.dto';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 
 const PROGRAM_ID = '00000000-0000-4000-a000-000000000010';
@@ -61,7 +61,7 @@ describe('UpdateProgramHandler', () => {
       providers: [
         UpdateProgramHandler,
         { provide: PrismaService, useValue: {} },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
 

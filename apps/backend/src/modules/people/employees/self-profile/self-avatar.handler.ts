@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileVisibility } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
 import { ownEmployee } from './self-profile.handler';
 import { employeeAvatarUrl } from './employee-avatar-url';
@@ -9,7 +9,7 @@ export const SELF_AVATAR_LIMIT = 1024 * 1024;
 type Avatar = Pick<Express.Multer.File, 'originalname' | 'mimetype' | 'size' | 'buffer'>;
 @Injectable()
 export class ChangeSelfAvatarHandler {
-  constructor(private readonly prisma: PrismaService, private readonly transactions: RlsTransactionService, private readonly upload: UploadFileHandler, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly transactions: TransactionService, private readonly upload: UploadFileHandler, private readonly config: ConfigService) {}
   async execute(userId: string, file: Avatar | null) {
     const { employee } = await ownEmployee(this.prisma, userId);
     let url: string | null = null;

@@ -14,7 +14,7 @@ import {
 } from '@prisma/client';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitClientPaymentDto } from './init-client-payment.dto';
@@ -50,7 +50,7 @@ export class InitClientPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly moyasar: MoyasarApiClient,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: InitClientPaymentCommand): Promise<InitClientPaymentResult> {

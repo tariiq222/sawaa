@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { BankTransferUploadDto } from './bank-transfer-upload.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
@@ -37,7 +37,7 @@ export class BankTransferUploadHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: MinioService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: BankTransferUploadCommand) {

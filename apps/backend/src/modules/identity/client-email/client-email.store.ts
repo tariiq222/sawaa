@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { isEmail } from 'class-validator';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { ClientEmailStatusDto, ClientEmailStatusValue } from './client-email.response';
 
 type EmailFields = {
@@ -13,7 +13,7 @@ type EmailFields = {
 
 @Injectable()
 export class ClientEmailStore {
-  constructor(private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly transactions: TransactionService) {}
   transaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>) { return this.transactions.withTransaction(run, { timeout: 15000 }); }
   normalize(value: string): string {
     const email = value.trim().toLowerCase();

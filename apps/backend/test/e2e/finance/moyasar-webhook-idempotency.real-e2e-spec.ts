@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { AppModule } from '../../../src/app.module';
-import { PrismaService, RlsTransactionService } from '../../../src/infrastructure/database';
+import { PrismaService, TransactionService } from '../../../src/infrastructure/database';
 import { MoyasarApiClient } from '../../../src/modules/finance/moyasar-api/moyasar-api.client';
 import { MoyasarCredentialsService } from '../../../src/infrastructure/payments/moyasar-credentials.service';
 import { stableEventId } from '../../../src/common/events';
@@ -431,7 +431,7 @@ describeRealE2e('Moyasar webhook idempotency (real e2e, R-26)', () => {
       }): Promise<void>;
     };
 
-    const rls = app.get(RlsTransactionService) as unknown as {
+    const rls = app.get(TransactionService) as unknown as {
       withTransaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>;
     };
     const originalWithTransaction = rls.withTransaction.bind(rls);

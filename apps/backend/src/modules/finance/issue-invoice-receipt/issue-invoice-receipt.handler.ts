@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, type Invoice } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORG_ID } from '../../../common/constants';
@@ -46,7 +46,7 @@ export class IssueInvoiceReceiptHandler {
     private readonly storage: MinioService,
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   register(): void {

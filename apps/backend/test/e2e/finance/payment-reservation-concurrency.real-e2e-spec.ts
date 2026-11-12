@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AppModule } from '../../../src/app.module';
-import { PrismaService, RlsTransactionService } from '../../../src/infrastructure/database';
+import { PrismaService, TransactionService } from '../../../src/infrastructure/database';
 import { InitClientPaymentHandler } from '../../../src/modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { ProcessPaymentHandler } from '../../../src/modules/finance/process-payment/process-payment.handler';
 import { BankTransferUploadHandler } from '../../../src/modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
@@ -20,7 +20,7 @@ describeRealE2e('Payment reservation concurrency — real Postgres', () => {
 
   let app: INestApplication;
   let prisma: PrismaService;
-  let rls: RlsTransactionService;
+  let rls: TransactionService;
   const invoiceIds: string[] = [];
   const clientId = `payment-race-client-${randomUUID()}`;
 
@@ -30,7 +30,7 @@ describeRealE2e('Payment reservation concurrency — real Postgres', () => {
     app = moduleRef.createNestApplication();
     await app.init();
     prisma = app.get(PrismaService);
-    rls = app.get(RlsTransactionService);
+    rls = app.get(TransactionService);
     await prisma.$queryRaw`SELECT 1`;
   });
 

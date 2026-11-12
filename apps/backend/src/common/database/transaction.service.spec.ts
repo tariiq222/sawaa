@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RlsTransactionService } from './rls-transaction';
+import { TransactionService } from './transaction.service';
 import { PrismaService } from '../../infrastructure/database';
 
-describe('RlsTransactionService', () => {
-  let service: RlsTransactionService;
+describe('TransactionService', () => {
+  let service: TransactionService;
   let prisma: PrismaService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        RlsTransactionService,
+        TransactionService,
         {
           provide: PrismaService,
           useValue: {
@@ -19,7 +19,7 @@ describe('RlsTransactionService', () => {
       ],
     }).compile();
 
-    service = module.get<RlsTransactionService>(RlsTransactionService);
+    service = module.get<TransactionService>(TransactionService);
     prisma = module.get<PrismaService>(PrismaService);
   });
 

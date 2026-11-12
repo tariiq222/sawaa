@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { AuthController } from './auth.controller';
 import { LoginHandler } from '../../modules/identity/login/login.handler';
 import { LogoutHandler } from '../../modules/identity/logout/logout.handler';
-import { PrismaService, RlsTransactionService } from '../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../infrastructure/database';
 import { TokenService } from '../../modules/identity/shared/token.service';
 import { GetCurrentUserHandler } from '../../modules/identity/get-current-user/get-current-user.handler';
 import { ChangePasswordHandler } from '../../modules/identity/users/change-password.handler';
@@ -78,7 +78,7 @@ describe('AuthController (e2e)', () => {
         { provide: LoginHandler, useValue: mockLogin },
         logoutProvider,
         { provide: PrismaService, useValue: mockPrisma },
-        RlsTransactionService,
+        TransactionService,
         { provide: TokenService, useValue: mockTokens },
         { provide: GetCurrentUserHandler, useValue: mockGetCurrentUser },
         { provide: ChangePasswordHandler, useValue: mockChangePassword },

@@ -3,7 +3,7 @@ import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.ca
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
 	PrismaService,
-	RlsTransactionService,
+	TransactionService,
 } from "../../../infrastructure/database";
 
 export interface RemoveEmployeeServiceCommand {
@@ -20,7 +20,7 @@ const REMOVE_EMPLOYEE_SERVICE_MESSAGES = {
 export class RemoveEmployeeServiceHandler {
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly rlsTransaction: RlsTransactionService,
+		private readonly rlsTransaction: TransactionService,
 		private readonly cache: CacheService,
 	) {}
 

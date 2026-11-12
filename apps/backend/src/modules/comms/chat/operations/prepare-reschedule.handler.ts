@@ -5,7 +5,7 @@ import {
   type ChatOperation,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { ChatBookingQuoteService } from './chat-booking-quote.service';
 import { assistantDispatchIdempotencyKey, type AssistantOperationFence } from './assistant-operation-fence';
 import { createOrGetPreparedOperation } from './create-or-get-prepared-operation';
@@ -23,7 +23,7 @@ export interface PrepareRescheduleCommand {
 export class PrepareRescheduleHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly quote: ChatBookingQuoteService,
   ) {}
 

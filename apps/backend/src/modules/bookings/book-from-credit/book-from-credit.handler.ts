@@ -12,7 +12,7 @@ import {
   PackagePurchaseStatus,
   Prisma,
 } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { BookingCreatedEvent } from '../events/booking-created.event';
@@ -124,7 +124,7 @@ function hasAvailableCapacity(credit: {
 export class BookFromCreditHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}

@@ -1,5 +1,5 @@
 import { ChatAccessService } from '../guest/chat-access.service';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { ListChatMessagesHandler } from './list-chat-messages.handler';
 
 describe('ListChatMessagesHandler', () => {
@@ -29,7 +29,7 @@ describe('ListChatMessagesHandler', () => {
     ]);
     const handler = new ListChatMessagesHandler(
       access as unknown as ChatAccessService,
-      { withTransaction: jest.fn((work) => work(tx)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(tx)) } as unknown as TransactionService,
     );
 
     const result = await handler.execute({
@@ -54,7 +54,7 @@ describe('ListChatMessagesHandler', () => {
     tx.commsChatMessage.findUnique.mockResolvedValue({ id: 'foreign-message', conversationId: 'conversation-2' });
     const handler = new ListChatMessagesHandler(
       access as unknown as ChatAccessService,
-      { withTransaction: jest.fn((work) => work(tx)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(tx)) } as unknown as TransactionService,
     );
 
     await expect(handler.execute({
@@ -67,7 +67,7 @@ describe('ListChatMessagesHandler', () => {
     tx.commsChatMessage.findMany.mockResolvedValue([]);
     const handler = new ListChatMessagesHandler(
       access as unknown as ChatAccessService,
-      { withTransaction: jest.fn((work) => work(tx)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(tx)) } as unknown as TransactionService,
     );
 
     await handler.execute({ audience: 'client', conversationId: 'conversation-1', clientId: 'client-a', limit: 20 });
@@ -81,7 +81,7 @@ describe('ListChatMessagesHandler', () => {
     tx.chatConversation.findFirst.mockResolvedValue(null);
     const handler = new ListChatMessagesHandler(
       access as unknown as ChatAccessService,
-      { withTransaction: jest.fn((work) => work(tx)) } as unknown as RlsTransactionService,
+      { withTransaction: jest.fn((work) => work(tx)) } as unknown as TransactionService,
     );
 
     await expect(handler.execute({

@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import {
 	PrismaService,
-	RlsTransactionService,
+	TransactionService,
 } from "../../../infrastructure/database";
 import { CacheService } from "../../../infrastructure/cache";
 import { SERVICES_CACHE_PREFIX } from "./services.cache";
@@ -40,7 +40,7 @@ function snapshotReferencesService(value: unknown, serviceId: string, durationOp
 export class ArchiveServiceHandler {
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly rlsTransaction: RlsTransactionService,
+		private readonly rlsTransaction: TransactionService,
 		private readonly cache: CacheService,
 	) {}
 

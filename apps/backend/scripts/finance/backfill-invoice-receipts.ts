@@ -397,10 +397,10 @@ export async function createReceiptIssuer(
     import('nestjs-cls'),
     import('@nestjs/config'),
   ]);
-  const [{ PrismaService }, { RlsTransactionService }, { MinioService, FINANCE_INVOICES_BUCKET }, { InvoicePdfRendererService }, { IssueInvoiceReceiptHandler }] =
+  const [{ PrismaService }, { TransactionService }, { MinioService, FINANCE_INVOICES_BUCKET }, { InvoicePdfRendererService }, { IssueInvoiceReceiptHandler }] =
     await Promise.all([
       import('../../src/infrastructure/database/prisma.service'),
-      import('../../src/common/database/rls-transaction'),
+      import('../../src/common/database/transaction.service'),
       import('../../src/infrastructure/storage/minio.service'),
       import('../../src/modules/finance/issue-invoice-receipt/invoice-pdf-renderer.service'),
       import('../../src/modules/finance/issue-invoice-receipt/issue-invoice-receipt.handler'),
@@ -424,7 +424,7 @@ export async function createReceiptIssuer(
     // issue() never publishes; subscribe/publish are not reachable here.
     {} as never,
     cls,
-    new RlsTransactionService(prisma),
+    new TransactionService(prisma),
   );
   return {
     issue: (invoiceId, paymentId) => handler.issue(invoiceId, paymentId, { deliver: false }),

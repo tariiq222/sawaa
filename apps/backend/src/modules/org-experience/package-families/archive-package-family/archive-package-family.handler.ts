@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { CacheService } from '../../../../infrastructure/cache';
 import { PUBLIC_PACKAGES_CACHE_KEY } from '../../session-packages/list-public-packages/public-packages.cache';
 
@@ -11,7 +11,7 @@ import { PUBLIC_PACKAGES_CACHE_KEY } from '../../session-packages/list-public-pa
 @Injectable()
 export class ArchivePackageFamilyHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     @Optional() private readonly cache?: CacheService,
   ) {}
 

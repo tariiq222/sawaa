@@ -3,7 +3,7 @@ import { MobileEmailFlow, Prisma } from '@prisma/client';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../common/database/rls-transaction';
+import { TransactionService } from '../../../common/database/transaction.service';
 
 export const hashContinuation = (token: string) => createHash('sha256').update(token).digest('hex');
 export const newContinuation = () => randomBytes(32).toString('base64url');
@@ -12,7 +12,7 @@ export const codeHash = (code: string) => bcrypt.hash(code, 10);
 
 @Injectable()
 export class MobileEmailFlowStore {
-  constructor(private readonly prisma: PrismaService, private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly prisma: PrismaService, private readonly transactions: TransactionService) {}
 
   transaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.transactions.withTransaction(run, { timeout: 15000 });

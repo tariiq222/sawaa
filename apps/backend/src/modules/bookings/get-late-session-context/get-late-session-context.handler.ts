@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { RlsTransactionService } from "../../../infrastructure/database";
+import { TransactionService } from "../../../infrastructure/database";
 import { resolveVatRate } from "../../finance/create-invoice/create-invoice.handler";
 import { getEnabledManualReceiptMethods } from "../../finance/record-previous-receipt/manual-receipt-method.helper";
 import { GetLateSessionContextResponseDto } from "./get-late-session-context.dto";
 @Injectable()
 export class GetLateSessionContextHandler {
-  constructor(private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly transactions: TransactionService) {}
   async execute(): Promise<GetLateSessionContextResponseDto> {
     return this.transactions.withTransaction(
       async (tx) => {

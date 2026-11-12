@@ -2,7 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SetEmployeeBreaksHandler } from './set-employee-breaks.handler';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 
 const EMPLOYEE = { id: 'emp-1', organizationId: 'org-1' };
 
@@ -32,7 +32,7 @@ describe('SetEmployeeBreaksHandler', () => {
         SetEmployeeBreaksHandler,
         { provide: PrismaService, useValue: prisma },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: {
             withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
             withBypassTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),

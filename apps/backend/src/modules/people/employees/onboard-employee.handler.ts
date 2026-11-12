@@ -1,6 +1,6 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { OnboardEmployeeDto } from './onboard-employee.dto';
 
 export type OnboardEmployeeCommand = OnboardEmployeeDto;
@@ -9,7 +9,7 @@ export type OnboardEmployeeCommand = OnboardEmployeeDto;
 export class OnboardEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(dto: OnboardEmployeeCommand) {

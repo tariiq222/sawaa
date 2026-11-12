@@ -197,7 +197,7 @@ function buildHandler(
   tx = buildTx(),
 ) {
   // Use one shared payment-create spy while exposing the full Prisma read/CAS
-  // surface on every RlsTransactionService transaction client.
+  // surface on every TransactionService transaction client.
   tx.payment.create = prisma.payment.create;
   const transactionClient = {
     ...prisma,

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { normalizeDeliveryTypeInput } from '../delivery-type-input.helper';
 import { dedupeDurationOptions } from '../set-service-booking-configs.handler';
 import { SetEmployeeDurationsCommand } from './set-employee-durations.dto';
@@ -17,7 +17,7 @@ export { SetEmployeeDurationsCommand };
 export class SetEmployeeDurationsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: SetEmployeeDurationsCommand) {

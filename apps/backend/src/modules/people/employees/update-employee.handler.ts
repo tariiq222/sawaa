@@ -3,7 +3,7 @@ import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.ca
 import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-image.handler';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { EmployeeDeactivatedEvent } from '../events/employee-deactivated.event';
 import { EmployeeReactivatedEvent } from '../events/employee-reactivated.event';
@@ -34,7 +34,7 @@ function normalizeEmail(value: string): string {
 export class UpdateEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
     private readonly images: ResolveEmployeeImageHandler,
     private readonly cache: CacheService,

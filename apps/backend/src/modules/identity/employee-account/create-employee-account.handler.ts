@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { PasswordService } from '../shared/password.service';
 import { assertCanAssignRole, assertCanManageUser } from '../shared/role-rank';
 import { CreateEmployeeAccountDto } from './create-employee-account.dto';
@@ -20,7 +20,7 @@ export type CreateEmployeeAccountCommand = CreateEmployeeAccountDto & {
 export class CreateEmployeeAccountHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly password: PasswordService,
   ) {}
 

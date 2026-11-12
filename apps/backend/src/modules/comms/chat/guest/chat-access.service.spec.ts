@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { ChatAccessService } from './chat-access.service';
 import { GuestChatTokenService } from './guest-chat-token.service';
 
@@ -39,7 +39,7 @@ describe('ChatAccessService', () => {
     service = new ChatAccessService(
       prisma as unknown as PrismaService,
       tokenService,
-      rlsTransaction as unknown as RlsTransactionService,
+      rlsTransaction as unknown as TransactionService,
       audit as never,
     );
   });

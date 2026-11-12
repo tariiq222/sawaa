@@ -2,7 +2,7 @@ import { CacheService } from '../../../infrastructure/cache';
 import { SERVICES_CACHE_PREFIX } from '../../org-experience/services/services.cache';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OnboardingStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EmployeeOnboardingDto } from './employee-onboarding.dto';
 
 export type EmployeeOnboardingCommand = EmployeeOnboardingDto & {
@@ -28,7 +28,7 @@ const RELATION_CONFIG = {
 export class EmployeeOnboardingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly cache: CacheService,
   ) {}
 

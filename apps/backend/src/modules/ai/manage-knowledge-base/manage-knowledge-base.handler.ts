@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Optional } from '@n
 import { ActivityAction, DocumentStatus, Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../common/database/rls-transaction';
+import { TransactionService } from '../../../common/database/transaction.service';
 import { CreateDocumentDto, ListDocumentsDto, UpdateDocumentDto } from './manage-knowledge-base.dto';
 
 const REINDEX_EVENT = 'ai.knowledge.reindex_requested.v1';
@@ -29,7 +29,7 @@ function safeMetadata(actor?: ActivityActor, extra?: Record<string, unknown>) { 
 
 @Injectable()
 export class ManageKnowledgeBaseHandler {
-  constructor(private readonly prisma: PrismaService, @Optional() private readonly rls?: RlsTransactionService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly rls?: TransactionService) {}
   private async transaction<T>(fn: (tx: TransactionLike) => Promise<T>): Promise<T> {
     if (this.rls) return this.rls.withTransaction((tx) => fn(tx as TransactionLike));
     return fn(this.prisma as unknown as TransactionLike);

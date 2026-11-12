@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { BullMqService } from '../../../../infrastructure/queue/bull-mq.service';
 import { stageAdministrativeMessageProcessing } from './administrative-message-processing-requested.event';
 import {
@@ -21,7 +21,7 @@ export class AdministrativeAssistantRecoveryWorker implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly bullMq: BullMqService,
   ) {}
 

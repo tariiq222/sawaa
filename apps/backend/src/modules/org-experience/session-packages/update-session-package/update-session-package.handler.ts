@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { DiscountType } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { toHalalas } from '../../../finance/money.helper';
 import { UpdateSessionPackageDto } from './update-session-package.dto';
 import { CreateSessionPackageItemDto } from '../create-session-package/create-session-package.dto';
@@ -55,7 +55,7 @@ export type UpdateSessionPackageCommand = UpdateSessionPackageDto & { packageId:
 export class UpdateSessionPackageHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly pricing: ComputePackagePriceService,
     private readonly cache: CacheService,
     @Optional() private readonly priceResolver?: PriceResolverService,

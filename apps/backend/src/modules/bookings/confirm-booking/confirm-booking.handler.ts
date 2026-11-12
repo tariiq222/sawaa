@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus, DeliveryType, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
 import { BookingZoomCreateRequestedEvent } from '../events/booking-zoom-create-requested.event';
 import { ZoomMeetingQueueService } from '../create-zoom-meeting/zoom-meeting-queue.service';
@@ -19,7 +19,7 @@ export class ConfirmBookingHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly zoomMeetingQueue: ZoomMeetingQueueService,
   ) {}
 

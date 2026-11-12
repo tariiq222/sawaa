@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InvoiceStatus, PaymentStatus, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { computeVat, toHalalas } from '../money.helper';
@@ -23,7 +23,7 @@ const MOYASAR_SETTLED_STATES = ['paid', 'captured', 'authorized'] as const;
 export class ApplyInvoiceDiscountHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly moyasar: MoyasarApiClient,
   ) {}
 

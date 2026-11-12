@@ -3,7 +3,7 @@ import { HttpException, HttpStatus, ServiceUnavailableException, UnauthorizedExc
 import { OtpChannel } from '@prisma/client';
 import { RequestDashboardOtpHandler } from './request-dashboard-otp.handler';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
@@ -57,7 +57,7 @@ describe('RequestDashboardOtpHandler', () => {
           },
         },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: {
             withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prismaMock.$transaction(fn)),
             withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prismaMock.$transaction(fn)),

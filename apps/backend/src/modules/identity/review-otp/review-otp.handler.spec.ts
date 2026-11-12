@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
@@ -77,7 +77,7 @@ describe('Synthetic review OTP through real request and verification handlers', 
     const module = await Test.createTestingModule({ providers: [
       RequestMobileLoginOtpHandler, RequestOtpHandler, VerifyMobileOtpHandler, ReviewOtpHandler,
       { provide: PrismaService, useValue: db },
-      { provide: RlsTransactionService, useValue: { withTransaction: (fn: any) => fn(db) } },
+      { provide: TransactionService, useValue: { withTransaction: (fn: any) => fn(db) } },
       { provide: ConfigService, useValue: { get: (key: string) => config[key] } },
       { provide: ClsService, useValue: { run: (fn: any) => fn(), set: () => undefined } },
       { provide: RedisService, useValue: { getClient: () => ({ set: async () => state.cooldown ? null : 'OK' }) } },

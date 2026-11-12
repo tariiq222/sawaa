@@ -15,7 +15,7 @@ import {
   type ChatOperation,
 } from '@prisma/client';
 import { isDeepStrictEqual } from 'node:util';
-import { RlsTransactionService } from '../../../../infrastructure/database';
+import { TransactionService } from '../../../../infrastructure/database';
 import { CreateBookingHandler } from '../../../bookings/create-booking/create-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../bookings/client/client-reschedule-booking.handler';
 import { ClientCancelBookingHandler } from '../../../bookings/client/client-cancel-booking.handler';
@@ -61,7 +61,7 @@ const TERMINAL_STATUSES = new Set<ChatOperationStatus>([
 @Injectable()
 export class ConfirmOperationHandler {
   constructor(
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly quote: ChatBookingQuoteService,
     private readonly createBooking: CreateBookingHandler,
     private readonly rescheduleBooking: ClientRescheduleBookingHandler,

@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ClsService } from 'nestjs-cls';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { ZoomMeetingService } from '../zoom-meeting.service';
@@ -69,7 +69,7 @@ describe('RefundCompletedCompatibilityHandler compatibility acknowledgement', ()
         RefundCompletedCompatibilityHandler,
         { provide: EventBusService, useValue: eventBus },
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: { withTransaction: (fn: (tx: unknown) => unknown) => fn(prisma) } },
+        { provide: TransactionService, useValue: { withTransaction: (fn: (tx: unknown) => unknown) => fn(prisma) } },
         { provide: ZoomMeetingService, useValue: zoom },
         { provide: ClsService, useValue: cls },
       ],

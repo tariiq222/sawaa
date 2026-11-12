@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { NativeRefreshHandler } from './native-refresh.handler';
@@ -53,7 +53,7 @@ describe('native session handlers', () => {
         NativeRefreshHandler,
         NativeLogoutHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rls },
+        { provide: TransactionService, useValue: rls },
         { provide: TokenService, useValue: tokens },
         { provide: ClientTokenService, useValue: clientTokens },
         { provide: PlatformSettingsService, useValue: settings },

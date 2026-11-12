@@ -12,7 +12,7 @@ function mapDbConflict(err: unknown): never {
   }
   throw err;
 }
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { retrySerializableTransaction } from '../../../common/database/person-reference-lock.helper';
 
 /** Enough attempts for a small burst of reschedules queued on one client lock. */
@@ -39,7 +39,7 @@ export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledA
 export class RescheduleBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     // Retained as a constructor dependency for backwards-compatible module
     // wiring; all provider work now goes through the durable outbox protocol.

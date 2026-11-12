@@ -12,7 +12,7 @@ import {
 } from "@prisma/client";
 import {
 	PrismaService,
-	RlsTransactionService,
+	TransactionService,
 } from "../../../infrastructure/database";
 import { isTerminalStatus } from "../booking-state-machine";
 import { assertBookingIsMutable } from "../booking-lifecycle.helper";
@@ -74,7 +74,7 @@ export class DeleteBookingHandler {
 
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly rlsTransaction: RlsTransactionService,
+		private readonly rlsTransaction: TransactionService,
 	) {}
 
 	async execute(cmd: DeleteBookingCommand): Promise<void> {

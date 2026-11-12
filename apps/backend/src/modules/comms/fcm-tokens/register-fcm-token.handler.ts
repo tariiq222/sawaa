@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 import { RegisterFcmTokenDto } from './register-fcm-token.dto';
 
 export type RegisterFcmTokenCommand = RegisterFcmTokenDto & { clientId: string };
 
 @Injectable()
 export class RegisterFcmTokenHandler {
-  constructor(private readonly transactions: RlsTransactionService) {}
+  constructor(private readonly transactions: TransactionService) {}
 
   async execute(cmd: RegisterFcmTokenCommand) {
     return this.transactions.withTransaction(async (tx) => {

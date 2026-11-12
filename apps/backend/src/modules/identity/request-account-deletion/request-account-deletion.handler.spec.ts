@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { RequestAccountDeletionHandler } from './request-account-deletion.handler';
-import { RlsTransactionService } from '../../../infrastructure/database';
+import { TransactionService } from '../../../infrastructure/database';
 
 describe('RequestAccountDeletionHandler', () => {
   let handler: RequestAccountDeletionHandler;
@@ -34,7 +34,7 @@ describe('RequestAccountDeletionHandler', () => {
       providers: [
         RequestAccountDeletionHandler,
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: { withTransaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx) },
         },
       ],

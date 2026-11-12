@@ -11,7 +11,7 @@ import {
   PackagePurchaseStatus,
   Prisma,
 } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { TransferCreditDto } from './transfer-credit.dto';
 import { lockPackagePurchase } from '../package-purchase-lock.helper';
 
@@ -45,7 +45,7 @@ export type TransferCreditCommand = TransferCreditDto & {
 export class TransferCreditHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(cmd: TransferCreditCommand) {

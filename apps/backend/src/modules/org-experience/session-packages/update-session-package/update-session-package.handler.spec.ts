@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { DiscountType, PackageConstraintDimension, PackageConstraintMode } from '@prisma/client';
 import { UpdateSessionPackageHandler } from './update-session-package.handler';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
@@ -128,7 +128,7 @@ describe('UpdateSessionPackageHandler', () => {
         ComputePackagePriceService,
         { provide: PrismaService, useValue: prisma },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: { withTransaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)) },
         },
         cacheProvider,

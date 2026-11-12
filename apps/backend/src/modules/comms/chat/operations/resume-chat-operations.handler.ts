@@ -14,7 +14,7 @@ import {
   Prisma,
   type ChatOperation,
 } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { ACTIVE_BOOKING_STATUSES } from '../../../bookings/active-booking-statuses';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { ChatAuditService } from '../chat-audit.service';
@@ -63,7 +63,7 @@ type ExistingBooking = {
 export class ResumeChatOperationsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
     private readonly quote: ChatBookingQuoteService,
     private readonly audit: ChatAuditService,
   ) {}

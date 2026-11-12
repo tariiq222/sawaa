@@ -1,14 +1,14 @@
 import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { ActivityAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../common/database/rls-transaction';
+import { TransactionService } from '../../../common/database/transaction.service';
 import { AiProviderCredentialsService } from '../../../infrastructure/ai/ai-provider-credentials.service';
 import { AiConnectionStatus, assertProviderModel, toPublicAiProviderConfig } from './ai-provider-config.types';
 import { UpsertAiProviderConfigDto } from './provider-config.dto';
 
 @Injectable()
 export class UpsertAiProviderConfigHandler {
-  constructor(private readonly prisma: PrismaService, private readonly rls: RlsTransactionService, private readonly credentials: AiProviderCredentialsService) {}
+  constructor(private readonly prisma: PrismaService, private readonly rls: TransactionService, private readonly credentials: AiProviderCredentialsService) {}
 
   async execute(dto: UpsertAiProviderConfigDto, actor?: { id?: string; email?: string }) {
     try { assertProviderModel(dto.provider, dto.model); } catch { throw new BadRequestException('Invalid provider or model'); }

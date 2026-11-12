@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { RequestOtpHandler } from './request-otp.handler';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
@@ -60,7 +60,7 @@ describe('RequestOtpHandler', () => {
           },
         },
         {
-          provide: RlsTransactionService,
+          provide: TransactionService,
           useValue: {
             withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prismaMock.$transaction(fn)),
             withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prismaMock.$transaction(fn)),

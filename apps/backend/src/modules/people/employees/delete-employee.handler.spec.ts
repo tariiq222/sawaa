@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DeleteEmployeeHandler } from './delete-employee.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { ACTIVE_BOOKING_STATUSES } from '../../bookings/active-booking-statuses';
 
 const buildPrisma = () => ({
@@ -36,7 +36,7 @@ describe('DeleteEmployeeHandler', () => {
         { provide: CacheService, useValue: cache },
         DeleteEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: rlsTransaction },
+        { provide: TransactionService, useValue: rlsTransaction },
       ],
     }).compile();
     handler = module.get<DeleteEmployeeHandler>(DeleteEmployeeHandler);

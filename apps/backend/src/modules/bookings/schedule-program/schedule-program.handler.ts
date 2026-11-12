@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import {
   PrismaService,
-  RlsTransactionService,
+  TransactionService,
 } from '../../../infrastructure/database';
 import { assertProgramTransition } from '../program/program-state-machine';
 import { ScheduleProgramDto } from '../enroll-in-program/enroll-in-program.dto';
@@ -16,7 +16,7 @@ import { ScheduleProgramDto } from '../enroll-in-program/enroll-in-program.dto';
 export class ScheduleProgramHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly rlsTransaction: TransactionService,
   ) {}
 
   async execute(programId: string, dto: ScheduleProgramDto) {

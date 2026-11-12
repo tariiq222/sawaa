@@ -6,7 +6,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { ChatAdapter } from '../../../../infrastructure/ai';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { AdministrativeAssistantLeaseService } from './administrative-assistant-lease.service';
 import {
   AdministrativeAssistantService,
@@ -273,7 +273,7 @@ describe('AdministrativeAssistantService', () => {
     const scopeGate = new AdministrativeScopeGate();
     service = new AdministrativeAssistantService(
       prisma as unknown as PrismaService,
-      transaction as unknown as RlsTransactionService,
+      transaction as unknown as TransactionService,
       chat as unknown as ChatAdapter,
       tools as unknown as AdministrativeToolsService,
       lease as unknown as AdministrativeAssistantLeaseService,

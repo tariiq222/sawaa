@@ -11,7 +11,7 @@
 import { ConflictException, INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { CancellationReason } from "@prisma/client";
-import { RlsTransactionService } from "../../../src/common/database/rls-transaction";
+import { TransactionService } from "../../../src/common/database/transaction.service";
 import { AppModule } from "../../../src/app.module";
 import { PrismaService } from "../../../src/infrastructure/database";
 import { MoyasarApiClient } from "../../../src/modules/finance/moyasar-api/moyasar-api.client";
@@ -446,7 +446,7 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
     let signal!: () => void;
     const hit = new Promise<void>((resolve) => (signal = resolve));
     const gate = new Promise<void>((resolve) => (resume = resolve));
-    const rls = app.get(RlsTransactionService);
+    const rls = app.get(TransactionService);
     const wrapped = {
       withTransaction: (fn: any) =>
         rls.withTransaction(async (tx: any) => {
@@ -676,7 +676,7 @@ describeRealE2e("Package credit concurrency lifecycle", () => {
       const purchaseLockAttempt = new Promise<void>((resolve) => {
         signalPurchaseLockAttempt = resolve;
       });
-      const rls = app.get(RlsTransactionService);
+      const rls = app.get(TransactionService);
       const originalWithTransaction = rls.withTransaction.bind(rls);
       cancelSpy = jest.spyOn(rls, "withTransaction").mockImplementationOnce((fn: any, options?: any) =>
         originalWithTransaction(async (tx: any) => {
