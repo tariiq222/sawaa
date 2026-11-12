@@ -586,6 +586,10 @@ importers:
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@25.9.9)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(msw@2.14.2(@types/node@25.9.9)(typescript@5.9.3))(vite@8.3.4(@types/node@25.9.9)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/shared:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.6.7
     devDependencies:
       '@prisma/client':
         specifier: ^7.8.0
@@ -599,9 +603,6 @@ importers:
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@25.9.9)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(msw@2.14.2(@types/node@25.9.9)(typescript@5.9.3))(vite@8.3.4(@types/node@25.9.9)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
-      zod:
-        specifier: ^4.4.3
-        version: 4.6.7
 
   packages/test-helpers-pw:
     devDependencies:
