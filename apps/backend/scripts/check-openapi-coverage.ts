@@ -12,7 +12,11 @@ import { resolve } from 'path';
 interface OperationObject {
   summary?: string;
   tags?: string[];
-  responses?: Record<string, unknown>;
+  responses?: Record<string, ResponseObject>;
+}
+
+interface ResponseObject {
+  content?: Record<string, { schema?: Record<string, unknown> }>;
 }
 
 interface SchemaProperty {
@@ -39,6 +43,20 @@ const spec = JSON.parse(readFileSync(specPath, 'utf-8')) as OpenApi;
 
 const problems: string[] = [];
 const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
+const SUCCESS_CODES = ['200', '201', '202', '204'];
+const DETAIL_KEYS = ['$ref', 'properties', 'items', 'allOf', 'oneOf', 'anyOf'];
+
+function hasDetailedJsonSchema(response: ResponseObject | undefined): boolean {
+  const schema = response?.content?.['application/json']?.schema;
+  return !!schema && DETAIL_KEYS.some((key) => key in schema);
+}
+
+/** A non-JSON content type (pdf, csv, octet-stream...) that declares a schema is exempt. */
+function hasNonJsonSchema(response: ResponseObject | undefined): boolean {
+  return Object.entries(response?.content ?? {}).some(
+    ([type, media]) => type !== 'application/json' && !!media?.schema,
+  );
+}
 
 for (const [route, methods] of Object.entries(spec.paths ?? {})) {
   for (const [method, op] of Object.entries(methods)) {
@@ -51,6 +69,19 @@ for (const [route, methods] of Object.entries(spec.paths ?? {})) {
       (code) => code.startsWith('4') || code.startsWith('5'),
     );
     if (!hasErrorResponse) problems.push(`${id} — no 4xx/5xx response documented`);
+
+    if (!SUCCESS_CODES.some((code) => code in responses)) {
+      problems.push(`${id} — no success response documented`);
+    } else {
+      // 202/204-only operations carry no body contract; check the first of 200/201.
+      const primaryCode = ['200', '201'].find((code) => code in responses);
+      if (primaryCode) {
+        const primary = responses[primaryCode];
+        if (!hasDetailedJsonSchema(primary) && !hasNonJsonSchema(primary)) {
+          problems.push(`${id} — success response has no detailed schema`);
+        }
+      }
+    }
   }
 }
 
