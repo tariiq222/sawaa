@@ -23,6 +23,9 @@ import { TransferCreditDto } from '../../modules/bookings/transfer-credit/transf
 import { ApiQuery } from '@nestjs/swagger';
 import { AuditControllerName } from '../../common/interceptors/audit-controller-name.decorator';
 
+import { BookingRecordDto } from './dto/booking-record-response.dto';
+import { MatchingCreditDto, PackageCreditRecordDto } from './dto/booking-support-response.dto';
+
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -39,22 +42,11 @@ export class DashboardBookingsCreditsController {
   @Post('from-credit')
   @CheckPermissions({ action: 'create', subject: 'Booking' })
   @ApiOperation({ summary: 'Book an appointment by consuming session-package credit' })
-  @ApiCreatedResponse({
-    description: 'Zero-value booking created from a package credit',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'CONFIRMED' },
-        scheduledAt: { type: 'string', format: 'date-time' },
-        packageCreditId: { type: 'string', format: 'uuid' },
-      },
-    },
-  })
+  @ApiCreatedResponse({ description: 'Zero-value booking created from a package credit', type: BookingRecordDto })
   @ApiResponse({ status: 400, description: 'Slot unavailable, missing credit selector, or past date', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'No usable package credit found', type: ApiErrorDto })
   @ApiResponse({ status: 409, description: 'No remaining credit or slot conflict (concurrent over-draw rejected)', type: ApiErrorDto })
-  bookFromCredit(@UserId() userId: string, @Body() body: BookFromCreditDto) {
+  bookFromCredit(@UserId() userId: string, @Body() body: BookFromCreditDto): Promise<BookingRecordDto> {
     const { scheduledAt, ...rest } = body;
     return this.bookFromCreditHandler.execute({
       ...rest,
@@ -70,24 +62,8 @@ export class DashboardBookingsCreditsController {
   @ApiQuery({ name: 'serviceId', description: 'Service ID', example: '00000000-0000-4000-a000-000000000004' })
   @ApiQuery({ name: 'employeeId', description: 'Employee ID', example: '00000000-0000-4000-a000-000000000003' })
   @ApiQuery({ name: 'durationOptionId', description: 'Duration option ID', example: '00000000-0000-4000-a000-000000000005' })
-  @ApiOkResponse({
-    description: 'Matching ACTIVE credits with remaining capacity (FIFO order)',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          creditId: { type: 'string', format: 'uuid' },
-          purchaseId: { type: 'string', format: 'uuid' },
-          totalQuantity: { type: 'number' },
-          usedQuantity: { type: 'number' },
-          reservedQuantity: { type: 'number' },
-          remaining: { type: 'number' },
-        },
-      },
-    },
-  })
-  getMatchingCredits(@Query() q: GetMatchingCreditsDto) {
+  @ApiOkResponse({ description: 'Matching ACTIVE credits with remaining capacity (FIFO order)', type: MatchingCreditDto, isArray: true })
+  getMatchingCredits(@Query() q: GetMatchingCreditsDto): Promise<MatchingCreditDto[]> {
     return this.matchingCreditsHandler.execute(q);
   }
 
@@ -98,23 +74,14 @@ export class DashboardBookingsCreditsController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Transfer a session-package credit to another practitioner' })
   @ApiParam({ name: 'creditId', description: 'Package credit ID', example: '00000000-0000-4000-a000-000000000006' })
-  @ApiOkResponse({
-    description: 'Credit re-pointed to the target employee (price snapshot unchanged)',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        employeeId: { type: 'string', format: 'uuid' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Credit re-pointed to the target employee (price snapshot unchanged)', type: PackageCreditRecordDto })
   @ApiResponse({ status: 400, description: 'Target employee does not provide the service/duration, is inactive, or is the current owner', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Credit or target employee not found', type: ApiErrorDto })
   transferCredit(
     @UserId() userId: string,
     @Param('creditId', ParseUUIDPipe) creditId: string,
     @Body() body: TransferCreditDto,
-  ) {
+  ): Promise<PackageCreditRecordDto> {
     return this.transferCreditHandler.execute({
       creditId,
       toEmployeeId: body.toEmployeeId,

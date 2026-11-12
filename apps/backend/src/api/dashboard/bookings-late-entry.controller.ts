@@ -11,6 +11,8 @@ import { CurrentUser, type JwtUser } from '../../common/auth/current-user.decora
 import { ApiStandardResponses } from '../../common/swagger';
 import { AuditControllerName } from '../../common/interceptors/audit-controller-name.decorator';
 
+import { LateEntryResultDto } from './dto/booking-late-entry-response.dto';
+
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -27,15 +29,15 @@ export class DashboardBookingsLateEntryController {
   @CheckPermissions({ action: 'create', subject: 'Booking' })
   @ApiOperation({ summary: 'Get permitted late session VAT and manual payment context' })
   @ApiOkResponse({ description: 'Current VAT rate and enabled manual payment methods only', type: GetLateSessionContextResponseDto })
-  getLateSessionContext() {
+  getLateSessionContext(): Promise<GetLateSessionContextResponseDto> {
     return this.lateSessionContextHandler.execute();
   }
 
   @Post('late-entry')
   @CheckPermissions({ action: 'create', subject: 'Booking' })
   @ApiOperation({ summary: 'Record a previous session and its actual financial facts' })
-  @ApiCreatedResponse({ description: 'Session and financial facts recorded atomically', schema: { type:'object', properties: { booking:{type:'object',additionalProperties:true},invoice:{type:'object',nullable:true,additionalProperties:true},payment:{type:'object',nullable:true,additionalProperties:true},outstanding:{type:'integer'},isLateEntry:{type:'boolean',enum:[true]},lateEntryRecordedAt:{type:'string',format:'date-time'},lateEntryRecordedBy:{type:'string'} } } })
-  recordLateSession(@CurrentUser() user: JwtUser, @Body() body: RecordLateSessionDto) {
+  @ApiCreatedResponse({ description: 'Session and financial facts recorded atomically', type: LateEntryResultDto })
+  recordLateSession(@CurrentUser() user: JwtUser, @Body() body: RecordLateSessionDto): Promise<LateEntryResultDto> {
     return this.recordLateSessionHandler.execute(body, user);
   }
 }
