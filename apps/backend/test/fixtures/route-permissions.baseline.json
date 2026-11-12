@@ -346,13 +346,13 @@
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/bookings/late-entry/context @DashboardBookingsController.getLateSessionContext": [
+    "GET /dashboard/bookings/late-entry/context @DashboardBookingsLateEntryController.getLateSessionContext": [
       {
         "action": "create",
         "subject": "Booking"
       }
     ],
-    "POST /dashboard/bookings/late-entry @DashboardBookingsController.recordLateSession": [
+    "POST /dashboard/bookings/late-entry @DashboardBookingsLateEntryController.recordLateSession": [
       {
         "action": "create",
         "subject": "Booking"
@@ -382,31 +382,31 @@
         "subject": "Booking"
       }
     ],
-    "POST /dashboard/bookings/from-credit @DashboardBookingsController.bookFromCredit": [
+    "POST /dashboard/bookings/from-credit @DashboardBookingsCreditsController.bookFromCredit": [
       {
         "action": "create",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/bookings/matching-credits @DashboardBookingsController.getMatchingCredits": [
+    "GET /dashboard/bookings/matching-credits @DashboardBookingsCreditsController.getMatchingCredits": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "POST /dashboard/bookings/credits/:creditId/transfer @DashboardBookingsController.transferCredit": [
+    "POST /dashboard/bookings/credits/:creditId/transfer @DashboardBookingsCreditsController.transferCredit": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/bookings/:id/status-log @DashboardBookingsController.getBookingStatusLog": [
+    "GET /dashboard/bookings/:id/status-log @DashboardBookingsHistoryController.getBookingStatusLog": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/bookings/:id/timeline @DashboardBookingsController.getBookingTimeline": [
+    "GET /dashboard/bookings/:id/timeline @DashboardBookingsHistoryController.getBookingTimeline": [
       {
         "action": "read",
         "subject": "Booking"
@@ -418,7 +418,7 @@
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/cancel @DashboardBookingsController.cancelBooking": [
+    "PATCH /dashboard/bookings/:id/cancel @DashboardBookingsLifecycleController.cancelBooking": [
       {
         "action": "manage",
         "subject": "Booking"
@@ -430,55 +430,55 @@
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/approve-cancel @DashboardBookingsController.approveCancelBooking": [
+    "PATCH /dashboard/bookings/:id/approve-cancel @DashboardBookingsLifecycleController.approveCancelBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/reject-cancel @DashboardBookingsController.rejectCancelBooking": [
+    "PATCH /dashboard/bookings/:id/reject-cancel @DashboardBookingsLifecycleController.rejectCancelBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/reschedule @DashboardBookingsController.rescheduleBooking": [
+    "PATCH /dashboard/bookings/:id/reschedule @DashboardBookingsLifecycleController.rescheduleBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/confirm @DashboardBookingsController.confirmBooking": [
+    "PATCH /dashboard/bookings/:id/confirm @DashboardBookingsLifecycleController.confirmBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "POST /dashboard/bookings/:id/zoom/retry @DashboardBookingsController.retryZoomMeeting": [
+    "POST /dashboard/bookings/:id/zoom/retry @DashboardBookingsLifecycleController.retryZoomMeeting": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/check-in @DashboardBookingsController.checkInBooking": [
+    "PATCH /dashboard/bookings/:id/check-in @DashboardBookingsLifecycleController.checkInBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/complete @DashboardBookingsController.completeBooking": [
+    "PATCH /dashboard/bookings/:id/complete @DashboardBookingsLifecycleController.completeBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/no-show @DashboardBookingsController.noShowBooking": [
+    "PATCH /dashboard/bookings/:id/no-show @DashboardBookingsLifecycleController.noShowBooking": [
       {
         "action": "manage",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/bookings/:id/restore-no-show @DashboardBookingsController.restoreNoShowBooking": [
+    "PATCH /dashboard/bookings/:id/restore-no-show @DashboardBookingsLifecycleController.restoreNoShowBooking": [
       {
         "action": "manage",
         "subject": "Booking"
@@ -526,97 +526,97 @@
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/comms/contact-messages @DashboardCommsController.listContactMessagesEndpoint": [
+    "GET /dashboard/comms/contact-messages @DashboardCommsInboxController.listContactMessagesEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "PATCH /dashboard/comms/contact-messages/:id/status @DashboardCommsController.updateContactMessageStatusEndpoint": [
+    "PATCH /dashboard/comms/contact-messages/:id/status @DashboardCommsInboxController.updateContactMessageStatusEndpoint": [
       {
         "action": "update",
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/comms/notifications @DashboardCommsController.listNotificationsEndpoint": [
+    "GET /dashboard/comms/notifications @DashboardCommsInboxController.listNotificationsEndpoint": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/comms/notifications/unread-count @DashboardCommsController.getUnreadCountEndpoint": [
+    "GET /dashboard/comms/notifications/unread-count @DashboardCommsInboxController.getUnreadCountEndpoint": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/comms/notifications/mark-read @DashboardCommsController.markReadEndpoint": [
+    "PATCH /dashboard/comms/notifications/mark-read @DashboardCommsInboxController.markReadEndpoint": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/comms/email-templates @DashboardCommsController.listEmailTemplatesEndpoint": [
+    "GET /dashboard/comms/email-templates @DashboardCommsEmailTemplatesController.listEmailTemplatesEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "POST /dashboard/comms/email-templates @DashboardCommsController.createEmailTemplateEndpoint": [
+    "POST /dashboard/comms/email-templates @DashboardCommsEmailTemplatesController.createEmailTemplateEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/comms/email-templates/:id @DashboardCommsController.getEmailTemplateEndpoint": [
+    "GET /dashboard/comms/email-templates/:id @DashboardCommsEmailTemplatesController.getEmailTemplateEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "POST /dashboard/comms/email-templates/:id/preview @DashboardCommsController.previewEmailTemplateEndpoint": [
+    "POST /dashboard/comms/email-templates/:id/preview @DashboardCommsEmailTemplatesController.previewEmailTemplateEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "PATCH /dashboard/comms/email-templates/:id @DashboardCommsController.updateEmailTemplateEndpoint": [
+    "PATCH /dashboard/comms/email-templates/:id @DashboardCommsEmailTemplatesController.updateEmailTemplateEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/comms/chat/conversations @DashboardCommsController.listConversationsEndpoint": [
+    "GET /dashboard/comms/chat/conversations @DashboardCommsChatController.listConversationsEndpoint": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/comms/chat/conversations/:id/messages @DashboardCommsController.listMessagesEndpoint": [
+    "GET /dashboard/comms/chat/conversations/:id/messages @DashboardCommsChatController.listMessagesEndpoint": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/comms/chat/conversations/:id @DashboardCommsController.getConversationEndpoint": [
+    "GET /dashboard/comms/chat/conversations/:id @DashboardCommsChatController.getConversationEndpoint": [
       {
         "action": "read",
         "subject": "Booking"
       }
     ],
-    "PATCH /dashboard/comms/chat/conversations/:id/close @DashboardCommsController.closeConversationEndpoint": [
+    "PATCH /dashboard/comms/chat/conversations/:id/close @DashboardCommsChatController.closeConversationEndpoint": [
       {
         "action": "update",
         "subject": "Booking"
       }
     ],
-    "POST /dashboard/comms/chat/conversations/:id/messages @DashboardCommsController.sendStaffMessageEndpoint": [
+    "POST /dashboard/comms/chat/conversations/:id/messages @DashboardCommsChatController.sendStaffMessageEndpoint": [
       {
         "action": "update",
         "subject": "Booking"
       }
     ],
-    "GET /dashboard/comms/delivery-logs @DashboardCommsController.listDeliveryLogs": [
+    "GET /dashboard/comms/delivery-logs @DashboardCommsChatController.listDeliveryLogs": [
       {
         "action": "read",
         "subject": "Setting"
@@ -1196,115 +1196,115 @@
         "subject": "Setting"
       }
     ],
-    "POST /dashboard/organization/services @DashboardOrganizationSettingsController.createServiceEndpoint": [
+    "POST /dashboard/organization/services @DashboardOrganizationServicesController.createServiceEndpoint": [
       {
         "action": "create",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/services @DashboardOrganizationSettingsController.listServicesEndpoint": [
+    "GET /dashboard/organization/services @DashboardOrganizationServicesController.listServicesEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/services/:serviceId @DashboardOrganizationSettingsController.getServiceEndpoint": [
+    "GET /dashboard/organization/services/:serviceId @DashboardOrganizationServicesController.getServiceEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "PATCH /dashboard/organization/services/:serviceId @DashboardOrganizationSettingsController.updateServiceEndpoint": [
+    "PATCH /dashboard/organization/services/:serviceId @DashboardOrganizationServicesController.updateServiceEndpoint": [
       {
         "action": "update",
         "subject": "Service"
       }
     ],
-    "DELETE /dashboard/organization/services/:serviceId @DashboardOrganizationSettingsController.archiveServiceEndpoint": [
+    "DELETE /dashboard/organization/services/:serviceId @DashboardOrganizationServicesController.archiveServiceEndpoint": [
       {
         "action": "delete",
         "subject": "Service"
       }
     ],
-    "POST /dashboard/organization/services/:serviceId/restore @DashboardOrganizationSettingsController.restoreServiceEndpoint": [
+    "POST /dashboard/organization/services/:serviceId/restore @DashboardOrganizationServicesController.restoreServiceEndpoint": [
       {
         "action": "update",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/services/:serviceId/employees @DashboardOrganizationSettingsController.listServiceEmployeesEndpoint": [
+    "GET /dashboard/organization/services/:serviceId/employees @DashboardOrganizationServicesController.listServiceEmployeesEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/services/:serviceId/booking-types @DashboardOrganizationSettingsController.getServiceBookingTypesEndpoint": [
+    "GET /dashboard/organization/services/:serviceId/booking-types @DashboardOrganizationServicesController.getServiceBookingTypesEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "PUT /dashboard/organization/services/:serviceId/booking-types @DashboardOrganizationSettingsController.setServiceBookingTypesEndpoint": [
+    "PUT /dashboard/organization/services/:serviceId/booking-types @DashboardOrganizationServicesController.setServiceBookingTypesEndpoint": [
       {
         "action": "update",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/services/:serviceId/duration-options @DashboardOrganizationSettingsController.getDurationOptionsEndpoint": [
+    "GET /dashboard/organization/services/:serviceId/duration-options @DashboardOrganizationServicesController.getDurationOptionsEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "PUT /dashboard/organization/services/:serviceId/duration-options @DashboardOrganizationSettingsController.setDurationOptionsEndpoint": [
+    "PUT /dashboard/organization/services/:serviceId/duration-options @DashboardOrganizationServicesController.setDurationOptionsEndpoint": [
       {
         "action": "update",
         "subject": "Service"
       }
     ],
-    "POST /dashboard/organization/intake-forms @DashboardOrganizationSettingsController.createIntakeFormEndpoint": [
+    "POST /dashboard/organization/intake-forms @DashboardOrganizationIntakeFormsController.createIntakeFormEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/organization/intake-forms @DashboardOrganizationSettingsController.listIntakeFormsEndpoint": [
+    "GET /dashboard/organization/intake-forms @DashboardOrganizationIntakeFormsController.listIntakeFormsEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/organization/intake-forms/responses/:bookingId @DashboardOrganizationSettingsController.getIntakeFormResponsesEndpoint": [
+    "GET /dashboard/organization/intake-forms/responses/:bookingId @DashboardOrganizationIntakeFormsController.getIntakeFormResponsesEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "POST /dashboard/organization/intake-forms/responses/:bookingId @DashboardOrganizationSettingsController.submitIntakeResponseEndpoint": [
+    "POST /dashboard/organization/intake-forms/responses/:bookingId @DashboardOrganizationIntakeFormsController.submitIntakeResponseEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
       }
     ],
-    "GET /dashboard/organization/intake-forms/:formId @DashboardOrganizationSettingsController.getIntakeFormEndpoint": [
+    "GET /dashboard/organization/intake-forms/:formId @DashboardOrganizationIntakeFormsController.getIntakeFormEndpoint": [
       {
         "action": "read",
         "subject": "Setting"
       }
     ],
-    "PATCH /dashboard/organization/intake-forms/:formId @DashboardOrganizationSettingsController.updateIntakeFormEndpoint": [
+    "PATCH /dashboard/organization/intake-forms/:formId @DashboardOrganizationIntakeFormsController.updateIntakeFormEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
       }
     ],
-    "PUT /dashboard/organization/intake-forms/:formId/fields @DashboardOrganizationSettingsController.setIntakeFieldsEndpoint": [
+    "PUT /dashboard/organization/intake-forms/:formId/fields @DashboardOrganizationIntakeFormsController.setIntakeFieldsEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
       }
     ],
-    "DELETE /dashboard/organization/intake-forms/:formId @DashboardOrganizationSettingsController.deleteIntakeFormEndpoint": [
+    "DELETE /dashboard/organization/intake-forms/:formId @DashboardOrganizationIntakeFormsController.deleteIntakeFormEndpoint": [
       {
         "action": "manage",
         "subject": "Setting"
@@ -1352,31 +1352,31 @@
         "subject": "Setting"
       }
     ],
-    "POST /dashboard/organization/packages @DashboardOrganizationSettingsController.createSessionPackageEndpoint": [
+    "POST /dashboard/organization/packages @DashboardOrganizationPackagesController.createSessionPackageEndpoint": [
       {
         "action": "create",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/packages @DashboardOrganizationSettingsController.listSessionPackagesEndpoint": [
+    "GET /dashboard/organization/packages @DashboardOrganizationPackagesController.listSessionPackagesEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "GET /dashboard/organization/packages/:packageId @DashboardOrganizationSettingsController.getSessionPackageEndpoint": [
+    "GET /dashboard/organization/packages/:packageId @DashboardOrganizationPackagesController.getSessionPackageEndpoint": [
       {
         "action": "read",
         "subject": "Service"
       }
     ],
-    "PATCH /dashboard/organization/packages/:packageId @DashboardOrganizationSettingsController.updateSessionPackageEndpoint": [
+    "PATCH /dashboard/organization/packages/:packageId @DashboardOrganizationPackagesController.updateSessionPackageEndpoint": [
       {
         "action": "update",
         "subject": "Service"
       }
     ],
-    "DELETE /dashboard/organization/packages/:packageId @DashboardOrganizationSettingsController.archiveSessionPackageEndpoint": [
+    "DELETE /dashboard/organization/packages/:packageId @DashboardOrganizationPackagesController.archiveSessionPackageEndpoint": [
       {
         "action": "delete",
         "subject": "Service"
@@ -1412,253 +1412,253 @@
         "subject": "Service"
       }
     ],
-    "POST /dashboard/people/clients @DashboardPeopleController.createClientEndpoint": [
+    "POST /dashboard/people/clients @DashboardPeopleClientsController.createClientEndpoint": [
       {
         "action": "create",
         "subject": "Client"
       }
     ],
-    "GET /dashboard/people/clients @DashboardPeopleController.listClientsEndpoint": [
+    "GET /dashboard/people/clients @DashboardPeopleClientsController.listClientsEndpoint": [
       {
         "action": "read",
         "subject": "Client"
       }
     ],
-    "GET /dashboard/people/clients/:id @DashboardPeopleController.getClientEndpoint": [
+    "GET /dashboard/people/clients/:id @DashboardPeopleClientsController.getClientEndpoint": [
       {
         "action": "read",
         "subject": "Client"
       }
     ],
-    "PATCH /dashboard/people/clients/:id @DashboardPeopleController.updateClientEndpoint": [
+    "PATCH /dashboard/people/clients/:id @DashboardPeopleClientsController.updateClientEndpoint": [
       {
         "action": "update",
         "subject": "Client"
       }
     ],
-    "DELETE /dashboard/people/clients/:id @DashboardPeopleController.deleteClientEndpoint": [
+    "DELETE /dashboard/people/clients/:id @DashboardPeopleClientsController.deleteClientEndpoint": [
       {
         "action": "delete",
         "subject": "Client"
       }
     ],
-    "PATCH /dashboard/people/clients/:id/active @DashboardPeopleController.setClientActiveEndpoint": [
+    "PATCH /dashboard/people/clients/:id/active @DashboardPeopleClientsController.setClientActiveEndpoint": [
       {
         "action": "update",
         "subject": "Client"
       }
     ],
-    "POST /dashboard/people/employees @DashboardPeopleController.createEmployeeEndpoint": [
+    "POST /dashboard/people/employees @DashboardPeopleEmployeesController.createEmployeeEndpoint": [
       {
         "action": "create",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/onboarding @DashboardPeopleController.onboardEmployeeEndpoint": [
+    "POST /dashboard/people/employees/onboarding @DashboardPeopleEmployeesController.onboardEmployeeEndpoint": [
       {
         "action": "create",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees @DashboardPeopleController.listEmployeesEndpoint": [
+    "GET /dashboard/people/employees @DashboardPeopleEmployeesController.listEmployeesEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/stats @DashboardPeopleController.employeeStatsEndpoint": [
+    "GET /dashboard/people/employees/stats @DashboardPeopleEmployeesController.employeeStatsEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id @DashboardPeopleController.getEmployeeEndpoint": [
+    "GET /dashboard/people/employees/:id @DashboardPeopleEmployeesController.getEmployeeEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "PATCH /dashboard/people/employees/:id @DashboardPeopleController.updateEmployeeEndpoint": [
+    "PATCH /dashboard/people/employees/:id @DashboardPeopleEmployeesController.updateEmployeeEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/availability @DashboardPeopleController.getAvailabilityEndpoint": [
+    "GET /dashboard/people/employees/:id/availability @DashboardPeopleEmployeeScheduleController.getAvailabilityEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/breaks @DashboardPeopleController.getBreaksEndpoint": [
+    "GET /dashboard/people/employees/:id/breaks @DashboardPeopleEmployeeScheduleController.getBreaksEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "PUT /dashboard/people/employees/:id/breaks @DashboardPeopleController.putBreaksEndpoint": [
+    "PUT /dashboard/people/employees/:id/breaks @DashboardPeopleEmployeeScheduleController.putBreaksEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/vacations @DashboardPeopleController.listVacationsEndpoint": [
+    "GET /dashboard/people/employees/:id/vacations @DashboardPeopleEmployeeScheduleController.listVacationsEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/:id/vacations @DashboardPeopleController.createVacationEndpoint": [
+    "POST /dashboard/people/employees/:id/vacations @DashboardPeopleEmployeeScheduleController.createVacationEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "DELETE /dashboard/people/employees/:id/vacations/:vacationId @DashboardPeopleController.deleteVacationEndpoint": [
+    "DELETE /dashboard/people/employees/:id/vacations/:vacationId @DashboardPeopleEmployeeScheduleController.deleteVacationEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PATCH /dashboard/people/employees/:id/availability @DashboardPeopleController.updateAvailabilityEndpoint": [
+    "PATCH /dashboard/people/employees/:id/availability @DashboardPeopleEmployeeScheduleController.updateAvailabilityEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/:id/onboarding @DashboardPeopleController.employeeOnboardingEndpoint": [
+    "POST /dashboard/people/employees/:id/onboarding @DashboardPeopleEmployeesController.employeeOnboardingEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "DELETE /dashboard/people/employees/:id @DashboardPeopleController.deleteEmployeeEndpoint": [
+    "DELETE /dashboard/people/employees/:id @DashboardPeopleEmployeesController.deleteEmployeeEndpoint": [
       {
         "action": "delete",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/services @DashboardPeopleController.listEmployeeServicesEndpoint": [
+    "GET /dashboard/people/employees/:id/services @DashboardPeopleEmployeeServicesController.listEmployeeServicesEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/:id/services @DashboardPeopleController.assignEmployeeServiceEndpoint": [
+    "POST /dashboard/people/employees/:id/services @DashboardPeopleEmployeeServicesController.assignEmployeeServiceEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PATCH /dashboard/people/employees/:id/services/:serviceId @DashboardPeopleController.updateEmployeeServiceEndpoint": [
+    "PATCH /dashboard/people/employees/:id/services/:serviceId @DashboardPeopleEmployeeServicesController.updateEmployeeServiceEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PUT /dashboard/people/employees/:id/services/:serviceId/options @DashboardPeopleController.setEmployeeServiceOptionsEndpoint": [
+    "PUT /dashboard/people/employees/:id/services/:serviceId/options @DashboardPeopleEmployeeServicesController.setEmployeeServiceOptionsEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PUT /dashboard/people/employees/:employeeId/services/:serviceId/custom-pricing @DashboardPeopleController.setEmployeeCustomPricingEndpoint": [
+    "PUT /dashboard/people/employees/:employeeId/services/:serviceId/custom-pricing @DashboardPeopleEmployeeServicesController.setEmployeeCustomPricingEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PUT /dashboard/people/employees/:id/services/:serviceId/durations @DashboardPeopleController.setEmployeeDurationsEndpoint": [
+    "PUT /dashboard/people/employees/:id/services/:serviceId/durations @DashboardPeopleEmployeeServicesController.setEmployeeDurationsEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PUT /dashboard/people/employees/:id/services/:serviceId/delivery-types @DashboardPeopleController.setEmployeeDeliveryTypesEndpoint": [
+    "PUT /dashboard/people/employees/:id/services/:serviceId/delivery-types @DashboardPeopleEmployeeServicesController.setEmployeeDeliveryTypesEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "PUT /dashboard/people/employees/:id/services/:serviceId/pricing-mode @DashboardPeopleController.setEmployeePricingModeEndpoint": [
+    "PUT /dashboard/people/employees/:id/services/:serviceId/pricing-mode @DashboardPeopleEmployeeServicesController.setEmployeePricingModeEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/slots @DashboardPeopleController.getEmployeeSlotsEndpoint": [
+    "GET /dashboard/people/employees/:id/slots @DashboardPeopleEmployeesController.getEmployeeSlotsEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/available-days @DashboardPeopleController.getEmployeeAvailableDaysEndpoint": [
+    "GET /dashboard/people/employees/:id/available-days @DashboardPeopleEmployeesController.getEmployeeAvailableDaysEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/services/:serviceId/types @DashboardPeopleController.getEmployeeServiceTypesEndpoint": [
+    "GET /dashboard/people/employees/:id/services/:serviceId/types @DashboardPeopleEmployeeServicesController.getEmployeeServiceTypesEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "DELETE /dashboard/people/employees/:id/services/:serviceId @DashboardPeopleController.removeEmployeeServiceEndpoint": [
+    "DELETE /dashboard/people/employees/:id/services/:serviceId @DashboardPeopleEmployeeServicesController.removeEmployeeServiceEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/exceptions @DashboardPeopleController.listEmployeeExceptionsEndpoint": [
+    "GET /dashboard/people/employees/:id/exceptions @DashboardPeopleEmployeeScheduleController.listEmployeeExceptionsEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/:id/exceptions @DashboardPeopleController.createEmployeeExceptionEndpoint": [
+    "POST /dashboard/people/employees/:id/exceptions @DashboardPeopleEmployeeScheduleController.createEmployeeExceptionEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "DELETE /dashboard/people/employees/:id/exceptions/:exceptionId @DashboardPeopleController.deleteEmployeeExceptionEndpoint": [
+    "DELETE /dashboard/people/employees/:id/exceptions/:exceptionId @DashboardPeopleEmployeeScheduleController.deleteEmployeeExceptionEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/ratings @DashboardPeopleController.listEmployeeRatingsEndpoint": [
+    "GET /dashboard/people/employees/:id/ratings @DashboardPeopleEmployeeAccountController.listEmployeeRatingsEndpoint": [
       {
         "action": "read",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/:employeeId/avatar @DashboardPeopleController.uploadAvatarEndpoint": [
+    "POST /dashboard/people/employees/:employeeId/avatar @DashboardPeopleEmployeeAccountController.uploadAvatarEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "POST /dashboard/people/employees/:employeeId/public-image @DashboardPeopleController.uploadPublicImageEndpoint": [
+    "POST /dashboard/people/employees/:employeeId/public-image @DashboardPeopleEmployeeAccountController.uploadPublicImageEndpoint": [
       {
         "action": "update",
         "subject": "Employee"
       }
     ],
-    "GET /dashboard/people/employees/:id/account @DashboardPeopleController.getEmployeeAccountEndpoint": [
+    "GET /dashboard/people/employees/:id/account @DashboardPeopleEmployeeAccountController.getEmployeeAccountEndpoint": [
       {
         "action": "read",
         "subject": "User"
       }
     ],
-    "POST /dashboard/people/employees/:id/account @DashboardPeopleController.createEmployeeAccountEndpoint": [
+    "POST /dashboard/people/employees/:id/account @DashboardPeopleEmployeeAccountController.createEmployeeAccountEndpoint": [
       {
         "action": "manage",
         "subject": "User"
       }
     ],
-    "PATCH /dashboard/people/employees/:id/account @DashboardPeopleController.updateEmployeeAccountEndpoint": [
+    "PATCH /dashboard/people/employees/:id/account @DashboardPeopleEmployeeAccountController.updateEmployeeAccountEndpoint": [
       {
         "action": "manage",
         "subject": "User"

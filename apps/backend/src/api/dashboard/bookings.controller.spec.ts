@@ -4,6 +4,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { DashboardBookingsController } from './bookings.controller';
+import { DashboardBookingsLateEntryController } from './bookings-late-entry.controller';
+import { DashboardBookingsCreditsController } from './bookings-credits.controller';
+import { DashboardBookingsHistoryController } from './bookings-history.controller';
+import { DashboardBookingsLifecycleController } from './bookings-lifecycle.controller';
 import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
 import { ListBookingsHandler } from '../../modules/bookings/list-bookings/list-bookings.handler';
 import { BookingsStatsHandler } from '../../modules/bookings/bookings-stats/bookings-stats.handler';
@@ -55,7 +59,13 @@ describe('DashboardBookingsController (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardBookingsController],
+      controllers: [
+        DashboardBookingsLateEntryController,
+        DashboardBookingsCreditsController,
+        DashboardBookingsHistoryController,
+        DashboardBookingsLifecycleController,
+        DashboardBookingsController,
+      ],
       providers: [
         { provide: GetLateSessionContextHandler, useValue: { execute: jest.fn() } },
         { provide: RecordLateSessionHandler, useValue: { execute: jest.fn() } },
@@ -506,13 +516,13 @@ describe('trusted privacy actor wiring', () => {
   it('getBookingTimeline uses the authenticated actor', () => {
     const execute = jest.fn();
     const user = { sub: 'user-a', role: 'EMPLOYEE' };
-    (DashboardBookingsController.prototype.getBookingTimeline as any).apply({ timelineHandler: { execute } }, ['booking-1', user]);
+    (DashboardBookingsHistoryController.prototype.getBookingTimeline as any).apply({ timelineHandler: { execute } }, ['booking-1', user]);
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
   });
   it('getBookingStatusLog uses the authenticated actor', () => {
     const execute = jest.fn();
     const user = { sub: 'user-a', role: 'EMPLOYEE' };
-    (DashboardBookingsController.prototype.getBookingStatusLog as any).apply({ statusLogHandler: { execute } }, ['booking-1', user]);
+    (DashboardBookingsHistoryController.prototype.getBookingStatusLog as any).apply({ statusLogHandler: { execute } }, ['booking-1', user]);
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
   });
 });

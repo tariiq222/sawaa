@@ -1243,7 +1243,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Approve a pending cancel request */
-        patch: operations["DashboardBookingsController_approveCancelBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_approveCancelBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/cancel": {
@@ -1260,7 +1260,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Cancel a booking */
-        patch: operations["DashboardBookingsController_cancelBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_cancelBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/check-in": {
@@ -1277,7 +1277,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Check in a client for a booking */
-        patch: operations["DashboardBookingsController_checkInBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_checkInBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/complete": {
@@ -1294,7 +1294,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Mark a booking as complete */
-        patch: operations["DashboardBookingsController_completeBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_completeBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/confirm": {
@@ -1311,7 +1311,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Confirm a booking */
-        patch: operations["DashboardBookingsController_confirmBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_confirmBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/no-show": {
@@ -1328,7 +1328,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Mark a booking as no-show */
-        patch: operations["DashboardBookingsController_noShowBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_noShowBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/reject-cancel": {
@@ -1345,7 +1345,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Reject a pending cancel request */
-        patch: operations["DashboardBookingsController_rejectCancelBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_rejectCancelBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/reschedule": {
@@ -1362,7 +1362,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Reschedule a booking */
-        patch: operations["DashboardBookingsController_rescheduleBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_rescheduleBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/restore-no-show": {
@@ -1379,7 +1379,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Restore a no-show booking to confirmed */
-        patch: operations["DashboardBookingsController_restoreNoShowBooking_v1"];
+        patch: operations["DashboardBookingsLifecycleController_restoreNoShowBooking_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings/{id}/status-log": {
@@ -1390,7 +1390,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get the status transition log for a booking */
-        get: operations["DashboardBookingsController_getBookingStatusLog_v1"];
+        get: operations["DashboardBookingsHistoryController_getBookingStatusLog_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1407,7 +1407,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get the full activity timeline for a booking */
-        get: operations["DashboardBookingsController_getBookingTimeline_v1"];
+        get: operations["DashboardBookingsHistoryController_getBookingTimeline_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1426,7 +1426,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Retry creating Zoom meeting for a booking */
-        post: operations["DashboardBookingsController_retryZoomMeeting_v1"];
+        post: operations["DashboardBookingsLifecycleController_retryZoomMeeting_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1460,7 +1460,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Transfer a session-package credit to another practitioner */
-        post: operations["DashboardBookingsController_transferCredit_v1"];
+        post: operations["DashboardBookingsCreditsController_transferCredit_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1477,7 +1477,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Book an appointment by consuming session-package credit */
-        post: operations["DashboardBookingsController_bookFromCredit_v1"];
+        post: operations["DashboardBookingsCreditsController_bookFromCredit_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1494,7 +1494,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Record a previous session and its actual financial facts */
-        post: operations["DashboardBookingsController_recordLateSession_v1"];
+        post: operations["DashboardBookingsLateEntryController_recordLateSession_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1509,7 +1509,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get permitted late session VAT and manual payment context */
-        get: operations["DashboardBookingsController_getLateSessionContext_v1"];
+        get: operations["DashboardBookingsLateEntryController_getLateSessionContext_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1526,7 +1526,7 @@ export interface paths {
             cookie?: never;
         };
         /** List a client's usable session-package credits matching a service/employee/duration */
-        get: operations["DashboardBookingsController_getMatchingCredits_v1"];
+        get: operations["DashboardBookingsCreditsController_getMatchingCredits_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1560,7 +1560,7 @@ export interface paths {
             cookie?: never;
         };
         /** List chat conversations */
-        get: operations["DashboardCommsController_listConversationsEndpoint_v1"];
+        get: operations["DashboardCommsChatController_listConversationsEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1577,7 +1577,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get a single conversation by ID */
-        get: operations["DashboardCommsController_getConversationEndpoint_v1"];
+        get: operations["DashboardCommsChatController_getConversationEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1600,7 +1600,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Close a conversation */
-        patch: operations["DashboardCommsController_closeConversationEndpoint_v1"];
+        patch: operations["DashboardCommsChatController_closeConversationEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/comms/chat/conversations/{id}/messages": {
@@ -1611,10 +1611,10 @@ export interface paths {
             cookie?: never;
         };
         /** List messages in a conversation */
-        get: operations["DashboardCommsController_listMessagesEndpoint_v1"];
+        get: operations["DashboardCommsChatController_listMessagesEndpoint_v1"];
         put?: never;
         /** Send a staff message in a conversation */
-        post: operations["DashboardCommsController_sendStaffMessageEndpoint_v1"];
+        post: operations["DashboardCommsChatController_sendStaffMessageEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1629,7 +1629,7 @@ export interface paths {
             cookie?: never;
         };
         /** List contact messages */
-        get: operations["DashboardCommsController_listContactMessagesEndpoint_v1"];
+        get: operations["DashboardCommsInboxController_listContactMessagesEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1652,7 +1652,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Update contact message status */
-        patch: operations["DashboardCommsController_updateContactMessageStatusEndpoint_v1"];
+        patch: operations["DashboardCommsInboxController_updateContactMessageStatusEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/comms/delivery-logs": {
@@ -1663,7 +1663,7 @@ export interface paths {
             cookie?: never;
         };
         /** List email delivery logs for this organization */
-        get: operations["DashboardCommsController_listDeliveryLogs_v1"];
+        get: operations["DashboardCommsChatController_listDeliveryLogs_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1680,10 +1680,10 @@ export interface paths {
             cookie?: never;
         };
         /** List email templates */
-        get: operations["DashboardCommsController_listEmailTemplatesEndpoint_v1"];
+        get: operations["DashboardCommsEmailTemplatesController_listEmailTemplatesEndpoint_v1"];
         put?: never;
         /** Create an email template */
-        post: operations["DashboardCommsController_createEmailTemplateEndpoint_v1"];
+        post: operations["DashboardCommsEmailTemplatesController_createEmailTemplateEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1698,14 +1698,14 @@ export interface paths {
             cookie?: never;
         };
         /** Get a single email template by ID */
-        get: operations["DashboardCommsController_getEmailTemplateEndpoint_v1"];
+        get: operations["DashboardCommsEmailTemplatesController_getEmailTemplateEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /** Update an email template */
-        patch: operations["DashboardCommsController_updateEmailTemplateEndpoint_v1"];
+        patch: operations["DashboardCommsEmailTemplatesController_updateEmailTemplateEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/comms/email-templates/{id}/preview": {
@@ -1718,7 +1718,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Preview a rendered email template */
-        post: operations["DashboardCommsController_previewEmailTemplateEndpoint_v1"];
+        post: operations["DashboardCommsEmailTemplatesController_previewEmailTemplateEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1733,7 +1733,7 @@ export interface paths {
             cookie?: never;
         };
         /** List notifications for the current staff user */
-        get: operations["DashboardCommsController_listNotificationsEndpoint_v1"];
+        get: operations["DashboardCommsInboxController_listNotificationsEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1756,7 +1756,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Mark notifications as read (all or a single one) */
-        patch: operations["DashboardCommsController_markReadEndpoint_v1"];
+        patch: operations["DashboardCommsInboxController_markReadEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/comms/notifications/unread-count": {
@@ -1767,7 +1767,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get unread notification count for the current staff user */
-        get: operations["DashboardCommsController_getUnreadCountEndpoint_v1"];
+        get: operations["DashboardCommsInboxController_getUnreadCountEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3065,10 +3065,10 @@ export interface paths {
             cookie?: never;
         };
         /** List intake forms */
-        get: operations["DashboardOrganizationSettingsController_listIntakeFormsEndpoint_v1"];
+        get: operations["DashboardOrganizationIntakeFormsController_listIntakeFormsEndpoint_v1"];
         put?: never;
         /** Create an intake form */
-        post: operations["DashboardOrganizationSettingsController_createIntakeFormEndpoint_v1"];
+        post: operations["DashboardOrganizationIntakeFormsController_createIntakeFormEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3083,15 +3083,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get an intake form by ID */
-        get: operations["DashboardOrganizationSettingsController_getIntakeFormEndpoint_v1"];
+        get: operations["DashboardOrganizationIntakeFormsController_getIntakeFormEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete an intake form */
-        delete: operations["DashboardOrganizationSettingsController_deleteIntakeFormEndpoint_v1"];
+        delete: operations["DashboardOrganizationIntakeFormsController_deleteIntakeFormEndpoint_v1"];
         options?: never;
         head?: never;
         /** Update an intake form */
-        patch: operations["DashboardOrganizationSettingsController_updateIntakeFormEndpoint_v1"];
+        patch: operations["DashboardOrganizationIntakeFormsController_updateIntakeFormEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/organization/intake-forms/{formId}/fields": {
@@ -3103,7 +3103,7 @@ export interface paths {
         };
         get?: never;
         /** Replace all fields on an intake form */
-        put: operations["DashboardOrganizationSettingsController_setIntakeFieldsEndpoint_v1"];
+        put: operations["DashboardOrganizationIntakeFormsController_setIntakeFieldsEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3119,10 +3119,10 @@ export interface paths {
             cookie?: never;
         };
         /** Get intake form responses for a booking */
-        get: operations["DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1"];
+        get: operations["DashboardOrganizationIntakeFormsController_getIntakeFormResponsesEndpoint_v1"];
         put?: never;
         /** Submit (or overwrite) intake answers on behalf of a client for a booking */
-        post: operations["DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1"];
+        post: operations["DashboardOrganizationIntakeFormsController_submitIntakeResponseEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3174,10 +3174,10 @@ export interface paths {
             cookie?: never;
         };
         /** List session packages */
-        get: operations["DashboardOrganizationSettingsController_listSessionPackagesEndpoint_v1"];
+        get: operations["DashboardOrganizationPackagesController_listSessionPackagesEndpoint_v1"];
         put?: never;
         /** Create a session package */
-        post: operations["DashboardOrganizationSettingsController_createSessionPackageEndpoint_v1"];
+        post: operations["DashboardOrganizationPackagesController_createSessionPackageEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3192,15 +3192,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get a session package by id */
-        get: operations["DashboardOrganizationSettingsController_getSessionPackageEndpoint_v1"];
+        get: operations["DashboardOrganizationPackagesController_getSessionPackageEndpoint_v1"];
         put?: never;
         post?: never;
         /** Archive a session package */
-        delete: operations["DashboardOrganizationSettingsController_archiveSessionPackageEndpoint_v1"];
+        delete: operations["DashboardOrganizationPackagesController_archiveSessionPackageEndpoint_v1"];
         options?: never;
         head?: never;
         /** Update a session package */
-        patch: operations["DashboardOrganizationSettingsController_updateSessionPackageEndpoint_v1"];
+        patch: operations["DashboardOrganizationPackagesController_updateSessionPackageEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/organization/ratings": {
@@ -3246,10 +3246,10 @@ export interface paths {
             cookie?: never;
         };
         /** List services */
-        get: operations["DashboardOrganizationSettingsController_listServicesEndpoint_v1"];
+        get: operations["DashboardOrganizationServicesController_listServicesEndpoint_v1"];
         put?: never;
         /** Create a service */
-        post: operations["DashboardOrganizationSettingsController_createServiceEndpoint_v1"];
+        post: operations["DashboardOrganizationServicesController_createServiceEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3264,15 +3264,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get a service by id */
-        get: operations["DashboardOrganizationSettingsController_getServiceEndpoint_v1"];
+        get: operations["DashboardOrganizationServicesController_getServiceEndpoint_v1"];
         put?: never;
         post?: never;
         /** Archive a service */
-        delete: operations["DashboardOrganizationSettingsController_archiveServiceEndpoint_v1"];
+        delete: operations["DashboardOrganizationServicesController_archiveServiceEndpoint_v1"];
         options?: never;
         head?: never;
         /** Update a service */
-        patch: operations["DashboardOrganizationSettingsController_updateServiceEndpoint_v1"];
+        patch: operations["DashboardOrganizationServicesController_updateServiceEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/organization/services/{serviceId}/booking-types": {
@@ -3283,9 +3283,9 @@ export interface paths {
             cookie?: never;
         };
         /** Get booking type configs for a service */
-        get: operations["DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint_v1"];
+        get: operations["DashboardOrganizationServicesController_getServiceBookingTypesEndpoint_v1"];
         /** Set booking type configs for a service */
-        put: operations["DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint_v1"];
+        put: operations["DashboardOrganizationServicesController_setServiceBookingTypesEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3301,9 +3301,9 @@ export interface paths {
             cookie?: never;
         };
         /** Get duration options for a service */
-        get: operations["DashboardOrganizationSettingsController_getDurationOptionsEndpoint_v1"];
+        get: operations["DashboardOrganizationServicesController_getDurationOptionsEndpoint_v1"];
         /** Set duration options for a service */
-        put: operations["DashboardOrganizationSettingsController_setDurationOptionsEndpoint_v1"];
+        put: operations["DashboardOrganizationServicesController_setDurationOptionsEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3319,7 +3319,7 @@ export interface paths {
             cookie?: never;
         };
         /** List active employees who offer this service */
-        get: operations["DashboardOrganizationSettingsController_listServiceEmployeesEndpoint_v1"];
+        get: operations["DashboardOrganizationServicesController_listServiceEmployeesEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3338,7 +3338,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Restore an archived service */
-        post: operations["DashboardOrganizationSettingsController_restoreServiceEndpoint_v1"];
+        post: operations["DashboardOrganizationServicesController_restoreServiceEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3371,10 +3371,10 @@ export interface paths {
             cookie?: never;
         };
         /** List clients */
-        get: operations["DashboardPeopleController_listClientsEndpoint_v1"];
+        get: operations["DashboardPeopleClientsController_listClientsEndpoint_v1"];
         put?: never;
         /** Create a client */
-        post: operations["DashboardPeopleController_createClientEndpoint_v1"];
+        post: operations["DashboardPeopleClientsController_createClientEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3389,15 +3389,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get a client by ID */
-        get: operations["DashboardPeopleController_getClientEndpoint_v1"];
+        get: operations["DashboardPeopleClientsController_getClientEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete a client */
-        delete: operations["DashboardPeopleController_deleteClientEndpoint_v1"];
+        delete: operations["DashboardPeopleClientsController_deleteClientEndpoint_v1"];
         options?: never;
         head?: never;
         /** Update a client */
-        patch: operations["DashboardPeopleController_updateClientEndpoint_v1"];
+        patch: operations["DashboardPeopleClientsController_updateClientEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/people/clients/{id}/active": {
@@ -3414,7 +3414,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Enable or disable a client account */
-        patch: operations["DashboardPeopleController_setClientActiveEndpoint_v1"];
+        patch: operations["DashboardPeopleClientsController_setClientActiveEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/people/employees": {
@@ -3425,10 +3425,10 @@ export interface paths {
             cookie?: never;
         };
         /** List employees */
-        get: operations["DashboardPeopleController_listEmployeesEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeesController_listEmployeesEndpoint_v1"];
         put?: never;
         /** Create an employee */
-        post: operations["DashboardPeopleController_createEmployeeEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeesController_createEmployeeEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3445,7 +3445,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Upload an avatar image for an employee */
-        post: operations["DashboardPeopleController_uploadAvatarEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeeAccountController_uploadAvatarEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3462,7 +3462,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Upload a public profile image for an employee */
-        post: operations["DashboardPeopleController_uploadPublicImageEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeeAccountController_uploadPublicImageEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3478,7 +3478,7 @@ export interface paths {
         };
         get?: never;
         /** Set custom pricing for an employee on a service */
-        put: operations["DashboardPeopleController_setEmployeeCustomPricingEndpoint_v1"];
+        put: operations["DashboardPeopleEmployeeServicesController_setEmployeeCustomPricingEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3494,15 +3494,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get an employee by ID */
-        get: operations["DashboardPeopleController_getEmployeeEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeesController_getEmployeeEndpoint_v1"];
         put?: never;
         post?: never;
         /** Delete an employee */
-        delete: operations["DashboardPeopleController_deleteEmployeeEndpoint_v1"];
+        delete: operations["DashboardPeopleEmployeesController_deleteEmployeeEndpoint_v1"];
         options?: never;
         head?: never;
         /** Update an employee */
-        patch: operations["DashboardPeopleController_updateEmployeeEndpoint_v1"];
+        patch: operations["DashboardPeopleEmployeesController_updateEmployeeEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/people/employees/{id}/account": {
@@ -3513,15 +3513,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get the login account linked to an employee */
-        get: operations["DashboardPeopleController_getEmployeeAccountEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeAccountController_getEmployeeAccountEndpoint_v1"];
         put?: never;
         /** Create or link a login account for an employee */
-        post: operations["DashboardPeopleController_createEmployeeAccountEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeeAccountController_createEmployeeAccountEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
         /** Update an employee login account role or status */
-        patch: operations["DashboardPeopleController_updateEmployeeAccountEndpoint_v1"];
+        patch: operations["DashboardPeopleEmployeeAccountController_updateEmployeeAccountEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/people/employees/{id}/availability": {
@@ -3532,14 +3532,14 @@ export interface paths {
             cookie?: never;
         };
         /** Get an employee's availability schedule */
-        get: operations["DashboardPeopleController_getAvailabilityEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeScheduleController_getAvailabilityEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /** Update an employee's availability windows and exceptions */
-        patch: operations["DashboardPeopleController_updateAvailabilityEndpoint_v1"];
+        patch: operations["DashboardPeopleEmployeeScheduleController_updateAvailabilityEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/people/employees/{id}/available-days": {
@@ -3550,7 +3550,7 @@ export interface paths {
             cookie?: never;
         };
         /** Days that have at least one bookable slot — used to disable empty day chips in the wizard */
-        get: operations["DashboardPeopleController_getEmployeeAvailableDaysEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeesController_getEmployeeAvailableDaysEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3567,9 +3567,9 @@ export interface paths {
             cookie?: never;
         };
         /** Get an employee's break schedule */
-        get: operations["DashboardPeopleController_getBreaksEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeScheduleController_getBreaksEndpoint_v1"];
         /** Set an employee's break schedule */
-        put: operations["DashboardPeopleController_putBreaksEndpoint_v1"];
+        put: operations["DashboardPeopleEmployeeScheduleController_putBreaksEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3585,10 +3585,10 @@ export interface paths {
             cookie?: never;
         };
         /** List availability exceptions for an employee */
-        get: operations["DashboardPeopleController_listEmployeeExceptionsEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeScheduleController_listEmployeeExceptionsEndpoint_v1"];
         put?: never;
         /** Create an availability exception for an employee */
-        post: operations["DashboardPeopleController_createEmployeeExceptionEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeeScheduleController_createEmployeeExceptionEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3606,7 +3606,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Delete an availability exception */
-        delete: operations["DashboardPeopleController_deleteEmployeeExceptionEndpoint_v1"];
+        delete: operations["DashboardPeopleEmployeeScheduleController_deleteEmployeeExceptionEndpoint_v1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3622,7 +3622,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Submit an onboarding step for an employee */
-        post: operations["DashboardPeopleController_employeeOnboardingEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeesController_employeeOnboardingEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3637,7 +3637,7 @@ export interface paths {
             cookie?: never;
         };
         /** List ratings for an employee */
-        get: operations["DashboardPeopleController_listEmployeeRatingsEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeAccountController_listEmployeeRatingsEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3654,10 +3654,10 @@ export interface paths {
             cookie?: never;
         };
         /** List services assigned to an employee */
-        get: operations["DashboardPeopleController_listEmployeeServicesEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeServicesController_listEmployeeServicesEndpoint_v1"];
         put?: never;
         /** Assign a service to an employee */
-        post: operations["DashboardPeopleController_assignEmployeeServiceEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeeServicesController_assignEmployeeServiceEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3675,11 +3675,11 @@ export interface paths {
         put?: never;
         post?: never;
         /** Remove a service from an employee */
-        delete: operations["DashboardPeopleController_removeEmployeeServiceEndpoint_v1"];
+        delete: operations["DashboardPeopleEmployeeServicesController_removeEmployeeServiceEndpoint_v1"];
         options?: never;
         head?: never;
         /** Update an employee-service assignment */
-        patch: operations["DashboardPeopleController_updateEmployeeServiceEndpoint_v1"];
+        patch: operations["DashboardPeopleEmployeeServicesController_updateEmployeeServiceEndpoint_v1"];
         trace?: never;
     };
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/delivery-types": {
@@ -3691,7 +3691,7 @@ export interface paths {
         };
         get?: never;
         /** Set the delivery types a practitioner opts out of for a service */
-        put: operations["DashboardPeopleController_setEmployeeDeliveryTypesEndpoint_v1"];
+        put: operations["DashboardPeopleEmployeeServicesController_setEmployeeDeliveryTypesEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3708,7 +3708,7 @@ export interface paths {
         };
         get?: never;
         /** Set practitioner-owned duration options for an employee on a service */
-        put: operations["DashboardPeopleController_setEmployeeDurationsEndpoint_v1"];
+        put: operations["DashboardPeopleEmployeeServicesController_setEmployeeDurationsEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3725,7 +3725,7 @@ export interface paths {
         };
         get?: never;
         /** Set employee-specific service options */
-        put: operations["DashboardPeopleController_setEmployeeServiceOptionsEndpoint_v1"];
+        put: operations["DashboardPeopleEmployeeServicesController_setEmployeeServiceOptionsEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3742,7 +3742,7 @@ export interface paths {
         };
         get?: never;
         /** Set whether a practitioner uses custom pricing for a service */
-        put: operations["DashboardPeopleController_setEmployeePricingModeEndpoint_v1"];
+        put: operations["DashboardPeopleEmployeeServicesController_setEmployeePricingModeEndpoint_v1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3758,7 +3758,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get bookable types + duration options for an employee-service pair */
-        get: operations["DashboardPeopleController_getEmployeeServiceTypesEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeServicesController_getEmployeeServiceTypesEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3775,7 +3775,7 @@ export interface paths {
             cookie?: never;
         };
         /** Available booking slots for an employee on a given date */
-        get: operations["DashboardPeopleController_getEmployeeSlotsEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeesController_getEmployeeSlotsEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3792,10 +3792,10 @@ export interface paths {
             cookie?: never;
         };
         /** List an employee's vacations (exceptions) */
-        get: operations["DashboardPeopleController_listVacationsEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeeScheduleController_listVacationsEndpoint_v1"];
         put?: never;
         /** Create a vacation exception for an employee */
-        post: operations["DashboardPeopleController_createVacationEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeeScheduleController_createVacationEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3813,7 +3813,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Delete a vacation exception */
-        delete: operations["DashboardPeopleController_deleteVacationEndpoint_v1"];
+        delete: operations["DashboardPeopleEmployeeScheduleController_deleteVacationEndpoint_v1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3829,7 +3829,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Onboard a new employee with full profile details */
-        post: operations["DashboardPeopleController_onboardEmployeeEndpoint_v1"];
+        post: operations["DashboardPeopleEmployeesController_onboardEmployeeEndpoint_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3844,7 +3844,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get employee statistics */
-        get: operations["DashboardPeopleController_employeeStatsEndpoint_v1"];
+        get: operations["DashboardPeopleEmployeesController_employeeStatsEndpoint_v1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -21152,7 +21152,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_approveCancelBooking_v1: {
+    DashboardBookingsLifecycleController_approveCancelBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21230,7 +21230,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_cancelBooking_v1: {
+    DashboardBookingsLifecycleController_cancelBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21311,7 +21311,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_checkInBooking_v1: {
+    DashboardBookingsLifecycleController_checkInBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21386,7 +21386,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_completeBooking_v1: {
+    DashboardBookingsLifecycleController_completeBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21465,7 +21465,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_confirmBooking_v1: {
+    DashboardBookingsLifecycleController_confirmBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21538,7 +21538,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_noShowBooking_v1: {
+    DashboardBookingsLifecycleController_noShowBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21611,7 +21611,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_rejectCancelBooking_v1: {
+    DashboardBookingsLifecycleController_rejectCancelBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21688,7 +21688,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_rescheduleBooking_v1: {
+    DashboardBookingsLifecycleController_rescheduleBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21766,7 +21766,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_restoreNoShowBooking_v1: {
+    DashboardBookingsLifecycleController_restoreNoShowBooking_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21847,7 +21847,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_getBookingStatusLog_v1: {
+    DashboardBookingsHistoryController_getBookingStatusLog_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21916,7 +21916,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_getBookingTimeline_v1: {
+    DashboardBookingsHistoryController_getBookingTimeline_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -21993,7 +21993,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_retryZoomMeeting_v1: {
+    DashboardBookingsLifecycleController_retryZoomMeeting_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22145,7 +22145,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_transferCredit_v1: {
+    DashboardBookingsCreditsController_transferCredit_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22222,7 +22222,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_bookFromCredit_v1: {
+    DashboardBookingsCreditsController_bookFromCredit_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22309,7 +22309,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_recordLateSession_v1: {
+    DashboardBookingsLateEntryController_recordLateSession_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22385,7 +22385,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_getLateSessionContext_v1: {
+    DashboardBookingsLateEntryController_getLateSessionContext_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22441,7 +22441,7 @@ export interface operations {
             };
         };
     };
-    DashboardBookingsController_getMatchingCredits_v1: {
+    DashboardBookingsCreditsController_getMatchingCredits_v1: {
         parameters: {
             query: {
                 /** @description Client ID */
@@ -22582,7 +22582,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_listConversationsEndpoint_v1: {
+    DashboardCommsChatController_listConversationsEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Filter conversations by client UUID */
@@ -22641,7 +22641,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_getConversationEndpoint_v1: {
+    DashboardCommsChatController_getConversationEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22698,7 +22698,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_closeConversationEndpoint_v1: {
+    DashboardCommsChatController_closeConversationEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22755,7 +22755,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_listMessagesEndpoint_v1: {
+    DashboardCommsChatController_listMessagesEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Cursor (message UUID) for keyset pagination */
@@ -22817,7 +22817,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_sendStaffMessageEndpoint_v1: {
+    DashboardCommsChatController_sendStaffMessageEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -22878,7 +22878,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_listContactMessagesEndpoint_v1: {
+    DashboardCommsInboxController_listContactMessagesEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Filter by status */
@@ -22941,7 +22941,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_updateContactMessageStatusEndpoint_v1: {
+    DashboardCommsInboxController_updateContactMessageStatusEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23013,7 +23013,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_listDeliveryLogs_v1: {
+    DashboardCommsChatController_listDeliveryLogs_v1: {
         parameters: {
             query?: {
                 /** @description Filter by delivery status */
@@ -23076,7 +23076,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_listEmailTemplatesEndpoint_v1: {
+    DashboardCommsEmailTemplatesController_listEmailTemplatesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23130,7 +23130,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_createEmailTemplateEndpoint_v1: {
+    DashboardCommsEmailTemplatesController_createEmailTemplateEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23188,7 +23188,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_getEmailTemplateEndpoint_v1: {
+    DashboardCommsEmailTemplatesController_getEmailTemplateEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23245,7 +23245,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_updateEmailTemplateEndpoint_v1: {
+    DashboardCommsEmailTemplatesController_updateEmailTemplateEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23306,7 +23306,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_previewEmailTemplateEndpoint_v1: {
+    DashboardCommsEmailTemplatesController_previewEmailTemplateEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23367,7 +23367,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_listNotificationsEndpoint_v1: {
+    DashboardCommsInboxController_listNotificationsEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Return only unread notifications */
@@ -23430,7 +23430,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_markReadEndpoint_v1: {
+    DashboardCommsInboxController_markReadEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -23488,7 +23488,7 @@ export interface operations {
             };
         };
     };
-    DashboardCommsController_getUnreadCountEndpoint_v1: {
+    DashboardCommsInboxController_getUnreadCountEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30364,7 +30364,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_listIntakeFormsEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_listIntakeFormsEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Filter by active status */
@@ -30423,7 +30423,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_createIntakeFormEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_createIntakeFormEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30483,7 +30483,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getIntakeFormEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_getIntakeFormEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30549,7 +30549,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_deleteIntakeFormEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_deleteIntakeFormEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30613,7 +30613,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_updateIntakeFormEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_updateIntakeFormEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30690,7 +30690,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_setIntakeFieldsEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_setIntakeFieldsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30767,7 +30767,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_getIntakeFormResponsesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -30826,7 +30826,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1: {
+    DashboardOrganizationIntakeFormsController_submitIntakeResponseEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31195,7 +31195,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_listSessionPackagesEndpoint_v1: {
+    DashboardOrganizationPackagesController_listSessionPackagesEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Filter by active status */
@@ -31256,7 +31256,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_createSessionPackageEndpoint_v1: {
+    DashboardOrganizationPackagesController_createSessionPackageEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31312,7 +31312,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getSessionPackageEndpoint_v1: {
+    DashboardOrganizationPackagesController_getSessionPackageEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31376,7 +31376,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_archiveSessionPackageEndpoint_v1: {
+    DashboardOrganizationPackagesController_archiveSessionPackageEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31440,7 +31440,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_updateSessionPackageEndpoint_v1: {
+    DashboardOrganizationPackagesController_updateSessionPackageEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31686,7 +31686,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_listServicesEndpoint_v1: {
+    DashboardOrganizationServicesController_listServicesEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Filter by a branch where an active assigned practitioner works */
@@ -31761,7 +31761,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_createServiceEndpoint_v1: {
+    DashboardOrganizationServicesController_createServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31819,7 +31819,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getServiceEndpoint_v1: {
+    DashboardOrganizationServicesController_getServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31883,7 +31883,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_archiveServiceEndpoint_v1: {
+    DashboardOrganizationServicesController_archiveServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -31954,7 +31954,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_updateServiceEndpoint_v1: {
+    DashboardOrganizationServicesController_updateServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32022,7 +32022,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint_v1: {
+    DashboardOrganizationServicesController_getServiceBookingTypesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32086,7 +32086,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint_v1: {
+    DashboardOrganizationServicesController_setServiceBookingTypesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32154,7 +32154,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_getDurationOptionsEndpoint_v1: {
+    DashboardOrganizationServicesController_getDurationOptionsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32211,7 +32211,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_setDurationOptionsEndpoint_v1: {
+    DashboardOrganizationServicesController_setDurationOptionsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32279,7 +32279,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_listServiceEmployeesEndpoint_v1: {
+    DashboardOrganizationServicesController_listServiceEmployeesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32336,7 +32336,7 @@ export interface operations {
             };
         };
     };
-    DashboardOrganizationSettingsController_restoreServiceEndpoint_v1: {
+    DashboardOrganizationServicesController_restoreServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32512,7 +32512,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_listClientsEndpoint_v1: {
+    DashboardPeopleClientsController_listClientsEndpoint_v1: {
         parameters: {
             query?: {
                 sortBy?: "name" | "createdAt" | "isActive";
@@ -32583,7 +32583,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_createClientEndpoint_v1: {
+    DashboardPeopleClientsController_createClientEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32643,7 +32643,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getClientEndpoint_v1: {
+    DashboardPeopleClientsController_getClientEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32709,7 +32709,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_deleteClientEndpoint_v1: {
+    DashboardPeopleClientsController_deleteClientEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32773,7 +32773,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_updateClientEndpoint_v1: {
+    DashboardPeopleClientsController_updateClientEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32843,7 +32843,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_setClientActiveEndpoint_v1: {
+    DashboardPeopleClientsController_setClientActiveEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -32913,7 +32913,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_listEmployeesEndpoint_v1: {
+    DashboardPeopleEmployeesController_listEmployeesEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Include historical inactive/archived references for staff recording */
@@ -32992,7 +32992,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_createEmployeeEndpoint_v1: {
+    DashboardPeopleEmployeesController_createEmployeeEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33052,7 +33052,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_uploadAvatarEndpoint_v1: {
+    DashboardPeopleEmployeeAccountController_uploadAvatarEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33128,7 +33128,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_uploadPublicImageEndpoint_v1: {
+    DashboardPeopleEmployeeAccountController_uploadPublicImageEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33204,7 +33204,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_setEmployeeCustomPricingEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_setEmployeeCustomPricingEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33295,7 +33295,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getEmployeeEndpoint_v1: {
+    DashboardPeopleEmployeesController_getEmployeeEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33361,7 +33361,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_deleteEmployeeEndpoint_v1: {
+    DashboardPeopleEmployeesController_deleteEmployeeEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33425,7 +33425,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_updateEmployeeEndpoint_v1: {
+    DashboardPeopleEmployeesController_updateEmployeeEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33495,7 +33495,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getEmployeeAccountEndpoint_v1: {
+    DashboardPeopleEmployeeAccountController_getEmployeeAccountEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33576,7 +33576,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_createEmployeeAccountEndpoint_v1: {
+    DashboardPeopleEmployeeAccountController_createEmployeeAccountEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33655,7 +33655,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_updateEmployeeAccountEndpoint_v1: {
+    DashboardPeopleEmployeeAccountController_updateEmployeeAccountEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33734,7 +33734,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getAvailabilityEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_getAvailabilityEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33813,7 +33813,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_updateAvailabilityEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_updateAvailabilityEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -33903,7 +33903,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getEmployeeAvailableDaysEndpoint_v1: {
+    DashboardPeopleEmployeesController_getEmployeeAvailableDaysEndpoint_v1: {
         parameters: {
             query: {
                 /** @description IN_PERSON | ONLINE */
@@ -33975,7 +33975,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getBreaksEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_getBreaksEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34052,7 +34052,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_putBreaksEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_putBreaksEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34133,7 +34133,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_listEmployeeExceptionsEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_listEmployeeExceptionsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34210,7 +34210,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_createEmployeeExceptionEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_createEmployeeExceptionEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34291,7 +34291,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_deleteEmployeeExceptionEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_deleteEmployeeExceptionEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34357,7 +34357,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_employeeOnboardingEndpoint_v1: {
+    DashboardPeopleEmployeesController_employeeOnboardingEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34427,7 +34427,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_listEmployeeRatingsEndpoint_v1: {
+    DashboardPeopleEmployeeAccountController_listEmployeeRatingsEndpoint_v1: {
         parameters: {
             query?: {
                 /** @description Results per page */
@@ -34523,7 +34523,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_listEmployeeServicesEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_listEmployeeServicesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34609,7 +34609,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_assignEmployeeServiceEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_assignEmployeeServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34694,7 +34694,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_removeEmployeeServiceEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_removeEmployeeServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34760,7 +34760,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_updateEmployeeServiceEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_updateEmployeeServiceEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34826,7 +34826,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_setEmployeeDeliveryTypesEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_setEmployeeDeliveryTypesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34900,7 +34900,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_setEmployeeDurationsEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_setEmployeeDurationsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -34970,7 +34970,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_setEmployeeServiceOptionsEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_setEmployeeServiceOptionsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35040,7 +35040,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_setEmployeePricingModeEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_setEmployeePricingModeEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35114,7 +35114,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getEmployeeServiceTypesEndpoint_v1: {
+    DashboardPeopleEmployeeServicesController_getEmployeeServiceTypesEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35206,7 +35206,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_getEmployeeSlotsEndpoint_v1: {
+    DashboardPeopleEmployeesController_getEmployeeSlotsEndpoint_v1: {
         parameters: {
             query: {
                 /** @description Slot duration in minutes */
@@ -35290,7 +35290,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_listVacationsEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_listVacationsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35364,7 +35364,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_createVacationEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_createVacationEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35444,7 +35444,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_deleteVacationEndpoint_v1: {
+    DashboardPeopleEmployeeScheduleController_deleteVacationEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35510,7 +35510,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_onboardEmployeeEndpoint_v1: {
+    DashboardPeopleEmployeesController_onboardEmployeeEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;
@@ -35576,7 +35576,7 @@ export interface operations {
             };
         };
     };
-    DashboardPeopleController_employeeStatsEndpoint_v1: {
+    DashboardPeopleEmployeesController_employeeStatsEndpoint_v1: {
         parameters: {
             query?: never;
             header?: never;

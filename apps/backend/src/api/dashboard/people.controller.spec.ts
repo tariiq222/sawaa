@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { DashboardPeopleController } from './people.controller';
+import { DashboardPeopleClientsController } from './people-clients.controller';
+import { DashboardPeopleEmployeesController } from './people-employees.controller';
+import { DashboardPeopleEmployeeScheduleController } from './people-employee-schedule.controller';
+import { DashboardPeopleEmployeeServicesController } from './people-employee-services.controller';
+import { DashboardPeopleEmployeeAccountController } from './people-employee-account.controller';
 import { CreateClientHandler } from '../../modules/people/clients/create-client.handler';
 import { UpdateClientHandler } from '../../modules/people/clients/update-client.handler';
 import { ListClientsHandler } from '../../modules/people/clients/list-clients.handler';
@@ -42,7 +46,7 @@ import { EmployeeAvailabilityQueryHandler } from '../../modules/bookings/employe
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
-describe('DashboardPeopleController (e2e)', () => {
+describe('Dashboard people controllers (e2e)', () => {
   let app: INestApplication;
 
   const mockCreateClient = { execute: jest.fn() };
@@ -97,7 +101,13 @@ describe('DashboardPeopleController (e2e)', () => {
 
   const buildModule = async (jwtGuardValue: any) => {
     const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardPeopleController],
+      controllers: [
+        DashboardPeopleClientsController,
+        DashboardPeopleEmployeesController,
+        DashboardPeopleEmployeeScheduleController,
+        DashboardPeopleEmployeeServicesController,
+        DashboardPeopleEmployeeAccountController,
+      ],
       providers: [
         { provide: CreateClientHandler, useValue: mockCreateClient },
         { provide: UpdateClientHandler, useValue: mockUpdateClient },

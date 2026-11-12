@@ -3,6 +3,9 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { DashboardOrganizationSettingsController } from '../../api/dashboard/organization-settings.controller';
+import { DashboardOrganizationServicesController } from '../../api/dashboard/organization-services.controller';
+import { DashboardOrganizationIntakeFormsController } from '../../api/dashboard/organization-intake-forms.controller';
+import { DashboardOrganizationPackagesController } from '../../api/dashboard/organization-packages.controller';
 import { CreateServiceHandler } from './services/create-service.handler';
 import { UpdateServiceHandler } from './services/update-service.handler';
 import { ListServicesHandler } from './services/list-services.handler';
@@ -117,7 +120,7 @@ const mobileHomeCardHandlers = [
 
 @Module({
   imports: [MediaModule, DatabaseModule, MessagingModule],
-  controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController, DashboardPackageFamiliesController, DashboardMobileHomeCardsController],
+  controllers: [DashboardOrganizationServicesController, DashboardOrganizationIntakeFormsController, DashboardOrganizationSettingsController, DashboardOrganizationPackagesController, DashboardDiscountReasonsController, DashboardPackageFamiliesController, DashboardMobileHomeCardsController],
   providers: [
     ...serviceHandlers,
     ...discountReasonHandlers,

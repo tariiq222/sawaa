@@ -13,6 +13,7 @@ import { ActivityAction } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AppMetricsService } from '../../infrastructure/telemetry/app-metrics.service';
 import { RequestContextStorage } from '../http/request-context';
+import { AUDIT_CONTROLLER_NAME_KEY } from './audit-controller-name.decorator';
 
 /** HTTP methods considered write operations and subject to audit logging. */
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -164,7 +165,10 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     const handlerName = ctx.getHandler().name;
-    const controllerName = ctx.getClass().name;
+    const controllerClass = ctx.getClass();
+    const controllerName =
+      (Reflect.getMetadata(AUDIT_CONTROLLER_NAME_KEY, controllerClass) as string | undefined) ??
+      controllerClass.name;
     const path = (req.originalUrl ?? req.url).split('?')[0];
     const entity = resolveEntity(controllerName, handlerName, path);
     const action = mapMethodToAction(method);

@@ -22394,7 +22394,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/approve-cancel": {
       "patch": {
-        "operationId": "DashboardBookingsController_approveCancelBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_approveCancelBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -22505,7 +22505,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/cancel": {
       "patch": {
-        "operationId": "DashboardBookingsController_cancelBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_cancelBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -22623,7 +22623,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/check-in": {
       "patch": {
-        "operationId": "DashboardBookingsController_checkInBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_checkInBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -22726,7 +22726,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/complete": {
       "patch": {
-        "operationId": "DashboardBookingsController_completeBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_completeBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -22839,7 +22839,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/confirm": {
       "patch": {
-        "operationId": "DashboardBookingsController_confirmBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_confirmBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -22937,7 +22937,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/no-show": {
       "patch": {
-        "operationId": "DashboardBookingsController_noShowBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_noShowBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23035,7 +23035,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/reject-cancel": {
       "patch": {
-        "operationId": "DashboardBookingsController_rejectCancelBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_rejectCancelBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23143,7 +23143,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/reschedule": {
       "patch": {
-        "operationId": "DashboardBookingsController_rescheduleBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_rescheduleBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23254,7 +23254,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/restore-no-show": {
       "patch": {
-        "operationId": "DashboardBookingsController_restoreNoShowBooking_v1",
+        "operationId": "DashboardBookingsLifecycleController_restoreNoShowBooking_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23372,7 +23372,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/status-log": {
       "get": {
-        "operationId": "DashboardBookingsController_getBookingStatusLog_v1",
+        "operationId": "DashboardBookingsHistoryController_getBookingStatusLog_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23479,7 +23479,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/timeline": {
       "get": {
-        "operationId": "DashboardBookingsController_getBookingTimeline_v1",
+        "operationId": "DashboardBookingsHistoryController_getBookingTimeline_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23618,7 +23618,7 @@
     },
     "/api/v1/dashboard/bookings/{id}/zoom/retry": {
       "post": {
-        "operationId": "DashboardBookingsController_retryZoomMeeting_v1",
+        "operationId": "DashboardBookingsLifecycleController_retryZoomMeeting_v1",
         "parameters": [
           {
             "description": "Booking ID",
@@ -23883,7 +23883,7 @@
     },
     "/api/v1/dashboard/bookings/credits/{creditId}/transfer": {
       "post": {
-        "operationId": "DashboardBookingsController_transferCredit_v1",
+        "operationId": "DashboardBookingsCreditsController_transferCredit_v1",
         "parameters": [
           {
             "description": "Package credit ID",
@@ -23991,7 +23991,7 @@
     },
     "/api/v1/dashboard/bookings/from-credit": {
       "post": {
-        "operationId": "DashboardBookingsController_bookFromCredit_v1",
+        "operationId": "DashboardBookingsCreditsController_bookFromCredit_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -24106,7 +24106,7 @@
     },
     "/api/v1/dashboard/bookings/late-entry": {
       "post": {
-        "operationId": "DashboardBookingsController_recordLateSession_v1",
+        "operationId": "DashboardBookingsLateEntryController_recordLateSession_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -24215,7 +24215,7 @@
     },
     "/api/v1/dashboard/bookings/late-entry/context": {
       "get": {
-        "operationId": "DashboardBookingsController_getLateSessionContext_v1",
+        "operationId": "DashboardBookingsLateEntryController_getLateSessionContext_v1",
         "parameters": [],
         "responses": {
           "200": {
@@ -24282,7 +24282,7 @@
     },
     "/api/v1/dashboard/bookings/matching-credits": {
       "get": {
-        "operationId": "DashboardBookingsController_getMatchingCredits_v1",
+        "operationId": "DashboardBookingsCreditsController_getMatchingCredits_v1",
         "parameters": [
           {
             "description": "Client ID",
@@ -24517,7 +24517,7 @@
     },
     "/api/v1/dashboard/comms/chat/conversations": {
       "get": {
-        "operationId": "DashboardCommsController_listConversationsEndpoint_v1",
+        "operationId": "DashboardCommsChatController_listConversationsEndpoint_v1",
         "parameters": [
           {
             "description": "Filter conversations by client UUID",
@@ -24598,7 +24598,7 @@
     },
     "/api/v1/dashboard/comms/chat/conversations/{id}": {
       "get": {
-        "operationId": "DashboardCommsController_getConversationEndpoint_v1",
+        "operationId": "DashboardCommsChatController_getConversationEndpoint_v1",
         "parameters": [
           {
             "description": "Conversation UUID",
@@ -24669,7 +24669,7 @@
     },
     "/api/v1/dashboard/comms/chat/conversations/{id}/close": {
       "patch": {
-        "operationId": "DashboardCommsController_closeConversationEndpoint_v1",
+        "operationId": "DashboardCommsChatController_closeConversationEndpoint_v1",
         "parameters": [
           {
             "description": "Conversation UUID",
@@ -24740,7 +24740,7 @@
     },
     "/api/v1/dashboard/comms/chat/conversations/{id}/messages": {
       "get": {
-        "operationId": "DashboardCommsController_listMessagesEndpoint_v1",
+        "operationId": "DashboardCommsChatController_listMessagesEndpoint_v1",
         "parameters": [
           {
             "description": "Conversation UUID",
@@ -24829,7 +24829,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardCommsController_sendStaffMessageEndpoint_v1",
+        "operationId": "DashboardCommsChatController_sendStaffMessageEndpoint_v1",
         "parameters": [
           {
             "description": "Conversation UUID",
@@ -24910,7 +24910,7 @@
     },
     "/api/v1/dashboard/comms/contact-messages": {
       "get": {
-        "operationId": "DashboardCommsController_listContactMessagesEndpoint_v1",
+        "operationId": "DashboardCommsInboxController_listContactMessagesEndpoint_v1",
         "parameters": [
           {
             "description": "Filter by status",
@@ -25013,7 +25013,7 @@
     },
     "/api/v1/dashboard/comms/contact-messages/{id}/status": {
       "patch": {
-        "operationId": "DashboardCommsController_updateContactMessageStatusEndpoint_v1",
+        "operationId": "DashboardCommsInboxController_updateContactMessageStatusEndpoint_v1",
         "parameters": [
           {
             "description": "Contact message UUID",
@@ -25110,7 +25110,7 @@
     },
     "/api/v1/dashboard/comms/delivery-logs": {
       "get": {
-        "operationId": "DashboardCommsController_listDeliveryLogs_v1",
+        "operationId": "DashboardCommsChatController_listDeliveryLogs_v1",
         "parameters": [
           {
             "description": "Filter by delivery status",
@@ -25223,7 +25223,7 @@
     },
     "/api/v1/dashboard/comms/email-templates": {
       "get": {
-        "operationId": "DashboardCommsController_listEmailTemplatesEndpoint_v1",
+        "operationId": "DashboardCommsEmailTemplatesController_listEmailTemplatesEndpoint_v1",
         "parameters": [],
         "responses": {
           "200": {
@@ -25281,7 +25281,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardCommsController_createEmailTemplateEndpoint_v1",
+        "operationId": "DashboardCommsEmailTemplatesController_createEmailTemplateEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -25351,7 +25351,7 @@
     },
     "/api/v1/dashboard/comms/email-templates/{id}": {
       "get": {
-        "operationId": "DashboardCommsController_getEmailTemplateEndpoint_v1",
+        "operationId": "DashboardCommsEmailTemplatesController_getEmailTemplateEndpoint_v1",
         "parameters": [
           {
             "description": "Email template UUID",
@@ -25420,7 +25420,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardCommsController_updateEmailTemplateEndpoint_v1",
+        "operationId": "DashboardCommsEmailTemplatesController_updateEmailTemplateEndpoint_v1",
         "parameters": [
           {
             "description": "Email template UUID",
@@ -25501,7 +25501,7 @@
     },
     "/api/v1/dashboard/comms/email-templates/{id}/preview": {
       "post": {
-        "operationId": "DashboardCommsController_previewEmailTemplateEndpoint_v1",
+        "operationId": "DashboardCommsEmailTemplatesController_previewEmailTemplateEndpoint_v1",
         "parameters": [
           {
             "description": "Email template UUID",
@@ -25582,7 +25582,7 @@
     },
     "/api/v1/dashboard/comms/notifications": {
       "get": {
-        "operationId": "DashboardCommsController_listNotificationsEndpoint_v1",
+        "operationId": "DashboardCommsInboxController_listNotificationsEndpoint_v1",
         "parameters": [
           {
             "description": "Return only unread notifications",
@@ -25683,7 +25683,7 @@
     },
     "/api/v1/dashboard/comms/notifications/mark-read": {
       "patch": {
-        "operationId": "DashboardCommsController_markReadEndpoint_v1",
+        "operationId": "DashboardCommsInboxController_markReadEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -25753,7 +25753,7 @@
     },
     "/api/v1/dashboard/comms/notifications/unread-count": {
       "get": {
-        "operationId": "DashboardCommsController_getUnreadCountEndpoint_v1",
+        "operationId": "DashboardCommsInboxController_getUnreadCountEndpoint_v1",
         "parameters": [],
         "responses": {
           "200": {
@@ -34969,7 +34969,7 @@
     },
     "/api/v1/dashboard/organization/intake-forms": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_listIntakeFormsEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_listIntakeFormsEndpoint_v1",
         "parameters": [
           {
             "description": "Filter by active status",
@@ -35048,7 +35048,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardOrganizationSettingsController_createIntakeFormEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_createIntakeFormEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -35125,7 +35125,7 @@
     },
     "/api/v1/dashboard/organization/intake-forms/{formId}": {
       "delete": {
-        "operationId": "DashboardOrganizationSettingsController_deleteIntakeFormEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_deleteIntakeFormEndpoint_v1",
         "parameters": [
           {
             "description": "Intake form UUID",
@@ -35197,7 +35197,7 @@
         ]
       },
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_getIntakeFormEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_getIntakeFormEndpoint_v1",
         "parameters": [
           {
             "description": "Intake form UUID or reference (e.g. FRM-1024)",
@@ -35276,7 +35276,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardOrganizationSettingsController_updateIntakeFormEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_updateIntakeFormEndpoint_v1",
         "parameters": [
           {
             "description": "Intake form UUID",
@@ -35370,7 +35370,7 @@
     },
     "/api/v1/dashboard/organization/intake-forms/{formId}/fields": {
       "put": {
-        "operationId": "DashboardOrganizationSettingsController_setIntakeFieldsEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_setIntakeFieldsEndpoint_v1",
         "parameters": [
           {
             "description": "Intake form UUID",
@@ -35464,7 +35464,7 @@
     },
     "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_getIntakeFormResponsesEndpoint_v1",
         "parameters": [
           {
             "description": "Booking UUID",
@@ -35543,7 +35543,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardOrganizationSettingsController_submitIntakeResponseEndpoint_v1",
+        "operationId": "DashboardOrganizationIntakeFormsController_submitIntakeResponseEndpoint_v1",
         "parameters": [
           {
             "description": "Booking UUID",
@@ -35977,7 +35977,7 @@
     },
     "/api/v1/dashboard/organization/packages": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_listSessionPackagesEndpoint_v1",
+        "operationId": "DashboardOrganizationPackagesController_listSessionPackagesEndpoint_v1",
         "parameters": [
           {
             "description": "Filter by active status",
@@ -36067,7 +36067,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardOrganizationSettingsController_createSessionPackageEndpoint_v1",
+        "operationId": "DashboardOrganizationPackagesController_createSessionPackageEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -36130,7 +36130,7 @@
     },
     "/api/v1/dashboard/organization/packages/{packageId}": {
       "delete": {
-        "operationId": "DashboardOrganizationSettingsController_archiveSessionPackageEndpoint_v1",
+        "operationId": "DashboardOrganizationPackagesController_archiveSessionPackageEndpoint_v1",
         "parameters": [
           {
             "description": "Session package UUID",
@@ -36202,7 +36202,7 @@
         ]
       },
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_getSessionPackageEndpoint_v1",
+        "operationId": "DashboardOrganizationPackagesController_getSessionPackageEndpoint_v1",
         "parameters": [
           {
             "description": "Session package UUID",
@@ -36274,7 +36274,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardOrganizationSettingsController_updateSessionPackageEndpoint_v1",
+        "operationId": "DashboardOrganizationPackagesController_updateSessionPackageEndpoint_v1",
         "parameters": [
           {
             "description": "Session package UUID",
@@ -36590,7 +36590,7 @@
     },
     "/api/v1/dashboard/organization/services": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_listServicesEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_listServicesEndpoint_v1",
         "parameters": [
           {
             "description": "Filter by a branch where an active assigned practitioner works",
@@ -36760,7 +36760,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardOrganizationSettingsController_createServiceEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_createServiceEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -36830,7 +36830,7 @@
     },
     "/api/v1/dashboard/organization/services/{serviceId}": {
       "delete": {
-        "operationId": "DashboardOrganizationSettingsController_archiveServiceEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_archiveServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -36905,7 +36905,7 @@
         ]
       },
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_getServiceEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_getServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID or reference (e.g. SVC-1024)",
@@ -36977,7 +36977,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardOrganizationSettingsController_updateServiceEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_updateServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37061,7 +37061,7 @@
     },
     "/api/v1/dashboard/organization/services/{serviceId}/booking-types": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_getServiceBookingTypesEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37133,7 +37133,7 @@
         ]
       },
       "put": {
-        "operationId": "DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_setServiceBookingTypesEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37217,7 +37217,7 @@
     },
     "/api/v1/dashboard/organization/services/{serviceId}/duration-options": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_getDurationOptionsEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_getDurationOptionsEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37286,7 +37286,7 @@
         ]
       },
       "put": {
-        "operationId": "DashboardOrganizationSettingsController_setDurationOptionsEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_setDurationOptionsEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37370,7 +37370,7 @@
     },
     "/api/v1/dashboard/organization/services/{serviceId}/employees": {
       "get": {
-        "operationId": "DashboardOrganizationSettingsController_listServiceEmployeesEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_listServiceEmployeesEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37441,7 +37441,7 @@
     },
     "/api/v1/dashboard/organization/services/{serviceId}/restore": {
       "post": {
-        "operationId": "DashboardOrganizationSettingsController_restoreServiceEndpoint_v1",
+        "operationId": "DashboardOrganizationServicesController_restoreServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Service UUID",
@@ -37643,7 +37643,7 @@
     },
     "/api/v1/dashboard/people/clients": {
       "get": {
-        "operationId": "DashboardPeopleController_listClientsEndpoint_v1",
+        "operationId": "DashboardPeopleClientsController_listClientsEndpoint_v1",
         "parameters": [
           {
             "in": "query",
@@ -37790,7 +37790,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardPeopleController_createClientEndpoint_v1",
+        "operationId": "DashboardPeopleClientsController_createClientEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -37867,7 +37867,7 @@
     },
     "/api/v1/dashboard/people/clients/{id}": {
       "delete": {
-        "operationId": "DashboardPeopleController_deleteClientEndpoint_v1",
+        "operationId": "DashboardPeopleClientsController_deleteClientEndpoint_v1",
         "parameters": [
           {
             "description": "Client UUID",
@@ -37939,7 +37939,7 @@
         ]
       },
       "get": {
-        "operationId": "DashboardPeopleController_getClientEndpoint_v1",
+        "operationId": "DashboardPeopleClientsController_getClientEndpoint_v1",
         "parameters": [
           {
             "description": "Client UUID or reference (e.g. CL-1024)",
@@ -38018,7 +38018,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardPeopleController_updateClientEndpoint_v1",
+        "operationId": "DashboardPeopleClientsController_updateClientEndpoint_v1",
         "parameters": [
           {
             "description": "Client UUID",
@@ -38109,7 +38109,7 @@
     },
     "/api/v1/dashboard/people/clients/{id}/active": {
       "patch": {
-        "operationId": "DashboardPeopleController_setClientActiveEndpoint_v1",
+        "operationId": "DashboardPeopleClientsController_setClientActiveEndpoint_v1",
         "parameters": [
           {
             "description": "Client UUID",
@@ -38200,7 +38200,7 @@
     },
     "/api/v1/dashboard/people/employees": {
       "get": {
-        "operationId": "DashboardPeopleController_listEmployeesEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_listEmployeesEndpoint_v1",
         "parameters": [
           {
             "description": "Include historical inactive/archived references for staff recording",
@@ -38381,7 +38381,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardPeopleController_createEmployeeEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_createEmployeeEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -38458,7 +38458,7 @@
     },
     "/api/v1/dashboard/people/employees/{employeeId}/avatar": {
       "post": {
-        "operationId": "DashboardPeopleController_uploadAvatarEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeAccountController_uploadAvatarEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -38559,7 +38559,7 @@
     },
     "/api/v1/dashboard/people/employees/{employeeId}/public-image": {
       "post": {
-        "operationId": "DashboardPeopleController_uploadPublicImageEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeAccountController_uploadPublicImageEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -38660,7 +38660,7 @@
     },
     "/api/v1/dashboard/people/employees/{employeeId}/services/{serviceId}/custom-pricing": {
       "put": {
-        "operationId": "DashboardPeopleController_setEmployeeCustomPricingEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_setEmployeeCustomPricingEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -38803,7 +38803,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}": {
       "delete": {
-        "operationId": "DashboardPeopleController_deleteEmployeeEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_deleteEmployeeEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -38875,7 +38875,7 @@
         ]
       },
       "get": {
-        "operationId": "DashboardPeopleController_getEmployeeEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_getEmployeeEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID or reference (e.g. EMP-1024)",
@@ -38954,7 +38954,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardPeopleController_updateEmployeeEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_updateEmployeeEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39045,7 +39045,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/account": {
       "get": {
-        "operationId": "DashboardPeopleController_getEmployeeAccountEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeAccountController_getEmployeeAccountEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39157,7 +39157,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardPeopleController_updateEmployeeAccountEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeAccountController_updateEmployeeAccountEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39264,7 +39264,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardPeopleController_createEmployeeAccountEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeAccountController_createEmployeeAccountEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39373,7 +39373,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/availability": {
       "get": {
-        "operationId": "DashboardPeopleController_getAvailabilityEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_getAvailabilityEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39484,7 +39484,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardPeopleController_updateAvailabilityEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_updateAvailabilityEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39629,7 +39629,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/available-days": {
       "get": {
-        "operationId": "DashboardPeopleController_getEmployeeAvailableDaysEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_getEmployeeAvailableDaysEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39752,7 +39752,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/breaks": {
       "get": {
-        "operationId": "DashboardPeopleController_getBreaksEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_getBreaksEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39859,7 +39859,7 @@
         ]
       },
       "put": {
-        "operationId": "DashboardPeopleController_putBreaksEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_putBreaksEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -39978,7 +39978,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/exceptions": {
       "get": {
-        "operationId": "DashboardPeopleController_listEmployeeExceptionsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_listEmployeeExceptionsEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40085,7 +40085,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardPeopleController_createEmployeeExceptionEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_createEmployeeExceptionEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40201,7 +40201,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/exceptions/{exceptionId}": {
       "delete": {
-        "operationId": "DashboardPeopleController_deleteEmployeeExceptionEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_deleteEmployeeExceptionEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40285,7 +40285,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/onboarding": {
       "post": {
-        "operationId": "DashboardPeopleController_employeeOnboardingEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_employeeOnboardingEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40376,7 +40376,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/ratings": {
       "get": {
-        "operationId": "DashboardPeopleController_listEmployeeRatingsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeAccountController_listEmployeeRatingsEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40542,7 +40542,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services": {
       "get": {
-        "operationId": "DashboardPeopleController_listEmployeeServicesEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_listEmployeeServicesEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40661,7 +40661,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardPeopleController_assignEmployeeServiceEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_assignEmployeeServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40780,7 +40780,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}": {
       "delete": {
-        "operationId": "DashboardPeopleController_removeEmployeeServiceEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_removeEmployeeServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40862,7 +40862,7 @@
         ]
       },
       "patch": {
-        "operationId": "DashboardPeopleController_updateEmployeeServiceEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_updateEmployeeServiceEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -40946,7 +40946,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/delivery-types": {
       "put": {
-        "operationId": "DashboardPeopleController_setEmployeeDeliveryTypesEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_setEmployeeDeliveryTypesEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41059,7 +41059,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/durations": {
       "put": {
-        "operationId": "DashboardPeopleController_setEmployeeDurationsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_setEmployeeDurationsEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41153,7 +41153,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/options": {
       "put": {
-        "operationId": "DashboardPeopleController_setEmployeeServiceOptionsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_setEmployeeServiceOptionsEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41247,7 +41247,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/pricing-mode": {
       "put": {
-        "operationId": "DashboardPeopleController_setEmployeePricingModeEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_setEmployeePricingModeEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41353,7 +41353,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/types": {
       "get": {
-        "operationId": "DashboardPeopleController_getEmployeeServiceTypesEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeServicesController_getEmployeeServiceTypesEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41505,7 +41505,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/slots": {
       "get": {
-        "operationId": "DashboardPeopleController_getEmployeeSlotsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_getEmployeeSlotsEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41628,7 +41628,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/vacations": {
       "get": {
-        "operationId": "DashboardPeopleController_listVacationsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_listVacationsEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41728,7 +41728,7 @@
         ]
       },
       "post": {
-        "operationId": "DashboardPeopleController_createVacationEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_createVacationEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41841,7 +41841,7 @@
     },
     "/api/v1/dashboard/people/employees/{id}/vacations/{vacationId}": {
       "delete": {
-        "operationId": "DashboardPeopleController_deleteVacationEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeeScheduleController_deleteVacationEndpoint_v1",
         "parameters": [
           {
             "description": "Employee UUID",
@@ -41925,7 +41925,7 @@
     },
     "/api/v1/dashboard/people/employees/onboarding": {
       "post": {
-        "operationId": "DashboardPeopleController_onboardEmployeeEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_onboardEmployeeEndpoint_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -42015,7 +42015,7 @@
     },
     "/api/v1/dashboard/people/employees/stats": {
       "get": {
-        "operationId": "DashboardPeopleController_employeeStatsEndpoint_v1",
+        "operationId": "DashboardPeopleEmployeesController_employeeStatsEndpoint_v1",
         "parameters": [],
         "responses": {
           "200": {
