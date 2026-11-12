@@ -3,6 +3,9 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import request from 'supertest';
 import { DashboardCommsController } from './comms.controller';
+import { DashboardCommsInboxController } from './comms-inbox.controller';
+import { DashboardCommsEmailTemplatesController } from './comms-email-templates.controller';
+import { DashboardCommsChatController } from './comms-chat.controller';
 import { ListNotificationsHandler } from '../../modules/comms/notifications/list-notifications.handler';
 import { GetUnreadCountHandler } from '../../modules/comms/notifications/get-unread-count.handler';
 import { MarkReadHandler } from '../../modules/comms/notifications/mark-read.handler';
@@ -65,7 +68,12 @@ describe('DashboardCommsController (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardCommsController],
+      controllers: [
+        DashboardCommsController,
+        DashboardCommsInboxController,
+        DashboardCommsEmailTemplatesController,
+        DashboardCommsChatController,
+      ],
       providers: [
         { provide: ListNotificationsHandler, useValue: mockListNotifications },
         { provide: GetUnreadCountHandler, useValue: mockGetUnreadCount },
@@ -718,13 +726,13 @@ describe('trusted privacy actor wiring', () => {
   it('listConversationsEndpoint uses the authenticated actor', () => {
     const execute = jest.fn();
     const user = { sub: 'user-a', role: 'EMPLOYEE' };
-    (DashboardCommsController.prototype.listConversationsEndpoint as any).apply({ listConversations: { execute } }, [{ requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
+    (DashboardCommsChatController.prototype.listConversationsEndpoint as any).apply({ listConversations: { execute } }, [{ requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
   });
   it('listMessagesEndpoint uses the authenticated actor', () => {
     const execute = jest.fn();
     const user = { sub: 'user-a', role: 'EMPLOYEE' };
-    (DashboardCommsController.prototype.listMessagesEndpoint as any).apply({ listMessages: { execute } }, ['conv-1', { requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
+    (DashboardCommsChatController.prototype.listMessagesEndpoint as any).apply({ listMessages: { execute } }, ['conv-1', { requesterRole: 'ADMIN', requesterUserId: 'spoofed' }, user]);
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ requesterRole: 'EMPLOYEE', requesterUserId: 'user-a' }));
   });
 });
@@ -732,14 +740,24 @@ describe('trusted privacy actor wiring', () => {
 // Mutation of one's own inbox uses the same access as reading it.
 describe('notification own-record permission', () => {
   it('does not require booking update permission to mark the current inbox read', () => {
-    expect(Reflect.getMetadata('requiredPermissions', DashboardCommsController.prototype.markReadEndpoint))
+    expect(Reflect.getMetadata('requiredPermissions', DashboardCommsInboxController.prototype.markReadEndpoint))
       .toEqual([{action:'read',subject:'Booking'}]);
   });
 });
 
 describe('DashboardCommsController permission subjects (Setting split)', () => {
   const reflector = new Reflector();
-  const proto = DashboardCommsController.prototype as unknown as Record<string, () => void>;
+  const proto: Record<string, () => void> = {};
+  for (const ctrl of [
+    DashboardCommsController,
+    DashboardCommsInboxController,
+    DashboardCommsEmailTemplatesController,
+    DashboardCommsChatController,
+  ]) {
+    for (const name of Object.getOwnPropertyNames(ctrl.prototype)) {
+      proto[name] = (ctrl.prototype as unknown as Record<string, () => void>)[name];
+    }
+  }
   const subjectOf = (fn: string) =>
     (reflector.get(CHECK_PERMISSIONS_KEY, proto[fn]) as Array<{ subject: string }>)[0].subject;
 

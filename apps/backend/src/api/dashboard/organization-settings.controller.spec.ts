@@ -3,6 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { DashboardOrganizationSettingsController } from './organization-settings.controller';
+import { DashboardOrganizationServicesController } from './organization-services.controller';
+import { DashboardOrganizationIntakeFormsController } from './organization-intake-forms.controller';
+import { DashboardOrganizationPackagesController } from './organization-packages.controller';
 import { CreateServiceHandler } from '../../modules/org-experience/services/create-service.handler';
 import { UpdateServiceHandler } from '../../modules/org-experience/services/update-service.handler';
 import { ListServicesHandler } from '../../modules/org-experience/services/list-services.handler';
@@ -73,7 +76,12 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardOrganizationSettingsController],
+      controllers: [
+        DashboardOrganizationServicesController,
+        DashboardOrganizationIntakeFormsController,
+        DashboardOrganizationSettingsController,
+        DashboardOrganizationPackagesController,
+      ],
       providers: [
         { provide: CreateServiceHandler, useValue: mockCreateService },
         { provide: UpdateServiceHandler, useValue: mockUpdateService },

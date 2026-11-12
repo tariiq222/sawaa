@@ -47,7 +47,11 @@ import { GetEmployeeClientHistoryHandler } from './clients/get-employee-client-h
 import { GetEmployeeClientHandler } from './clients/get-employee-client.handler';
 import { ResolveEmployeeIdHandler } from './employees/resolve-employee-id.handler';
 import { LogActivityHandler } from '../ops/log-activity/log-activity.handler';
-import { DashboardPeopleController } from '../../api/dashboard/people.controller';
+import { DashboardPeopleClientsController } from '../../api/dashboard/people-clients.controller';
+import { DashboardPeopleEmployeesController } from '../../api/dashboard/people-employees.controller';
+import { DashboardPeopleEmployeeScheduleController } from '../../api/dashboard/people-employee-schedule.controller';
+import { DashboardPeopleEmployeeServicesController } from '../../api/dashboard/people-employee-services.controller';
+import { DashboardPeopleEmployeeAccountController } from '../../api/dashboard/people-employee-account.controller';
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
 import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
@@ -71,7 +75,14 @@ const handlers = [
 
 @Module({
   imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule, NotificationOutboxModule],
-  controllers: [DashboardPeopleController, PublicEmployeeAvatarController],
+  controllers: [
+    DashboardPeopleClientsController,
+    DashboardPeopleEmployeesController,
+    DashboardPeopleEmployeeScheduleController,
+    DashboardPeopleEmployeeServicesController,
+    DashboardPeopleEmployeeAccountController,
+    PublicEmployeeAvatarController,
+  ],
   providers: [...handlers, PublicEmployeeAvatarHandler],
   exports: [...handlers],
 })

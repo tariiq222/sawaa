@@ -40,6 +40,10 @@ import { ZoomMeetingWorker } from './create-zoom-meeting/zoom-meeting-worker';
 import { RetryZoomMeetingHandler } from './retry-zoom-meeting/retry-zoom-meeting.handler';
 import { ZoomMeetingService } from './zoom-meeting.service';
 import { ZoomModule } from '../integrations/zoom/zoom.module';
+import { DashboardBookingsLateEntryController } from '../../api/dashboard/bookings-late-entry.controller';
+import { DashboardBookingsCreditsController } from '../../api/dashboard/bookings-credits.controller';
+import { DashboardBookingsHistoryController } from '../../api/dashboard/bookings-history.controller';
+import { DashboardBookingsLifecycleController } from '../../api/dashboard/bookings-lifecycle.controller';
 import { DashboardBookingsController } from '../../api/dashboard/bookings.controller';
 import { DashboardProgramsController } from '../../api/dashboard/programs.controller';
 import { GetPublicAvailabilityHandler } from './availability/public/get-public-availability.handler';
@@ -150,7 +154,14 @@ const handlers = [
     ZoomModule,
     FinanceModule,
   ],
-  controllers: [DashboardBookingsController, DashboardProgramsController],
+  controllers: [
+    DashboardBookingsLateEntryController,
+    DashboardBookingsCreditsController,
+    DashboardBookingsHistoryController,
+    DashboardBookingsLifecycleController,
+    DashboardBookingsController,
+    DashboardProgramsController,
+  ],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedCompatibilityHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler, RestoreNoShowBookingHandler, GetClientPortalSummaryHandler, ListClientUpcomingBookingsHandler, GetClientBookingForActionHandler, EmployeeAvailabilityQueryHandler],
 })

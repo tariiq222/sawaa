@@ -2,6 +2,7 @@ import { AuditInterceptor, deriveEntityFromHandler, deriveEntityFromController, 
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of, throwError, lastValueFrom } from 'rxjs';
 import { ActivityAction } from '@prisma/client';
+import { AuditControllerName } from './audit-controller-name.decorator';
 import { RequestContextStorage } from '../http/request-context';
 
 describe('AuditInterceptor pure functions', () => {
@@ -77,6 +78,28 @@ describe('AuditInterceptor', () => {
 
     await lastValueFrom(interceptor.intercept(createContext(req, 'handler', 'Controller'), next));
     expect(mockPrisma.activityLog.create).not.toHaveBeenCalled();
+  });
+
+  it('derives the entity from @AuditControllerName when a controller was split out', async () => {
+    @AuditControllerName('DashboardPeopleController')
+    class DashboardPeopleClientsController {}
+    const req = {
+      method: 'PATCH',
+      url: '/api/v1/dashboard/people/clients/1/active',
+      originalUrl: '/api/v1/dashboard/people/clients/1/active',
+      ip: '127.0.0.1',
+      socket: {},
+      headers: {},
+    };
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => req }),
+      getHandler: () => ({ name: 'setClientActiveEndpoint' }),
+      getClass: () => DashboardPeopleClientsController,
+    } as any;
+    await lastValueFrom(interceptor.intercept(ctx, { handle: () => of({ id: 'c-1' }) }));
+    expect(mockPrisma.activityLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ entity: 'People' }) }),
+    );
   });
 
   it('logs POST requests', async () => {

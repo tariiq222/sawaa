@@ -1,6 +1,9 @@
 import { OnRefundOutcomeHandler } from './events/on-refund-outcome.handler';
 import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
 import { DashboardCommsController } from '../../api/dashboard/comms.controller';
+import { DashboardCommsInboxController } from '../../api/dashboard/comms-inbox.controller';
+import { DashboardCommsEmailTemplatesController } from '../../api/dashboard/comms-email-templates.controller';
+import { DashboardCommsChatController } from '../../api/dashboard/comms-chat.controller';
 import { DashboardConversationsController } from '../../api/dashboard/conversations.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
@@ -217,7 +220,13 @@ const eventHandlers = [
     forwardRef(() => PeopleModule),
     NotificationOutboxModule,
   ],
-  controllers: [DashboardCommsController, DashboardConversationsController],
+  controllers: [
+    DashboardCommsController,
+    DashboardCommsInboxController,
+    DashboardCommsEmailTemplatesController,
+    DashboardCommsChatController,
+    DashboardConversationsController,
+  ],
   providers: [...handlers, ...eventHandlers],
   exports: [...handlers, NotificationChannelModule],
 })
