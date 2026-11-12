@@ -1,13 +1,5 @@
-# Temporary exception — remove when node-forge ships a fix and the lockfiles are bumped.
+# Legacy plain ignore file. CI reads .trivyignore.yaml only (merge-gate.yml).
 #
-# CVE-2026-85393 (GHSA-86w9-cpqp-85rv), node-forge <= 1.4.0, no patched version
-# as of 2026-10-02: RSA PKCS#1 v1.5 signature *verification* accepts forged
-# signatures for low-exponent keys.
-#
-# Not reachable here:
-#   - backend: only via firebase-admin, which calls forge.pki.privateKeyFromPem
-#     to validate the service-account key format. No signature verification.
-#   - mobile: only via @expo/cli and @expo/code-signing-certificates (developer
-#     tooling, not shipped in the app bundle).
-# No app code imports node-forge directly.
-CVE-2026-85393
+# 2026-11-12 (MNT-07): the CVE-2026-85393 node-forge entry was removed. The
+# installed node-forge (mobile override, 1.4.2) is no longer reported for it
+# by Trivy 0.72.0. Add new exceptions to .trivyignore.yaml with an expiry date.
