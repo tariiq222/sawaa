@@ -1,5 +1,6 @@
-# Additional merge checks. This job does not aggregate the separate CI jobs.
-# Require CI jobs separately in branch protection; see docs/operations/current-state.md.
+# This workflow is the merge check: ci.yml is retired (see
+# .github/retired-workflows/README.md), so `gate` and `critical-real-e2e` are
+# the required checks and carry everything the local pre-commit hook enforces.
 # The Git ancestry check is not proof of a deployed or manually accepted revision.
 
 name: merge-gate
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────
-  # gate — additional checks alongside the separate CI workflow.
+  # gate — the merge check (lint, typecheck, tests, drift, security).
   # ─────────────────────────────────────────────────────────────────────
   gate:
     name: gate
@@ -106,6 +107,18 @@ jobs:
       - name: Website — typecheck + unit
         run: pnpm --filter @sawaa/website typecheck && pnpm --filter @sawaa/website test -- --run
 
+      - name: Lint (ESLint + multi-tenant guard + backend boundaries)
+        run: pnpm lint
+
+      - name: Package tests (shared, api-client, ui)
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client --filter @sawaa/ui test
+
+      - name: Dashboard API drift
+        run: node scripts/check-dashboard-api-drift.mjs
+
+      - name: Dashboard i18n verification
+        run: pnpm --filter dashboard run i18n:verify
+
       - name: Install mobile workspace dependencies
         working-directory: apps/mobile
         run: pnpm install --frozen-lockfile
@@ -176,11 +189,11 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Lefthook pre-push (eslint + typecheck + multi-tenant guard)
-        # Single source of truth: this is the SAME lefthook config that runs
-        # locally before every `git push`. CI invokes the CLI directly so
-        # there is no risk of the CI and local-hook behaviors drifting apart.
-        # --all-files ensures we lint every changed path, not just the diff.
+      - name: Lefthook pre-push (direct-push guard + typecheck)
+        # Runs the pre-push jobs from lefthook.yml (direct-push guard and
+        # turbo typecheck) so CI and the local hook share one definition.
+        # ESLint and the multi-tenant guard are NOT part of pre-push; they run
+        # in the dedicated `pnpm lint` step above.
         # --no-TTY prevents lefthook from blocking on a missing TTY.
         run: |
           pnpm lefthook run pre-push --all-files --no-tty
