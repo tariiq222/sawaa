@@ -20,6 +20,6 @@ After observing the target environment, use the [deployment-record contract](../
 
 ## Checks and enforcement
 
-`release-integrity.yml` runs the release tag, ancestry and deployment-record behavioral tests without application dependencies. It uses temporary local Git remotes and never publishes a real release in tests.
+`merge-gate.yml` runs on pull requests into `main`, `develop` and `integration/**` and on pushes to `main`. It has exactly two jobs, `gate` and `critical-real-e2e`; those are the required checks named in the [deployment policy](../docs/operations/deployment-policy.md#merge-checks-for-develop--owner-direction-2026-10-01). A `cancelled`, skipped or failed required check counts as failed. The separate `ci.yml`, `release-integrity.yml`, `dashboard-smoke` and `outbox-transport` jobs were retired (see `.github/retired-workflows/`) and must not be configured as required checks. `gate` runs the deploy-state regression tests (`scripts/check-deploy-state.test.mjs`) and the code-release ancestry check.
 
-`merge-gate.yml` is an additional check, not an aggregate of `ci.yml`. Branch protection must separately require the relevant CI jobs (backend, dashboard, website, mobile, security, critical-real-e2e, dashboard-smoke, outbox-transport), `gate` for main, and `release-integrity`. Confirm the actual check names and fresh results before configuring protection. Workflow presence does not configure protection; the last observed enforcement limitations are in the operations summary.
+Confirm the actual check names and fresh results before configuring branch protection. Workflow presence does not configure protection; the last observed enforcement limitations are in the operations summary.

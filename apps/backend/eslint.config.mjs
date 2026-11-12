@@ -76,25 +76,24 @@ export default defineConfig([
       // Require @ApiOperation on every NestJS HTTP handler.
       "sawaa/require-api-operation": "error",
 
-      // `$allTenantsUnsafe` is reserved for CLI/bootstrap code (seed/scripts).
-      // Application code must go through the CLS-gated `$allTenants` escape hatch.
+      // Single-tenant: Postgres RLS and the `$allTenants` / `$allTenantsUnsafe`
+      // escape hatches were removed (see src/common/database/rls-transaction.ts).
+      // The first rule below is kept so those removed names cannot be reintroduced.
       //
-      // Direct `prisma.$transaction()` calls bypass RLS context injection.
-      // Use `RlsTransactionService.withTransaction()` or `.withBypassTransaction()`
-      // instead. For super-admin / cron paths add `{ bypassRls: true }` and a
-      // comment explaining why. The helper file itself is exempt via a file-level
-      // disable comment.
+      // `RlsTransactionService.withTransaction()` is now a thin wrapper over
+      // `prisma.$transaction()`. The second rule keeps transactions flowing through
+      // that single wrapper; the wrapper file itself is exempt below.
       "no-restricted-syntax": [
         "error",
         {
           selector: "MemberExpression[property.name='$allTenantsUnsafe']",
           message:
-            "Use PrismaService.$allTenants only inside a SuperAdminContextInterceptor-protected request. $allTenantsUnsafe is reserved for seed/scripts code.",
+            "$allTenantsUnsafe belonged to the removed multi-tenant RLS layer and must not be reintroduced. Use PrismaService directly (single-tenant).",
         },
         {
           selector: "CallExpression[callee.property.name='$transaction']:not([callee.object.property.name='$allTenants'])",
           message:
-            "Use RlsTransactionService.withTransaction() instead of prisma.$transaction() to ensure RLS context is injected. $allTenants.$transaction is allowed for super-admin/cron with a justification comment.",
+            "Use RlsTransactionService.withTransaction() instead of calling prisma.$transaction() directly, so transactions go through the one shared wrapper (RLS itself was removed; the service name is historical).",
         },
       ],
     },
@@ -108,7 +107,7 @@ export default defineConfig([
       "@typescript-eslint/no-unused-vars": "off",
       "sawaa/require-api-operation": "off",
       // Test helpers and e2e fixtures legitimately call $transaction directly for
-      // database setup/teardown; they are not application code subject to RLS rules.
+      // database setup/teardown; they are not application code subject to these rules.
       "no-restricted-syntax": "off",
     },
   },
@@ -126,8 +125,6 @@ export default defineConfig([
     // exempt from the no-restricted-syntax/$transaction rule — they ARE the wrapper.
     files: [
       "src/common/database/rls-transaction.ts",
-      "src/common/tenant/rls.helper.ts",
-      "src/common/interceptors/tenant-guc.interceptor.ts",
     ],
     rules: { "no-restricted-syntax": "off" },
   },

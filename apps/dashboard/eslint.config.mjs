@@ -16,7 +16,6 @@ import nextTs from "eslint-config-next/typescript";
 const FEATURES = [
   "activity-log",
   "bookings",
-  "branches",
   "chatbot",
   "clients",
   "contact-messages",
@@ -26,15 +25,12 @@ const FEATURES = [
   "departments",
   "email-config",
   "employees",
-  "groups",
   "intake-forms",
   "invoices",
   "login",
   "notifications",
   "packages",
-  "patients",
   "payments",
-  "practitioners",
   "profile",
   "programs",
   "ratings",
@@ -43,7 +39,6 @@ const FEATURES = [
   "settings",
   "sms",
   "users",
-  "whatsapp",
   "zoom",
 ]
 
