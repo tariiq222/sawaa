@@ -27,11 +27,12 @@
 #     - Delete the duplicate pnpm install in app-build (lines 92)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm.
+RUN npm install -g pnpm@10.10.0 && pnpm --version
 
 # Copy manifests and dependency patches before installing from the lockfile.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
@@ -44,11 +45,12 @@ COPY packages/ui/package.json              ./packages/ui/
 RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: shared-build ────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS shared-build
+FROM node:26-bookworm-slim AS shared-build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm.
+RUN npm install -g pnpm@10.10.0 && pnpm --version
 
 # Copy manifests + lockfile so pnpm install is a cache hit when nothing changed
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
@@ -86,11 +88,12 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && test -f /app/node_modules/@sawaa/shared/dist/constants/index.d.ts
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS app-build
+FROM node:26-bookworm-slim AS app-build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm.
+RUN npm install -g pnpm@10.10.0 && pnpm --version
 
 COPY --from=shared-build /app/node_modules ./node_modules
 COPY --from=shared-build /app/packages     ./packages
@@ -126,7 +129,7 @@ RUN cd /app/apps/backend && /app/node_modules/.bin/prisma generate --schema=pris
 RUN cd /app/apps/backend && /app/node_modules/.bin/nest build
 
 # ── Stage 4: runner ──────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5100

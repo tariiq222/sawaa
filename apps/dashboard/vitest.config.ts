@@ -22,7 +22,8 @@ export default defineConfig({
     pool: "forks",
     maxWorkers: 1,
     // Increase per-worker heap to avoid OOM on memory-heavy test files.
-    execArgv: ["--max-old-space-size=6144"],
+    // Node 25+ ships a global localStorage that shadows jsdom's; disable it.
+    execArgv: ["--max-old-space-size=6144", "--no-experimental-webstorage"],
     // Increase teardown timeout from default 30 s — memory-heavy hook imports
     // need extra time for environment setup before the worker is considered hung.
     teardownTimeout: 60000,

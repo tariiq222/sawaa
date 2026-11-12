@@ -68,12 +68,14 @@
     "test": "vitest run",
     "test:cov": "vitest run --coverage"
   },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
   "devDependencies": {
     "@prisma/client": "^7.8.0",
     "@vitest/coverage-v8": "^4.1.4",
     "typescript": "^5.4.0",
-    "vitest": "^4.1.4",
-    "zod": "^4.4.3"
+    "vitest": "^4.1.4"
   },
   "peerDependencies": {
     "@prisma/client": "^7.8.0"

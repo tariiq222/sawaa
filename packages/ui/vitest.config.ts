@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    // Node 25+ ships a global localStorage that shadows jsdom's; disable it.
+    execArgv: ['--no-experimental-webstorage'],
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {

@@ -58,7 +58,7 @@ const config: Config = {
     '^file-type$': '<rootDir>/src/__mocks__/file-type.ts',
     // @react-pdf/renderer is pure ESM (and pulls in yoga-layout which uses
     // import.meta) — same situation as file-type. Test environment uses the
-    // CJS shim; production uses Node 22's native require(esm) path.
+    // CJS shim; production uses Node's native require(esm) path.
     '^@react-pdf/renderer$': '<rootDir>/src/__mocks__/react-pdf-renderer.ts',
   },
   transformIgnorePatterns: ['node_modules/(?!(uuid)/)'],
