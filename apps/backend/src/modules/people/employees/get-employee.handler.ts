@@ -2,7 +2,6 @@ import { ResolveEmployeeImageHandler } from '../../media/files/resolve-employee-
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { parseEntityRef } from '../../../common/parse-entity-ref';
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
 import { mapEmployeeRow } from './employee-row.mapper';
 
 export interface GetEmployeeQuery {

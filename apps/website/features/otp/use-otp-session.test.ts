@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import {
-  useOtpSession,
-  setOtpSessionToken,
-  getOtpSessionToken,
-} from './use-otp-session';
 
 // Each test re-imports the module so the module-scoped `storedToken`
 // starts at null (the hook, the setter, and the getter all share the same

@@ -6730,6 +6730,325 @@ export interface components {
              */
             refundType?: "FULL" | "PARTIAL" | "NONE";
         };
+        ApprovedCancelBookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Whether a refund was started automatically
+             * @example false
+             */
+            autoRefund: boolean;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
+        };
         ApproveRefundDto: {
             /**
              * @description ID of the refund request to approve
@@ -6883,6 +7202,20 @@ export interface components {
              */
             serviceId?: string;
         };
+        BookingAvailableSlotDto: {
+            /**
+             * Format: date-time
+             * @description Slot end (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endTime: string;
+            /**
+             * Format: date-time
+             * @description Slot start (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            startTime: string;
+        };
         BookingConfigDurationOptionInputDto: {
             /**
              * @description Currency code
@@ -6961,12 +7294,988 @@ export interface components {
              */
             useCustomAvailability?: boolean;
         };
-        /** @enum {string} */
-        BookingSource: "RECEPTION" | "ONLINE" | "WHATSAPP" | "AI_CHAT";
-        /** @enum {string} */
-        BookingStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        BookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
+        };
+        BookingRowClientDto: {
+            /**
+             * @description Client email; empty string when none is stored
+             * @example sara@example.com
+             */
+            email: string;
+            /**
+             * @description Client first name (split from the full name when no first name is stored)
+             * @example Sara
+             */
+            firstName: string;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            id: string;
+            /**
+             * @description Client last name
+             * @example Al-Harbi
+             */
+            lastName: string;
+            /**
+             * @description Client phone number
+             * @example +966500000000
+             */
+            phone: string | null;
+        };
+        BookingRowDto: {
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            adminNotes: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * @description Cancellation reason (for late entries the free-text notes win over the enum)
+             * @example CLIENT_REQUESTED
+             */
+            cancellationReason: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            cancelledBy: string | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example 2026-06-01T08:55:00.000Z
+             */
+            checkedInAt: string | null;
+            /** @description Client summary; null when the client row is missing */
+            client: components["schemas"]["BookingRowClientDto"] | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example 2026-05-30T09:00:00.000Z
+             */
+            confirmedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Business-timezone calendar date (YYYY-MM-DD)
+             * @example 2026-06-01
+             */
+            date: string | null;
+            /**
+             * @description Delivery channel, lower-case
+             * @example in_person
+             * @enum {string|null}
+             */
+            deliveryType: "in_person" | "online" | null;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /** @description Employee summary; null when the employee row is missing */
+            employee: components["schemas"]["BookingRowEmployeeDto"] | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            employeeService: Record<string, never> | null;
+            /**
+             * @description Always an empty string (legacy field kept for compatibility)
+             * @example
+             */
+            employeeServiceId: string;
+            /**
+             * Format: date-time
+             * @description End instant (UTC ISO); null only for a malformed legacy row
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string | null;
+            /**
+             * @description Business-timezone end time (HH:mm)
+             * @example 13:00
+             */
+            endTime: string | null;
+            /** @description Imported payment projection; only for historical imports */
+            historicalPayment: components["schemas"]["BookingRowHistoricalPaymentDto"] | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description Always false today (reserved)
+             * @example false
+             */
+            intakeFormAlreadySubmitted: boolean;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            intakeFormId: string | null;
+            /** @description Invoice summary; null when no invoice exists */
+            invoice: components["schemas"]["BookingRowInvoiceDto"] | null;
+            /**
+             * @description True for rows imported from the legacy system (read-only)
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * @description True when the session was recorded after the fact (late entry)
+             * @example false
+             */
+            isLateEntry: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text booking notes
+             * @example Prefers morning sessions
+             */
+            notes: string | null;
+            /** @description Package-credit funding details; null when not funded by a package */
+            packageFunding: components["schemas"]["BookingRowPackageFundingDto"] | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example true
+             */
+            payAtClinic: boolean;
+            /** @description Latest payment on the booking invoice; null when none */
+            payment: components["schemas"]["BookingRowPaymentDto"] | null;
+            /**
+             * @description Price in halalas captured at booking time
+             * @example 20000
+             */
+            priceSnapshot: number | null;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            rescheduledFrom: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC ISO); null only for a malformed legacy row
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string | null;
+            /** @description Service summary; null for group-program bookings or a missing service */
+            service: components["schemas"]["BookingRowServiceDto"] | null;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Business-timezone start time (HH:mm)
+             * @example 12:00
+             */
+            startTime: string | null;
+            /**
+             * @description Booking status, lower-case
+             * @example confirmed
+             * @enum {string}
+             */
+            status: "pending" | "pending_group_fill" | "awaiting_payment" | "confirmed" | "cancelled" | "completed" | "no_show" | "expired" | "cancel_requested" | "deposit_paid";
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            suggestedRefundType: string | null;
+            /**
+             * @description Booking type, lower-case; INDIVIDUAL is reported as in_person
+             * @example in_person
+             * @enum {string}
+             */
+            type: "in_person" | "walk_in" | "group";
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Always null on dashboard reads: host URLs are stripped (P0-6)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL for the client
+             * @example https://zoom.us/j/123
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example CREATED
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Always null on dashboard reads: start URLs are stripped (P0-6)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+        };
+        BookingRowEmployeeDto: {
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            id: string;
+            /**
+             * @description Specialty (English); empty string when unset
+             * @example Family counseling
+             */
+            specialty: string;
+            /**
+             * @description Specialty (Arabic); empty string when unset
+             * @example الإرشاد الأسري
+             */
+            specialtyAr: string;
+            /** @description Employee name parts */
+            user: components["schemas"]["BookingRowEmployeeUserDto"];
+            /**
+             * @description Linked user UUID; empty string when the employee has no user
+             * @example 00000000-0000-0000-0000-000000000004
+             */
+            userId: string;
+        };
+        BookingRowEmployeeUserDto: {
+            /**
+             * @description Employee first name (split from the Arabic/display name)
+             * @example Ahmed
+             */
+            firstName: string;
+            /**
+             * @description Employee last name
+             * @example Al-Qahtani
+             */
+            lastName: string;
+        };
+        BookingRowHistoricalPaymentDto: {
+            /**
+             * @description Imported paid amount in halalas
+             * @example 20000
+             */
+            amount: number;
+            /**
+             * @description Imported payment method label
+             * @example Cash
+             */
+            method: string | null;
+            /**
+             * @description True when the imported payment was paid but the booking is not CONFIRMED
+             * @example false
+             */
+            requiresReview: boolean;
+            /**
+             * @description Imported (Booknetic) payment status
+             * @example paid
+             * @enum {string}
+             */
+            status: "paid" | "not_paid" | "pending" | "canceled" | "unknown";
+        };
+        BookingRowInvoiceDto: {
+            /**
+             * @description Invoice UUID
+             * @example 00000000-0000-0000-0000-000000000008
+             */
+            id: string;
+            /**
+             * @description Total minus completed payments, in halalas
+             * @example 0
+             */
+            outstanding: number;
+            /**
+             * @description Invoice status (Prisma InvoiceStatus)
+             * @example PAID
+             */
+            status: string;
+            /**
+             * @description Net amount before VAT and discount, in halalas
+             * @example 20000
+             */
+            subtotal: number;
+            /**
+             * @description Total after discount, in halalas
+             * @example 20000
+             */
+            total: number;
+            /**
+             * @description VAT rate as a fraction of 1 (0 when VAT is off)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        BookingRowPackageFundingDto: {
+            /**
+             * @description Package credit UUID that funds this booking
+             * @example 00000000-0000-0000-0000-000000000009
+             */
+            creditId: string;
+            /**
+             * @description Session package UUID
+             * @example 00000000-0000-0000-0000-00000000000b
+             */
+            packageId: string;
+            /**
+             * @description Package name (Arabic)
+             * @example باقة 5 جلسات
+             */
+            packageNameAr: string;
+            /**
+             * @description Package name (English)
+             * @example 5-session package
+             */
+            packageNameEn: string | null;
+            /**
+             * @description Package purchase UUID
+             * @example 00000000-0000-0000-0000-00000000000a
+             */
+            purchaseId: string;
+            /**
+             * @description Net halalas the client paid for this one session (reporting only); null for credits issued before net value was tracked
+             * @example 18000
+             */
+            sessionValue: number | null;
+            /**
+             * @description State of the credit usage for this booking
+             * @example RESERVED
+             * @enum {string}
+             */
+            usageStatus: "RESERVED" | "CONSUMED" | "RETURNED";
+        };
+        BookingRowPaymentDto: {
+            /**
+             * @description Payment amount in halalas
+             * @example 20000
+             */
+            amount: number;
+            /**
+             * Format: date-time
+             * @description effectiveReceivedAt, falling back to createdAt
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            collectionDate: string | null;
+            /**
+             * Format: date-time
+             * @description When the payment row was created
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            createdAt: string | null;
+            /**
+             * Format: date-time
+             * @description When the money was actually received (manual receipts)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            effectiveReceivedAt: string | null;
+            /**
+             * @description Payment UUID
+             * @example 00000000-0000-0000-0000-000000000006
+             */
+            id: string;
+            /**
+             * @description Payment method mapped for the dashboard
+             * @example cash
+             * @enum {string}
+             */
+            method: "moyasar" | "bank_transfer" | "cash" | "mada" | "tabby";
+            /**
+             * Format: date-time
+             * @description When the payment was processed
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            processedAt: string | null;
+            /**
+             * @description Reason given when a receipt was entered after the fact
+             * @example Received at the front desk
+             */
+            receiptEntryReason: string | null;
+            /**
+             * @description Evidence reference of a manual receipt
+             * @example RCPT-1001
+             */
+            receiptEvidenceRef: string | null;
+            /**
+             * @description User who recorded a manual receipt
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            receiptRecordedBy: string | null;
+            /**
+             * @description Payment status mapped for the dashboard
+             * @example paid
+             * @enum {string}
+             */
+            status: "pending" | "awaiting" | "paid" | "failed" | "refunded" | "rejected";
+            /**
+             * @description Same value as amount, in halalas
+             * @example 20000
+             */
+            totalAmount: number;
+        };
+        BookingRowServiceDto: {
+            /**
+             * @description Catalog duration in minutes
+             * @example 60
+             */
+            duration: number;
+            /**
+             * @description Service UUID
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            id: string;
+            /**
+             * @description Service name (Arabic)
+             * @example استشارة أسرية
+             */
+            nameAr: string;
+            /**
+             * @description Service name (English); empty string when unset
+             * @example Family consultation
+             */
+            nameEn: string;
+            /**
+             * @description Current catalog price of the service, as stored (not a booking snapshot)
+             * @example 20000
+             */
+            price: number;
+        };
         /**
-         * @description Booking type
+         * @description Where the booking was created
+         * @enum {string}
+         */
+        BookingSource: "RECEPTION" | "ONLINE" | "WHATSAPP" | "AI_CHAT";
+        BookingsStatsResponseDto: {
+            /**
+             * @description Bookings completed today
+             * @example 7
+             */
+            completedToday: number;
+            /**
+             * @description Today's bookings that are PENDING, AWAITING_PAYMENT or CONFIRMED
+             * @example 3
+             */
+            pendingCount: number;
+            /**
+             * @description Revenue of today's completed bookings, in halalas
+             * @example 150000
+             */
+            revenueToday: number;
+            /**
+             * @description Bookings scheduled today
+             * @example 12
+             */
+            todayCount: number;
+        };
+        /**
+         * @description Booking status
+         * @enum {string}
+         */
+        BookingStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        BookingStatusLogEntryDto: {
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            bookingId: string;
+            /**
+             * @description Who made the change (user id or system actor)
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            changedBy: string;
+            /**
+             * Format: date-time
+             * @description When the transition happened
+             * @example 2026-05-30T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Previous status; null for the first entry
+             * @example PENDING
+             * @enum {string|null}
+             */
+            fromStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID" | null;
+            /**
+             * @description Log entry UUID
+             * @example 00000000-0000-0000-0000-00000000000d
+             */
+            id: string;
+            /**
+             * @description Reason given for the change
+             * @example null
+             */
+            reason: string | null;
+            /**
+             * @description Hash of the originating action request
+             * @example null
+             */
+            sourceActionHash: string | null;
+            /**
+             * @description Idempotency id of the originating action
+             * @example null
+             */
+            sourceActionId: string | null;
+            /**
+             * @description Stored result of the originating action (free-form JSON)
+             * @example null
+             */
+            sourceActionResult: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description New status
+             * @example CONFIRMED
+             * @enum {string}
+             */
+            toStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        };
+        BookingTimelineEntryDto: {
+            /**
+             * @description User id, email or system actor that triggered it
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            actor: string | null;
+            /**
+             * @description Money in integer halalas (payment and refund entries only)
+             * @example 20000
+             */
+            amount: number | null;
+            /**
+             * Format: date-time
+             * @description When the event occurred
+             * @example 2026-05-30T09:00:00.000Z
+             */
+            at: string;
+            /**
+             * @description Previous status (status changes)
+             * @example PENDING
+             * @enum {string|null}
+             */
+            fromStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID" | null;
+            /**
+             * @description Entry id, prefixed by its source (for example payment:<uuid>)
+             * @example payment:00000000-0000-0000-0000-000000000006
+             */
+            id: string;
+            /**
+             * @description Kind of event
+             * @example PAYMENT
+             * @enum {string}
+             */
+            kind: "CREATED" | "STATUS_CHANGE" | "RESCHEDULE" | "PAYMENT" | "REFUND" | "ACTIVITY";
+            /**
+             * @description Structured extras such as fromScheduledAt/toScheduledAt for reschedules
+             * @example null
+             */
+            meta: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description Payment method (payment entries)
+             * @example CASH
+             * @enum {string|null}
+             */
+            method: "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON" | "MADA" | "TABBY" | null;
+            /**
+             * @description Payment status (payment entries)
+             * @example COMPLETED
+             * @enum {string|null}
+             */
+            paymentStatus: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED" | null;
+            /**
+             * @description Reason or description
+             * @example null
+             */
+            reason: string | null;
+            /**
+             * @description Refund status (refund entries)
+             * @example null
+             * @enum {string|null}
+             */
+            refundStatus: "PENDING_REVIEW" | "APPROVED" | "DENIED" | "PROCESSING" | "COMPLETED" | "FAILED" | "MANUAL_REVIEW" | null;
+            /**
+             * @description New status (status changes)
+             * @example CONFIRMED
+             * @enum {string|null}
+             */
+            toStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID" | null;
+        };
+        /**
+         * @description Appointment shape
          * @enum {string}
          */
         BookingType: "INDIVIDUAL" | "WALK_IN" | "GROUP";
@@ -7349,6 +8658,326 @@ export interface components {
              * @enum {string}
              */
             window: "EARLY" | "LATE";
+        };
+        CancelledBookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * @description Refund decision applied by the cancellation policy
+             * @example FULL
+             * @enum {string}
+             */
+            refundType: "FULL" | "PARTIAL" | "NONE";
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
         };
         CancelProgramDto: {
             /** @description Token from the current cancellation preview */
@@ -9275,6 +10904,325 @@ export interface components {
              */
             serviceIds?: string[];
         };
+        CreatedBookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description Invoice UUID created with the booking; null when none exists
+             * @example 00000000-0000-0000-0000-000000000008
+             */
+            invoiceId: string | null;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
+        };
         CreateDepartmentDto: {
             /**
              * @description Department description in Arabic
@@ -10378,7 +12326,7 @@ export interface components {
             deleted: boolean;
         };
         /**
-         * @description Delivery channel (IN_PERSON or ONLINE)
+         * @description Delivery channel
          * @enum {string}
          */
         DeliveryType: "IN_PERSON" | "ONLINE";
@@ -11806,6 +13754,333 @@ export interface components {
              */
             status: "PENDING";
         };
+        LateEntryInvoiceDto: {
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            bookingId: string | null;
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Discount amount in halalas (converted to a number)
+             * @example 0
+             */
+            discountAmt: number;
+            /**
+             * Format: date-time
+             * @description When the discount was applied
+             * @example null
+             */
+            discountAppliedAt: string | null;
+            /**
+             * @description User who applied the discount
+             * @example null
+             */
+            discountAppliedBy: string | null;
+            /**
+             * @description Discount reason UUID
+             * @example null
+             */
+            discountReasonId: string | null;
+            /**
+             * Format: date-time
+             * @description Due instant
+             * @example null
+             */
+            dueAt: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Invoice UUID
+             * @example 00000000-0000-0000-0000-000000000008
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Issue instant
+             * @example null
+             */
+            issuedAt: string | null;
+            /**
+             * @description Invoice notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Sequential invoice number
+             * @example 1001
+             */
+            number: number;
+            /**
+             * @description Total minus paid/refunded payments, in halalas
+             * @example 0
+             */
+            outstanding: number;
+            /**
+             * @description Package purchase UUID (package invoices only)
+             * @example null
+             */
+            packagePurchaseId: string | null;
+            /**
+             * Format: date-time
+             * @description Paid instant
+             * @example null
+             */
+            paidAt: string | null;
+            /**
+             * Format: date-time
+             * @description When the PDF was generated
+             * @example null
+             */
+            pdfGeneratedAt: string | null;
+            /**
+             * @description Stored PDF URL
+             * @example null
+             */
+            pdfUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the paid receipt was issued
+             * @example null
+             */
+            receiptIssuedAt: string | null;
+            /**
+             * @description Payment that triggered the receipt
+             * @example null
+             */
+            receiptPaymentId: string | null;
+            /**
+             * @description Frozen paid-receipt object key
+             * @example null
+             */
+            receiptPdfKey: string | null;
+            /**
+             * @description Refunded amount in halalas, decimal string (not converted)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * @description Refunded VAT in halalas, decimal string (not converted)
+             * @example 0
+             */
+            refundedVatAmt: string;
+            /**
+             * Format: date-time
+             * @description When the invoice was sent to the client
+             * @example null
+             */
+            sentToClientAt: string | null;
+            /**
+             * @description Invoice status
+             * @example ISSUED
+             * @enum {string}
+             */
+            status: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
+            /**
+             * @description Net amount before VAT and discount, in halalas (converted to a number)
+             * @example 20000
+             */
+            subtotal: number;
+            /**
+             * @description Total after discount in halalas (converted to a number)
+             * @example 20000
+             */
+            total: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT amount in halalas (converted to a number)
+             * @example 0
+             */
+            vatAmt: number;
+            /**
+             * @description VAT rate as a fraction of 1 (converted to a number)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        LateEntryPaymentDto: {
+            /**
+             * @description Amount in halalas (converted to a number)
+             * @example 20000
+             */
+            amount: number;
+            /**
+             * Format: date-time
+             * @description effectiveReceivedAt, falling back to createdAt
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            collectionDate: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description When the money was actually received
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            effectiveReceivedAt: string | null;
+            /**
+             * @description Failure reason
+             * @example null
+             */
+            failureReason: string | null;
+            /**
+             * @description Gateway payment reference
+             * @example null
+             */
+            gatewayRef: string | null;
+            /**
+             * @description Payment UUID
+             * @example 00000000-0000-0000-0000-000000000006
+             */
+            id: string;
+            /**
+             * @description Idempotency key
+             * @example null
+             */
+            idempotencyKey: string | null;
+            /**
+             * @description Invoice UUID
+             * @example 00000000-0000-0000-0000-000000000008
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method
+             * @example CASH
+             * @enum {string}
+             */
+            method: "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON" | "MADA" | "TABBY";
+            /**
+             * @description Fingerprint of the native checkout configuration
+             * @example null
+             */
+            nativeConfigFingerprint: string | null;
+            /**
+             * @description Sequential payment number
+             * @example 2001
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Processing instant
+             * @example null
+             */
+            processedAt: string | null;
+            /**
+             * @description Reason the receipt was entered after the fact
+             * @example null
+             */
+            receiptEntryReason: string | null;
+            /**
+             * @description Evidence reference of the receipt
+             * @example RCPT-1001
+             */
+            receiptEvidenceRef: string | null;
+            /**
+             * @description User who recorded the receipt
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            receiptRecordedBy: string | null;
+            /**
+             * @description Stored receipt file path
+             * @example null
+             */
+            receiptUrl: string | null;
+            /**
+             * @description Refunded amount in halalas, decimal string (not converted)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * Format: date-time
+             * @description Refund provider lease expiry
+             * @example null
+             */
+            refundProviderLeaseExpiresAt: string | null;
+            /**
+             * @description Worker holding the refund provider lease
+             * @example null
+             */
+            refundProviderLeaseOwner: string | null;
+            /**
+             * @description Payment status
+             * @example COMPLETED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        LateEntryResultDto: {
+            /** @description The recorded booking in the dashboard read projection */
+            booking: components["schemas"]["BookingRowDto"];
+            /** @description Invoice created for the session; null when none */
+            invoice: components["schemas"]["LateEntryInvoiceDto"] | null;
+            /**
+             * @description Always true
+             * @example true
+             * @enum {boolean}
+             */
+            isLateEntry: true;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            lateEntryRecordedAt: string;
+            /**
+             * @description User id who recorded the late entry
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            lateEntryRecordedBy: string;
+            /**
+             * @description Outstanding balance in halalas
+             * @example 0
+             */
+            outstanding: number;
+            /** @description Latest payment on the invoice; null when none */
+            payment: components["schemas"]["LateEntryPaymentDto"] | null;
+        };
         ListClientChatConversationsResponseDto: {
             data: components["schemas"]["ClientChatConversationSummaryDto"][];
             meta: components["schemas"]["ClientChatConversationCursorMetaDto"];
@@ -11882,6 +14157,11 @@ export interface components {
              */
             amount?: number;
             /**
+             * @description Client-generated idempotency key for this refund attempt; retries must reuse it
+             * @example refund-attempt-6f1c2b7e
+             */
+            idempotencyKey?: string;
+            /**
              * @description Reason for the refund
              * @example Service not delivered
              */
@@ -11910,6 +14190,105 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             notificationId?: string;
+        };
+        MatchingCreditAvailabilityDto: {
+            /**
+             * @description Whether the credit can be booked now
+             * @example true
+             */
+            bookable: boolean;
+            /**
+             * @description Why the credit is not bookable; null when bookable
+             * @example null
+             */
+            reason: string | null;
+        };
+        MatchingCreditDto: {
+            /** @description Computed availability of the credit */
+            availability: components["schemas"]["MatchingCreditAvailabilityDto"];
+            /**
+             * Format: date-time
+             * @description Credit creation instant
+             * @example 2026-05-30T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Package credit UUID
+             * @example 00000000-0000-0000-0000-000000000009
+             */
+            creditId: string;
+            /**
+             * @description Group this one depends on
+             * @example null
+             */
+            dependsOnGroupId: string | null;
+            /**
+             * @description Pinned duration option UUID; null on flexible credits
+             * @example 00000000-0000-0000-0000-000000000010
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Pinned employee UUID; null on flexible credits
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string | null;
+            /**
+             * @description Group label (grouped packages)
+             * @example null
+             */
+            groupLabel: string | null;
+            /**
+             * @description Package model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Purchase group UUID (grouped packages)
+             * @example null
+             */
+            purchaseGroupId: string | null;
+            /**
+             * @description Package purchase UUID
+             * @example 00000000-0000-0000-0000-00000000000a
+             */
+            purchaseId: string;
+            /**
+             * @description totalQuantity - usedQuantity - reservedQuantity
+             * @example 3
+             */
+            remaining: number;
+            /**
+             * @description Sessions booked but not yet delivered (they occupy a seat)
+             * @example 1
+             */
+            reservedQuantity: number;
+            /**
+             * @description Whether group sessions must be consumed in order
+             * @example null
+             * @enum {string|null}
+             */
+            sequenceMode: "ORDERED" | "UNORDERED" | null;
+            /**
+             * @description Pinned service UUID; null on flexible (rule-based) credits
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Position of the session inside its group
+             * @example null
+             */
+            sessionPosition: number | null;
+            /**
+             * @description Total sessions in the credit
+             * @example 5
+             */
+            totalQuantity: number;
+            /**
+             * @description Sessions already delivered
+             * @example 1
+             */
+            usedQuantity: number;
         };
         MobileCancelBookingDto: {
             /**
@@ -12144,9 +14523,8 @@ export interface components {
             /**
              * @description Payment status reported by Moyasar
              * @example paid
-             * @enum {string}
              */
-            status?: "paid" | "failed" | "refunded" | "authorized" | "captured" | "voided";
+            status?: string;
             /**
              * @description Timestamp when the payment was last updated
              * @example 2026-09-19T18:43:34.000Z
@@ -12272,9 +14650,8 @@ export interface components {
             /**
              * @description Payment status reported by Moyasar
              * @example paid
-             * @enum {string}
              */
-            status?: "paid" | "failed" | "refunded" | "authorized" | "captured" | "voided";
+            status?: string;
             /**
              * @description Webhook event type (nested shape)
              * @example payment_paid
@@ -12836,6 +15213,100 @@ export interface components {
             /** @description Target IDs for INCLUDE/EXCLUDE. Empty/omitted for ANY. */
             targetIds?: string[];
         };
+        PackageCreditRecordDto: {
+            /**
+             * Format: date-time
+             * @description Credit creation instant
+             * @example 2026-05-30T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Frozen delivery channel
+             * @example IN_PERSON
+             * @enum {string|null}
+             */
+            deliveryTypeSnapshot: "IN_PERSON" | "ONLINE" | null;
+            /**
+             * @description Frozen duration in minutes
+             * @example 60
+             */
+            durationMinsSnapshot: number | null;
+            /**
+             * @description Pinned duration option UUID
+             * @example 00000000-0000-0000-0000-000000000010
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Practitioner the credit now points to
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string | null;
+            /**
+             * @description Frozen employee name
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * @description Package credit UUID
+             * @example 00000000-0000-0000-0000-000000000009
+             */
+            id: string;
+            /**
+             * @description Frozen list price in halalas, decimal string
+             * @example 20000
+             */
+            listPriceSnapshot: string | null;
+            /**
+             * @description Net amount paid for the credit in halalas, decimal string
+             * @example 90000
+             */
+            netValue: string | null;
+            /**
+             * @description Purchase group UUID
+             * @example null
+             */
+            purchaseGroupId: string | null;
+            /**
+             * @description Package purchase UUID
+             * @example 00000000-0000-0000-0000-00000000000a
+             */
+            purchaseId: string;
+            /**
+             * @description Sessions booked but not yet delivered
+             * @example 1
+             */
+            reservedQuantity: number;
+            /**
+             * @description Pinned service UUID
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Frozen service name
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Position of the session inside its group
+             * @example null
+             */
+            sessionPosition: number | null;
+            /**
+             * @description Total sessions in the credit
+             * @example 5
+             */
+            totalQuantity: number;
+            /**
+             * @description Frozen unit price in halalas, decimal string
+             * @example 18000
+             */
+            unitPriceSnapshot: string;
+            /**
+             * @description Sessions already delivered
+             * @example 1
+             */
+            usedQuantity: number;
+        };
         PackageFamilyOptionDto: {
             /** @description Option-wide discount */
             globalDiscount: components["schemas"]["GlobalDiscountDto"];
@@ -12869,6 +15340,12 @@ export interface components {
         };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
+        PaginatedBookingRowsDto: {
+            /** @description Bookings on the requested page */
+            items: components["schemas"]["BookingRowDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
         PaginatedBranchesDto: {
             /** @description Branches on the requested page */
             items: components["schemas"]["BranchResponseDto"][];
@@ -13870,6 +16347,11 @@ export interface components {
             refreshToken?: string;
         };
         RefundPackagePurchaseDto: {
+            /**
+             * @description Client-generated idempotency key for this refund attempt; retries must reuse it
+             * @example package-refund-6f1c2b7e
+             */
+            idempotencyKey?: string;
             /**
              * @description Reason / note for the manual refund (appended to the purchase notes)
              * @example Client moved abroad
@@ -20869,23 +23351,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items?: {
-                            /**
-                             * @description Client selected payment at the center; independent of financial payment status
-                             * @example true
-                             */
-                            payAtClinic?: boolean;
-                        }[];
-                        meta?: {
-                            hasNextPage?: boolean;
-                            hasPreviousPage?: boolean;
-                            limit?: number;
-                            page?: number;
-                            total?: number;
-                            totalPages?: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["PaginatedBookingRowsDto"];
                 };
             };
             /** @description Validation failed */
@@ -20945,20 +23411,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        clientId?: string;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        /** @example PENDING */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["CreatedBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21017,26 +23470,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        clientId?: string;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        durationMins?: number;
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        /**
-                         * @description Client selected payment at the center; independent of financial payment status
-                         * @example true
-                         */
-                        payAtClinic?: boolean;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        status?: string;
-                        zoomJoinUrl?: string | null;
-                    };
+                    "application/json": components["schemas"]["BookingRowDto"];
                 };
             };
             /** @description Validation failed */
@@ -21174,13 +23608,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        autoRefund?: boolean;
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example CANCELLED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["ApprovedCancelBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21252,16 +23680,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        cancelledAt?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example FULL */
-                        refundType?: string | null;
-                        /** @example CANCELLED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["CancelledBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21329,14 +23748,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        checkedInAt?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example CHECKED_IN */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21408,14 +23820,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        completedAt?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example COMPLETED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21483,12 +23888,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example CONFIRMED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21556,12 +23956,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example NO_SHOW */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21633,12 +24028,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** @example CONFIRMED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21710,13 +24100,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -21788,16 +24172,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        checkedInAt?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: date-time */
-                        noShowAt?: string | null;
-                        /** @example CONFIRMED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Booking is not in NO_SHOW, or credit bucket is full */
@@ -21865,17 +24240,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        changedBy?: string | null;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        fromStatus?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        reason?: string | null;
-                        toStatus?: string;
-                    }[];
+                    "application/json": components["schemas"]["BookingStatusLogEntryDto"][];
                 };
             };
             /** @description Validation failed */
@@ -21934,25 +24299,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        actor?: string | null;
-                        /** @description Halalas */
-                        amount?: number | null;
-                        /** Format: date-time */
-                        at?: string;
-                        fromStatus?: string | null;
-                        id?: string;
-                        /** @enum {string} */
-                        kind?: "CREATED" | "STATUS_CHANGE" | "RESCHEDULE" | "PAYMENT" | "REFUND" | "ACTIVITY";
-                        meta?: {
-                            [key: string]: unknown;
-                        } | null;
-                        method?: string | null;
-                        paymentStatus?: string | null;
-                        reason?: string | null;
-                        refundStatus?: string | null;
-                        toStatus?: string | null;
-                    }[];
+                    "application/json": components["schemas"]["BookingTimelineEntryDto"][];
                 };
             };
             /** @description Validation failed */
@@ -22011,13 +24358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        zoomJoinUrl?: string | null;
-                        zoomMeetingId?: string | null;
-                        zoomStartUrl?: string | null;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -22099,12 +24440,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        endTime?: string;
-                        /** Format: date-time */
-                        startTime?: string;
-                    }[];
+                    "application/json": components["schemas"]["BookingAvailableSlotDto"][];
                 };
             };
             /** @description Validation failed */
@@ -22167,12 +24503,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: uuid */
-                        id?: string;
-                    };
+                    "application/json": components["schemas"]["PackageCreditRecordDto"];
                 };
             };
             /** @description Target employee does not provide the service/duration, is inactive, or is the current owner */
@@ -22241,16 +24572,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: uuid */
-                        packageCreditId?: string;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        /** @example CONFIRMED */
-                        status?: string;
-                    };
+                    "application/json": components["schemas"]["BookingRecordDto"];
                 };
             };
             /** @description Slot unavailable, missing credit selector, or past date */
@@ -22328,23 +24650,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        booking?: {
-                            [key: string]: unknown;
-                        };
-                        invoice?: {
-                            [key: string]: unknown;
-                        } | null;
-                        /** @enum {boolean} */
-                        isLateEntry?: true;
-                        /** Format: date-time */
-                        lateEntryRecordedAt?: string;
-                        lateEntryRecordedBy?: string;
-                        outstanding?: number;
-                        payment?: {
-                            [key: string]: unknown;
-                        } | null;
-                    };
+                    "application/json": components["schemas"]["LateEntryResultDto"];
                 };
             };
             /** @description Validation failed */
@@ -22467,16 +24773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        creditId?: string;
-                        /** Format: uuid */
-                        purchaseId?: string;
-                        remaining?: number;
-                        reservedQuantity?: number;
-                        totalQuantity?: number;
-                        usedQuantity?: number;
-                    }[];
+                    "application/json": components["schemas"]["MatchingCreditDto"][];
                 };
             };
             /** @description Validation failed */
@@ -22532,16 +24829,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example 7 */
-                        completedToday?: number;
-                        /** @example 3 */
-                        pendingCount?: number;
-                        /** @example 1500 */
-                        revenueToday?: number;
-                        /** @example 12 */
-                        todayCount?: number;
-                    };
+                    "application/json": components["schemas"]["BookingsStatsResponseDto"];
                 };
             };
             /** @description Validation failed */

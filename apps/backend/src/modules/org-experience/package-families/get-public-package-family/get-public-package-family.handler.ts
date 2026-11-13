@@ -10,7 +10,7 @@ import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.h
 export class GetPublicPackageFamilyHandler {
   private readonly bucket: string;
   constructor(private readonly prisma: PrismaService, private readonly pricing: ComputePackagePriceService, private readonly storage: MinioService, @Optional() config?: ConfigService) {
-    this.bucket = config && typeof (config as any).getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
+    this.bucket = config && typeof config.getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
   }
   async execute({ familyId }: { familyId: string }) {
     // Prices are net; clients add VAT for display with the same rounding as invoices.

@@ -45,7 +45,7 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
 
   const { slots, slotsLoading, canFetchSlots } = useCreateBookingSlots({
     employeeId:   booking.employeeId,
-    serviceId:        booking.serviceId,
+    serviceId:        booking.serviceId ?? "",
     deliveryType:     booking.deliveryType ?? "",
     date:             watchedDate,
     // The booking already carries its resolved session length. Pass it through

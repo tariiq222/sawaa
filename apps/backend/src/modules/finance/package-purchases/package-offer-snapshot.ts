@@ -1,10 +1,20 @@
 import type { PackageOfferSnapshot } from '@sawaa/shared/types';
 
-export function buildPackageOfferSnapshot(pkg: any): PackageOfferSnapshot | null {
+/** Structural subset of a loaded SessionPackage row that the offer snapshot reads. */
+export type PackageOfferSnapshotSource = {
+  familyId?: string | null;
+  family?: { nameAr: string; nameEn?: string | null } | null;
+  nameAr: string;
+  nameEn?: string | null;
+  groups?: ReadonlyArray<{ items?: readonly unknown[] | null }> | null;
+  items?: ReadonlyArray<{ paidQuantity?: unknown; freeQuantity?: unknown }> | null;
+};
+
+export function buildPackageOfferSnapshot(pkg: PackageOfferSnapshotSource): PackageOfferSnapshot | null {
   const family = pkg.family;
   if (!pkg.familyId || !family) return null;
-  const sessionCount = (pkg.groups ?? []).reduce((total: number, group: any) => total + (group.items?.length ?? 0), 0) ||
-    (pkg.items ?? []).reduce((total: number, item: any) => total + Number(item.paidQuantity ?? 0) + Number(item.freeQuantity ?? 0), 0);
+  const sessionCount = (pkg.groups ?? []).reduce((total: number, group) => total + (group.items?.length ?? 0), 0) ||
+    (pkg.items ?? []).reduce((total: number, item) => total + Number(item.paidQuantity ?? 0) + Number(item.freeQuantity ?? 0), 0);
   return {
     familyId: pkg.familyId,
     familyNameAr: family.nameAr,

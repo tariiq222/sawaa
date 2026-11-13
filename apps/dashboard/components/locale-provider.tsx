@@ -65,7 +65,6 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       const bridged = translations.en[key] ?? translations.ar[key]
       if (bridged !== undefined) return bridged
       if (process.env.NODE_ENV !== "production") {
-        // eslint-disable-next-line no-console
         console.warn(`[i18n] missing translation key: "${key}" (locale=${locale})`)
       }
       // Preserve legacy behaviour: return the key so existing

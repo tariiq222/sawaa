@@ -17,7 +17,7 @@ export class CreatePackageFamilyHandler {
 
   async execute(dto: CreatePackageFamilyDto) {
     return this.rlsTransaction.withTransaction(async (tx) => {
-      const family = await (tx as any).packageFamily.create({
+      const family = await tx.packageFamily.create({
         data: {
           nameAr: dto.nameAr,
           nameEn: dto.nameEn ?? null,
@@ -31,11 +31,11 @@ export class CreatePackageFamilyHandler {
       });
       const options = [];
       for (const option of dto.options) {
-        options.push(await writeGroupedFamilyOption(tx as any, option, family.id, tx, this.priceResolver));
+        options.push(await writeGroupedFamilyOption(tx, option, family.id, tx, this.priceResolver));
       }
       return { ...family, options };
     }).then(async (result) => {
-      if (this.cache && typeof (this.cache as any).invalidatePrefix === 'function') await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
+      if (this.cache && typeof this.cache.invalidatePrefix === 'function') await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
       return result;
     });
   }

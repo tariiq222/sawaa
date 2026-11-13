@@ -1,6 +1,5 @@
 "use client"
 
-import { toast } from "sonner"
 import { Card, CardContent, Switch, Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { usePaymentSettings, usePaymentSettingsMutation } from "@/hooks/use-organization-settings"

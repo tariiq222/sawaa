@@ -33,6 +33,10 @@ import { DeleteBookingHandler } from '../../modules/bookings/delete-booking/dele
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/check-availability.dto';
 
+import { CreatedBookingRecordDto } from './dto/booking-record-response.dto';
+import { BookingRowDto, PaginatedBookingRowsDto } from './dto/booking-row-response.dto';
+import { BookingAvailableSlotDto, BookingsStatsResponseDto } from './dto/booking-support-response.dto';
+
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -51,21 +55,8 @@ export class DashboardBookingsController {
   @Post()
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Create a booking' })
-  @ApiCreatedResponse({
-    description: 'Booking created',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'PENDING' },
-        scheduledAt: { type: 'string', format: 'date-time' },
-        clientId: { type: 'string', format: 'uuid' },
-        employeeId: { type: 'string', format: 'uuid' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
-  createBooking(@UserId() userId: string, @Body() body: CreateBookingDto) {
+  @ApiCreatedResponse({ description: 'Booking created', type: CreatedBookingRecordDto })
+  createBooking(@UserId() userId: string, @Body() body: CreateBookingDto): Promise<CreatedBookingRecordDto> {
     const { scheduledAt, expiresAt, ...rest } = body;
     return this.createHandler.execute({
       ...rest,
@@ -77,35 +68,8 @@ export class DashboardBookingsController {
   @Get()
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'List bookings' })
-  @ApiOkResponse({
-    description: 'Paginated list of bookings',
-    schema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              payAtClinic: { type: 'boolean', description: 'Client selected payment at the center; independent of financial payment status', example: true },
-            },
-          },
-        },
-        meta: {
-          type: 'object',
-          properties: {
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
-            totalPages: { type: 'number' },
-            hasNextPage: { type: 'boolean' },
-            hasPreviousPage: { type: 'boolean' },
-          },
-        },
-      },
-    },
-  })
-  listBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto) {
+  @ApiOkResponse({ description: 'Paginated list of bookings', type: PaginatedBookingRowsDto })
+  listBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto): Promise<PaginatedBookingRowsDto> {
     const { page, limit, fromDate, toDate, ...rest } = q;
     return this.listHandler.execute({
       ...rest,
@@ -121,39 +85,16 @@ export class DashboardBookingsController {
   @Get('stats')
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Today\'s booking counters + revenue for the dashboard StatsGrid' })
-  @ApiOkResponse({
-    description: 'Today/pending counts and today revenue',
-    schema: {
-      type: 'object',
-      properties: {
-        todayCount: { type: 'number', example: 12 },
-        pendingCount: { type: 'number', example: 3 },
-        completedToday: { type: 'number', example: 7 },
-        revenueToday: { type: 'number', example: 1500 },
-      },
-    },
-  })
-  getStats() {
+  @ApiOkResponse({ description: 'Today/pending counts and today revenue', type: BookingsStatsResponseDto })
+  getStats(): Promise<BookingsStatsResponseDto> {
     return this.statsHandler.execute();
   }
 
   @Get('availability')
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Check employee availability for a date' })
-  @ApiOkResponse({
-    description: 'Available time slots',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          startTime: { type: 'string', format: 'date-time' },
-          endTime: { type: 'string', format: 'date-time' },
-        },
-      },
-    },
-  })
-  checkAvailability(@Query() q: CheckAvailabilityDto) {
+  @ApiOkResponse({ description: 'Available time slots', type: BookingAvailableSlotDto, isArray: true })
+  checkAvailability(@Query() q: CheckAvailabilityDto): Promise<BookingAvailableSlotDto[]> {
     const { date, ...rest } = q;
     return this.availabilityHandler.execute({
       ...rest,
@@ -165,28 +106,12 @@ export class DashboardBookingsController {
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Get a booking by ID' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Booking detail',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        payAtClinic: { type: 'boolean', description: 'Client selected payment at the center; independent of financial payment status', example: true },
-        status: { type: 'string' },
-        scheduledAt: { type: 'string', format: 'date-time' },
-        durationMins: { type: 'number' },
-        clientId: { type: 'string', format: 'uuid' },
-        employeeId: { type: 'string', format: 'uuid' },
-        zoomJoinUrl: { type: 'string', nullable: true },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Booking detail', type: BookingRowDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   getBooking(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<BookingRowDto> {
     // AUTHZ-005: pass caller identity so the handler scopes EMPLOYEE reads to
     // their own assigned bookings (privileged roles keep full access).
     return this.getHandler.execute({

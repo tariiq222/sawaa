@@ -99,7 +99,7 @@ function rowFor(b: Booking): string[] {
     client?.email ?? "",
     b.employeeId,
     employee,
-    b.serviceId,
+    b.serviceId ?? "",
     b.service?.nameEn ?? "",
     b.branchNameSnapshot ?? "",
     b.status,

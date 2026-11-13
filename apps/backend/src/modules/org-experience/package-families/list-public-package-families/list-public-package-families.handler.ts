@@ -10,7 +10,7 @@ import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.h
 export class ListPublicPackageFamiliesHandler {
   private readonly bucket: string;
   constructor(private readonly prisma: PrismaService, private readonly pricing: ComputePackagePriceService, private readonly storage: MinioService, @Optional() config?: ConfigService) {
-    this.bucket = config && typeof (config as any).getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
+    this.bucket = config && typeof config.getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
   }
   async execute() {
     const [families, standalone] = await Promise.all([
@@ -26,15 +26,15 @@ export class ListPublicPackageFamiliesHandler {
       }),
     ]);
     const sellableFamilies = families
-      .filter((family: any) => family.isActive === true && family.isPublic === true && family.archivedAt == null)
-      .map((family: any) => ({
+      .filter((family) => family.isActive === true && family.isPublic === true && family.archivedAt == null)
+      .map((family) => ({
         ...family,
-        options: (family.options ?? []).filter((option: any) => option.isActive === true && option.isPublic === true && option.archivedAt == null),
+        options: (family.options ?? []).filter((option) => option.isActive === true && option.isPublic === true && option.archivedAt == null),
       }))
-      .filter((family: any) => family.options.length > 0);
+      .filter((family) => family.options.length > 0);
     const display = await loadFamilyDisplayData(this.prisma, [...sellableFamilies, ...standalone]);
     const mappedFamilies = await Promise.all(sellableFamilies.map((family) => decorateFamily(family, this.pricing, this.storage, this.bucket, false, display)));
-    const mappedStandalone = await Promise.all(standalone.map(async (option: any) => decorateFamily({
+    const mappedStandalone = await Promise.all(standalone.map(async (option) => decorateFamily({
       id: option.id,
       nameAr: option.nameAr,
       nameEn: option.nameEn,

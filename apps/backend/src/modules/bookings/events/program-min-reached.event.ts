@@ -1,5 +1,4 @@
 import { BaseEvent } from '../../../common/events';
-import { ProgramStatus } from '@prisma/client';
 
 export interface ProgramMinReachedPayload {
   programId: string;

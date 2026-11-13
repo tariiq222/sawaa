@@ -1,7 +1,6 @@
 import { ResolveEmployeeImageHandler } from '../../../media/files/resolve-employee-image.handler';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { MEDIA_IMAGE_URL_EXPIRY_SECONDS } from '../../../media/media-image-url.helper';
 import { PrismaService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
 

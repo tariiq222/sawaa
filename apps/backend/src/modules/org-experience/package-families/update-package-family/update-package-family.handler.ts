@@ -21,7 +21,7 @@ export class UpdatePackageFamilyHandler {
       // Serialize complete option-list replacements with other family edits
       // (including archive) so two concurrent writes cannot merge stale lists.
       await tx.$queryRaw`SELECT id FROM "PackageFamily" WHERE id = ${familyId} FOR UPDATE`;
-      const family = await (tx as any).packageFamily.findUnique({ where: { id: familyId }, include: { options: { select: { id: true, familyId: true, archivedAt: true } } } });
+      const family = await tx.packageFamily.findUnique({ where: { id: familyId }, include: { options: { select: { id: true, familyId: true, archivedAt: true } } } });
       if (!family) throw new NotFoundException('Package family not found');
       const suppliedIds = new Set(dto.options.map((option) => option.id).filter((id): id is string => !!id));
       if (suppliedIds.size !== dto.options.filter((option) => option.id).length) {
@@ -29,24 +29,24 @@ export class UpdatePackageFamilyHandler {
       }
       for (const option of dto.options) {
         if (option.id) {
-          const existing = family.options.find((candidate: any) => candidate.id === option.id);
+          const existing = family.options.find((candidate) => candidate.id === option.id);
           if (!existing) {
-            const foreign = await (tx as any).sessionPackage.findUnique({ where: { id: option.id }, select: { familyId: true } });
+            const foreign = await tx.sessionPackage.findUnique({ where: { id: option.id }, select: { familyId: true } });
             if (foreign?.familyId && foreign.familyId !== familyId) throw new BadRequestException('Package option belongs to another family');
             throw new NotFoundException('Package option not found in this family');
           }
           if (existing.familyId !== familyId) throw new BadRequestException('Package option belongs to another family');
-          await writeGroupedFamilyOption(tx as any, option, familyId, tx, this.priceResolver, option.id);
+          await writeGroupedFamilyOption(tx, option, familyId, tx, this.priceResolver, option.id);
         } else {
-          await writeGroupedFamilyOption(tx as any, option, familyId, tx, this.priceResolver);
+          await writeGroupedFamilyOption(tx, option, familyId, tx, this.priceResolver);
         }
       }
       for (const existing of family.options) {
         if (!suppliedIds.has(existing.id) && existing.archivedAt == null) {
-          await (tx as any).sessionPackage.update({ where: { id: existing.id }, data: { archivedAt: new Date(), isActive: false, isPublic: false } });
+          await tx.sessionPackage.update({ where: { id: existing.id }, data: { archivedAt: new Date(), isActive: false, isPublic: false } });
         }
       }
-      return (tx as any).packageFamily.update({
+      return tx.packageFamily.update({
         where: { id: familyId },
         data: {
           ...(dto.nameAr !== undefined && { nameAr: dto.nameAr }),
@@ -60,7 +60,7 @@ export class UpdatePackageFamilyHandler {
         },
       });
     }).then(async (result) => {
-      if (this.cache && typeof (this.cache as any).invalidatePrefix === 'function') await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
+      if (this.cache && typeof this.cache.invalidatePrefix === 'function') await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
       return result;
     });
   }

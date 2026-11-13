@@ -34,6 +34,8 @@ import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel
 import { RejectCancelBookingDto } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.dto';
 import { AuditControllerName } from '../../common/interceptors/audit-controller-name.decorator';
 
+import { ApprovedCancelBookingRecordDto, BookingRecordDto, CancelledBookingRecordDto } from './dto/booking-record-response.dto';
+
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -58,24 +60,13 @@ export class DashboardBookingsLifecycleController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Cancel a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Booking cancelled',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'CANCELLED' },
-        refundType: { type: 'string', nullable: true, example: 'FULL' },
-        cancelledAt: { type: 'string', format: 'date-time', nullable: true },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Booking cancelled', type: CancelledBookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   cancelBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CancelBookingDto,
-  ) {
+  ): Promise<CancelledBookingRecordDto> {
     return this.cancelHandler.execute({
       bookingId: id,
       changedBy: userId,
@@ -88,23 +79,13 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Approve a pending cancel request' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Cancel request approved',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'CANCELLED' },
-        autoRefund: { type: 'boolean' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Cancel request approved', type: ApprovedCancelBookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   approveCancelBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: ApproveCancelBookingDto,
-  ) {
+  ): Promise<ApprovedCancelBookingRecordDto> {
     return this.approveCancelHandler.execute({
       bookingId: id,
       approvedBy: userId,
@@ -119,22 +100,13 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reject a pending cancel request' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Cancel request rejected; booking returns to CONFIRMED',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'CONFIRMED' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Cancel request rejected; booking returns to CONFIRMED', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   rejectCancelBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RejectCancelBookingDto,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.rejectCancelHandler.execute({
       bookingId: id,
       rejectedBy: userId,
@@ -146,13 +118,13 @@ export class DashboardBookingsLifecycleController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Reschedule a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking rescheduled', schema: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, scheduledAt: { type: 'string', format: 'date-time' }, status: { type: 'string' } } } })
+  @ApiOkResponse({ description: 'Booking rescheduled', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   rescheduleBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RescheduleBookingDto,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.rescheduleHandler.execute({
       bookingId: id,
       newScheduledAt: new Date(body.newScheduledAt),
@@ -166,12 +138,12 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking confirmed', schema: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, status: { type: 'string', example: 'CONFIRMED' } } } })
+  @ApiOkResponse({ description: 'Booking confirmed', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   confirmBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.confirmHandler.execute({ bookingId: id, changedBy: userId });
   }
 
@@ -180,22 +152,11 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retry creating Zoom meeting for a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Zoom meeting retry attempted',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        zoomMeetingId: { type: 'string', nullable: true },
-        zoomJoinUrl: { type: 'string', nullable: true },
-        zoomStartUrl: { type: 'string', nullable: true },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Zoom meeting retry attempted', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   retryZoomMeeting(
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.retryZoomHandler.execute({ bookingId: id });
   }
 
@@ -204,12 +165,12 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check in a client for a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Client checked in', schema: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, status: { type: 'string', example: 'CHECKED_IN' }, checkedInAt: { type: 'string', format: 'date-time', nullable: true } } } })
+  @ApiOkResponse({ description: 'Client checked in', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   checkInBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.checkInHandler.execute({ bookingId: id, changedBy: userId });
   }
 
@@ -218,13 +179,13 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark a booking as complete' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking marked complete', schema: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, status: { type: 'string', example: 'COMPLETED' }, completedAt: { type: 'string', format: 'date-time', nullable: true } } } })
+  @ApiOkResponse({ description: 'Booking marked complete', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   completeBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CompleteBookingDto,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.completeHandler.execute({
       bookingId: id,
       changedBy: userId,
@@ -237,12 +198,12 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark a booking as no-show' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking marked as no-show', schema: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, status: { type: 'string', example: 'NO_SHOW' } } } })
+  @ApiOkResponse({ description: 'Booking marked as no-show', type: BookingRecordDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   noShowBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.noShowHandler.execute({ bookingId: id, changedBy: userId });
   }
 
@@ -251,25 +212,14 @@ export class DashboardBookingsLifecycleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Restore a no-show booking to confirmed' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Booking restored to CONFIRMED while preserving attendance and suppressing automatic no-show',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'CONFIRMED' },
-        checkedInAt: { type: 'string', format: 'date-time', nullable: true },
-        noShowAt: { type: 'string', format: 'date-time', nullable: true },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Booking restored to CONFIRMED while preserving attendance and suppressing automatic no-show', type: BookingRecordDto })
   @ApiResponse({ status: 400, description: 'Booking is not in NO_SHOW, or credit bucket is full', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   restoreNoShowBooking(
     @UserId() userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RestoreNoShowBookingDto,
-  ) {
+  ): Promise<BookingRecordDto> {
     return this.restoreNoShowHandler.execute({
       bookingId: id,
       changedBy: userId,
