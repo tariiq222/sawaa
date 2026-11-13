@@ -9,6 +9,7 @@
 // payload that lacks the resolved categoryId/departmentId, so we await the
 // invalidated list query before switching to EXISTING mode.
 
+import type { JSX } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { HugeiconsIcon } from "@hugeicons/react"

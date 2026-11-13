@@ -1,5 +1,6 @@
 "use client"
 
+import type { JSX } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Package01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@sawaa/ui"

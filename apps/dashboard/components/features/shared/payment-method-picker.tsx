@@ -16,6 +16,7 @@
  * MADA later — or any future method — requires editing exactly one file.
  */
 
+import type { JSX } from "react"
 import { useLocale } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
 import type { PaymentSettings } from "@/lib/api/organization-settings"
