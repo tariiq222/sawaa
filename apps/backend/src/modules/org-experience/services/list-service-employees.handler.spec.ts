@@ -118,7 +118,6 @@ describe('ListServiceEmployeesHandler', () => {
     expect(emp.effectiveDurations).toBeDefined();
     const inPersonGroup = emp.effectiveDurations.find((g: { deliveryType: string }) => g.deliveryType === 'IN_PERSON');
     expect(inPersonGroup).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     expect(inPersonGroup!.durations).toHaveLength(2);
     expect(inPersonGroup!.durations[0].isInherited).toBe(true);
     expect(inPersonGroup!.durations[1].isInherited).toBe(true);

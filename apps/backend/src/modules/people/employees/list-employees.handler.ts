@@ -4,7 +4,6 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListEmployeesDto, type EmployeeSortField } from './list-employees.dto';
-import { OwnedImageResolver } from '../../media/owned-image.resolver';
 import { mapEmployeeRow } from './employee-row.mapper';
 
 export type ListEmployeesQuery = ListEmployeesDto & {

@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it, beforeEach } from "vitest"
-import { render, screen, act, waitFor } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { LocaleProvider, useLocale } from "@/components/locale-provider"
 

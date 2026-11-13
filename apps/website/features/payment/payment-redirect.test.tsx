@@ -40,6 +40,8 @@ describe('PaymentRedirect', () => {
 
   it('reuses the stored hosted checkout URL when the retry button is clicked', () => {
     render(<PaymentRedirect redirectUrl="https://moyasar.test/pay/abc" bookingId="bk_42" />);
+    // window.location is the plain mock object installed in beforeEach; this assignment does not navigate.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = '';
     fireEvent.click(screen.getByRole('button', { name: /اضغط هنا إذا لم يتم التحويل/i }));
     expect(window.location.href).toBe('https://moyasar.test/pay/abc');

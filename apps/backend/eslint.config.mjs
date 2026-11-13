@@ -57,11 +57,9 @@ export default defineConfig([
       "no-dupe-class-members": "off",
       "no-redeclare": "off",
 
-      // Sawaa golden rule: no `any` in TypeScript
-      // Dropped to "warn" temporarily — 6 pre-existing occurrences surfaced when
-      // the missing eslint.config.mjs was restored (bookings handlers). Track
-      // and fix in a follow-up, then promote back to "error".
-      "@typescript-eslint/no-explicit-any": "warn",
+      // Sawaa golden rule: no `any` in TypeScript (MNT-13: all former warnings
+      // fixed, rule promoted to "error"). Tests keep their relaxed override below.
+      "@typescript-eslint/no-explicit-any": "error",
 
       // Unused: allow underscore-prefixed vars
       "@typescript-eslint/no-unused-vars": [

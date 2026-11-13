@@ -30,7 +30,7 @@ export class SetEmployeeCustomPricingHandler {
     }
 
     if (cmd.enabled === false) {
-      await this.rlsTransaction.withTransaction((tx: any) =>
+      await this.rlsTransaction.withTransaction((tx) =>
         tx.employeeServiceOption.updateMany({
           where: { employeeServiceId },
           data: { isActive: false },
@@ -40,7 +40,7 @@ export class SetEmployeeCustomPricingHandler {
     }
 
     // enabled === true
-    await this.rlsTransaction.withTransaction(async (tx: any) => {
+    await this.rlsTransaction.withTransaction(async (tx) => {
       for (const entry of cmd.types) {
         const deliveryType = normalizeDeliveryTypeInput(entry.deliveryType);
 

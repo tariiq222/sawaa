@@ -1,8 +1,48 @@
-import { applyGroupedPackagePrice, decorateGroupedPackage } from '../session-packages/package-group-catalog.helper';
+import { applyGroupedPackagePrice, decorateGroupedPackage, type GroupedCatalogItem, type GroupedCatalogPackage } from '../session-packages/package-group-catalog.helper';
 import { familySessionCount } from './package-family-write.helper';
 import { signMediaImageUrl } from '../../media/media-image-url.helper';
-import type { ComputePackagePriceService } from '../compute-package-price.service';
+import type { ComputePackagePriceService, PackageItemInput } from '../compute-package-price.service';
 import type { PrismaService } from '../../../infrastructure/database';
+import type { MinioService } from '../../../infrastructure/storage/minio.service';
+
+/** Package option row (Prisma SessionPackage with groups/items) as read by the family decorators. */
+export type FamilyOptionSource = Omit<GroupedCatalogPackage, 'items'> & {
+  id: string;
+  familyId?: string | null;
+  nameAr: string;
+  nameEn?: string | null;
+  descriptionAr?: string | null;
+  descriptionEn?: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  isPublic: boolean;
+  sortOrder?: number | null;
+  items?: Array<GroupedCatalogItem & {
+    serviceId?: string | null;
+    employeeId?: string | null;
+    paidQuantity?: number | null;
+    freeQuantity?: number | null;
+    discountType?: PackageItemInput['discountType'];
+    discountValue?: unknown;
+  }>;
+};
+
+/** Package family row (or the family-shaped projection of a standalone package). */
+export type FamilySource = {
+  id: string;
+  nameAr: string;
+  nameEn?: string | null;
+  descriptionAr?: string | null;
+  descriptionEn?: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  isPublic: boolean;
+  sortOrder?: number | null;
+  archivedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  options?: FamilyOptionSource[];
+};
 
 const zeroPrice = { subtotal: 0, discountAmount: 0, finalPrice: 0, fullValue: 0, freeValue: 0, itemUnitPrices: [], lines: [] };
 
@@ -55,7 +95,7 @@ export async function loadFamilyDisplayData(db: FamilyDisplayDb, sources: readon
   };
 }
 
-function displayGroupsForOption(option: any, display?: FamilyDisplayData): DisplayGroup[] | undefined {
+function displayGroupsForOption(option: FamilyOptionSource, display?: FamilyDisplayData): DisplayGroup[] | undefined {
   if (!display || option.modelVersion !== 'GROUPED_V2') return undefined;
   const decorated = decorateGroupedPackage(option);
   if (!decorated.groups.length) return undefined;
@@ -84,11 +124,11 @@ function displayGroupsForOption(option: any, display?: FamilyDisplayData): Displ
   return groups.every((group): group is DisplayGroup => group !== null) ? groups : undefined;
 }
 
-export async function decorateFamilyOption(option: any, pricing?: Pick<ComputePackagePriceService, 'compute'>, storage?: any, bucket?: string, display?: FamilyDisplayData) {
+export async function decorateFamilyOption(option: FamilyOptionSource, pricing?: Pick<ComputePackagePriceService, 'compute'>, storage?: MinioService, bucket?: string, display?: FamilyDisplayData) {
   const decorated = decorateGroupedPackage(option);
   const displayGroups = displayGroupsForOption(option, display);
   const legacyPrice = pricing?.compute
-    ? await pricing.compute({ items: (option.items ?? []).map((item: any) => ({
+    ? await pricing.compute({ items: (option.items ?? []).map((item) => ({
       serviceId: item.serviceId,
       employeeId: item.employeeId,
       durationOptionId: item.durationOptionId,
@@ -120,8 +160,8 @@ export async function decorateFamilyOption(option: any, pricing?: Pick<ComputePa
   };
 }
 
-export async function decorateFamily(family: any, pricing?: Pick<ComputePackagePriceService, 'compute'>, storage?: any, bucket?: string, isStandalone = false, display?: FamilyDisplayData) {
-  const options = await Promise.all((family.options ?? []).map((option: any) => decorateFamilyOption(option, pricing, storage, bucket, display)));
+export async function decorateFamily(family: FamilySource, pricing?: Pick<ComputePackagePriceService, 'compute'>, storage?: MinioService, bucket?: string, isStandalone = false, display?: FamilyDisplayData) {
+  const options = await Promise.all((family.options ?? []).map((option) => decorateFamilyOption(option, pricing, storage, bucket, display)));
   return {
     id: family.id,
     nameAr: family.nameAr,

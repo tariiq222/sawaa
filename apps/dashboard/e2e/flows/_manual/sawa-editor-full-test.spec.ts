@@ -117,7 +117,7 @@ test('Service editor Employees tab — exhaustive UI test', async ({ page }) => 
 
   // BUG: availableTypes from API is uppercase "IN_PERSON" but FE badge code compares lowercase
   // → the available-type badge in the header shows the wrong label
-  const headerTypeBadge = await page.locator('div').filter({ hasText: /^(حضوري|عن بُعد)$/ }).first().textContent().catch(() => 'n/a')
+  await page.locator('div').filter({ hasText: /^(حضوري|عن بُعد)$/ }).first().textContent().catch(() => 'n/a')
   const typeBadgeInHeader = await page.evaluate(() => {
     // Find the employee header (with name "لبنى القطّان" or similar) and the type badge inside
     const header = Array.from(document.querySelectorAll('span, div')).find((el) => el.textContent?.includes('طبيبة عامة'))
