@@ -218,13 +218,13 @@ export function mergeDraftsFromServer(
       return {
         deliveryType: dt,
         enabled: server.isActive,
-        price: halalasToSarNumber(server.price),
+        price: halalasToSarNumber(Number(server.price)),
         durationMins: server.durationMins,
         useCustomAvailability: false,
         availabilityWindows: [],
         durationOptions: (server.durationOptions ?? [])
           .filter((o) => !o.isDefault)
-          .map((o) => ({ key: o.id, id: o.id, durationMins: o.durationMins, price: halalasToSarNumber(o.price) })),
+          .map((o) => ({ key: o.id, id: o.id, durationMins: o.durationMins, price: halalasToSarNumber(Number(o.price)) })),
         defaultOptionId: server.durationOptions?.find((o) => o.isDefault)?.id,
       }
     },

@@ -38,9 +38,11 @@ Object.assign(HTMLElement.prototype, {
 })
 
 const categoryServices: ServiceCategory[] = [
-  { id: "service-category", ref: 41, nameAr: "العلاج", nameEn: "Therapy", departmentId: "dept-1", bookingMode: "SERVICES", sortOrder: 0, isActive: true, iconName: null, iconBgColor: null, imageUrl: null, createdAt: "2026-01-01" },
-  { id: "direct-category", ref: 42, nameAr: "عيادة", nameEn: "Clinic", departmentId: "dept-1", bookingMode: "DIRECT", sortOrder: 0, isActive: true, iconName: null, iconBgColor: null, imageUrl: null, createdAt: "2026-01-01" },
-  { id: "legacy-category", ref: 43, nameAr: "قديم", nameEn: "Legacy", departmentId: null, sortOrder: 0, isActive: true, iconName: null, iconBgColor: null, imageUrl: null, createdAt: "2026-01-01" },
+  { id: "service-category", ref: 41, nameAr: "العلاج", nameEn: "Therapy", departmentId: "dept-1", bookingMode: "SERVICES", kind: "CLINIC", sortOrder: 0, isActive: true, iconName: null, iconBgColor: null, imageUrl: null, createdAt: "2026-01-01", updatedAt: "2026-01-01" },
+  { id: "direct-category", ref: 42, nameAr: "عيادة", nameEn: "Clinic", departmentId: "dept-1", bookingMode: "DIRECT", kind: "CLINIC", sortOrder: 0, isActive: true, iconName: null, iconBgColor: null, imageUrl: null, createdAt: "2026-01-01", updatedAt: "2026-01-01" },
+  // A pre-kind response: the resolver must keep treating a missing bookingMode
+  // as SERVICES (the API now always sends it, so this stays a runtime guard).
+  { id: "legacy-category", ref: 43, nameAr: "قديم", nameEn: "Legacy", departmentId: null, sortOrder: 0, isActive: true, iconName: null, iconBgColor: null, imageUrl: null } as unknown as ServiceCategory,
 ]
 
 function BasicInfoHarness({ onCategoryChange, edit = false, internal = false, categoryId = "" }: { onCategoryChange?: (id: string) => void; edit?: boolean; internal?: boolean; categoryId?: string }) {

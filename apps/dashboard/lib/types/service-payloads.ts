@@ -116,17 +116,8 @@ export interface ServiceAvailabilityWindowPayload {
   isActive?: boolean
 }
 
-// @deprecated Use DeliveryTypeConfigPayload.
-export type BookingTypeConfigPayload = DeliveryTypeConfigPayload
 
 export interface SetServiceBookingTypesPayload {
   types: DeliveryTypeConfigPayload[]
 }
 
-/* ─── Intake Forms Payloads ─── */
-
-export interface CreateIntakeFormPayload {
-  nameAr: string
-  nameEn?: string
-  isActive?: boolean
-}

@@ -16531,6 +16531,12 @@ export interface components {
             /** @description Pagination metadata */
             meta: components["schemas"]["NotificationListMetaDto"];
         };
+        PaginatedServicesResponseDto: {
+            /** @description Services on the requested page */
+            items: components["schemas"]["ServiceListItemResponseDto"][];
+            /** @description Pagination metadata for the full result set */
+            meta: components["schemas"]["ListMetaDto"];
+        };
         /**
          * @description Payment method used
          * @enum {string}
@@ -17871,6 +17877,314 @@ export interface components {
              */
             startTime: string;
         };
+        ServiceAvailabilityWindowRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Day of week (0 = Sunday, 6 = Saturday)
+             * @example 1
+             */
+            dayOfWeek: number;
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Window end time (HH:MM)
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * Format: uuid
+             * @description Availability window UUID
+             * @example 00000000-0000-4000-a000-000000000080
+             */
+            id: string;
+            /**
+             * @description Whether the window is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            serviceId: string;
+            /**
+             * @description Window start time (HH:MM)
+             * @example 09:00
+             */
+            startTime: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceBookingConfigResponseDto: {
+            /** @description Custom availability windows scoped to this delivery type */
+            availabilityWindows: components["schemas"]["ServiceAvailabilityWindowRecordDto"][];
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Default duration in minutes for this delivery type
+             * @example 60
+             */
+            durationMins: number;
+            /** @description Duration options scoped to this delivery type */
+            durationOptions: components["schemas"]["ServiceDurationOptionRecordDto"][];
+            /**
+             * Format: uuid
+             * @description Booking config UUID
+             * @example 00000000-0000-4000-a000-000000000070
+             */
+            id: string;
+            /**
+             * @description Whether this delivery type is bookable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Price in halalas, decimal string
+             * @example 30000
+             */
+            price: string;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            serviceId: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Whether the service uses its own availability windows for this delivery type
+             * @example false
+             */
+            useCustomAvailability: boolean;
+        };
+        ServiceCategoryDepartmentRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic department description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English department description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Department icon identifier
+             * @example family
+             */
+            icon: string | null;
+            /**
+             * Format: uuid
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Whether the department is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the department is shown in public navigation
+             * @example true
+             */
+            isVisible: boolean;
+            /**
+             * @description Arabic department name
+             * @example قسم الاستشارات الأسرية
+             */
+            nameAr: string;
+            /**
+             * @description English department name
+             * @example Family Counseling
+             */
+            nameEn: string | null;
+            /**
+             * @description Department display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceDetailResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Buffer minutes after a session
+             * @example 0
+             */
+            bufferMinutes: number;
+            /** @description Owning category row */
+            category: components["schemas"]["ServiceEmbeddedCategoryDto"] | null;
+            /**
+             * @description Owning category UUID
+             * @example null
+             */
+            categoryId: string | null;
+            /**
+             * @description Per-service commission rate override (0–1), decimal string
+             * @example null
+             */
+            commissionRateOverride: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Deposit amount in halalas, decimal string
+             * @example null
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether a deposit is required
+             * @example false
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Description (Arabic)
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description Description (English)
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Default duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /** @description Service-level duration options ordered by sortOrder */
+            durationOptions: components["schemas"]["ServiceDurationOptionRecordDto"][];
+            /**
+             * @description Whether the duration is hidden on the booking surface
+             * @example false
+             */
+            hideDurationOnBooking: boolean;
+            /**
+             * @description Whether the price is hidden on the booking surface
+             * @example false
+             */
+            hidePriceOnBooking: boolean;
+            /**
+             * @description Icon background colour token
+             * @example null
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name
+             * @example null
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Stored image reference
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the service is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the service is hidden from the catalog
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @description Maximum advance booking window in days
+             * @example null
+             */
+            maxAdvanceDays: number | null;
+            /**
+             * @description Minimum lead time in minutes
+             * @example null
+             */
+            minLeadMinutes: number | null;
+            /**
+             * @description Service name (Arabic)
+             * @example استشارة أسرية
+             */
+            nameAr: string;
+            /**
+             * @description Service name (English)
+             * @example Family consultation
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in halalas, decimal string
+             * @example 30000
+             */
+            price: string;
+            /**
+             * @description Sequential service reference
+             * @example 42
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
         ServiceDurationOptionRecordDto: {
             /**
              * Format: date-time
@@ -17941,6 +18255,455 @@ export interface components {
              * @example 0
              */
             sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceEmbeddedCategoryDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Owning department UUID
+             * @example null
+             */
+            departmentId: string | null;
+            /**
+             * @description Category icon background colour
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Category image; signed into a short-lived URL by the list/detail/create/update paths
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceEmbeddedCategoryListItemDto: {
+            /**
+             * @description Category booking mode
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode: "DIRECT" | "SERVICES";
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /** @description Owning department row */
+            department: components["schemas"]["ServiceCategoryDepartmentRecordDto"] | null;
+            /**
+             * @description Owning department UUID
+             * @example null
+             */
+            departmentId: string | null;
+            /**
+             * @description Category icon background colour
+             * @example #F0F4FF
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Category icon name
+             * @example family
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Category image; signed into a short-lived URL by the list/detail/create/update paths
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Category kind, independent of department and name
+             * @example CLINIC
+             * @enum {string}
+             */
+            kind: "CLINIC" | "SERVICE_GROUP";
+            /**
+             * @description Arabic category name
+             * @example الإرشاد الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English category name
+             * @example Family Guidance
+             */
+            nameEn: string | null;
+            /**
+             * @description Sequential category reference
+             * @example 101
+             */
+            ref: number;
+            /**
+             * @description Category display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceEmployeeAssignmentDto: {
+            /**
+             * @description Delivery types the service offers
+             * @example [
+             *       "IN_PERSON",
+             *       "ONLINE"
+             *     ]
+             */
+            availableTypes: ("IN_PERSON" | "ONLINE")[];
+            /**
+             * @description Buffer minutes after a session
+             * @example 10
+             */
+            bufferMinutes: number;
+            /**
+             * @description Deprecated; the handler always emits null
+             * @example null
+             */
+            customDuration: number | null;
+            /**
+             * @description Delivery types this practitioner opts out of for the service
+             * @example []
+             */
+            disabledDeliveryTypes: ("IN_PERSON" | "ONLINE")[];
+            /** @description Effective durations grouped by delivery type */
+            effectiveDurations: components["schemas"]["EmployeeEffectiveDurationGroupDto"][];
+            /** @description The practitioner offering the service */
+            employee: components["schemas"]["ServiceEmployeePractitionerDto"];
+            /**
+             * @description Whether any delivery type carries a price or duration override
+             * @example true
+             */
+            hasCustomPricing: boolean;
+            /**
+             * Format: uuid
+             * @description EmployeeService link UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            id: string;
+            /**
+             * @description Whether the assignment is active
+             * @example true
+             */
+            isActive: boolean;
+            /** @description Bookable delivery types with effective price and duration */
+            serviceTypes: components["schemas"]["ServiceEmployeeServiceTypeDto"][];
+            /**
+             * @description Whether the practitioner prices this service from owned duration rows
+             * @example false
+             */
+            useCustomPricing: boolean;
+        };
+        ServiceEmployeePractitionerDto: {
+            /**
+             * @description Signed portrait URL, or null when the employee has no portrait
+             * @example null
+             */
+            avatarUrl: string | null;
+            /**
+             * @description Branches the employee works at
+             * @example []
+             */
+            branchIds: string[];
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the employee is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Employee name (Arabic)
+             * @example سارة الحربي
+             */
+            nameAr: string | null;
+            /**
+             * @description Professional title
+             * @example Family counselor
+             */
+            title: string | null;
+            /** @description Display name split into first and last parts */
+            user: components["schemas"]["ServiceEmployeeUserNameDto"];
+        };
+        ServiceEmployeeServiceTypeDto: {
+            /**
+             * @description Service-level base duration in minutes
+             * @example 50
+             */
+            baseDurationMins: number;
+            /**
+             * @description Service-level base price in halalas
+             * @example 25000
+             */
+            basePrice: number;
+            /**
+             * @description Legacy alias of deliveryType (deprecated)
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            bookingType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Effective duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Synthetic type id (`<employeeServiceId>:<deliveryType>`)
+             * @example link-uuid:IN_PERSON
+             */
+            id: string;
+            /**
+             * @description Always true for returned entries
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the practitioner has a price or duration override
+             * @example true
+             */
+            isCustom: boolean;
+            /**
+             * @description Effective price in halalas
+             * @example 30000
+             */
+            price: number;
+        };
+        ServiceEmployeeUserNameDto: {
+            /**
+             * @description First part of the display name
+             * @example Sara
+             */
+            firstName: string;
+            /**
+             * @description Remaining display-name parts
+             * @example Al-Harbi
+             */
+            lastName: string;
+        };
+        ServiceListItemResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Buffer minutes after a session
+             * @example 0
+             */
+            bufferMinutes: number;
+            /** @description Owning category row with its department */
+            category: components["schemas"]["ServiceEmbeddedCategoryListItemDto"] | null;
+            /**
+             * @description Owning category UUID
+             * @example null
+             */
+            categoryId: string | null;
+            /**
+             * @description Per-service commission rate override (0–1), decimal string
+             * @example null
+             */
+            commissionRateOverride: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Deposit amount in halalas, decimal string
+             * @example null
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether a deposit is required
+             * @example false
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Description (Arabic)
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description Description (English)
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Default duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /** @description Service-level duration options ordered by sortOrder */
+            durationOptions: components["schemas"]["ServiceDurationOptionRecordDto"][];
+            /**
+             * @description Active employees offering this service; 0 means the booking wizard disables it
+             * @example 2
+             */
+            employeeCount: number;
+            /**
+             * @description Whether the duration is hidden on the booking surface
+             * @example false
+             */
+            hideDurationOnBooking: boolean;
+            /**
+             * @description Whether the price is hidden on the booking surface
+             * @example false
+             */
+            hidePriceOnBooking: boolean;
+            /**
+             * @description Icon background colour token
+             * @example null
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name
+             * @example null
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Stored image reference
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the service is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the service is hidden from the catalog
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @description Maximum advance booking window in days
+             * @example null
+             */
+            maxAdvanceDays: number | null;
+            /**
+             * @description Minimum lead time in minutes
+             * @example null
+             */
+            minLeadMinutes: number | null;
+            /**
+             * @description Service name (Arabic)
+             * @example استشارة أسرية
+             */
+            nameAr: string;
+            /**
+             * @description Service name (English)
+             * @example Family consultation
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in halalas, decimal string
+             * @example 30000
+             */
+            price: string;
+            /**
+             * @description Sequential service reference
+             * @example 42
+             */
+            ref: number;
             /**
              * Format: date-time
              * @description Last update instant
@@ -18034,6 +18797,146 @@ export interface components {
             id: string;
             /**
              * @description Stored image reference
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the service is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the service is hidden from the catalog
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @description Maximum advance booking window in days
+             * @example null
+             */
+            maxAdvanceDays: number | null;
+            /**
+             * @description Minimum lead time in minutes
+             * @example null
+             */
+            minLeadMinutes: number | null;
+            /**
+             * @description Service name (Arabic)
+             * @example استشارة أسرية
+             */
+            nameAr: string;
+            /**
+             * @description Service name (English)
+             * @example Family consultation
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in halalas, decimal string
+             * @example 30000
+             */
+            price: string;
+            /**
+             * @description Sequential service reference
+             * @example 42
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceRestoreResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Buffer minutes after a session
+             * @example 0
+             */
+            bufferMinutes: number;
+            /** @description Owning category row (image reference not signed) */
+            category: components["schemas"]["ServiceEmbeddedCategoryDto"] | null;
+            /**
+             * @description Owning category UUID
+             * @example null
+             */
+            categoryId: string | null;
+            /**
+             * @description Per-service commission rate override (0–1), decimal string
+             * @example null
+             */
+            commissionRateOverride: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Deposit amount in halalas, decimal string
+             * @example null
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether a deposit is required
+             * @example false
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Description (Arabic)
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description Description (English)
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Default duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /** @description Service-level duration options ordered by sortOrder */
+            durationOptions: components["schemas"]["ServiceDurationOptionRecordDto"][];
+            /**
+             * @description Whether the duration is hidden on the booking surface
+             * @example false
+             */
+            hideDurationOnBooking: boolean;
+            /**
+             * @description Whether the price is hidden on the booking surface
+             * @example false
+             */
+            hidePriceOnBooking: boolean;
+            /**
+             * @description Icon background colour token
+             * @example null
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name
+             * @example null
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Persisted image reference returned without signing; may be a storage key or a legacy external URL
              * @example null
              */
             imageUrl: string | null;
@@ -35357,6 +36260,10 @@ export interface operations {
                 categoryId?: string;
                 /** @description Search by name */
                 search?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -35369,7 +36276,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedServicesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35427,7 +36336,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35455,6 +36366,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description A non-archived service with the same Arabic or English name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -35484,7 +36402,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35623,7 +36543,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35659,6 +36581,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Service was modified by someone else (expectedUpdatedAt mismatch) or the name is taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Unhandled server error */
             500: {
                 headers: {
@@ -35687,7 +36616,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceBookingConfigResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35755,7 +36686,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceBookingConfigResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35819,7 +36752,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceDurationOptionRecordDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35880,7 +36815,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceDurationOptionRecordDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35944,7 +36881,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceEmployeeAssignmentDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35972,6 +36911,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -36001,7 +36947,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ServiceRestoreResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {

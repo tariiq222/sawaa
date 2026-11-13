@@ -115,6 +115,8 @@ const item: ServiceEmployee = {
   customDuration: null,
   bufferMinutes: 0,
   availableTypes: ["ONLINE"],
+  disabledDeliveryTypes: [],
+  useCustomPricing: false,
   isActive: true,
   hasCustomPricing: false,
   effectiveDurations: [],
@@ -141,15 +143,14 @@ describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
     expect(screen.getByTestId("employee-custom-pricing-row")).toBeInTheDocument()
   })
 
-  it("falls back gracefully when branchIds is undefined on the employee", () => {
-    const itemWithoutBranches: ServiceEmployee = {
-      ...item,
-      employee: { ...item.employee, branchIds: undefined },
-    }
-
+  it("keeps the row renderable without any branch data (the row does not read branchIds)", () => {
+    // The service-employees endpoint always sends `branchIds` (an array built
+    // from `employee.branches`), and this row never reads it: branch info is
+    // rendered by EmployeeWorkingInfo, which is not mounted here. The old
+    // "branchIds undefined" fixture fed a state the API cannot produce.
     renderWithProviders(
       <AssignedEmployeeRow
-        item={itemWithoutBranches}
+        item={item}
         serviceId="svc-1"
         isAr
         t={(k) => k}
@@ -157,7 +158,6 @@ describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
       />,
     )
 
-    // Component renders without error when branchIds is undefined
     expect(screen.getByTestId("employee-custom-pricing-row")).toBeInTheDocument()
   })
 })

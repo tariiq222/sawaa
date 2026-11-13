@@ -12,12 +12,14 @@ vi.mock("@/components/locale-provider", () => ({
 
 const service = (overrides: Partial<Service> = {}): Service => ({
   id: "svc-1", ref: 1, nameAr: "خدمة", nameEn: "Service", descriptionAr: null, descriptionEn: null,
-  categoryId: "cat-1", price: 100, currency: "SAR", durationMins: 60, isActive: true,
+  categoryId: "cat-1", price: "100", currency: "SAR", durationMins: 60, isActive: true,
   isHidden: true, hidePriceOnBooking: false, hideDurationOnBooking: false, iconName: null,
   iconBgColor: null, imageUrl: null, bufferMinutes: 0, minLeadMinutes: null, maxAdvanceDays: null,
-  depositEnabled: false, depositAmount: null, archivedAt: null, createdAt: "2026-01-01", updatedAt: "2026-01-01",
+  depositEnabled: false, depositAmount: null, commissionRateOverride: null,
+  archivedAt: null, createdAt: "2026-01-01", updatedAt: "2026-01-01", durationOptions: [],
   category: { id: "cat-1", ref: 1, nameEn: "Clinic", nameAr: "عيادة", sortOrder: 0, isActive: true,
-    departmentId: null, bookingMode: "DIRECT", iconName: null, iconBgColor: null, imageUrl: null, createdAt: "2026-01-01" },
+    departmentId: null, bookingMode: "DIRECT", kind: "CLINIC", iconName: null, iconBgColor: null,
+    imageUrl: null, createdAt: "2026-01-01", updatedAt: "2026-01-01" },
   ...overrides,
 })
 
