@@ -67,7 +67,7 @@ export function getClientColumns({
                 <p className="text-sm font-medium text-foreground">
                   {p.firstName} {p.lastName}
                 </p>
-                {(p.accountType === "walk_in" || p.accountType === "WALK_IN") && (
+                {p.accountType === "walk_in" && (
                   <span className="rounded-sm bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning">
                     {t("clients.detail.walkIn")}
                   </span>

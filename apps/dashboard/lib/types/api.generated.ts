@@ -10108,7 +10108,7 @@ export interface components {
              * @example true
              */
             isActive: boolean;
-            /** @description Most recent past booking (populated for list results) */
+            /** @description Most recent past booking (populated for list results; null on detail, create and update) */
             lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
             /**
              * Format: date-time
@@ -10141,7 +10141,7 @@ export interface components {
              * @example Saudi
              */
             nationality: string | null;
-            /** @description Next future booking (populated for list results) */
+            /** @description Next future booking (populated for list results; null on detail, create and update) */
             nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
             /**
              * @description Internal notes about the client
@@ -10733,7 +10733,7 @@ export interface components {
              * @example false
              */
             isExisting: boolean;
-            /** @description Most recent past booking (populated for list results) */
+            /** @description Most recent past booking (populated for list results; null on detail, create and update) */
             lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
             /**
              * Format: date-time
@@ -10766,7 +10766,7 @@ export interface components {
              * @example Saudi
              */
             nationality: string | null;
-            /** @description Next future booking (populated for list results) */
+            /** @description Next future booking (populated for list results; null on detail, create and update) */
             nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
             /**
              * @description Internal notes about the client
@@ -13118,6 +13118,87 @@ export interface components {
              */
             userId?: Record<string, never> | null;
         };
+        EmployeeScopedClientResponseDto: {
+            /**
+             * @description Account type
+             * @example full
+             * @enum {string}
+             */
+            accountType: "full" | "walk_in";
+            /**
+             * @description Avatar image URL
+             * @example https://cdn.example.com/avatars/sara.jpg
+             */
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Date of birth (ISO 8601)
+             * @example 1990-06-15T00:00:00.000Z
+             */
+            dateOfBirth: string | null;
+            /**
+             * @description Email address
+             * @example sara@example.com
+             */
+            email: string | null;
+            /**
+             * @description First name
+             * @example Sara
+             */
+            firstName: string | null;
+            /**
+             * @description Gender (lowercase)
+             * @example female
+             * @enum {string|null}
+             */
+            gender: "male" | "female" | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether the account is active
+             * @example true
+             */
+            isActive: boolean;
+            /** @description Most recent past booking (populated for list results; null on detail, create and update) */
+            lastBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * @description Last name
+             * @example Al-Harbi
+             */
+            lastName: string | null;
+            /**
+             * @description Full display name
+             * @example Sara Al-Harbi
+             */
+            name: string;
+            /** @description Next future booking (populated for list results; null on detail, create and update) */
+            nextBooking: components["schemas"]["ClientBookingSummaryDto"] | null;
+            /**
+             * @description Mobile phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * @description Sequential client reference
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
         EmployeeServiceOptionInputDto: {
             /**
              * @description Delivery channel for this override
@@ -15359,7 +15440,9 @@ export interface components {
             meta: components["schemas"]["CategoryListMetaDto"];
         };
         PaginatedClientsDto: {
-            items: components["schemas"]["ClientResponseDto"][];
+            /** @description Clients on the requested page */
+            items: (components["schemas"]["ClientResponseDto"] | components["schemas"]["EmployeeScopedClientResponseDto"])[];
+            /** @description Pagination metadata for the full result set */
             meta: components["schemas"]["ListMetaDto"];
         };
         PaginatedContactMessagesResponseDto: {
@@ -34943,13 +35026,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Client record */
+            /** @description Client record (shape depends on the caller role) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ClientResponseDto"];
+                    "application/json": components["schemas"]["ClientResponseDto"] | components["schemas"]["EmployeeScopedClientResponseDto"];
                 };
             };
             /** @description Validation failed */

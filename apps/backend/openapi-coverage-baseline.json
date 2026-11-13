@@ -299,8 +299,6 @@
   "schema KnowledgeReindexResponseDto.eventId — missing description and example",
   "schema ListClientChatConversationsResponseDto.data — missing description and example",
   "schema ListClientChatConversationsResponseDto.meta — missing description and example",
-  "schema PaginatedClientsDto.items — missing description and example",
-  "schema PaginatedClientsDto.meta — missing description and example",
   "schema PaginatedEmployeesDto.items — missing description and example",
   "schema PaginatedEmployeesDto.meta — missing description and example",
   "schema PublicCatalogDto.categories — missing description and example",

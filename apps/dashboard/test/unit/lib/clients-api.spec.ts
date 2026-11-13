@@ -86,6 +86,33 @@ describe("clients api", () => {
     })
   })
 
+  it("accepts the employee-scoped record, which withholds staff-only fields", async () => {
+    getMock.mockResolvedValueOnce({
+      id: "client-2",
+      ref: 7,
+      name: "Sara Al-Harbi",
+      firstName: "Sara",
+      lastName: "Al-Harbi",
+      phone: null,
+      email: null,
+      gender: null,
+      dateOfBirth: null,
+      avatarUrl: null,
+      accountType: "full",
+      isActive: true,
+      lastBooking: null,
+      nextBooking: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    })
+
+    const client = await fetchClient("client-2")
+
+    expect(client.emailVerified).toBe(false)
+    expect(client.nationalId).toBeUndefined()
+    expect(client.firstName).toBe("Sara")
+  })
+
   it("fetches client detail by id", async () => {
     getMock.mockResolvedValueOnce({ id: "client-1" })
 

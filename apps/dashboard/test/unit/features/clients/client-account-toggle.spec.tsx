@@ -51,16 +51,21 @@ function makeClient(overrides: Partial<Client> = {}): Client {
   return {
     id: "c-1",
     ref: 1,
+    name: "Ahmed Ali",
     firstName: "Ahmed",
     lastName: "Ali",
     email: "a@b.com",
     phone: null,
     gender: null,
+    dateOfBirth: null,
+    avatarUrl: null,
     isActive: true,
     emailVerified: false,
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
-    accountType: "FULL",
+    accountType: "full",
+    lastBooking: null,
+    nextBooking: null,
     ...overrides,
   }
 }
@@ -160,16 +165,7 @@ describe("ClientAccountToggle", () => {
     )
   })
 
-  it("renders nothing for WALK_IN clients (no password)", () => {
-    const { container } = render(
-      <ClientAccountToggle client={makeClient({ accountType: "WALK_IN" })} />,
-      { wrapper: makeWrapper() },
-    )
-
-    expect(container.firstChild).toBeNull()
-  })
-
-  it("renders nothing for walk_in (lowercase) clients", () => {
+  it("renders nothing for walk_in clients (no password)", () => {
     const { container } = render(
       <ClientAccountToggle
         client={makeClient({ accountType: "walk_in" })}

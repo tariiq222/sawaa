@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListClientsDto } from './list-clients.dto';
@@ -102,8 +103,8 @@ export class ListClientsHandler {
     employeeId?: string,
   ) {
     const empty = {
-      last: new Map<string, { id: string; date: string; status: string }>(),
-      next: new Map<string, { id: string; date: string; status: string }>(),
+      last: new Map<string, { id: string; date: string; status: BookingStatus }>(),
+      next: new Map<string, { id: string; date: string; status: BookingStatus }>(),
     };
     if (clientIds.length === 0) return empty;
 
@@ -130,7 +131,7 @@ export class ListClientsHandler {
       }),
     ]);
 
-    const last = new Map<string, { id: string; date: string; status: string }>();
+    const last = new Map<string, { id: string; date: string; status: BookingStatus }>();
     for (const b of pastBookings) {
       if (!last.has(b.clientId)) {
         last.set(b.clientId, {
@@ -141,7 +142,7 @@ export class ListClientsHandler {
       }
     }
 
-    const next = new Map<string, { id: string; date: string; status: string }>();
+    const next = new Map<string, { id: string; date: string; status: BookingStatus }>();
     for (const b of futureBookings) {
       if (!next.has(b.clientId)) {
         next.set(b.clientId, {

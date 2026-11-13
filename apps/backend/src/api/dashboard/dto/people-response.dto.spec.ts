@@ -3,11 +3,13 @@ import { plainToInstance } from 'class-transformer';
 import { Test } from '@nestjs/testing';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import type { SerializedClient } from '../../../modules/people/clients/client.serializer';
+import type { Client } from '@prisma/client';
+import { serializeClient, serializeEmployeeClient, type SerializedClient } from '../../../modules/people/clients/client.serializer';
 import {
   ClientResponseDto,
   CreateClientResponseDto,
   EmployeeResponseDto,
+  EmployeeScopedClientResponseDto,
   EmployeeStatsResponseDto,
   ListMetaDto,
   PaginatedClientsDto,
@@ -98,30 +100,118 @@ function makeEmployee(overrides: Partial<EmployeeResponseDto> = {}): EmployeeRes
   };
 }
 
-describe('ClientResponseDto (output shape)', () => {
-  it('documents every key emitted by serializeClient with scalar metadata', async () => {
-    const serializerFixture = makeClient() satisfies SerializedClient;
-    const moduleRef = await Test.createTestingModule({}).compile();
-    const app = moduleRef.createNestApplication();
-    let schema: SchemaObject | undefined;
-    try {
-      const document = SwaggerModule.createDocument(app, new DocumentBuilder().build(), {
-        extraModels: [ClientResponseDto],
-      });
-      schema = document.components?.schemas?.ClientResponseDto as SchemaObject | undefined;
-    } finally {
-      await app.close();
-    }
-    expect(schema).toBeDefined();
-    if (!schema) throw new Error('ClientResponseDto schema was not generated');
+// A complete Prisma row, including the auth columns serializeClient must strip.
+function makeClientRow(): Client {
+  return {
+    id: '00000000-0000-0000-0000-000000000000',
+    ref: 1024,
+    userId: null,
+    name: 'Sara Al-Harbi',
+    firstName: 'Sara',
+    middleName: null,
+    lastName: 'Al-Harbi',
+    phone: '+966501234567',
+    email: null,
+    emailVerified: null,
+    pendingEmail: null,
+    emailPromptResolvedAt: null,
+    phoneVerified: null,
+    gender: 'FEMALE',
+    dateOfBirth: null,
+    nationality: null,
+    nationalId: null,
+    emergencyName: null,
+    emergencyPhone: null,
+    bloodType: null,
+    allergies: null,
+    chronicConditions: null,
+    avatarUrl: null,
+    notes: null,
+    source: 'WALK_IN',
+    accountType: 'FULL',
+    claimedAt: null,
+    isActive: true,
+    deletedAt: null,
+    tokenVersion: 0,
+    passwordHash: null,
+    loginAttempts: 0,
+    lockoutUntil: null,
+    lastLoginAt: null,
+    preferredLocale: null,
+    pushEnabled: true,
+    consentedAt: null,
+    consentVersion: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+  };
+}
 
-    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(Object.keys(serializerFixture).sort());
-    expect(schema.required?.sort()).toEqual(Object.keys(serializerFixture).sort());
+// Mutual assignability (not identity): SerializedClient is an Omit/intersection type.
+type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Expect<T extends true> = T;
+type EmployeeSerialized = ReturnType<typeof serializeEmployeeClient>;
+
+// Compile-time proof, in both directions, that each DTO is exactly what its
+// serializer produces. The controller's union return type alone cannot prove
+// the staff branch (a full record is also assignable to the employee shape).
+export type StaffSerializerMatchesDto = Expect<Equal<SerializedClient, ClientResponseDto>>;
+export type EmployeeSerializerMatchesDto = Expect<Equal<EmployeeSerialized, EmployeeScopedClientResponseDto>>;
+
+async function buildSchemas(): Promise<Record<string, SchemaObject>> {
+  const moduleRef = await Test.createTestingModule({}).compile();
+  const app = moduleRef.createNestApplication();
+  try {
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().build(), {
+      extraModels: [ClientResponseDto, EmployeeScopedClientResponseDto, PaginatedClientsDto],
+    });
+    return (document.components?.schemas ?? {}) as Record<string, SchemaObject>;
+  } finally {
+    await app.close();
+  }
+}
+
+describe('client response schemas (output shape)', () => {
+  it('EmployeeScopedClientResponseDto documents exactly the keys serializeEmployeeClient emits, all required', async () => {
+    const employeeKeys = Object.keys(serializeEmployeeClient(makeClientRow())).sort();
+    const schema = (await buildSchemas()).EmployeeScopedClientResponseDto;
+    expect(schema).toBeDefined();
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(employeeKeys);
+    expect([...(schema.required ?? [])].sort()).toEqual(employeeKeys);
+  });
+
+  it('ClientResponseDto documents exactly the keys serializeClient emits, all required', async () => {
+    const staffKeys = Object.keys(serializeClient(makeClientRow())).sort();
+    const schema = (await buildSchemas()).ClientResponseDto;
+    expect(schema).toBeDefined();
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(staffKeys);
+    expect([...(schema.required ?? [])].sort()).toEqual(staffKeys);
     expect(schema.properties?.emailVerified).toMatchObject({ type: 'string', format: 'date-time', nullable: true });
     expect(schema.properties?.source).toMatchObject({ type: 'string', enum: ['WALK_IN', 'ONLINE', 'REFERRAL', 'WHATSAPP'] });
     expect(schema.properties?.accountType).toMatchObject({ type: 'string', enum: ['full', 'walk_in'] });
   });
 
+  it('the staff schema is the employee schema plus staff-only keys', () => {
+    const staffKeys = Object.keys(serializeClient(makeClientRow()));
+    const employeeKeys = Object.keys(serializeEmployeeClient(makeClientRow()));
+    expect(staffKeys).toEqual(expect.arrayContaining(employeeKeys));
+    expect(staffKeys.length - employeeKeys.length).toBe(20);
+  });
+
+  it('PaginatedClientsDto documents items as one of the two shapes', async () => {
+    const schema = (await buildSchemas()).PaginatedClientsDto;
+    expect(schema.properties?.items).toMatchObject({
+      type: 'array',
+      items: {
+        oneOf: [
+          { $ref: '#/components/schemas/ClientResponseDto' },
+          { $ref: '#/components/schemas/EmployeeScopedClientResponseDto' },
+        ],
+      },
+    });
+  });
+});
+
+describe('ClientResponseDto (output shape)', () => {
   it('constructs a populated client with all fields populated', () => {
     const c = makeClient();
     expect(c.id).toBe('00000000-0000-0000-0000-000000000000');

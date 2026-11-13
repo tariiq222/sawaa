@@ -28,7 +28,8 @@ import {
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import {
-  ClientResponseDto, CreateClientResponseDto, EmployeeResponseDto,
+  CLIENT_READ_SCHEMA, ClientReadResponseDto, ClientResponseDto, CreateClientResponseDto,
+  EmployeeScopedClientResponseDto, EmployeeResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -51,7 +52,7 @@ import { AuditControllerName } from '../../common/interceptors/audit-controller-
 @ApiBearerAuth()
 @ApiStandardResponses()
 @ApiExtraModels(
-  ClientResponseDto, EmployeeResponseDto,
+  ClientResponseDto, EmployeeScopedClientResponseDto, EmployeeResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -74,7 +75,7 @@ export class DashboardPeopleClientsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a client' })
   @ApiCreatedResponse({ type: CreateClientResponseDto, description: 'Client created or matched by phone' })
-  createClientEndpoint(@Body() body: CreateClientDto) {
+  createClientEndpoint(@Body() body: CreateClientDto): Promise<CreateClientResponseDto> {
     return this.createClient.execute(body);
   }
 
@@ -92,7 +93,7 @@ export class DashboardPeopleClientsController {
     @Query() query: ListClientsDto,
     @Query('isActive') rawIsActive: string | undefined,
     @Request() req: { user: { sub: string; role?: string | null } },
-  ) {
+  ): Promise<PaginatedClientsDto> {
     // Global ValidationPipe has enableImplicitConversion: true, which runs
     // Boolean(string) against query params — making any non-empty string truthy
     // (so "false" becomes true). Parse the raw value explicitly instead.
@@ -112,9 +113,12 @@ export class DashboardPeopleClientsController {
   @CheckPermissions({ action: 'read', subject: 'Client' })
   @ApiOperation({ summary: 'Get a client by ID' })
   @ApiParam({ name: 'id', description: 'Client UUID or reference (e.g. CL-1024)', example: 'CL-1024' })
-  @ApiOkResponse({ type: ClientResponseDto, description: 'Client record' })
+  @ApiOkResponse({ schema: CLIENT_READ_SCHEMA, description: 'Client record (shape depends on the caller role)' })
   @ApiNotFoundResponse({ description: 'Client not found' })
-  getClientEndpoint(@Param('id') id: string, @Request() req: { user: { sub: string; role?: string | null } }) {
+  getClientEndpoint(
+    @Param('id') id: string,
+    @Request() req: { user: { sub: string; role?: string | null } },
+  ): Promise<ClientReadResponseDto> {
     return this.getClient.execute({ clientId: id, requesterRole: req.user.role ?? null, requesterUserId: req.user.sub });
   }
 
@@ -127,7 +131,7 @@ export class DashboardPeopleClientsController {
   updateClientEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateClientDto,
-  ) {
+  ): Promise<ClientResponseDto> {
     return this.updateClient.execute({ clientId: id, ...body });
   }
 
@@ -138,7 +142,7 @@ export class DashboardPeopleClientsController {
   @ApiParam({ name: 'id', description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Client deleted' })
   @ApiNotFoundResponse({ description: 'Client not found' })
-  async deleteClientEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  async deleteClientEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.deleteClient.execute({ clientId: id });
   }
 
@@ -153,7 +157,7 @@ export class DashboardPeopleClientsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: SetClientActiveDto,
     @Request() req: { user?: { id?: string } },
-  ) {
+  ): Promise<SetClientActiveResponseDto> {
     return this.setClientActive.execute({
       clientId: id,
       isActive: body.isActive,

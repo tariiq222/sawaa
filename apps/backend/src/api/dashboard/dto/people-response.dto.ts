@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
 
 // ── Client ─────────────────────────────────────────────────────────────────
 
@@ -17,24 +17,25 @@ export class ClientBookingSummaryDto {
   status!: 'PENDING' | 'PENDING_GROUP_FILL' | 'AWAITING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW' | 'EXPIRED' | 'CANCEL_REQUESTED' | 'DEPOSIT_PAID';
 }
 
-export class ClientResponseDto {
+/**
+ * Client record as seen by an EMPLOYEE-role caller of GET list/detail: exactly
+ * the keys `serializeEmployeeClient` emits (modules/people/clients/client.serializer.ts).
+ * Medical, identity, consent and auth-state fields are deliberately withheld.
+ * The name avoids `EmployeeClientResponseDto`, which the mobile employee API
+ * already registers as a different OpenAPI schema.
+ */
+export class EmployeeScopedClientResponseDto {
   @ApiProperty({ description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
   id!: string;
 
   @ApiProperty({ description: 'Sequential client reference', example: 1024 })
   ref!: number;
 
-  @ApiProperty({ description: 'Linked user UUID', type: String, example: '00000000-0000-0000-0000-000000000001', nullable: true })
-  userId!: string | null;
-
   @ApiProperty({ description: 'Full display name', example: 'Sara Al-Harbi' })
   name!: string;
 
   @ApiProperty({ description: 'First name', type: String, example: 'Sara', nullable: true })
   firstName!: string | null;
-
-  @ApiProperty({ description: 'Middle name', type: String, example: 'Ali', nullable: true })
-  middleName!: string | null;
 
   @ApiProperty({ description: 'Last name', type: String, example: 'Al-Harbi', nullable: true })
   lastName!: string | null;
@@ -45,17 +46,51 @@ export class ClientResponseDto {
   @ApiProperty({ description: 'Email address', type: String, example: 'sara@example.com', nullable: true })
   email!: string | null;
 
-  @ApiProperty({ description: 'Email verification timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
-  emailVerified!: Date | null;
-
-  @ApiProperty({ description: 'Phone verification timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
-  phoneVerified!: Date | null;
-
   @ApiProperty({ description: 'Date of birth (ISO 8601)', type: String, format: 'date-time', example: '1990-06-15T00:00:00.000Z', nullable: true })
   dateOfBirth!: Date | null;
 
   @ApiProperty({ description: 'Gender (lowercase)', example: 'female', enum: ['male', 'female'], nullable: true })
   gender!: 'male' | 'female' | null;
+
+  @ApiProperty({ description: 'Avatar image URL', type: String, example: 'https://cdn.example.com/avatars/sara.jpg', nullable: true })
+  avatarUrl!: string | null;
+
+  @ApiProperty({ description: 'Account type', example: 'full', enum: ['full', 'walk_in'] })
+  accountType!: 'full' | 'walk_in';
+
+  @ApiProperty({ description: 'Whether the account is active', example: true })
+  isActive!: boolean;
+
+  @ApiProperty({ description: 'Most recent past booking (populated for list results; null on detail, create and update)', type: ClientBookingSummaryDto, nullable: true })
+  lastBooking!: ClientBookingSummaryDto | null;
+
+  @ApiProperty({ description: 'Next future booking (populated for list results; null on detail, create and update)', type: ClientBookingSummaryDto, nullable: true })
+  nextBooking!: ClientBookingSummaryDto | null;
+
+  @ApiProperty({ description: 'Creation timestamp', example: '2026-01-01T00:00:00.000Z' })
+  createdAt!: Date;
+
+  @ApiProperty({ description: 'Last update timestamp', example: '2026-01-01T00:00:00.000Z' })
+  updatedAt!: Date;
+}
+
+/**
+ * Full client record (`serializeClient`): the employee-scoped fields plus the
+ * staff-only ones. Returned to every non-EMPLOYEE caller, and by create and
+ * update for all callers.
+ */
+export class ClientResponseDto extends EmployeeScopedClientResponseDto {
+  @ApiProperty({ description: 'Linked user UUID', type: String, example: '00000000-0000-0000-0000-000000000001', nullable: true })
+  userId!: string | null;
+
+  @ApiProperty({ description: 'Middle name', type: String, example: 'Ali', nullable: true })
+  middleName!: string | null;
+
+  @ApiProperty({ description: 'Email verification timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  emailVerified!: Date | null;
+
+  @ApiProperty({ description: 'Phone verification timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
+  phoneVerified!: Date | null;
 
   @ApiProperty({ description: 'Nationality', type: String, example: 'Saudi', nullable: true })
   nationality!: string | null;
@@ -78,23 +113,14 @@ export class ClientResponseDto {
   @ApiProperty({ description: 'Chronic conditions', type: String, example: 'Type 2 Diabetes', nullable: true })
   chronicConditions!: string | null;
 
-  @ApiProperty({ description: 'Avatar image URL', type: String, example: 'https://cdn.example.com/avatars/sara.jpg', nullable: true })
-  avatarUrl!: string | null;
-
   @ApiProperty({ description: 'Internal notes about the client', type: String, example: 'Prefers morning appointments', nullable: true })
   notes!: string | null;
 
   @ApiProperty({ description: 'Acquisition source (uppercase)', enum: ['WALK_IN', 'ONLINE', 'REFERRAL', 'WHATSAPP'], example: 'WALK_IN' })
   source!: 'WALK_IN' | 'ONLINE' | 'REFERRAL' | 'WHATSAPP';
 
-  @ApiProperty({ description: 'Account type', example: 'full', enum: ['full', 'walk_in'] })
-  accountType!: 'full' | 'walk_in';
-
   @ApiProperty({ description: 'Account claim timestamp', type: String, format: 'date-time', example: '2026-01-01T00:00:00.000Z', nullable: true })
   claimedAt!: Date | null;
-
-  @ApiProperty({ description: 'Whether the account is active', example: true })
-  isActive!: boolean;
 
   @ApiProperty({ description: 'Soft deletion timestamp', type: String, format: 'date-time', example: null, nullable: true })
   deletedAt!: Date | null;
@@ -113,19 +139,21 @@ export class ClientResponseDto {
 
   @ApiProperty({ description: 'Accepted privacy consent version', type: String, example: '2026-01', nullable: true })
   consentVersion!: string | null;
-
-  @ApiProperty({ description: 'Most recent past booking (populated for list results)', type: ClientBookingSummaryDto, nullable: true })
-  lastBooking!: ClientBookingSummaryDto | null;
-
-  @ApiProperty({ description: 'Next future booking (populated for list results)', type: ClientBookingSummaryDto, nullable: true })
-  nextBooking!: ClientBookingSummaryDto | null;
-
-  @ApiProperty({ description: 'Creation timestamp', example: '2026-01-01T00:00:00.000Z' })
-  createdAt!: Date;
-
-  @ApiProperty({ description: 'Last update timestamp', example: '2026-01-01T00:00:00.000Z' })
-  updatedAt!: Date;
 }
+
+/**
+ * GET clients and GET clients/:id return one of two shapes depending on the
+ * caller's role: EMPLOYEE gets `EmployeeScopedClientResponseDto`
+ * (`serializeEmployeeClient`), every other role gets `ClientResponseDto`
+ * (`serializeClient`). See modules/people/clients/client.serializer.ts.
+ */
+export type ClientReadResponseDto = ClientResponseDto | EmployeeScopedClientResponseDto;
+export const CLIENT_READ_SCHEMA = {
+  oneOf: [
+    { $ref: getSchemaPath(ClientResponseDto) },
+    { $ref: getSchemaPath(EmployeeScopedClientResponseDto) },
+  ],
+};
 
 export class CreateClientResponseDto extends ClientResponseDto {
   @ApiProperty({ description: 'Whether an existing client was returned by phone deduplication', example: false })
@@ -238,10 +266,10 @@ export class ListMetaDto {
 }
 
 export class PaginatedClientsDto {
-  @ApiProperty({ type: [ClientResponseDto] })
-  items!: ClientResponseDto[];
+  @ApiProperty({ type: 'array', items: CLIENT_READ_SCHEMA, description: 'Clients on the requested page' })
+  items!: ClientReadResponseDto[];
 
-  @ApiProperty({ type: ListMetaDto })
+  @ApiProperty({ type: ListMetaDto, description: 'Pagination metadata for the full result set' })
   meta!: ListMetaDto;
 }
 

@@ -5,7 +5,8 @@ function typecheckOpenApiContract() {
     query: { page: 1, limit: 20, search: "Sara", isActive: true },
   })
   const expectedList: Promise<{
-    items: Array<{ id: string; ref: number; emailVerified: string | null }>
+    // emailVerified is withheld from EMPLOYEE-role callers, so it is optional.
+    items: Array<{ id: string; ref: number; emailVerified?: string | null }>
     meta: { total: number; page: number }
   }> = list
   void expectedList

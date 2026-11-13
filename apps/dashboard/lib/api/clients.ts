@@ -68,7 +68,8 @@ function toClient(client: ClientWire): Client {
     ...client,
     firstName: client.firstName ?? "",
     lastName: client.lastName ?? "",
-    emailVerified: !!client.emailVerified,
+    // Withheld from EMPLOYEE-role callers; absent means "not known", shown as false.
+    emailVerified: "emailVerified" in client && !!client.emailVerified,
   }
 }
 
