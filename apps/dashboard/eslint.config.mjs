@@ -187,6 +187,27 @@ const nativeDateInputRules = {
   },
 }
 
+/**
+ * Entity ids in form schemas go through `entityId()` (lib/schemas/primitives.ts).
+ *
+ * zod's `uuid()` also enforces the RFC version/variant bits. The API does not,
+ * so a form using it can reject an id the server accepts.
+ */
+const zodUuidRestriction = {
+  selector:
+    "CallExpression[callee.property.name='uuid'][callee.object.callee.property.name='string'][callee.object.callee.object.name='z'], " +
+    "CallExpression[callee.property.name='uuid'][callee.object.name='z']",
+  message:
+    "Use entityId() from @/lib/schemas/primitives instead of zod's uuid(): it rejects ids without RFC version bits, which the API accepts.",
+}
+
+const schemaSyntaxRules = {
+  files: ["lib/**/*.{ts,tsx}", "hooks/**/*.{ts,tsx}"],
+  rules: {
+    "no-restricted-syntax": ["error", zodUuidRestriction],
+  },
+}
+
 /** Forbidden icon libraries — use @hugeicons only */
 const iconLibraryRules = {
   files: ["**/*.{ts,tsx}"],
@@ -230,6 +251,7 @@ const featureSyntaxRules = {
     "no-restricted-syntax": [
       "error",
       ...nativeDateInputRules.rules["no-restricted-syntax"].slice(1),
+      zodUuidRestriction,
       {
         // Catch colour/shadow arbitrary values whose class prefix is
         // one of the colour/shadow utilities. The bracketed payload
@@ -285,6 +307,7 @@ const eslintConfig = defineConfig([
   hooksLayerRules,
   ...featureRules,
   featureSyntaxRules,
+  schemaSyntaxRules,
   unusedVarsRule,
   reactCompilerRule,
 

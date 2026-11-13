@@ -32,7 +32,7 @@ export function EmployeeContactEditor({ channel, currentValue, request, verify, 
   }, [pending]);
   const send = async () => {
     setError('');
-    if (channel === 'EMAIL' ? !z.string().email().safeParse(value.trim()).success : !hasPhoneFormat(value.trim())) { setError('employeeSelfProfile.invalidContact'); return; }
+    if (channel === 'EMAIL' ? !z.email().safeParse(value.trim()).success : !hasPhoneFormat(value.trim())) { setError('employeeSelfProfile.invalidContact'); return; }
     try {
       const result = await request({ channel, identifier: value.trim() });
       const startedAt = Date.now();

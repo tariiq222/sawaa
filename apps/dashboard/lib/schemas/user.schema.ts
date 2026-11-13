@@ -1,10 +1,11 @@
 import { z } from "zod"
+import { emailAddress } from "@/lib/schemas/primitives"
 import type { TenantUserRole } from "@/lib/types/user"
 
 /* ─── User base schema (user-form-page) ─── */
 
 export const userBaseSchema = z.object({
-  email: z.string().email(),
+  email: emailAddress(),
   name: z.string().min(1),
   phone: z.string().optional().refine(
     (v) => !v || /^\+[1-9]\d{6,14}$/.test(v),

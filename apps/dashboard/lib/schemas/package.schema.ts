@@ -21,13 +21,14 @@
  */
 
 import { z } from "zod"
+import { formNumber } from "@/lib/schemas/primitives"
 import { validatePackageItem } from "./package-item-validation"
 
 const REQUIRED = "common.required"
 const NON_NEGATIVE = "packages.errors.nonNegative"
 const WHOLE_NUMBER = "packages.errors.wholeNumber"
 const numberField = () =>
-  z.coerce.number({ invalid_type_error: "packages.errors.invalidNumber" })
+  formNumber("packages.errors.invalidNumber")
 const optionalNonNegativeNumber = () =>
   z
     .union([

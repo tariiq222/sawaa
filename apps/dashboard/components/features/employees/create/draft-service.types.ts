@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { formNumber } from "@/lib/schemas/primitives"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
 import type { ServiceBookingType } from "@/lib/types/service"
 
@@ -19,7 +20,7 @@ export interface DraftService {
 
 export const addServiceSchema = z.object({
   serviceId: z.string().min(1, "Service is required"),
-  bufferMinutes: z.coerce.number().int().min(0),
+  bufferMinutes: formNumber().int().min(0),
   isActive: z.boolean(),
 })
 

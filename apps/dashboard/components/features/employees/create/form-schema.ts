@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { emailAddress, formNumber } from "@/lib/schemas/primitives"
 
 /* ─── Zod Schema ─── */
 
@@ -16,7 +17,7 @@ export function createEmployeeSchema(t?: (key: string) => string) {
     title: z.string().optional(),
     nameEn: z.string().min(1, msg("employees.form.validation.nameEnRequired", "Full name in English is required")).max(255),
     nameAr: z.string().min(1, msg("employees.form.validation.nameArRequired", "Full name in Arabic is required")).max(255),
-    email: z.string().email(msg("employees.form.validation.emailInvalid", "Invalid email address")),
+    email: emailAddress(msg("employees.form.validation.emailInvalid", "Invalid email address")),
     phone: z.string().regex(/^\+?[0-9\s-]{7,20}$/, msg("employees.form.validation.phoneInvalid", "Invalid phone number")).optional().or(z.literal("")),
     // Selects default to `<option value="">—</option>`, which submits `""`.
     // z.enum rejects "" — preprocess it to `undefined` so .optional() kicks in.
@@ -26,7 +27,7 @@ export function createEmployeeSchema(t?: (key: string) => string) {
     specialtyAr: z.string().optional(),
     bio: z.string().optional(),
     bioAr: z.string().optional(),
-    experience: z.coerce.number().int().min(0).optional(),
+    experience: formNumber().int().min(0).optional(),
     education: z.string().optional(),
     educationAr: z.string().optional(),
     avatarUrl: z.string().optional().or(z.literal("")),

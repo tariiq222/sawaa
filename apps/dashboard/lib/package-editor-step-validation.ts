@@ -4,7 +4,7 @@ import type { PackageFormData, PackageItemFormData, ScopeFormData } from "./sche
 export type PackageStep = 1 | 2 | 3 | 4
 
 export interface PackageStepIssue {
-  path: (string | number)[]
+  path: PropertyKey[]
   message: string
 }
 

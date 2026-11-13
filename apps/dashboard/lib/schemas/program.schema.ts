@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { entityId } from '@/lib/schemas/primitives';
 
 /**
  * Programs schema — accepts SAR in the form for staff convenience and
@@ -16,8 +17,8 @@ const positiveInt = z.number().int().min(1);
 
 export function buildCreateProgramSchema(t: (k: string) => string) {
   return z.object({
-    departmentId: z.string().uuid(),
-    branchId: z.string().uuid(),
+    departmentId: entityId(),
+    branchId: entityId(),
     nameAr: z.string().min(2),
     nameEn: z.string().optional(),
     descriptionAr: z.string().optional(),
@@ -34,7 +35,7 @@ export function buildCreateProgramSchema(t: (k: string) => string) {
     isPublic: z.boolean().default(false),
     publicDescriptionAr: z.string().optional(),
     publicDescriptionEn: z.string().optional(),
-    supervisorIds: z.array(z.string().uuid()).min(1, t("validation.atLeastOneSupervisor")),
+    supervisorIds: z.array(entityId()).min(1, t("validation.atLeastOneSupervisor")),
   }).refine(
     (d) => d.minParticipants <= d.maxParticipants,
     { message: t("validation.minExceedsMax"), path: ['minParticipants'] },
@@ -85,7 +86,7 @@ export type CancelProgramFormValues = z.infer<ReturnType<typeof buildCancelProgr
 
 export function buildEnrollInProgramSchema(_t: (k: string) => string) {
   return z.object({
-    clientId: z.string().uuid(),
+    clientId: entityId(),
   });
 }
 export type EnrollInProgramFormValues = z.infer<ReturnType<typeof buildEnrollInProgramSchema>>;
@@ -97,8 +98,8 @@ export type EnrollInProgramFormValues = z.infer<ReturnType<typeof buildEnrollInP
  * (buildCreateProgramSchema, etc.) with `t` for AR support.
  */
 export const createProgramSchema = z.object({
-  departmentId: z.string().uuid(),
-  branchId: z.string().uuid(),
+  departmentId: entityId(),
+  branchId: entityId(),
   nameAr: z.string().min(2),
   nameEn: z.string().optional(),
   descriptionAr: z.string().optional(),
@@ -114,7 +115,7 @@ export const createProgramSchema = z.object({
   isPublic: z.boolean().default(false),
   publicDescriptionAr: z.string().optional(),
   publicDescriptionEn: z.string().optional(),
-  supervisorIds: z.array(z.string().uuid()).min(1, 'At least one supervisor is required'),
+  supervisorIds: z.array(entityId()).min(1, 'At least one supervisor is required'),
 }).refine(
   (d) => d.minParticipants <= d.maxParticipants,
   { message: 'minParticipants cannot exceed maxParticipants', path: ['minParticipants'] },
@@ -130,7 +131,7 @@ export const cancelProgramSchema = z.object({
   reason: z.string().min(2, 'Reason is required'),
 });
 export const enrollInProgramSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: entityId(),
 });
 
 /** Helper used by the form to convert a Prisma Decimal-string to SAR number. */

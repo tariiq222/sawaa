@@ -1,5 +1,5 @@
 export interface PackageValidationIssue {
-  path: (string | number)[]
+  path: PropertyKey[]
   message: string
 }
 

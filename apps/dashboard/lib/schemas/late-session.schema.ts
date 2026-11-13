@@ -1,5 +1,6 @@
 import { grossWithVat } from '@/lib/money'
 import { z } from 'zod'
+import { formNumber } from '@/lib/schemas/primitives'
 import { moneyInputToHalalas } from '@/lib/money-input'
 import type {
   LateSessionDraft,
@@ -35,7 +36,7 @@ const base = z.object({
   serviceId: required,
   deliveryType: z.enum(['IN_PERSON', 'ONLINE']),
   scheduledAt: required,
-  durationMins: z.coerce.number().int().positive(),
+  durationMins: formNumber().int().positive(),
   status: z.enum(['COMPLETED', 'CONFIRMED', 'NO_SHOW', 'CANCELLED']),
   paymentMode: z.enum(['UNPAID', 'PREVIOUSLY_RECEIVED', 'COLLECT_NOW']),
 })

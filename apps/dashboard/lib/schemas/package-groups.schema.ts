@@ -1,12 +1,13 @@
 import { z } from "zod"
+import { formNumber } from "@/lib/schemas/primitives"
 
 const requiredText = z.string().trim().min(1, "common.required")
-const nonNegative = z.coerce.number({ invalid_type_error: "packages.grouped.errors.number" }).finite().min(0, "packages.errors.nonNegative")
+const nonNegative = formNumber("packages.grouped.errors.number").min(0, "packages.errors.nonNegative")
 const sarAmount = nonNegative.refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-8, "packages.grouped.errors.decimals")
 
 export const groupedSessionFormSchema = z.object({
   key: requiredText,
-  position: z.coerce.number().int().min(0),
+  position: formNumber().int().min(0),
   durationOptionId: requiredText,
   deliveryType: z.enum(["IN_PERSON", "ONLINE"]),
   unitPriceSar: sarAmount,
@@ -38,7 +39,7 @@ const groupedDetailsSchema = z.object({
   imageUrl: z.string().trim().max(500).nullable().optional(),
   iconName: z.string().trim().max(100).nullable().optional(),
   iconBgColor: z.string().trim().max(20).nullable().optional(),
-  sortOrder: z.coerce.number().int().min(0),
+  sortOrder: formNumber().int().min(0),
   isActive: z.boolean(),
   isPublic: z.boolean(),
 })

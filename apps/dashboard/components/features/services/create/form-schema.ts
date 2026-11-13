@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { entityId, formNumber } from "@/lib/schemas/primitives"
 
 /* ─── Zod Schema ─── */
 
@@ -7,7 +8,7 @@ export const createServiceSchema = z.object({
   nameAr: z.string().min(1, "services.create.nameArRequired"),
   descriptionEn: z.string().optional(),
   descriptionAr: z.string().optional(),
-  categoryId: z.string().uuid("services.create.categoryRequired"),
+  categoryId: entityId("services.create.categoryRequired"),
   isActive: z.boolean().optional(),
   isHidden: z.boolean().optional(),
   hidePriceOnBooking: z.boolean().optional(),
@@ -15,14 +16,14 @@ export const createServiceSchema = z.object({
   iconName: z.string().max(100).nullable().optional(),
   iconBgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
   imageUrl: z.string().nullable().optional(),
-  bufferMinutes: z.coerce.number().int().min(0).max(120).optional(),
-  bufferBeforeMinutes: z.coerce.number().int().min(0).max(120).nullable().optional(),
-  bufferAfterMinutes: z.coerce.number().int().min(0).max(120).nullable().optional(),
+  bufferMinutes: formNumber().int().min(0).max(120).optional(),
+  bufferBeforeMinutes: formNumber().int().min(0).max(120).nullable().optional(),
+  bufferAfterMinutes: formNumber().int().min(0).max(120).nullable().optional(),
   depositEnabled: z.boolean().optional(),
-  depositAmount: z.coerce.number().min(0).nullable().optional(),
-  minLeadMinutes: z.coerce.number().int().min(0).max(1440).nullable().optional(),
-  maxAdvanceDays: z.coerce.number().int().min(1).max(365).nullable().optional(),
-  branchIds: z.array(z.string().uuid()).optional(),
+  depositAmount: formNumber().min(0).nullable().optional(),
+  minLeadMinutes: formNumber().int().min(0).max(1440).nullable().optional(),
+  maxAdvanceDays: formNumber().int().min(1).max(365).nullable().optional(),
+  branchIds: z.array(entityId()).optional(),
   calendarColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
 })
 
@@ -35,7 +36,7 @@ export function createServiceEditSchema(savedNameEn?: string | null) {
 
   return createServiceSchema.extend({
     nameEn: nameEnSchema,
-    categoryId: z.union([z.string().uuid("services.create.categoryRequired"), z.literal("")]).optional(),
+    categoryId: z.union([entityId("services.create.categoryRequired"), z.literal("")]).optional(),
   })
 }
 
