@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { formNumber } from "@/lib/schemas/primitives"
 
 /* ─── Coupon schema (coupon-form-page) ─── */
 
@@ -10,10 +11,10 @@ export const couponSchema = z.object({
   // FIXED coupons accept fractional SAR (e.g. 49.50); the form's
   // toStorageValue converts to integer halalas on submit. PERCENTAGE is a
   // raw 0-100 percent. Either way, fractional input must be allowed here.
-  discountValue: z.coerce.number().min(0.01),
-  minOrderAmt: z.union([z.coerce.number().min(0), z.literal("")]).optional(),
-  maxUses: z.coerce.number().int().min(1).optional().or(z.literal("")),
-  maxUsesPerUser: z.coerce.number().int().min(1).optional().or(z.literal("")),
+  discountValue: formNumber().min(0.01),
+  minOrderAmt: z.union([formNumber().min(0), z.literal("")]).optional(),
+  maxUses: formNumber().int().min(1).optional().or(z.literal("")),
+  maxUsesPerUser: formNumber().int().min(1).optional().or(z.literal("")),
   serviceIds: z.array(z.string()).optional(),
   expiresAt: z.string().optional(),
   isActive: z.boolean(),

@@ -28,7 +28,7 @@ export function validatePackageItem(
 ) {
   if (item.paidQuantity + (item.freeQuantity ?? 0) < 1) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["paidQuantity"],
       message: "packages.errors.minQuantity",
     })
@@ -38,14 +38,14 @@ export function validatePackageItem(
     const scope = item[dim]
     if (scope.mode === "ANY" && scope.ids.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: [dim, "ids"],
         message: "packages.errors.scopeAnyTargets",
       })
     }
     if (scope.mode !== "ANY" && scope.ids.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: [dim, "ids"],
         message: "packages.errors.scopeNeedsTarget",
       })
@@ -67,7 +67,7 @@ export function validatePackageItem(
     (!singleService || item.duration.ids.length === 0)
   ) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["duration", "mode"],
       message: "packages.errors.durationNeedsService",
     })
@@ -82,7 +82,7 @@ export function validatePackageItem(
     item.unitPriceSar >= 0
   if (flexible && !hasPrepaidPrice) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["unitPriceSar"],
       message: "packages.errors.unitPriceRequired",
     })
@@ -94,7 +94,7 @@ export function validatePackageItem(
     item.discountValue > 100
   ) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["discountValue"],
       message: "packages.errors.discountPercentageRange",
     })
@@ -110,7 +110,7 @@ export function validatePackageItem(
     item.discountValue > item.unitPriceSar * item.paidQuantity
   ) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["discountValue"],
       message: "packages.errors.discountFixedExceedsPayable",
     })

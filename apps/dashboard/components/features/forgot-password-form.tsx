@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { FormEvent } from "react"
 import Link from "next/link"
-import { z } from "zod"
+import { emailAddress } from "@/lib/schemas/primitives"
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
@@ -12,7 +12,7 @@ import { CheckmarkCircle01Icon } from "@hugeicons/core-free-icons"
 import { useLocale } from "@/components/locale-provider"
 import { requestStaffPasswordReset } from "@/lib/api/auth"
 
-const emailSchema = z.string().email()
+const emailSchema = emailAddress()
 
 export function ForgotPasswordForm() {
   const { t } = useLocale()

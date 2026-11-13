@@ -5,7 +5,7 @@ const required = (field: string) =>
   z.string().min(1, { message: `${field} مطلوب` }).max(500)
 
 const icon = z.enum(FEATURE_CARD_ICON_OPTIONS, {
-  errorMap: () => ({ message: "اختر أيقونة من القائمة" }),
+  error: "اختر أيقونة من القائمة",
 })
 
 const cardShape = z.object({

@@ -69,7 +69,7 @@
     "test:cov": "vitest run --coverage"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@prisma/client": "^7.8.0",
