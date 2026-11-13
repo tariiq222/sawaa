@@ -1,4 +1,4 @@
-import type { Client, Prisma } from '@prisma/client';
+import type { BookingStatus, Client, Prisma } from '@prisma/client';
 import { employeeClientSelect } from './list-employee-clients.handler';
 
 // Dashboard and mobile clients historically use lowercase enum values
@@ -7,7 +7,7 @@ import { employeeClientSelect } from './list-employee-clients.handler';
 type ClientBookingSummary = {
   id: string;
   date: string;
-  status: string;
+  status: BookingStatus;
 };
 
 // Sensitive auth columns on the Client row that must never be serialized out
@@ -27,8 +27,8 @@ export type SerializedClient = Omit<
 > & {
   gender: 'male' | 'female' | null;
   accountType: 'full' | 'walk_in';
-  lastBooking?: ClientBookingSummary | null;
-  nextBooking?: ClientBookingSummary | null;
+  lastBooking: ClientBookingSummary | null;
+  nextBooking: ClientBookingSummary | null;
 };
 
 type SerializeOptions = {

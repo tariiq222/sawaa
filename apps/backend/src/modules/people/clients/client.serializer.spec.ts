@@ -74,8 +74,8 @@ describe('serializeClient', () => {
   });
 
   it('passes through booking summaries from options', () => {
-    const lastBooking = { id: 'b1', date: '2026-05-01', status: 'COMPLETED' };
-    const nextBooking = { id: 'b2', date: '2026-06-01', status: 'CONFIRMED' };
+    const lastBooking = { id: 'b1', date: '2026-05-01', status: 'COMPLETED' as const };
+    const nextBooking = { id: 'b2', date: '2026-06-01', status: 'CONFIRMED' as const };
 
     const result = serializeClient(buildFullClientRow(), { lastBooking, nextBooking });
 

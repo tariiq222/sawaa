@@ -5968,7 +5968,7 @@
                 "$ref": "#/components/schemas/ClientBookingSummaryDto"
               }
             ],
-            "description": "Most recent past booking (populated for list results)",
+            "description": "Most recent past booking (populated for list results; null on detail, create and update)",
             "nullable": true,
             "type": "object"
           },
@@ -6014,7 +6014,7 @@
                 "$ref": "#/components/schemas/ClientBookingSummaryDto"
               }
             ],
-            "description": "Next future booking (populated for list results)",
+            "description": "Next future booking (populated for list results; null on detail, create and update)",
             "nullable": true,
             "type": "object"
           },
@@ -6080,17 +6080,24 @@
         "required": [
           "id",
           "ref",
-          "userId",
           "name",
           "firstName",
-          "middleName",
           "lastName",
           "phone",
           "email",
-          "emailVerified",
-          "phoneVerified",
           "dateOfBirth",
           "gender",
+          "avatarUrl",
+          "accountType",
+          "isActive",
+          "lastBooking",
+          "nextBooking",
+          "createdAt",
+          "updatedAt",
+          "userId",
+          "middleName",
+          "emailVerified",
+          "phoneVerified",
           "nationality",
           "nationalId",
           "emergencyName",
@@ -6098,22 +6105,15 @@
           "bloodType",
           "allergies",
           "chronicConditions",
-          "avatarUrl",
           "notes",
           "source",
-          "accountType",
           "claimedAt",
-          "isActive",
           "deletedAt",
           "lastLoginAt",
           "preferredLocale",
           "pushEnabled",
           "consentedAt",
-          "consentVersion",
-          "lastBooking",
-          "nextBooking",
-          "createdAt",
-          "updatedAt"
+          "consentVersion"
         ],
         "type": "object"
       },
@@ -6840,7 +6840,7 @@
                 "$ref": "#/components/schemas/ClientBookingSummaryDto"
               }
             ],
-            "description": "Most recent past booking (populated for list results)",
+            "description": "Most recent past booking (populated for list results; null on detail, create and update)",
             "nullable": true,
             "type": "object"
           },
@@ -6886,7 +6886,7 @@
                 "$ref": "#/components/schemas/ClientBookingSummaryDto"
               }
             ],
-            "description": "Next future booking (populated for list results)",
+            "description": "Next future booking (populated for list results; null on detail, create and update)",
             "nullable": true,
             "type": "object"
           },
@@ -6952,17 +6952,24 @@
         "required": [
           "id",
           "ref",
-          "userId",
           "name",
           "firstName",
-          "middleName",
           "lastName",
           "phone",
           "email",
-          "emailVerified",
-          "phoneVerified",
           "dateOfBirth",
           "gender",
+          "avatarUrl",
+          "accountType",
+          "isActive",
+          "lastBooking",
+          "nextBooking",
+          "createdAt",
+          "updatedAt",
+          "userId",
+          "middleName",
+          "emailVerified",
+          "phoneVerified",
           "nationality",
           "nationalId",
           "emergencyName",
@@ -6970,22 +6977,15 @@
           "bloodType",
           "allergies",
           "chronicConditions",
-          "avatarUrl",
           "notes",
           "source",
-          "accountType",
           "claimedAt",
-          "isActive",
           "deletedAt",
           "lastLoginAt",
           "preferredLocale",
           "pushEnabled",
           "consentedAt",
           "consentVersion",
-          "lastBooking",
-          "nextBooking",
-          "createdAt",
-          "updatedAt",
           "isExisting"
         ],
         "type": "object"
@@ -10379,6 +10379,137 @@
           "bookingCount",
           "branchIds",
           "serviceIds",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "EmployeeScopedClientResponseDto": {
+        "properties": {
+          "accountType": {
+            "description": "Account type",
+            "enum": [
+              "full",
+              "walk_in"
+            ],
+            "example": "full",
+            "type": "string"
+          },
+          "avatarUrl": {
+            "description": "Avatar image URL",
+            "example": "https://cdn.example.com/avatars/sara.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "description": "Date of birth (ISO 8601)",
+            "example": "1990-06-15T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "example": "sara@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name",
+            "example": "Sara",
+            "nullable": true,
+            "type": "string"
+          },
+          "gender": {
+            "description": "Gender (lowercase)",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "example": "female",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Client UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the account is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "lastBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Most recent past booking (populated for list results; null on detail, create and update)",
+            "nullable": true,
+            "type": "object"
+          },
+          "lastName": {
+            "description": "Last name",
+            "example": "Al-Harbi",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Sara Al-Harbi",
+            "type": "string"
+          },
+          "nextBooking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingSummaryDto"
+              }
+            ],
+            "description": "Next future booking (populated for list results; null on detail, create and update)",
+            "nullable": true,
+            "type": "object"
+          },
+          "phone": {
+            "description": "Mobile phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential client reference",
+            "example": 1024,
+            "type": "number"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "name",
+          "firstName",
+          "lastName",
+          "phone",
+          "email",
+          "dateOfBirth",
+          "gender",
+          "avatarUrl",
+          "accountType",
+          "isActive",
+          "lastBooking",
+          "nextBooking",
           "createdAt",
           "updatedAt"
         ],
@@ -13984,13 +14115,26 @@
       "PaginatedClientsDto": {
         "properties": {
           "items": {
+            "description": "Clients on the requested page",
             "items": {
-              "$ref": "#/components/schemas/ClientResponseDto"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ClientResponseDto"
+                },
+                {
+                  "$ref": "#/components/schemas/EmployeeScopedClientResponseDto"
+                }
+              ]
             },
             "type": "array"
           },
           "meta": {
-            "$ref": "#/components/schemas/ListMetaDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata for the full result set"
           }
         },
         "required": [
@@ -41197,11 +41341,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientResponseDto"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ClientResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmployeeScopedClientResponseDto"
+                    }
+                  ]
                 }
               }
             },
-            "description": "Client record"
+            "description": "Client record (shape depends on the caller role)"
           },
           "400": {
             "content": {
