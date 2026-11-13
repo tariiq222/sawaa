@@ -8,6 +8,9 @@ import type { MinioService } from '../../../infrastructure/storage/minio.service
 /** Package option row (Prisma SessionPackage with groups/items) as read by the family decorators. */
 export type FamilyOptionSource = Omit<GroupedCatalogPackage, 'items'> & {
   id: string;
+  /** `SessionPackage.modelVersion` is `PackageModelVersion @default(LEGACY)` (non-null);
+   *  requiring it here keeps the decorated family option's value exact. */
+  modelVersion: NonNullable<GroupedCatalogPackage['modelVersion']>;
   familyId?: string | null;
   nameAr: string;
   nameEn?: string | null;

@@ -16,6 +16,15 @@ import type {
   PackageConstraintInput,
   PackageConstraintResponse,
 } from "./types/package"
+
+/**
+ * The subset of a persisted constraint row the editor hydrates from. The wire
+ * row also carries `id`/`constraintId`, but this module never reads them, so
+ * callers may pass either the full row or a trimmed fixture.
+ */
+export type PackageConstraintRead = Pick<PackageConstraintResponse, "dimension" | "mode"> & {
+  targets: Array<Pick<PackageConstraintResponse["targets"][number], "targetId">>
+}
 import type { PackageItemFormData, ScopeFormData } from "./schemas/package.schema"
 
 const EMPTY_SCOPE: ScopeFormData = { mode: "ANY", ids: [] }
@@ -70,7 +79,7 @@ export function scopesToConstraints(item: PackageItemFormData): PackageConstrain
 
 /** Preserve the exact constraint rows while an existing item remains untouched. */
 export function responseConstraintsToInputs(
-  constraints: PackageConstraintResponse[] | undefined,
+  constraints: PackageConstraintRead[] | undefined,
 ): PackageConstraintInput[] | undefined {
   if (!constraints || constraints.length === 0) return undefined
   return constraints.map((constraint) => ({
@@ -99,7 +108,7 @@ export function itemToScopes(item: {
   serviceId: string | null
   employeeId: string | null
   durationOptionId: string | null
-  constraints?: PackageConstraintResponse[]
+  constraints?: PackageConstraintRead[]
 }): {
   service: ScopeFormData
   practitioner: ScopeFormData
@@ -108,7 +117,7 @@ export function itemToScopes(item: {
 } {
   if (item.constraints && item.constraints.length > 0) {
     const byDim = new Map(item.constraints.map((c) => [c.dimension, c]))
-    const scopeOf = (dim: PackageConstraintResponse["dimension"]): ScopeFormData => {
+    const scopeOf = (dim: PackageConstraintRead["dimension"]): ScopeFormData => {
       const c = byDim.get(dim)
       if (!c || c.mode === "ANY") return { mode: "ANY", ids: [] }
       return { mode: c.mode, ids: c.targets.map((t) => t.targetId) }

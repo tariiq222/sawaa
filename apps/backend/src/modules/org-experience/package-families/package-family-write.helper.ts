@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { DiscountType, type Prisma } from '@prisma/client';
+import { DiscountType, type GroupSequenceMode, type Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { PriceResolverService } from '../services/price-resolver.service';
 import { resolvePackageGroupOfferings, validateGroupedPackageStorageBounds, type PackageGroupInputLike } from '../session-packages/package-group-offering.helper';
@@ -37,7 +37,9 @@ export async function writeGroupedFamilyOption(
   validateGroupedPackageStorageBounds(prices, option.globalDiscount);
   allocateSessionNet(prices, option.globalDiscount as unknown as GlobalDiscount);
 
-  const groupRows = offerings.map((group, index) => ({
+  // `randomUUID()` is typed as a template-literal string; widen it so the
+  // returned group ids have the persisted column's `string` type.
+  const groupRows: Array<{ id: string; key: string; label: string | null; serviceId: string; employeeId: string; sequenceMode: GroupSequenceMode; sortOrder: number }> = offerings.map((group, index) => ({
     id: randomUUID(),
     key: group.key,
     label: group.label ?? null,

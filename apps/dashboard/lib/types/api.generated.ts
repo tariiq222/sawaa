@@ -16356,6 +16356,25 @@ export interface components {
             /** @description Target IDs for INCLUDE/EXCLUDE. Empty/omitted for ANY. */
             targetIds?: string[];
         };
+        PackageConstraintTargetRecordDto: {
+            /**
+             * Format: uuid
+             * @description Owning constraint UUID
+             * @example 00000000-0000-4000-a000-000000000060
+             */
+            constraintId: string;
+            /**
+             * Format: uuid
+             * @description Constraint target row UUID
+             * @example 00000000-0000-4000-a000-000000000070
+             */
+            id: string;
+            /**
+             * @description Target value: service/employee/duration UUID, or a delivery type
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            targetId: string;
+        };
         PackageCreditRecordDto: {
             /**
              * Format: date-time
@@ -16450,6 +16469,164 @@ export interface components {
              */
             usedQuantity: number;
         };
+        PackageDetailResponseDto: {
+            /**
+             * Format: date-time
+             * @description Soft-archive instant, or null while the package is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Package-level discount type (deprecated; per-item discounts are authoritative)
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Package-level discount value (deprecated), decimal string
+             * @example 0
+             */
+            discountValue: string;
+            /**
+             * @description Owning package family UUID, or null for a standalone package
+             * @example null
+             */
+            familyId: string | null;
+            /** @description Package-wide discount derived from the stored columns */
+            globalDiscount: components["schemas"]["PackageNoGlobalDiscountDto"] | components["schemas"]["PackagePercentageGlobalDiscountDto"] | components["schemas"]["PackageFixedGlobalDiscountDto"];
+            /** @description Editor projection of the groups (empty for LEGACY packages) */
+            groups: components["schemas"]["PackageGroupReadDto"][];
+            /**
+             * @description Icon background colour (hex), or null
+             * @example #FFD8A8
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name, or null
+             * @example package
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Stored image reference, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the package is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the package is visible in the public catalog
+             * @example false
+             */
+            isPublic: boolean;
+            /** @description Persisted items with their constraints */
+            items: components["schemas"]["PackageItemRecordDto"][];
+            /**
+             * @description Catalog model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Arabic package name
+             * @example أربع جلسات استشارة
+             */
+            nameAr: string;
+            /**
+             * @description English package name
+             * @example Four consultation sessions
+             */
+            nameEn: string | null;
+            /**
+             * @description Package-level practitioner UUID; null for a general package
+             * @example null
+             */
+            ownerEmployeeId: string | null;
+            /** @description Canonical computed price breakdown */
+            price: components["schemas"]["PackagePriceBreakdownDto"];
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PackageDisplayGroupDto: {
+            /**
+             * @description Practitioner display name
+             * @example د. خالد
+             */
+            employeeName: string;
+            /**
+             * @description Stable editor key
+             * @example group-1
+             */
+            key: string;
+            /**
+             * @description Group label, or null
+             * @example null
+             */
+            label: string | null;
+            /**
+             * @description Service display name (Arabic)
+             * @example استشارة أسرية
+             */
+            serviceNameAr: string;
+            /**
+             * @description Service display name (English)
+             * @example Family consultation
+             */
+            serviceNameEn: string | null;
+            /** @description Display sessions in position order */
+            sessions: components["schemas"]["PackageDisplaySessionDto"][];
+        };
+        PackageDisplaySessionDto: {
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Zero-based session position inside the group
+             * @example 0
+             */
+            position: number;
+        };
         PackageFamilyOptionDto: {
             /** @description Option-wide discount */
             globalDiscount: components["schemas"]["GlobalDiscountDto"];
@@ -16481,8 +16658,939 @@ export interface components {
              */
             nameEn?: string;
         };
+        PackageFamilyOptionResponseDto: {
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /** @description Read-only display labels; omitted when they cannot be resolved */
+            displayGroups?: components["schemas"]["PackageDisplayGroupDto"][];
+            /**
+             * @description Owning family UUID, or null
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            familyId: string | null;
+            /** @description Option-wide discount derived from the stored columns */
+            globalDiscount: components["schemas"]["PackageNoGlobalDiscountDto"] | components["schemas"]["PackagePercentageGlobalDiscountDto"] | components["schemas"]["PackageFixedGlobalDiscountDto"];
+            /** @description Editor projection of the option groups */
+            groups: components["schemas"]["PackageGroupReadDto"][];
+            /**
+             * Format: uuid
+             * @description Option (session package) UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Signed image URL, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the option can be purchased
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the option is shown publicly
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Stored model version
+             * @example GROUPED_V2
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Arabic option name
+             * @example 5 جلسات
+             */
+            nameAr: string;
+            /**
+             * @description English option name
+             * @example 5 sessions
+             */
+            nameEn: string | null;
+            /** @description Canonical computed price for this option */
+            price: components["schemas"]["PackagePriceBreakdownDto"];
+            /**
+             * @description Total sessions (paid + free, or grouped session count)
+             * @example 5
+             */
+            sessionCount: number;
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+        };
+        PackageFamilyResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant, or null while the family is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * Format: uuid
+             * @description Family UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Signed image URL, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the family is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the family is public
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description True when the row is a standalone package projected into the family shape
+             * @example false
+             */
+            isStandalone: boolean;
+            /**
+             * @description Arabic family name
+             * @example باقة الاستشارة
+             */
+            nameAr: string;
+            /**
+             * @description English family name
+             * @example Consultation pack
+             */
+            nameEn: string | null;
+            /** @description Sellable options of the family */
+            options: components["schemas"]["PackageFamilyOptionResponseDto"][];
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PackageFamilyWithVatResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant, or null while the family is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * Format: uuid
+             * @description Family UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Signed image URL, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the family is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the family is public
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description True when the row is a standalone package projected into the family shape
+             * @example false
+             */
+            isStandalone: boolean;
+            /**
+             * @description Arabic family name
+             * @example باقة الاستشارة
+             */
+            nameAr: string;
+            /**
+             * @description English family name
+             * @example Consultation pack
+             */
+            nameEn: string | null;
+            /** @description Sellable options of the family */
+            options: components["schemas"]["PackageFamilyOptionResponseDto"][];
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT rate the sale invoice adds on top of option prices (fraction; 0 unless enabled)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        PackageFixedGlobalDiscountDto: {
+            /**
+             * @description Fixed discount
+             * @example FIXED
+             * @enum {string}
+             */
+            type: "FIXED";
+            /**
+             * @description Fixed amount in integer halalas
+             * @example 5000
+             */
+            value: number;
+        };
+        PackageGroupedWriteResponseDto: {
+            /**
+             * Format: date-time
+             * @description Soft-archive instant, or null while the package is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Package-level discount type (deprecated; per-item discounts are authoritative)
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Package-level discount value (deprecated), decimal string
+             * @example 0
+             */
+            discountValue: string;
+            /**
+             * @description Owning package family UUID, or null for a standalone package
+             * @example null
+             */
+            familyId: string | null;
+            /** @description Persisted groups with their items */
+            groups: components["schemas"]["PackageRawGroupRecordDto"][];
+            /**
+             * @description Icon background colour (hex), or null
+             * @example #FFD8A8
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name, or null
+             * @example package
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Stored image reference, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the package is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the package is visible in the public catalog
+             * @example false
+             */
+            isPublic: boolean;
+            /** @description Persisted template items */
+            items: components["schemas"]["PackageItemRecordDto"][];
+            /**
+             * @description Catalog model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Arabic package name
+             * @example أربع جلسات استشارة
+             */
+            nameAr: string;
+            /**
+             * @description English package name
+             * @example Four consultation sessions
+             */
+            nameEn: string | null;
+            /**
+             * @description Package-level practitioner UUID; null for a general package
+             * @example null
+             */
+            ownerEmployeeId: string | null;
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PackageGroupReadDto: {
+            /**
+             * @description Key of the group that must complete first, or null
+             * @example null
+             */
+            dependsOnGroupKey: string | null;
+            /**
+             * Format: uuid
+             * @description Practitioner UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            employeeId: string;
+            /**
+             * @description Stable editor key
+             * @example group-1
+             */
+            key: string;
+            /**
+             * @description Optional group label; omitted when the stored label is null
+             * @example المرحلة الأولى
+             */
+            label?: string;
+            /**
+             * @description Session sequence behaviour
+             * @example ORDERED
+             * @enum {string}
+             */
+            sequenceMode: "ORDERED" | "UNORDERED";
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            serviceId: string;
+            /** @description Sessions in position order */
+            sessions: components["schemas"]["PackageGroupSessionReadDto"][];
+        };
+        PackageGroupSessionReadDto: {
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * Format: uuid
+             * @description Service duration-option UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            durationOptionId: string;
+            /**
+             * @description Stable editor key (the persisted item UUID)
+             * @example 00000000-0000-4000-a000-000000000050
+             */
+            key: string;
+            /**
+             * @description Zero-based session position inside the group
+             * @example 0
+             */
+            position: number;
+            /**
+             * @description Session price override in integer halalas
+             * @example 30000
+             */
+            unitPrice: number;
+        };
+        PackageItemConstraintRecordDto: {
+            /**
+             * @description Constrained dimension
+             * @example PRACTITIONER
+             * @enum {string}
+             */
+            dimension: "SERVICE" | "PRACTITIONER" | "DURATION" | "DELIVERY_TYPE";
+            /**
+             * Format: uuid
+             * @description Constraint row UUID
+             * @example 00000000-0000-4000-a000-000000000060
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Owning package item UUID
+             * @example 00000000-0000-4000-a000-000000000050
+             */
+            itemId: string;
+            /**
+             * @description Matching mode
+             * @example INCLUDE
+             * @enum {string}
+             */
+            mode: "ANY" | "INCLUDE" | "EXCLUDE";
+            /** @description Target values for INCLUDE/EXCLUDE (empty for ANY) */
+            targets: components["schemas"]["PackageConstraintTargetRecordDto"][];
+        };
+        PackageItemRecordDto: {
+            /** @description Eligibility constraints persisted for this item */
+            constraints: components["schemas"]["PackageItemConstraintRecordDto"][];
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Per-item discount type; null = no discount
+             * @example null
+             * @enum {string|null}
+             */
+            discountType: "PERCENTAGE" | "FIXED" | null;
+            /**
+             * @description Per-item discount value (0-100 for PERCENTAGE, integer halalas for FIXED), decimal string
+             * @example 0
+             */
+            discountValue: string;
+            /**
+             * @description Legacy single duration-option UUID (null for rule-based items)
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Legacy single-practitioner UUID (null for rule-based items)
+             * @example null
+             */
+            employeeId: string | null;
+            /**
+             * @description Free bonus session count
+             * @example 1
+             */
+            freeQuantity: number;
+            /**
+             * @description Owning group UUID for GROUPED_V2 items
+             * @example null
+             */
+            groupId: string | null;
+            /**
+             * Format: uuid
+             * @description Package item UUID
+             * @example 00000000-0000-4000-a000-000000000050
+             */
+            id: string;
+            /**
+             * @description Optional display label
+             * @example null
+             */
+            label: string | null;
+            /**
+             * Format: uuid
+             * @description Owning package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            packageId: string;
+            /**
+             * @description Paid session count
+             * @example 4
+             */
+            paidQuantity: number;
+            /**
+             * @description Legacy single-service UUID (null for rule-based items)
+             * @example null
+             */
+            serviceId: string | null;
+            /**
+             * @description Zero-based session position inside a GROUPED_V2 group
+             * @example null
+             */
+            sessionPosition: number | null;
+            /**
+             * @description Display order within the package
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * @description Fixed prepaid unit price in integer halalas, decimal string; null = derive
+             * @example 25000
+             */
+            unitPrice: string | null;
+        };
+        PackageItemUnitPriceDto: {
+            /**
+             * @description Duration-option UUID, or null for a rule-based item
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Resolved unit price in integer halalas
+             * @example 30000
+             */
+            unitPrice: number;
+        };
+        PackageLegacyWriteResponseDto: {
+            /**
+             * Format: date-time
+             * @description Soft-archive instant, or null while the package is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Package-level discount type (deprecated; per-item discounts are authoritative)
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Package-level discount value (deprecated), decimal string
+             * @example 0
+             */
+            discountValue: string;
+            /**
+             * @description Owning package family UUID, or null for a standalone package
+             * @example null
+             */
+            familyId: string | null;
+            /**
+             * @description Icon background colour (hex), or null
+             * @example #FFD8A8
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name, or null
+             * @example package
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Stored image reference, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the package is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the package is visible in the public catalog
+             * @example false
+             */
+            isPublic: boolean;
+            /** @description Persisted legacy items */
+            items: components["schemas"]["PackageItemRecordDto"][];
+            /**
+             * @description Catalog model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Arabic package name
+             * @example أربع جلسات استشارة
+             */
+            nameAr: string;
+            /**
+             * @description English package name
+             * @example Four consultation sessions
+             */
+            nameEn: string | null;
+            /**
+             * @description Package-level practitioner UUID; null for a general package
+             * @example null
+             */
+            ownerEmployeeId: string | null;
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PackageListRowDto: {
+            /**
+             * Format: date-time
+             * @description Soft-archive instant, or null while the package is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Computed discount total in integer halalas
+             * @example 12000
+             */
+            discountAmount: number;
+            /**
+             * @description Package-level discount type (deprecated; per-item discounts are authoritative)
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Package-level discount value (deprecated), decimal string
+             * @example 0
+             */
+            discountValue: string;
+            /**
+             * @description Owning package family UUID, or null for a standalone package
+             * @example null
+             */
+            familyId: string | null;
+            /**
+             * @description Computed final price in integer halalas
+             * @example 108000
+             */
+            finalPrice: number;
+            /**
+             * @description Computed value of free sessions in integer halalas
+             * @example 30000
+             */
+            freeValue: number;
+            /**
+             * @description Computed full value including free sessions, in integer halalas
+             * @example 150000
+             */
+            fullValue: number;
+            /** @description Package-wide discount derived from the stored columns */
+            globalDiscount: components["schemas"]["PackageNoGlobalDiscountDto"] | components["schemas"]["PackagePercentageGlobalDiscountDto"] | components["schemas"]["PackageFixedGlobalDiscountDto"];
+            /** @description Editor projection of the groups (empty for LEGACY packages) */
+            groups: components["schemas"]["PackageGroupReadDto"][];
+            /**
+             * @description Icon background colour (hex), or null
+             * @example #FFD8A8
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name, or null
+             * @example package
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Stored image reference, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the package is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the package is visible in the public catalog
+             * @example false
+             */
+            isPublic: boolean;
+            /** @description Persisted items with their constraints */
+            items: components["schemas"]["PackageItemRecordDto"][];
+            /**
+             * @description Catalog model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Arabic package name
+             * @example أربع جلسات استشارة
+             */
+            nameAr: string;
+            /**
+             * @description English package name
+             * @example Four consultation sessions
+             */
+            nameEn: string | null;
+            /**
+             * @description Package-level practitioner UUID; null for a general package
+             * @example null
+             */
+            ownerEmployeeId: string | null;
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * @description Computed subtotal in integer halalas
+             * @example 120000
+             */
+            subtotal: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT rate the sale invoice adds on top of finalPrice (fraction; 0 unless enabled)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        PackageNoGlobalDiscountDto: {
+            /**
+             * @description No discount
+             * @example NONE
+             * @enum {string}
+             */
+            type: "NONE";
+            /**
+             * @description Always zero for NONE
+             * @example 0
+             * @enum {number}
+             */
+            value: 0;
+        };
+        PackagePercentageGlobalDiscountDto: {
+            /**
+             * @description Percentage discount
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            type: "PERCENTAGE";
+            /**
+             * @description Percentage from 0 to 100
+             * @example 10
+             */
+            value: number;
+        };
+        PackagePriceBreakdownDto: {
+            /**
+             * @description Σ per-item discount in integer halalas
+             * @example 12000
+             */
+            discountAmount: number;
+            /**
+             * @description max(0, subtotal − discountAmount) in integer halalas
+             * @example 108000
+             */
+            finalPrice: number;
+            /**
+             * @description Σ value of free sessions in integer halalas
+             * @example 30000
+             */
+            freeValue: number;
+            /**
+             * @description Σ full value including free sessions, in integer halalas
+             * @example 150000
+             */
+            fullValue: number;
+            /** @description Per-item unit prices in item order */
+            itemUnitPrices: components["schemas"]["PackageItemUnitPriceDto"][];
+            /** @description Per-item price lines in item order */
+            lines: components["schemas"]["PackagePriceLineDto"][];
+            /**
+             * @description Σ payable in integer halalas
+             * @example 120000
+             */
+            subtotal: number;
+        };
+        PackagePriceLineDto: {
+            /**
+             * @description Item discount in integer halalas
+             * @example 12000
+             */
+            discountAmount: number;
+            /**
+             * @description Duration-option UUID, or null for a rule-based item
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description free × unitPrice in integer halalas
+             * @example 30000
+             */
+            freeValue: number;
+            /**
+             * @description (paid + free) × unitPrice in integer halalas
+             * @example 150000
+             */
+            fullValue: number;
+            /**
+             * @description payable − discountAmount in integer halalas
+             * @example 108000
+             */
+            net: number;
+            /**
+             * @description paid × unitPrice before the item discount
+             * @example 120000
+             */
+            payable: number;
+            /**
+             * @description Per-session price in integer halalas
+             * @example 30000
+             */
+            unitPrice: number;
+        };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
+        PackageRawGroupRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Group that must complete first, or null
+             * @example null
+             */
+            dependsOnGroupId: string | null;
+            /**
+             * Format: uuid
+             * @description Practitioner UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Group row UUID
+             * @example 00000000-0000-4000-a000-000000000061
+             */
+            id: string;
+            /** @description Persisted template items of this group */
+            items: components["schemas"]["PackageItemRecordDto"][];
+            /**
+             * @description Stable editor key
+             * @example group-1
+             */
+            key: string;
+            /**
+             * @description Optional group label
+             * @example null
+             */
+            label: string | null;
+            /**
+             * Format: uuid
+             * @description Owning package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            packageId: string;
+            /**
+             * @description Session sequence behaviour
+             * @example ORDERED
+             * @enum {string}
+             */
+            sequenceMode: "ORDERED" | "UNORDERED";
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            serviceId: string;
+            /**
+             * @description Group ordering
+             * @example 0
+             */
+            sortOrder: number;
+        };
         PaginatedBookingRowsDto: {
             /** @description Bookings on the requested page */
             items: components["schemas"]["BookingRowDto"][];
@@ -16530,6 +17638,12 @@ export interface components {
             items: components["schemas"]["NotificationResponseDto"][];
             /** @description Pagination metadata */
             meta: components["schemas"]["NotificationListMetaDto"];
+        };
+        PaginatedPackagesDto: {
+            /** @description Packages on the requested page */
+            items: components["schemas"]["PackageListRowDto"][];
+            /** @description Pagination metadata for the full result set */
+            meta: components["schemas"]["ListMetaDto"];
         };
         /**
          * @description Payment method used
@@ -34551,12 +35665,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Package families and their grouped options */
+            /** @description Package families and their grouped options, with the sale VAT rate */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageFamilyWithVatResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34609,12 +35725,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Package family created */
+            /** @description Package family created; returns the decorated family read */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageFamilyResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34671,7 +35789,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageFamilyResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34798,12 +35918,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Package family updated */
+            /** @description Package family updated; returns the decorated family read */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageFamilyResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34852,6 +35974,10 @@ export interface operations {
                 isPublic?: boolean;
                 /** @description Search by Arabic or English name (case-insensitive contains) */
                 search?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -34859,12 +35985,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paginated list of session packages */
+            /** @description Paginated list of session packages with their computed price */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedPackagesDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34917,12 +36045,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Session package created */
+            /** @description Session package created (raw persisted row: legacy items, or grouped groups and items) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageLegacyWriteResponseDto"] | components["schemas"]["PackageGroupedWriteResponseDto"];
+                };
             };
             /** @description Validation failed (invalid items, missing employee-service link, or invalid discount) */
             400: {
@@ -34977,7 +36107,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35104,12 +36236,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Session package updated */
+            /** @description Session package updated (raw persisted row: legacy items, or grouped groups and items) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackageLegacyWriteResponseDto"] | components["schemas"]["PackageGroupedWriteResponseDto"];
+                };
             };
             /** @description Validation failed (invalid items or invalid discount) */
             400: {

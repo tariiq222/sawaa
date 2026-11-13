@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import type { PackageModelVersion } from '@prisma/client';
 import type {
   PackagePriceResult,
   PackageLinePrice,
@@ -34,7 +35,9 @@ export type GroupedCatalogGroup = {
 
 export type GroupedCatalogPackage = {
   id?: string;
-  modelVersion?: string;
+  /** The Prisma column is a non-nullable `PackageModelVersion`; typing it here keeps
+   *  every decorated read/write payload's `modelVersion` exact instead of `string`. */
+  modelVersion?: PackageModelVersion;
   discountType?: string;
   discountValue?: unknown;
   groups?: GroupedCatalogGroup[];
@@ -74,7 +77,7 @@ function discountFromPackage(pkg: GroupedCatalogPackage): GlobalDiscount {
 
 /** Normalize Prisma V2 group rows into the editor/purchase-facing contract. */
 export function decorateGroupedPackage<T extends GroupedCatalogPackage>(pkg: T): Omit<T, 'groups'> & {
-  modelVersion: string;
+  modelVersion: PackageModelVersion;
   groups: PackageGroupInput[];
   globalDiscount: GlobalDiscount;
 } {

@@ -156,3 +156,79 @@ function typecheckCategoriesAndNotifications() {
 }
 
 void typecheckCategoriesAndNotifications
+
+/**
+ * MNT-08 packages unit: the six routes keep their documented success bodies.
+ * List rows carry the flattened computed price; the detail carries a nested
+ * breakdown; POST/PATCH return the raw persisted row.
+ */
+function typecheckPackageRoutes() {
+  const list = openApi.get("/api/v1/dashboard/organization/packages", {
+    query: { page: 1, limit: 20, isActive: true, isPublic: false },
+  })
+  const expectedList: Promise<{
+    items: Array<{
+      id: string
+      modelVersion: "LEGACY" | "GROUPED_V2"
+      subtotal: number
+      finalPrice: number
+      discountValue: string
+      vatRate: number
+    }>
+    meta: { total: number; page: number; hasNextPage: boolean }
+  }> = list
+  void expectedList
+
+  const detail = openApi.get("/api/v1/dashboard/organization/packages/{packageId}", {
+    path: { packageId: "pkg-1" },
+  })
+  const expectedDetail: Promise<{
+    id: string
+    price: { finalPrice: number; lines: Array<{ net: number }> }
+  }> = detail
+  void expectedDetail
+  // The detail payload carries the price as a breakdown; `subtotal` is a
+  // list-row column, so a detail response cannot satisfy a list-row annotation.
+  // @ts-expect-error A detail payload has no flattened list-row price columns.
+  const detailAsListRow: Promise<{ subtotal: number }> = detail
+  void detailAsListRow
+
+  const created = openApi.post("/api/v1/dashboard/organization/packages", {
+    body: {
+      nameAr: "باقة",
+      isActive: true,
+      isPublic: false,
+      sortOrder: 0,
+      modelVersion: "GROUPED_V2",
+      groups: [],
+      globalDiscount: { type: "NONE", value: 0 },
+    },
+  })
+  // POST/PATCH bodies accept either model version, so the documented response is a union.
+  const expectedCreate: Promise<{ id: string }> = created
+  void expectedCreate
+
+  const updated = openApi.patch("/api/v1/dashboard/organization/packages/{packageId}", {
+    path: { packageId: "pkg-1" },
+    body: { isActive: false },
+  })
+  const expectedUpdate: Promise<{ id: string }> = updated
+  void expectedUpdate
+
+  const families = openApi.get("/api/v1/dashboard/organization/package-families")
+  const expectedFamilies: Promise<Array<{ id: string; isStandalone: boolean; vatRate: number; options: Array<{ sessionCount: number; price: { finalPrice: number } }> }>> = families
+  void expectedFamilies
+
+  const archived = openApi.delete("/api/v1/dashboard/organization/packages/{packageId}", {
+    path: { packageId: "pkg-1" },
+  })
+  const expectedArchive: Promise<void> = archived
+  void expectedArchive
+
+  openApi.get("/api/v1/dashboard/organization/packages", {
+    // @ts-expect-error The list operation has no arbitrary query keys.
+    query: { unsupported: true },
+  })
+}
+
+void typecheckPackageRoutes

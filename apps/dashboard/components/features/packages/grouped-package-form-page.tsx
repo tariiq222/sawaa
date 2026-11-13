@@ -24,9 +24,9 @@ import { buildGroupedPackagePayload, packageSubmitIssues } from "@/lib/package-g
 import { collectPackageErrorPaths, focusPackageError } from "@/lib/package-validation"
 import { packageEditPath } from "@/lib/package-editor-navigation"
 import { packageErrorTranslationKey, showPackageApiError } from "@/lib/package-errors"
-import type { SessionPackage } from "@/lib/types/package"
+import type { PackageEditorEntity } from "@/lib/types/package"
 
-type Props = { mode: "create"; packageId?: never; initialPackage?: null } | { mode: "edit"; packageId: string; initialPackage?: SessionPackage | null }
+type Props = { mode: "create"; packageId?: never; initialPackage?: null } | { mode: "edit"; packageId: string; initialPackage?: PackageEditorEntity | null }
 type Step = 1 | 2 | 3 | 4
 const GROUPED_STEP_LABELS = ["packages.grouped.details.title", "packages.grouped.steps.groups", "packages.grouped.pricing.title", "packages.steps.review"] as const
 

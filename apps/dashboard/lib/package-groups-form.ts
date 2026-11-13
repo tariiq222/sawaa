@@ -2,7 +2,7 @@ import { calculateGroupedSessionNet, sarToHalalas } from "@sawaa/shared/money"
 import { groupedPackageInputSchema } from "@sawaa/shared/schemas"
 import type { GlobalDiscount, PackageGroupInput } from "@sawaa/shared/types"
 import type { UseFormRegisterReturn } from "react-hook-form"
-import type { SessionPackage, CreateSessionPackagePayload } from "@/lib/types/package"
+import type { PackageEditorEntity, CreateSessionPackagePayload } from "@/lib/types/package"
 import type { GroupedGroupFormData, GroupedPackageFormData } from "@/lib/schemas/package-groups.schema"
 
 let keyCounter = 0
@@ -112,7 +112,7 @@ export function packageSubmitIssues(error: unknown): PackageSubmitIssue[] | null
   })
 }
 
-export function groupedFormDefaults(pkg?: SessionPackage | null): GroupedPackageFormData {
+export function groupedFormDefaults(pkg?: PackageEditorEntity | null): GroupedPackageFormData {
   if (!pkg || pkg.modelVersion !== "GROUPED_V2" || !pkg.groups?.length) {
     return {
       nameAr: "",

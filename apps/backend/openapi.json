@@ -15488,6 +15488,33 @@
         ],
         "type": "object"
       },
+      "PackageConstraintTargetRecordDto": {
+        "properties": {
+          "constraintId": {
+            "description": "Owning constraint UUID",
+            "example": "00000000-0000-4000-a000-000000000060",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Constraint target row UUID",
+            "example": "00000000-0000-4000-a000-000000000070",
+            "format": "uuid",
+            "type": "string"
+          },
+          "targetId": {
+            "description": "Target value: service/employee/duration UUID, or a delivery type",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "constraintId",
+          "targetId"
+        ],
+        "type": "object"
+      },
       "PackageCreditRecordDto": {
         "properties": {
           "createdAt": {
@@ -15619,6 +15646,264 @@
         ],
         "type": "object"
       },
+      "PackageDetailResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Soft-archive instant, or null while the package is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Package-level discount type (deprecated; per-item discounts are authoritative)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Package-level discount value (deprecated), decimal string",
+            "example": "0",
+            "type": "string"
+          },
+          "familyId": {
+            "description": "Owning package family UUID, or null for a standalone package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "globalDiscount": {
+            "description": "Package-wide discount derived from the stored columns",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PackageNoGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackagePercentageGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackageFixedGlobalDiscountDto"
+              }
+            ]
+          },
+          "groups": {
+            "description": "Editor projection of the groups (empty for LEGACY packages)",
+            "items": {
+              "$ref": "#/components/schemas/PackageGroupReadDto"
+            },
+            "type": "array"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": "#FFD8A8",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name, or null",
+            "example": "package",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the package is visible in the public catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Persisted items with their constraints",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemRecordDto"
+            },
+            "type": "array"
+          },
+          "modelVersion": {
+            "description": "Catalog model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic package name",
+            "example": "أربع جلسات استشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English package name",
+            "example": "Four consultation sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner UUID; null for a general package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PackagePriceBreakdownDto"
+              }
+            ],
+            "description": "Canonical computed price breakdown"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "familyId",
+          "ownerEmployeeId",
+          "modelVersion",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "discountType",
+          "discountValue",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "items",
+          "groups",
+          "globalDiscount",
+          "price"
+        ],
+        "type": "object"
+      },
+      "PackageDisplayGroupDto": {
+        "properties": {
+          "employeeName": {
+            "description": "Practitioner display name",
+            "example": "د. خالد",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key",
+            "example": "group-1",
+            "type": "string"
+          },
+          "label": {
+            "description": "Group label, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceNameAr": {
+            "description": "Service display name (Arabic)",
+            "example": "استشارة أسرية",
+            "type": "string"
+          },
+          "serviceNameEn": {
+            "description": "Service display name (English)",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessions": {
+            "description": "Display sessions in position order",
+            "items": {
+              "$ref": "#/components/schemas/PackageDisplaySessionDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "serviceNameAr",
+          "serviceNameEn",
+          "employeeName",
+          "sessions"
+        ],
+        "type": "object"
+      },
+      "PackageDisplaySessionDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery channel",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "position": {
+            "description": "Zero-based session position inside the group",
+            "example": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "position",
+          "durationMins",
+          "deliveryType"
+        ],
+        "type": "object"
+      },
       "PackageFamilyOptionDto": {
         "properties": {
           "globalDiscount": {
@@ -15669,6 +15954,1326 @@
         ],
         "type": "object"
       },
+      "PackageFamilyOptionResponseDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "displayGroups": {
+            "description": "Read-only display labels; omitted when they cannot be resolved",
+            "items": {
+              "$ref": "#/components/schemas/PackageDisplayGroupDto"
+            },
+            "type": "array"
+          },
+          "familyId": {
+            "description": "Owning family UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "nullable": true,
+            "type": "string"
+          },
+          "globalDiscount": {
+            "description": "Option-wide discount derived from the stored columns",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PackageNoGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackagePercentageGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackageFixedGlobalDiscountDto"
+              }
+            ]
+          },
+          "groups": {
+            "description": "Editor projection of the option groups",
+            "items": {
+              "$ref": "#/components/schemas/PackageGroupReadDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Option (session package) UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Signed image URL, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the option can be purchased",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the option is shown publicly",
+            "example": false,
+            "type": "boolean"
+          },
+          "modelVersion": {
+            "description": "Stored model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "GROUPED_V2",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic option name",
+            "example": "5 جلسات",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English option name",
+            "example": "5 sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PackagePriceBreakdownDto"
+              }
+            ],
+            "description": "Canonical computed price for this option"
+          },
+          "sessionCount": {
+            "description": "Total sessions (paid + free, or grouped session count)",
+            "example": 5,
+            "type": "integer"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "familyId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "modelVersion",
+          "groups",
+          "globalDiscount",
+          "sessionCount",
+          "price"
+        ],
+        "type": "object"
+      },
+      "PackageFamilyResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant, or null while the family is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Family UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Signed image URL, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the family is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the family is public",
+            "example": false,
+            "type": "boolean"
+          },
+          "isStandalone": {
+            "description": "True when the row is a standalone package projected into the family shape",
+            "example": false,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "nullable": true,
+            "type": "string"
+          },
+          "options": {
+            "description": "Sellable options of the family",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionResponseDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isStandalone",
+          "options"
+        ],
+        "type": "object"
+      },
+      "PackageFamilyWithVatResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant, or null while the family is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Family UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Signed image URL, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the family is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the family is public",
+            "example": false,
+            "type": "boolean"
+          },
+          "isStandalone": {
+            "description": "True when the row is a standalone package projected into the family shape",
+            "example": false,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "nullable": true,
+            "type": "string"
+          },
+          "options": {
+            "description": "Sellable options of the family",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionResponseDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vatRate": {
+            "description": "VAT rate the sale invoice adds on top of option prices (fraction; 0 unless enabled)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isStandalone",
+          "options",
+          "vatRate"
+        ],
+        "type": "object"
+      },
+      "PackageFixedGlobalDiscountDto": {
+        "properties": {
+          "type": {
+            "description": "Fixed discount",
+            "enum": [
+              "FIXED"
+            ],
+            "example": "FIXED",
+            "type": "string"
+          },
+          "value": {
+            "description": "Fixed amount in integer halalas",
+            "example": 5000,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "PackageGroupedWriteResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Soft-archive instant, or null while the package is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Package-level discount type (deprecated; per-item discounts are authoritative)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Package-level discount value (deprecated), decimal string",
+            "example": "0",
+            "type": "string"
+          },
+          "familyId": {
+            "description": "Owning package family UUID, or null for a standalone package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "groups": {
+            "description": "Persisted groups with their items",
+            "items": {
+              "$ref": "#/components/schemas/PackageRawGroupRecordDto"
+            },
+            "type": "array"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": "#FFD8A8",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name, or null",
+            "example": "package",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the package is visible in the public catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Persisted template items",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemRecordDto"
+            },
+            "type": "array"
+          },
+          "modelVersion": {
+            "description": "Catalog model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic package name",
+            "example": "أربع جلسات استشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English package name",
+            "example": "Four consultation sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner UUID; null for a general package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "familyId",
+          "ownerEmployeeId",
+          "modelVersion",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "discountType",
+          "discountValue",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "items",
+          "groups"
+        ],
+        "type": "object"
+      },
+      "PackageGroupReadDto": {
+        "properties": {
+          "dependsOnGroupKey": {
+            "description": "Key of the group that must complete first, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Practitioner UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key",
+            "example": "group-1",
+            "type": "string"
+          },
+          "label": {
+            "description": "Optional group label; omitted when the stored label is null",
+            "example": "المرحلة الأولى",
+            "type": "string"
+          },
+          "sequenceMode": {
+            "description": "Session sequence behaviour",
+            "enum": [
+              "ORDERED",
+              "UNORDERED"
+            ],
+            "example": "ORDERED",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sessions": {
+            "description": "Sessions in position order",
+            "items": {
+              "$ref": "#/components/schemas/PackageGroupSessionReadDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "serviceId",
+          "employeeId",
+          "sequenceMode",
+          "dependsOnGroupKey",
+          "sessions"
+        ],
+        "type": "object"
+      },
+      "PackageGroupSessionReadDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery channel",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Service duration-option UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable editor key (the persisted item UUID)",
+            "example": "00000000-0000-4000-a000-000000000050",
+            "type": "string"
+          },
+          "position": {
+            "description": "Zero-based session position inside the group",
+            "example": 0,
+            "type": "integer"
+          },
+          "unitPrice": {
+            "description": "Session price override in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "position",
+          "durationOptionId",
+          "deliveryType",
+          "unitPrice"
+        ],
+        "type": "object"
+      },
+      "PackageItemConstraintRecordDto": {
+        "properties": {
+          "dimension": {
+            "description": "Constrained dimension",
+            "enum": [
+              "SERVICE",
+              "PRACTITIONER",
+              "DURATION",
+              "DELIVERY_TYPE"
+            ],
+            "example": "PRACTITIONER",
+            "type": "string"
+          },
+          "id": {
+            "description": "Constraint row UUID",
+            "example": "00000000-0000-4000-a000-000000000060",
+            "format": "uuid",
+            "type": "string"
+          },
+          "itemId": {
+            "description": "Owning package item UUID",
+            "example": "00000000-0000-4000-a000-000000000050",
+            "format": "uuid",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Matching mode",
+            "enum": [
+              "ANY",
+              "INCLUDE",
+              "EXCLUDE"
+            ],
+            "example": "INCLUDE",
+            "type": "string"
+          },
+          "targets": {
+            "description": "Target values for INCLUDE/EXCLUDE (empty for ANY)",
+            "items": {
+              "$ref": "#/components/schemas/PackageConstraintTargetRecordDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "itemId",
+          "dimension",
+          "mode",
+          "targets"
+        ],
+        "type": "object"
+      },
+      "PackageItemRecordDto": {
+        "properties": {
+          "constraints": {
+            "description": "Eligibility constraints persisted for this item",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemConstraintRecordDto"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Per-item discount type; null = no discount",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Per-item discount value (0-100 for PERCENTAGE, integer halalas for FIXED), decimal string",
+            "example": "0",
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Legacy single duration-option UUID (null for rule-based items)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Legacy single-practitioner UUID (null for rule-based items)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "freeQuantity": {
+            "description": "Free bonus session count",
+            "example": 1,
+            "type": "integer"
+          },
+          "groupId": {
+            "description": "Owning group UUID for GROUPED_V2 items",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package item UUID",
+            "example": "00000000-0000-4000-a000-000000000050",
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "description": "Optional display label",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "packageId": {
+            "description": "Owning package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "paidQuantity": {
+            "description": "Paid session count",
+            "example": 4,
+            "type": "integer"
+          },
+          "serviceId": {
+            "description": "Legacy single-service UUID (null for rule-based items)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionPosition": {
+            "description": "Zero-based session position inside a GROUPED_V2 group",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "sortOrder": {
+            "description": "Display order within the package",
+            "example": 0,
+            "type": "integer"
+          },
+          "unitPrice": {
+            "description": "Fixed prepaid unit price in integer halalas, decimal string; null = derive",
+            "example": "25000",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "packageId",
+          "groupId",
+          "sessionPosition",
+          "serviceId",
+          "employeeId",
+          "durationOptionId",
+          "unitPrice",
+          "label",
+          "paidQuantity",
+          "freeQuantity",
+          "discountType",
+          "discountValue",
+          "sortOrder",
+          "createdAt",
+          "constraints"
+        ],
+        "type": "object"
+      },
+      "PackageItemUnitPriceDto": {
+        "properties": {
+          "durationOptionId": {
+            "description": "Duration-option UUID, or null for a rule-based item",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "unitPrice": {
+            "description": "Resolved unit price in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "durationOptionId",
+          "unitPrice"
+        ],
+        "type": "object"
+      },
+      "PackageLegacyWriteResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Soft-archive instant, or null while the package is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Package-level discount type (deprecated; per-item discounts are authoritative)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Package-level discount value (deprecated), decimal string",
+            "example": "0",
+            "type": "string"
+          },
+          "familyId": {
+            "description": "Owning package family UUID, or null for a standalone package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": "#FFD8A8",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name, or null",
+            "example": "package",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the package is visible in the public catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Persisted legacy items",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemRecordDto"
+            },
+            "type": "array"
+          },
+          "modelVersion": {
+            "description": "Catalog model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic package name",
+            "example": "أربع جلسات استشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English package name",
+            "example": "Four consultation sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner UUID; null for a general package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "familyId",
+          "ownerEmployeeId",
+          "modelVersion",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "discountType",
+          "discountValue",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "items"
+        ],
+        "type": "object"
+      },
+      "PackageListRowDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Soft-archive instant, or null while the package is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "discountAmount": {
+            "description": "Computed discount total in integer halalas",
+            "example": 12000,
+            "type": "integer"
+          },
+          "discountType": {
+            "description": "Package-level discount type (deprecated; per-item discounts are authoritative)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Package-level discount value (deprecated), decimal string",
+            "example": "0",
+            "type": "string"
+          },
+          "familyId": {
+            "description": "Owning package family UUID, or null for a standalone package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "finalPrice": {
+            "description": "Computed final price in integer halalas",
+            "example": 108000,
+            "type": "integer"
+          },
+          "freeValue": {
+            "description": "Computed value of free sessions in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          },
+          "fullValue": {
+            "description": "Computed full value including free sessions, in integer halalas",
+            "example": 150000,
+            "type": "integer"
+          },
+          "globalDiscount": {
+            "description": "Package-wide discount derived from the stored columns",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PackageNoGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackagePercentageGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackageFixedGlobalDiscountDto"
+              }
+            ]
+          },
+          "groups": {
+            "description": "Editor projection of the groups (empty for LEGACY packages)",
+            "items": {
+              "$ref": "#/components/schemas/PackageGroupReadDto"
+            },
+            "type": "array"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": "#FFD8A8",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name, or null",
+            "example": "package",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the package is visible in the public catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Persisted items with their constraints",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemRecordDto"
+            },
+            "type": "array"
+          },
+          "modelVersion": {
+            "description": "Catalog model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic package name",
+            "example": "أربع جلسات استشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English package name",
+            "example": "Four consultation sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner UUID; null for a general package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "subtotal": {
+            "description": "Computed subtotal in integer halalas",
+            "example": 120000,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vatRate": {
+            "description": "VAT rate the sale invoice adds on top of finalPrice (fraction; 0 unless enabled)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "familyId",
+          "ownerEmployeeId",
+          "modelVersion",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "discountType",
+          "discountValue",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "items",
+          "groups",
+          "globalDiscount",
+          "subtotal",
+          "discountAmount",
+          "finalPrice",
+          "fullValue",
+          "freeValue",
+          "vatRate"
+        ],
+        "type": "object"
+      },
+      "PackageNoGlobalDiscountDto": {
+        "properties": {
+          "type": {
+            "description": "No discount",
+            "enum": [
+              "NONE"
+            ],
+            "example": "NONE",
+            "type": "string"
+          },
+          "value": {
+            "description": "Always zero for NONE",
+            "enum": [
+              0
+            ],
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "PackagePercentageGlobalDiscountDto": {
+        "properties": {
+          "type": {
+            "description": "Percentage discount",
+            "enum": [
+              "PERCENTAGE"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "value": {
+            "description": "Percentage from 0 to 100",
+            "example": 10,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "PackagePriceBreakdownDto": {
+        "properties": {
+          "discountAmount": {
+            "description": "Σ per-item discount in integer halalas",
+            "example": 12000,
+            "type": "integer"
+          },
+          "finalPrice": {
+            "description": "max(0, subtotal − discountAmount) in integer halalas",
+            "example": 108000,
+            "type": "integer"
+          },
+          "freeValue": {
+            "description": "Σ value of free sessions in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          },
+          "fullValue": {
+            "description": "Σ full value including free sessions, in integer halalas",
+            "example": 150000,
+            "type": "integer"
+          },
+          "itemUnitPrices": {
+            "description": "Per-item unit prices in item order",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemUnitPriceDto"
+            },
+            "type": "array"
+          },
+          "lines": {
+            "description": "Per-item price lines in item order",
+            "items": {
+              "$ref": "#/components/schemas/PackagePriceLineDto"
+            },
+            "type": "array"
+          },
+          "subtotal": {
+            "description": "Σ payable in integer halalas",
+            "example": 120000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "subtotal",
+          "discountAmount",
+          "finalPrice",
+          "fullValue",
+          "freeValue",
+          "itemUnitPrices",
+          "lines"
+        ],
+        "type": "object"
+      },
+      "PackagePriceLineDto": {
+        "properties": {
+          "discountAmount": {
+            "description": "Item discount in integer halalas",
+            "example": 12000,
+            "type": "integer"
+          },
+          "durationOptionId": {
+            "description": "Duration-option UUID, or null for a rule-based item",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "freeValue": {
+            "description": "free × unitPrice in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          },
+          "fullValue": {
+            "description": "(paid + free) × unitPrice in integer halalas",
+            "example": 150000,
+            "type": "integer"
+          },
+          "net": {
+            "description": "payable − discountAmount in integer halalas",
+            "example": 108000,
+            "type": "integer"
+          },
+          "payable": {
+            "description": "paid × unitPrice before the item discount",
+            "example": 120000,
+            "type": "integer"
+          },
+          "unitPrice": {
+            "description": "Per-session price in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "durationOptionId",
+          "unitPrice",
+          "fullValue",
+          "freeValue",
+          "payable",
+          "discountAmount",
+          "net"
+        ],
+        "type": "object"
+      },
       "PackagePurchaseStatus": {
         "enum": [
           "PENDING",
@@ -15677,6 +17282,92 @@
           "REFUNDED"
         ],
         "type": "string"
+      },
+      "PackageRawGroupRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dependsOnGroupId": {
+            "description": "Group that must complete first, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Practitioner UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Group row UUID",
+            "example": "00000000-0000-4000-a000-000000000061",
+            "format": "uuid",
+            "type": "string"
+          },
+          "items": {
+            "description": "Persisted template items of this group",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemRecordDto"
+            },
+            "type": "array"
+          },
+          "key": {
+            "description": "Stable editor key",
+            "example": "group-1",
+            "type": "string"
+          },
+          "label": {
+            "description": "Optional group label",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "packageId": {
+            "description": "Owning package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sequenceMode": {
+            "description": "Session sequence behaviour",
+            "enum": [
+              "ORDERED",
+              "UNORDERED"
+            ],
+            "example": "ORDERED",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Group ordering",
+            "example": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "packageId",
+          "key",
+          "label",
+          "serviceId",
+          "employeeId",
+          "sequenceMode",
+          "dependsOnGroupId",
+          "sortOrder",
+          "createdAt",
+          "items"
+        ],
+        "type": "object"
       },
       "PaginatedBookingRowsDto": {
         "properties": {
@@ -15869,6 +17560,30 @@
               }
             ],
             "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedPackagesDto": {
+        "properties": {
+          "items": {
+            "description": "Packages on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/PackageListRowDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata for the full result set"
           }
         },
         "required": [
@@ -40938,7 +42653,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Package families and their grouped options"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackageFamilyWithVatResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Package families and their grouped options, with the sale VAT rate"
           },
           "400": {
             "content": {
@@ -41006,7 +42731,14 @@
         },
         "responses": {
           "201": {
-            "description": "Package family created"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageFamilyResponseDto"
+                }
+              }
+            },
+            "description": "Package family created; returns the decorated family read"
           },
           "400": {
             "content": {
@@ -41147,6 +42879,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageFamilyResponseDto"
+                }
+              }
+            },
             "description": "Package family details"
           },
           "400": {
@@ -41228,7 +42967,14 @@
         },
         "responses": {
           "200": {
-            "description": "Package family updated"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageFamilyResponseDto"
+                }
+              }
+            },
+            "description": "Package family updated; returns the decorated family read"
           },
           "400": {
             "content": {
@@ -41316,11 +43062,41 @@
               "maxLength": 100,
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Paginated list of session packages"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPackagesDto"
+                }
+              }
+            },
+            "description": "Paginated list of session packages with their computed price"
           },
           "400": {
             "content": {
@@ -41388,7 +43164,21 @@
         },
         "responses": {
           "201": {
-            "description": "Session package created"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PackageLegacyWriteResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PackageGroupedWriteResponseDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Session package created (raw persisted row: legacy items, or grouped groups and items)"
           },
           "400": {
             "description": "Validation failed (invalid items, missing employee-service link, or invalid discount)"
@@ -41524,6 +43314,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageDetailResponseDto"
+                }
+              }
+            },
             "description": "Session package details including the computed price"
           },
           "400": {
@@ -41606,7 +43403,21 @@
         },
         "responses": {
           "200": {
-            "description": "Session package updated"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PackageLegacyWriteResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PackageGroupedWriteResponseDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Session package updated (raw persisted row: legacy items, or grouped groups and items)"
           },
           "400": {
             "description": "Validation failed (invalid items or invalid discount)"
