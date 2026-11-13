@@ -4,7 +4,8 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
-  ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
+  ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse, ApiExtraModels,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
@@ -26,10 +27,27 @@ import { SetServiceBookingConfigsDto } from '../../modules/org-experience/servic
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from '../../modules/org-experience/services/list-service-employees.handler';
 import { AuditControllerName } from '../../common/interceptors/audit-controller-name.decorator';
+import {
+  PaginatedServicesResponseDto,
+  ServiceBookingConfigResponseDto,
+  ServiceCategoryDepartmentRecordDto,
+  ServiceDetailResponseDto,
+  ServiceEmbeddedCategoryDto,
+  ServiceEmbeddedCategoryListItemDto,
+  ServiceEmployeeAssignmentDto,
+  ServiceRestoreResponseDto,
+} from './dto/service-response.dto';
+import { ServiceDurationOptionRecordDto } from './dto/employee-response.dto';
 
 @ApiTags('Dashboard / Org Experience')
 @ApiBearerAuth()
 @ApiStandardResponses()
+@ApiExtraModels(
+  ServiceEmbeddedCategoryDto,
+  ServiceCategoryDepartmentRecordDto,
+  ServiceEmbeddedCategoryListItemDto,
+  ServiceRestoreResponseDto,
+)
 @UseGuards(JwtGuard, CaslGuard)
 @Controller('dashboard/organization')
 @AuditControllerName('DashboardOrganizationSettingsController')
@@ -51,16 +69,19 @@ export class DashboardOrganizationServicesController {
   @Post('services')
   @CheckPermissions({ action: 'create', subject: 'Service' })
   @ApiOperation({ summary: 'Create a service' })
-  @ApiCreatedResponse({ description: 'Service created' })
-  createServiceEndpoint(@Body() body: CreateServiceDto) {
+  @ApiCreatedResponse({ description: 'Service created', type: ServiceDetailResponseDto })
+  @ApiResponse({ status: 409, description: 'A non-archived service with the same Arabic or English name already exists' })
+  createServiceEndpoint(@Body() body: CreateServiceDto): Promise<ServiceDetailResponseDto> {
     return this.createService.execute(body);
   }
 
   @Get('services')
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'List services' })
-  @ApiOkResponse({ description: 'Paginated list of services' })
-  listServicesEndpoint(@Query() query: ListServicesDto) {
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1, schema: { type: 'integer', minimum: 1, default: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20, schema: { type: 'integer', minimum: 1, maximum: 200, default: 20 } })
+  @ApiOkResponse({ description: 'Paginated list of services', type: PaginatedServicesResponseDto })
+  listServicesEndpoint(@Query() query: ListServicesDto): Promise<PaginatedServicesResponseDto> {
     return this.listServices.execute(query);
   }
 
@@ -68,9 +89,9 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'Get a service by id' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID or reference (e.g. SVC-1024)', example: 'SVC-1024' })
-  @ApiOkResponse({ description: 'Service details' })
+  @ApiOkResponse({ description: 'Service details', type: ServiceDetailResponseDto })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  getServiceEndpoint(@Param('serviceId') serviceId: string) {
+  getServiceEndpoint(@Param('serviceId') serviceId: string): Promise<ServiceDetailResponseDto> {
     return this.getService.execute({ serviceId });
   }
 
@@ -78,12 +99,13 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'update', subject: 'Service' })
   @ApiOperation({ summary: 'Update a service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Service updated' })
+  @ApiOkResponse({ description: 'Service updated', type: ServiceDetailResponseDto })
   @ApiResponse({ status: 404, description: 'Service not found' })
+  @ApiResponse({ status: 409, description: 'Service was modified by someone else (expectedUpdatedAt mismatch) or the name is taken' })
   updateServiceEndpoint(
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: UpdateServiceDto,
-  ) {
+  ): Promise<ServiceDetailResponseDto> {
     return this.updateService.execute({ serviceId, ...body });
   }
 
@@ -95,17 +117,17 @@ export class DashboardOrganizationServicesController {
   @ApiNoContentResponse({ description: 'Service archived' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   @ApiResponse({ status: 409, description: 'Clinic booking services and services referenced by packages cannot be deleted or archived' })
-  archiveServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
-    return this.archiveService.execute({ serviceId });
+  async archiveServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string): Promise<void> {
+    await this.archiveService.execute({ serviceId });
   }
 
   @Post('services/:serviceId/restore')
   @CheckPermissions({ action: 'update', subject: 'Service' })
   @ApiOperation({ summary: 'Restore an archived service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Service restored' })
+  @ApiOkResponse({ description: 'Service restored', type: ServiceRestoreResponseDto })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  restoreServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+  restoreServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string): Promise<ServiceRestoreResponseDto> {
     return this.restoreService.execute({ serviceId });
   }
 
@@ -113,8 +135,9 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'List active employees who offer this service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'List of employees for the service' })
-  listServiceEmployeesEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+  @ApiOkResponse({ description: 'List of employees for the service', type: ServiceEmployeeAssignmentDto, isArray: true })
+  @ApiResponse({ status: 404, description: 'Service not found' })
+  listServiceEmployeesEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string): Promise<ServiceEmployeeAssignmentDto[]> {
     return this.listServiceEmployees.execute({ serviceId });
   }
 
@@ -122,9 +145,9 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'Get booking type configs for a service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking type configs' })
+  @ApiOkResponse({ description: 'Booking type configs', type: ServiceBookingConfigResponseDto, isArray: true })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  getServiceBookingTypesEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+  getServiceBookingTypesEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string): Promise<ServiceBookingConfigResponseDto[]> {
     return this.getServiceBookingConfigs.execute({ serviceId });
   }
 
@@ -132,12 +155,12 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'update', subject: 'Service' })
   @ApiOperation({ summary: 'Set booking type configs for a service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking type configs updated' })
+  @ApiOkResponse({ description: 'Booking type configs updated', type: ServiceBookingConfigResponseDto, isArray: true })
   @ApiResponse({ status: 404, description: 'Service not found' })
   setServiceBookingTypesEndpoint(
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetServiceBookingConfigsDto,
-  ) {
+  ): Promise<ServiceBookingConfigResponseDto[]> {
     return this.setServiceBookingConfigs.execute({ serviceId, ...body });
   }
 
@@ -145,8 +168,8 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'Get duration options for a service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Duration options for the service' })
-  getDurationOptionsEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+  @ApiOkResponse({ description: 'Duration options for the service', type: ServiceDurationOptionRecordDto, isArray: true })
+  getDurationOptionsEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string): Promise<ServiceDurationOptionRecordDto[]> {
     return this.getDurationOptions.execute({ serviceId });
   }
 
@@ -154,12 +177,12 @@ export class DashboardOrganizationServicesController {
   @CheckPermissions({ action: 'update', subject: 'Service' })
   @ApiOperation({ summary: 'Set duration options for a service' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Duration options updated' })
+  @ApiOkResponse({ description: 'Duration options updated', type: ServiceDurationOptionRecordDto, isArray: true })
   @ApiResponse({ status: 404, description: 'Service not found' })
   setDurationOptionsEndpoint(
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetDurationOptionsDto,
-  ) {
+  ): Promise<ServiceDurationOptionRecordDto[]> {
     return this.setDurationOptions.execute({ serviceId, ...body });
   }
 }

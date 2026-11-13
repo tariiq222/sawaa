@@ -31,8 +31,9 @@ export function EmployeeTypeRow({
   onUpdate,
   onRemove,
 }: EmployeeTypeRowProps) {
-  // serviceDefault.price is in halalas; render as a SAR-major string.
-  const defaultPrice = serviceDefault ? formatPrice(serviceDefault.price) : ""
+  // serviceDefault.price is a decimal string of integer halalas (Prisma
+  // Decimal); Number() is what this boundary always did, now explicit.
+  const defaultPrice = serviceDefault ? formatPrice(Number(serviceDefault.price)) : ""
   const defaultDuration = serviceDefault ? String(serviceDefault.durationMins) : ""
   const hasDefault = !!serviceDefault
 

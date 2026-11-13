@@ -10,9 +10,11 @@ it('fetches category options beyond the first page', async () => {
   expect((await services.fetchAllCategories()).items.map((c: {id:string}) => c.id)).toEqual(['category-1', 'category-2'])
 })
 it('sends branch, department and global sort to service list', async () => {
-  mocks.get.mockResolvedValue({ items: [], meta: {} })
+  mocks.openGet.mockResolvedValue({ items: [], meta: {} })
   await services.fetchServices({ branchId: 'branch', departmentId: 'dept', sortBy: 'price', sortOrder: 'asc' } as never)
-  expect(mocks.get.mock.calls[0][1]).toMatchObject({ branchId: 'branch', departmentId: 'dept', sortBy: 'price', sortOrder: 'asc' })
+  expect(mocks.openGet).toHaveBeenCalledWith('/api/v1/dashboard/organization/services', {
+    query: expect.objectContaining({ branchId: 'branch', departmentId: 'dept', sortBy: 'price', sortOrder: 'asc' }),
+  })
 })
 it('persists the upload object key instead of its expiring preview URL', async () => {
   mocks.postForm.mockResolvedValue({ id: 'upload', storageKey: 'images/package.jpg', url: 'https://signed?expires=1' })

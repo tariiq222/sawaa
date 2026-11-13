@@ -54,7 +54,7 @@ export function useServiceFormHydration(
       imageUrl: service.imageUrl ?? null,
       bufferMinutes: service.bufferMinutes ?? undefined,
       depositEnabled: service.depositEnabled,
-      depositAmount: service.depositAmount != null ? halalasToSar(service.depositAmount) : null,
+      depositAmount: service.depositAmount != null ? halalasToSar(Number(service.depositAmount)) : null,
       minLeadMinutes: service.minLeadMinutes ?? null,
       maxAdvanceDays: service.maxAdvanceDays ?? null,
     })

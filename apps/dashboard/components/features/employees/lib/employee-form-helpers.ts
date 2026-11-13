@@ -52,7 +52,7 @@ export function buildOwnedDurationsPayload(ds: DraftService) {
     .map((tc) => {
       const def = defByDt.get(tc.deliveryType)
       const durationMins = tc.duration ?? def?.durationMins ?? null
-      const priceSar = tc.price ?? (def ? halalasToSarNumber(def.price) : null)
+      const priceSar = tc.price ?? (def ? halalasToSarNumber(Number(def.price)) : null)
       if (durationMins == null || priceSar == null) return null
       return {
         deliveryType: tc.deliveryType.toUpperCase(),
