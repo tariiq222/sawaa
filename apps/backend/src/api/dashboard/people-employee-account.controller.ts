@@ -40,6 +40,7 @@ import {
   SetClientActiveResponseDto,
   UploadAvatarResponseDto,
 } from './dto/people-response.dto';
+import { EmployeeRatingsResponseDto } from './dto/employee-response.dto';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ListEmployeeRatingsHandler } from '../../modules/people/employees/list-employee-ratings.handler';
@@ -57,6 +58,7 @@ import { AuditControllerName } from '../../common/interceptors/audit-controller-
 @ApiStandardResponses()
 @ApiExtraModels(
   ClientResponseDto, EmployeeResponseDto,
+  EmployeeRatingsResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -79,45 +81,12 @@ export class DashboardPeopleEmployeeAccountController {
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Results per page', example: 20 })
-  @ApiOkResponse({
-    description: 'Paginated list of employee ratings',
-    schema: {
-      type: 'object',
-      properties: {
-        starCounts: { type: 'object', additionalProperties: { type: 'integer' }, description: 'Score counts across every rating for this employee' },
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              employeeId: { type: 'string', format: 'uuid' },
-              score: { type: 'number', minimum: 1, maximum: 5, example: 5 },
-              comment: { type: 'string', nullable: true },
-              isPublic: { type: 'boolean' },
-              createdAt: { type: 'string', format: 'date-time' },
-            },
-          },
-        },
-        meta: {
-          type: 'object',
-          properties: {
-            total: { type: 'integer' },
-            page: { type: 'integer' },
-            limit: { type: 'integer' },
-            totalPages: { type: 'integer' },
-            hasNextPage: { type: 'boolean' },
-            hasPreviousPage: { type: 'boolean' },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeRatingsResponseDto, description: 'Paginated list of employee ratings' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   listEmployeeRatingsEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: PaginationDto,
-  ) {
+  ): Promise<EmployeeRatingsResponseDto> {
     return this.listEmployeeRatings.execute({ employeeId: id, ...query });
   }
 
@@ -142,7 +111,7 @@ export class DashboardPeopleEmployeeAccountController {
   uploadAvatarEndpoint(
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
-  ) {
+  ): Promise<UploadAvatarResponseDto> {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.uploadAvatar.execute({
       employeeId,
@@ -171,7 +140,7 @@ export class DashboardPeopleEmployeeAccountController {
   uploadPublicImageEndpoint(
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
-  ) {
+  ): Promise<UploadAvatarResponseDto> {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.uploadAvatar.execute({
       employeeId, target: 'public',

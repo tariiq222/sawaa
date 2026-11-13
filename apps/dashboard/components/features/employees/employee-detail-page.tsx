@@ -204,8 +204,8 @@ export function EmployeeDetailPage({ employeeId }: Props) {
         <TabsContent value="ratings" className="pt-4">
           <EmployeeRatingsSection
             employeeId={p.id}
-            averageRating={p.averageRating}
-            totalRatings={p.ratingCount ?? 0}
+            averageRating={p.averageRating ?? undefined}
+            totalRatings={p.ratingCount}
           />
         </TabsContent>
 

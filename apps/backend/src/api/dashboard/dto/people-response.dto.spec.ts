@@ -71,12 +71,20 @@ function makeClient(overrides: Partial<ClientResponseDto> = {}): ClientResponseD
 function makeEmployee(overrides: Partial<EmployeeResponseDto> = {}): EmployeeResponseDto {
   return {
     id: '00000000-0000-0000-0000-000000000001',
+    ref: 1024,
     userId: null,
     name: 'Dr. Khalid Al-Otaibi',
     nameAr: 'خالد العتيبي',
     nameEn: 'Khalid Al-Otaibi',
     title: 'Senior Therapist',
     specialty: 'Family Therapy',
+    specialtyAr: 'علاج أسري',
+    gender: 'MALE',
+    bio: 'Family therapist',
+    bioAr: 'معالج أسري',
+    education: 'King Saud University',
+    educationAr: 'جامعة الملك سعود',
+    experience: 8,
     phone: '+966501234567',
     email: 'khalid@example.com',
     avatarUrl: 'https://cdn.example.com/avatars/khalid.jpg',
@@ -94,6 +102,7 @@ function makeEmployee(overrides: Partial<EmployeeResponseDto> = {}): EmployeeRes
     bookingCount: 120,
     branchIds: ['br_1'],
     serviceIds: ['svc_1'],
+    availability: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: true }],
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     ...overrides,
@@ -303,6 +312,13 @@ describe('EmployeeResponseDto (output shape)', () => {
       nameEn: null,
       title: null,
       specialty: null,
+      specialtyAr: null,
+      gender: null,
+      bio: null,
+      bioAr: null,
+      education: null,
+      educationAr: null,
+      experience: null,
       phone: null,
       email: null,
       avatarUrl: null,
@@ -311,6 +327,8 @@ describe('EmployeeResponseDto (output shape)', () => {
     expect(e.userId).toBeNull();
     expect(e.nameAr).toBeNull();
     expect(e.averageRating).toBeNull();
+    expect(e.specialtyAr).toBeNull();
+    expect(e.experience).toBeNull();
   });
 });
 

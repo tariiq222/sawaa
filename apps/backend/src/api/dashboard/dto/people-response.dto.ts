@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
+import { EmployeeGender, EmploymentType, OnboardingStatus } from '@prisma/client';
 
 // ── Client ─────────────────────────────────────────────────────────────────
 
@@ -162,57 +163,95 @@ export class CreateClientResponseDto extends ClientResponseDto {
 
 // ── Employee ────────────────────────────────────────────────────────────────
 
+/**
+ * Employee READ projection produced by `mapEmployeeRow`
+ * (modules/people/employees/employee-row.mapper.ts) for GET list/detail. Every
+ * property is always emitted; `avatarUrl` is replaced with a readable signed
+ * URL by the handlers.
+ */
 export class EmployeeResponseDto {
-  @ApiPropertyOptional({ description: 'Public directory slug', type: String, nullable: true })
-  slug?: string | null;
+  @ApiProperty({ description: 'Public directory slug', type: String, nullable: true, example: null })
+  slug!: string | null;
 
-  @ApiPropertyOptional({ description: 'Whether the employee is published in the directory' })
-  isPublic?: boolean;
+  @ApiProperty({ description: 'Whether the employee is published in the directory', example: false })
+  isPublic!: boolean;
 
-  @ApiPropertyOptional({ description: 'Public biography in Arabic', type: String, nullable: true })
-  publicBioAr?: string | null;
+  @ApiProperty({ description: 'Public biography in Arabic', type: String, nullable: true, example: null })
+  publicBioAr!: string | null;
 
-  @ApiPropertyOptional({ description: 'Public biography in English', type: String, nullable: true })
-  publicBioEn?: string | null;
+  @ApiProperty({ description: 'Public biography in English', type: String, nullable: true, example: null })
+  publicBioEn!: string | null;
 
-  @ApiPropertyOptional({ description: 'Readable selected public portrait URL', type: String, nullable: true })
-  publicImageUrl?: string | null;
+  @ApiProperty({ description: 'Readable selected public portrait URL', type: String, nullable: true, example: null })
+  publicImageUrl!: string | null;
 
   @ApiProperty({ description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   id!: string;
 
-  @ApiPropertyOptional({ description: 'Linked user UUID', example: '00000000-0000-0000-0000-000000000000', nullable: true })
+  @ApiProperty({ type: 'integer', description: 'Sequential employee reference', example: 1024 })
+  ref!: number;
+
+  @ApiProperty({ description: 'Linked user UUID', type: String, example: '00000000-0000-0000-0000-000000000000', nullable: true })
   userId!: string | null;
 
   @ApiProperty({ description: 'Full display name', example: 'Dr. Khalid Al-Otaibi' })
   name!: string;
 
-  @ApiPropertyOptional({ description: 'Arabic name', example: 'خالد العتيبي', nullable: true })
+  @ApiProperty({ description: 'Arabic name', type: String, example: 'خالد العتيبي', nullable: true })
   nameAr!: string | null;
 
-  @ApiPropertyOptional({ description: 'English name', example: 'Khalid Al-Otaibi', nullable: true })
+  @ApiProperty({ description: 'English name', type: String, example: 'Khalid Al-Otaibi', nullable: true })
   nameEn!: string | null;
 
-  @ApiPropertyOptional({ description: 'Job title', example: 'Senior Therapist', nullable: true })
+  @ApiProperty({ description: 'Job title', type: String, example: 'Senior Therapist', nullable: true })
   title!: string | null;
 
-  @ApiPropertyOptional({ description: 'Specialty label', example: 'Family Therapy', nullable: true })
+  @ApiProperty({ description: 'Specialty label', type: String, example: 'Family Therapy', nullable: true })
   specialty!: string | null;
 
-  @ApiPropertyOptional({ description: 'Phone number', example: '+966501234567', nullable: true })
+  @ApiProperty({ description: 'Specialty label in Arabic', type: String, nullable: true, example: 'علاج أسري' })
+  specialtyAr!: string | null;
+
+  @ApiProperty({ description: 'Gender (uppercase enum)', enum: ['MALE', 'FEMALE'], nullable: true, example: 'MALE' })
+  gender!: EmployeeGender | null;
+
+  @ApiProperty({ description: 'Short biography in English', type: String, nullable: true, example: 'Family therapist with 10 years of experience.' })
+  bio!: string | null;
+
+  @ApiProperty({ description: 'Short biography in Arabic', type: String, nullable: true, example: 'معالج أسري بخبرة 10 سنوات.' })
+  bioAr!: string | null;
+
+  @ApiProperty({ description: 'Education details in English', type: String, nullable: true, example: 'King Saud University' })
+  education!: string | null;
+
+  @ApiProperty({ description: 'Education details in Arabic', type: String, nullable: true, example: 'جامعة الملك سعود' })
+  educationAr!: string | null;
+
+  @ApiProperty({ type: 'integer', nullable: true, description: 'Years of experience', example: 8 })
+  experience!: number | null;
+
+  @ApiProperty({ description: 'Phone number', type: String, example: '+966501234567', nullable: true })
   phone!: string | null;
 
-  @ApiPropertyOptional({ description: 'Email address', example: 'khalid@example.com', nullable: true })
+  @ApiProperty({ description: 'Email address', type: String, example: 'khalid@example.com', nullable: true })
   email!: string | null;
 
-  @ApiPropertyOptional({ description: 'Avatar URL', example: 'https://cdn.example.com/avatars/khalid.jpg', nullable: true })
+  @ApiProperty({ description: 'Avatar URL', type: String, example: 'https://cdn.example.com/avatars/khalid.jpg', nullable: true })
   avatarUrl!: string | null;
 
-  @ApiProperty({ description: 'Employment type', example: 'FULL_TIME' })
-  employmentType!: string;
+  @ApiProperty({
+    description: 'Employment type',
+    enum: Object.values(EmploymentType),
+    example: 'FULL_TIME',
+  })
+  employmentType!: EmploymentType;
 
-  @ApiProperty({ description: 'Onboarding status', example: 'COMPLETED' })
-  onboardingStatus!: string;
+  @ApiProperty({
+    description: 'Onboarding status',
+    enum: Object.values(OnboardingStatus),
+    example: 'COMPLETED',
+  })
+  onboardingStatus!: OnboardingStatus;
 
   @ApiProperty({ description: 'Whether the employee is active', example: true })
   isActive!: boolean;
@@ -221,7 +260,7 @@ export class EmployeeResponseDto {
   isAcceptingBookings!: boolean;
 
 
-  @ApiProperty({ description: 'Average rating (0–5)', example: 4.7, nullable: true })
+  @ApiProperty({ description: 'Average rating (0–5)', type: Number, example: 4.7, nullable: true })
   averageRating!: number | null;
 
   @ApiProperty({ description: 'Total rating count', example: 32 })
@@ -235,6 +274,21 @@ export class EmployeeResponseDto {
 
   @ApiProperty({ description: 'Assigned service UUIDs', type: [String] })
   serviceIds!: string[];
+
+  @ApiProperty({
+    type: 'array',
+    description: 'Active weekly availability windows, ordered by day',
+    items: {
+      type: 'object',
+      properties: {
+        dayOfWeek: { type: 'integer', minimum: 0, maximum: 6, example: 1 },
+        startTime: { type: 'string', example: '09:00' },
+        endTime: { type: 'string', example: '17:00' },
+        isActive: { type: 'boolean', example: true },
+      },
+    },
+  })
+  availability!: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
 
   @ApiProperty({ description: 'Creation timestamp', example: '2026-01-01T00:00:00.000Z' })
   createdAt!: Date;
@@ -274,10 +328,10 @@ export class PaginatedClientsDto {
 }
 
 export class PaginatedEmployeesDto {
-  @ApiProperty({ type: [EmployeeResponseDto] })
+  @ApiProperty({ type: [EmployeeResponseDto], description: 'Employees on the requested page' })
   items!: EmployeeResponseDto[];
 
-  @ApiProperty({ type: ListMetaDto })
+  @ApiProperty({ type: ListMetaDto, description: 'Pagination metadata for the full result set' })
   meta!: ListMetaDto;
 }
 
@@ -293,7 +347,7 @@ export class EmployeeStatsResponseDto {
   @ApiProperty({ description: 'Inactive employee count', example: 3 })
   inactive!: number;
 
-  @ApiPropertyOptional({ description: 'Average rating across all employees', example: 4.5, nullable: true })
+  @ApiProperty({ description: 'Average rating across all employees', type: Number, example: 4.5, nullable: true })
   avgRating!: number | null;
 }
 

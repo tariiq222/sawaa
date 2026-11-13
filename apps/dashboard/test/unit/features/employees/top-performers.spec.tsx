@@ -15,32 +15,59 @@ vi.mock("@hugeicons/react", () => ({
 import { TopPerformers } from "@/components/features/employees/top-performers"
 import type { Employee } from "@/lib/types/employee"
 
-function emp(partial: Partial<Employee> & { id: string; firstName: string; lastName: string; rating?: number; bookings?: number }): Employee {
+function emp(
+  partial: Partial<Employee> & {
+    id: string
+    firstName: string
+    lastName: string
+    rating?: number
+    bookings?: number
+  },
+): Employee {
   return {
     id: partial.id,
+    ref: 1,
     userId: partial.id + "-u",
-    title: null,
+    name: `${partial.firstName} ${partial.lastName}`,
     nameAr: null,
+    nameEn: `${partial.firstName} ${partial.lastName}`,
+    title: null,
     specialty: partial.specialty ?? "Cardiology",
     specialtyAr: "قلب",
+    gender: null,
     bio: null,
     bioAr: null,
-    experience: null,
     education: null,
     educationAr: null,
+    experience: null,
+    phone: null,
+    email: "e@test",
+    avatarUrl: null,
+    employmentType: "FULL_TIME",
+    onboardingStatus: "COMPLETED",
     isActive: true,
-    createdAt: "2026-01-01",
-    updatedAt: "2026-01-01",
+    isAcceptingBookings: true,
+    isPublic: false,
+    slug: null,
+    publicBioAr: null,
+    publicBioEn: null,
+    publicImageUrl: null,
+    averageRating: partial.rating ?? null,
+    ratingCount: 0,
+    bookingCount: partial.bookings ?? 0,
+    branchIds: [],
+    serviceIds: [],
+    availability: [],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
     user: {
       id: partial.id + "-u",
       firstName: partial.firstName,
       lastName: partial.lastName,
       email: "e@test",
       phone: null,
-    } as Employee["user"],
-    averageRating: partial.rating,
-    _count: partial.bookings != null ? { bookings: partial.bookings, ratings: 0 } : undefined,
-  } as Employee
+    },
+  }
 }
 
 describe("TopPerformers", () => {

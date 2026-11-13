@@ -40,7 +40,6 @@ import { createEmployeeSchemaStatic } from "@/components/features/employees/crea
 import {
   buildOwnedDurationsPayload,
   defaultSchedule,
-  toDisplayTypeConfigs,
   toStorageTypeConfigs,
 } from "@/components/features/employees/lib/employee-form-helpers"
 
@@ -194,11 +193,14 @@ export function useEmployeeForm({
         .map((ps: EmployeeService) => ({
           key: ps.id,
           serviceId: ps.serviceId,
-          serviceName: ps.service!.nameAr || ps.service!.nameEn,
-          bufferMinutes: ps.bufferMinutes ?? 0,
+          serviceName: ps.service!.nameAr || ps.service!.nameEn || "",
+          bufferMinutes: ps.bufferMinutes,
           isActive: ps.isActive,
-          availableTypes: ps.availableTypes ?? [],
-          types: toDisplayTypeConfigs(ps.serviceTypes ?? []),
+          // The assignment payload has no per-type pricing; those rows come
+          // from GET .../services/:serviceId/types, which this form does not
+          // load. Start empty, exactly as before.
+          availableTypes: [],
+          types: [],
         }))
     )
   }, [existingServices, setDraftServices])

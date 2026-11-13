@@ -14,13 +14,22 @@ import {
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
-import type { EmployeeService } from "@/lib/types/employee"
 
 /* ─── Props ─── */
 
+/**
+ * The dialog only reads the assignment id (mutation key), the service name
+ * (title) and nothing else. Callers pass either a full `EmployeeService` or a
+ * synthetic row, so the prop is scoped to those two fields.
+ */
+export interface RemoveServiceDialogTarget {
+  serviceId: string
+  service: { nameAr: string; nameEn: string | null } | null
+}
+
 interface RemoveServiceDialogProps {
   employeeId: string
-  employeeService: EmployeeService | null
+  employeeService: RemoveServiceDialogTarget | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }

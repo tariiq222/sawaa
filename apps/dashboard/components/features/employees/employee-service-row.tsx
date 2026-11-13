@@ -8,22 +8,10 @@ import {
   Delete02Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { SurfaceRow } from "@sawaa/ui"
 import { ActiveCell, BufferCell } from "@/components/features/shared/inline-edit-cells"
-import { formatPrice } from "@/lib/money"
 import type { EmployeeService } from "@/lib/types/employee"
-
-/* ─── Constants ─── */
-
-const TYPE_LABEL_MAP: Record<string, string> = {
-  in_person: "inPerson",
-  online: "online",
-  clinic_visit: "clinicVisit",
-  phone_consultation: "phoneConsultation",
-  video_consultation: "videoConsultation",
-}
 
 /* ─── Props ─── */
 
@@ -70,10 +58,7 @@ export function EmployeeServiceRow({
       ? ps.service.nameAr
       : ps.service.nameEn
     : t("employees.services.unknown")
-  const sarUnit = t("employees.services.sar")
   const minUnit = t("employees.services.minutes")
-
-  const typeBadges = buildTypeBadges(ps, t, sarUnit, minUnit)
   const displayedIsActive = optimisticIsActive ?? ps.isActive
 
   return (
@@ -88,21 +73,6 @@ export function EmployeeServiceRow({
           onChange={handlePatchActive}
         />
       </div>
-
-      {/* Type info pills */}
-      {typeBadges.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {typeBadges.map((badge) => (
-            <Badge
-              key={badge.type}
-              variant="secondary"
-              className="text-[10px] tabular-nums"
-            >
-              {badge.label}
-            </Badge>
-          ))}
-        </div>
-      )}
 
       {/* Buffer — inline editable */}
       <div className="flex items-center gap-2">
@@ -142,60 +112,4 @@ export function EmployeeServiceRow({
       </div>
     </SurfaceRow>
   )
-}
-
-/* ─── Helpers ─── */
-
-interface TypeBadgeInfo {
-  type: string
-  label: string
-}
-
-function buildTypeBadges(
-  ps: EmployeeService,
-  t: (key: string) => string,
-  sarUnit: string,
-  minUnit: string,
-): TypeBadgeInfo[] {
-  /* If serviceTypes exist (new per-type model), use them */
-  if (ps.serviceTypes && ps.serviceTypes.length > 0) {
-    return ps.serviceTypes
-      .filter((st) => st.isActive)
-      .map((st) => {
-        const deliveryType = st.deliveryType
-        const key = TYPE_LABEL_MAP[deliveryType]
-        const typeLabel = key ? t(`employees.services.${key}`) : deliveryType
-        const price = st.price != null
-          ? formatPrice(Number(st.price))
-          : t("employees.services.defaultPrice")
-        const duration = st.duration != null
-          ? String(st.duration)
-          : t("employees.services.defaultPrice")
-        return {
-          type: deliveryType,
-          label: `${typeLabel}: ${price} ${sarUnit} | ${duration}${minUnit}`,
-        }
-      })
-  }
-
-  /* Fallback: legacy availableTypes + single price display */
-  if (!ps.availableTypes) return []
-  return ps.availableTypes.map((type) => {
-    const key = TYPE_LABEL_MAP[type]
-    const typeLabel = key ? t(`employees.services.${key}`) : type
-    const duration = ps.customDuration ?? ps.service?.duration ?? 0
-    const priceVal =
-      type === "clinic_visit" && ps.priceClinic != null
-        ? formatPrice(Number(ps.priceClinic))
-        : type === "phone_consultation" && ps.pricePhone != null
-          ? formatPrice(Number(ps.pricePhone))
-          : type === "video_consultation" && ps.priceVideo != null
-            ? formatPrice(Number(ps.priceVideo))
-            : t("employees.services.defaultPrice")
-
-    return {
-      type,
-      label: `${typeLabel}: ${priceVal} ${sarUnit} | ${duration}${minUnit}`,
-    }
-  })
 }

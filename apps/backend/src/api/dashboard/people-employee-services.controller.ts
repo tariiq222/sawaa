@@ -34,6 +34,16 @@ import {
   SetClientActiveResponseDto,
   UploadAvatarResponseDto,
 } from './dto/people-response.dto';
+import {
+  EmployeeAssignedServiceDto,
+  EmployeeCustomPricingResponseDto,
+  EmployeeDeliveryTypesResponseDto,
+  EmployeeEffectiveDurationGroupDto,
+  EmployeePricingModeResponseDto,
+  EmployeeServiceOptionRecordDto,
+  EmployeeServiceRecordDto,
+  EmployeeServiceTypeDto,
+} from './dto/employee-response.dto';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ListEmployeeServicesHandler } from '../../modules/people/employees/list-employee-services.handler';
@@ -64,6 +74,10 @@ class AssignEmployeeServiceDto {
 @ApiStandardResponses()
 @ApiExtraModels(
   ClientResponseDto, EmployeeResponseDto,
+  EmployeeAssignedServiceDto, EmployeeServiceRecordDto,
+  EmployeeServiceOptionRecordDto, EmployeeServiceTypeDto,
+  EmployeeCustomPricingResponseDto, EmployeeEffectiveDurationGroupDto,
+  EmployeeDeliveryTypesResponseDto, EmployeePricingModeResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -89,31 +103,9 @@ export class DashboardPeopleEmployeeServicesController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: "List services assigned to an employee" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'List of assigned services with service details',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid', description: 'EmployeeService link UUID' },
-          employeeId: { type: 'string', format: 'uuid' },
-          serviceId: { type: 'string', format: 'uuid' },
-          service: {
-            type: 'object', nullable: true,
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              name: { type: 'string', example: 'Family Therapy Session' },
-              price: { type: 'number', example: 300 },
-              isActive: { type: 'boolean', example: true },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeAssignedServiceDto, isArray: true, description: 'List of assigned services with service details' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  listEmployeeServicesEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  listEmployeeServicesEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeAssignedServiceDto[]> {
     return this.listEmployeeServices.execute({ employeeId: id });
   }
 
@@ -129,23 +121,12 @@ export class DashboardPeopleEmployeeServicesController {
       properties: { serviceId: { type: 'string', format: 'uuid', description: 'Service UUID to assign' } },
     },
   })
-  @ApiCreatedResponse({
-    description: 'Service assigned',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        employeeId: { type: 'string', format: 'uuid' },
-        serviceId: { type: 'string', format: 'uuid' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
+  @ApiCreatedResponse({ type: EmployeeServiceRecordDto, description: 'Service assigned' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   assignEmployeeServiceEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: AssignEmployeeServiceDto,
-  ) {
+  ): Promise<EmployeeServiceRecordDto> {
     return this.assignEmployeeService.execute({ employeeId: id, serviceId: body.serviceId });
   }
 
@@ -154,13 +135,13 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Update an employee-service assignment' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Employee-service assignment updated' })
+  @ApiOkResponse({ type: EmployeeServiceRecordDto, description: 'Employee-service assignment updated' })
   @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
   updateEmployeeServiceEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: { isActive?: boolean; bufferMinutes?: number },
-  ) {
+  ): Promise<EmployeeServiceRecordDto> {
     return this.updateEmployeeService.execute({ employeeId: id, serviceId, ...body });
   }
 
@@ -169,13 +150,13 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Set employee-specific service options' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Employee service options updated' })
+  @ApiOkResponse({ type: EmployeeServiceOptionRecordDto, isArray: true, description: 'Employee service options updated' })
   @ApiNotFoundResponse({ description: 'Employee-service link not found' })
   setEmployeeServiceOptionsEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetEmployeeServiceOptionsDto,
-  ) {
+  ): Promise<EmployeeServiceOptionRecordDto[]> {
     return this.setEmployeeServiceOptions.execute({ employeeId: id, serviceId, ...body });
   }
 
@@ -185,36 +166,13 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Set custom pricing for an employee on a service' })
   @ApiParam({ name: 'employeeId', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Custom pricing updated',
-    schema: {
-      type: 'object',
-      properties: {
-        hasCustomPricing: { type: 'boolean', example: true },
-        serviceTypes: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', example: 'link-uuid:IN_PERSON' },
-              deliveryType: { type: 'string', example: 'IN_PERSON' },
-              price: { type: 'integer', example: 30000 },
-              durationMins: { type: 'integer', example: 60 },
-              basePrice: { type: 'integer', example: 25000 },
-              baseDurationMins: { type: 'integer', example: 50 },
-              isCustom: { type: 'boolean', example: true },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeCustomPricingResponseDto, description: 'Custom pricing updated' })
   @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
   setEmployeeCustomPricingEndpoint(
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetEmployeeCustomPricingDto,
-  ) {
+  ): Promise<EmployeeCustomPricingResponseDto> {
     return this.setEmployeeCustomPricing.execute({ employeeId, serviceId, ...body });
   }
 
@@ -224,13 +182,13 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Set practitioner-owned duration options for an employee on a service' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Effective durations after update, grouped by delivery type' })
+  @ApiOkResponse({ type: EmployeeEffectiveDurationGroupDto, isArray: true, description: 'Effective durations after update, grouped by delivery type' })
   @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
   setEmployeeDurationsEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetEmployeeDurationsDto,
-  ) {
+  ): Promise<EmployeeEffectiveDurationGroupDto[]> {
     return this.setEmployeeDurations.execute({ employeeId: id, serviceId, ...body });
   }
 
@@ -240,24 +198,13 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Set the delivery types a practitioner opts out of for a service' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'The persisted disabled delivery types',
-    schema: {
-      type: 'object',
-      properties: {
-        disabledDeliveryTypes: {
-          type: 'array',
-          items: { type: 'string', enum: ['IN_PERSON', 'ONLINE'] },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeDeliveryTypesResponseDto, description: 'The persisted disabled delivery types' })
   @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
   setEmployeeDeliveryTypesEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetEmployeeDeliveryTypesDto,
-  ) {
+  ): Promise<EmployeeDeliveryTypesResponseDto> {
     return this.setEmployeeDeliveryTypes.execute({ employeeId: id, serviceId, ...body });
   }
 
@@ -267,16 +214,13 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Set whether a practitioner uses custom pricing for a service' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'The persisted pricing mode',
-    schema: { type: 'object', properties: { useCustomPricing: { type: 'boolean' } } },
-  })
+  @ApiOkResponse({ type: EmployeePricingModeResponseDto, description: 'The persisted pricing mode' })
   @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
   setEmployeePricingModeEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetEmployeePricingModeDto,
-  ) {
+  ): Promise<EmployeePricingModeResponseDto> {
     return this.setEmployeePricingMode.execute({ employeeId: id, serviceId, ...body });
   }
 
@@ -285,43 +229,12 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiOperation({ summary: 'Get bookable types + duration options for an employee-service pair' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Bookable types with duration options',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', example: 'link-uuid:IN_PERSON' },
-          employeeServiceId: { type: 'string', format: 'uuid' },
-          bookingType: { type: 'string', example: 'in_person' },
-          price: { type: 'number', example: 300 },
-          duration: { type: 'integer', example: 60 },
-          useCustomOptions: { type: 'boolean' },
-          isActive: { type: 'boolean' },
-          durationOptions: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string', format: 'uuid' },
-                label: { type: 'string', nullable: true },
-                durationMinutes: { type: 'integer', example: 60 },
-                price: { type: 'number', example: 300 },
-                isDefault: { type: 'boolean' },
-                isActive: { type: 'boolean' },
-              },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeServiceTypeDto, isArray: true, description: 'Bookable types with duration options' })
   @ApiNotFoundResponse({ description: 'Employee-service link not found' })
   getEmployeeServiceTypesEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
-  ) {
+  ): Promise<EmployeeServiceTypeDto[]> {
     return this.getEmployeeServiceTypes.execute({ employeeId: id, serviceId });
   }
 
@@ -333,10 +246,10 @@ export class DashboardPeopleEmployeeServicesController {
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Service removed' })
   @ApiNotFoundResponse({ description: 'Employee or service not found' })
-  removeEmployeeServiceEndpoint(
+  async removeEmployeeServiceEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
-  ) {
-    return this.removeEmployeeService.execute({ employeeId: id, serviceId });
+  ): Promise<void> {
+    await this.removeEmployeeService.execute({ employeeId: id, serviceId });
   }
 }

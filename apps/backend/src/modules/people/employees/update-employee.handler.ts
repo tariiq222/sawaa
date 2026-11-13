@@ -67,7 +67,9 @@ export class UpdateEmployeeHandler {
       data.email = rawEmail;
     }
 
-    let updated;
+    let updated: Prisma.EmployeeGetPayload<{
+      include: { branches: true; services: true };
+    }>;
     try {
       updated = await this.rlsTransaction.withTransaction(async (tx) => {
         let syncUserEmail = false;

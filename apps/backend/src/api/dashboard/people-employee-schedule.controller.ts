@@ -33,6 +33,14 @@ import {
   SetClientActiveResponseDto,
   UploadAvatarResponseDto,
 } from './dto/people-response.dto';
+import {
+  EmployeeAvailabilityExceptionRecordDto,
+  EmployeeAvailabilityUpdateResponseDto,
+  EmployeeAvailabilityWindowRecordDto,
+  EmployeeBreakRecordDto,
+  EmployeeBreaksResponseDto,
+  EmployeeScheduleResponseDto,
+} from './dto/employee-response.dto';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { UpdateAvailabilityHandler } from '../../modules/people/employees/update-availability.handler';
@@ -52,6 +60,9 @@ import { AuditControllerName } from '../../common/interceptors/audit-controller-
 @ApiStandardResponses()
 @ApiExtraModels(
   ClientResponseDto, EmployeeResponseDto,
+  EmployeeScheduleResponseDto, EmployeeAvailabilityUpdateResponseDto,
+  EmployeeBreaksResponseDto, EmployeeAvailabilityWindowRecordDto,
+  EmployeeAvailabilityExceptionRecordDto, EmployeeBreakRecordDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -74,29 +85,9 @@ export class DashboardPeopleEmployeeScheduleController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: "Get an employee's availability schedule" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Availability windows and exceptions',
-    schema: {
-      type: 'object',
-      properties: {
-        schedule: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              dayOfWeek: { type: 'integer', minimum: 0, maximum: 6, example: 1 },
-              startTime: { type: 'string', example: '09:00' },
-              endTime: { type: 'string', example: '17:00' },
-              isActive: { type: 'boolean', example: true },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeScheduleResponseDto, description: 'Availability windows and exceptions' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  getAvailabilityEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  getAvailabilityEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeScheduleResponseDto> {
     return this.getAvailability.execute({ employeeId: id });
   }
 
@@ -104,28 +95,9 @@ export class DashboardPeopleEmployeeScheduleController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: "Get an employee's break schedule" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Break windows for the employee',
-    schema: {
-      type: 'object',
-      properties: {
-        breaks: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              dayOfWeek: { type: 'integer', minimum: 0, maximum: 6, example: 1 },
-              startTime: { type: 'string', example: '13:00' },
-              endTime: { type: 'string', example: '14:00' },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeBreaksResponseDto, description: 'Break windows for the employee' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  getBreaksEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  getBreaksEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeBreaksResponseDto> {
     return this.getEmployeeBreaks.execute({ employeeId: id });
   }
 
@@ -134,31 +106,12 @@ export class DashboardPeopleEmployeeScheduleController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Set an employee's break schedule" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Updated break windows',
-    schema: {
-      type: 'object',
-      properties: {
-        breaks: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              dayOfWeek: { type: 'integer', minimum: 0, maximum: 6, example: 1 },
-              startTime: { type: 'string', example: '13:00' },
-              endTime: { type: 'string', example: '14:00' },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeBreaksResponseDto, description: 'Updated break windows' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   putBreaksEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: SetEmployeeBreaksDto,
-  ) {
+  ): Promise<EmployeeBreaksResponseDto> {
     return this.setEmployeeBreaks.execute({ employeeId: id, ...body });
   }
 
@@ -166,23 +119,9 @@ export class DashboardPeopleEmployeeScheduleController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: "List an employee's vacations (exceptions)" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'List of vacation/exception records',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          startDate: { type: 'string', format: 'date-time' },
-          endDate: { type: 'string', format: 'date-time' },
-          reason: { type: 'string', nullable: true },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeAvailabilityExceptionRecordDto, isArray: true, description: 'List of vacation/exception records' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  listVacationsEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  listVacationsEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeAvailabilityExceptionRecordDto[]> {
     return this.listEmployeeExceptions.execute({ employeeId: id });
   }
 
@@ -191,24 +130,12 @@ export class DashboardPeopleEmployeeScheduleController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a vacation exception for an employee' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({
-    description: 'Vacation created',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        employeeId: { type: 'string', format: 'uuid' },
-        startDate: { type: 'string', format: 'date-time' },
-        endDate: { type: 'string', format: 'date-time' },
-        reason: { type: 'string', nullable: true },
-      },
-    },
-  })
+  @ApiCreatedResponse({ type: EmployeeAvailabilityExceptionRecordDto, description: 'Vacation created' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   createVacationEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CreateEmployeeExceptionDto,
-  ) {
+  ): Promise<EmployeeAvailabilityExceptionRecordDto> {
     return this.createEmployeeException.execute({ employeeId: id, ...body });
   }
 
@@ -220,55 +147,23 @@ export class DashboardPeopleEmployeeScheduleController {
   @ApiParam({ name: 'vacationId', description: 'Vacation exception UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Vacation deleted' })
   @ApiNotFoundResponse({ description: 'Employee or vacation not found' })
-  deleteVacationEndpoint(
+  async deleteVacationEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vacationId', ParseUUIDPipe) vacationId: string,
-  ) {
-    return this.deleteEmployeeException.execute({ employeeId: id, exceptionId: vacationId });
+  ): Promise<void> {
+    await this.deleteEmployeeException.execute({ employeeId: id, exceptionId: vacationId });
   }
 
   @Patch('employees/:id/availability')
   @CheckPermissions({ action: 'update', subject: 'Employee' })
   @ApiOperation({ summary: "Update an employee's availability windows and exceptions" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'Updated availability windows and exceptions',
-    schema: {
-      type: 'object',
-      properties: {
-        windows: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              dayOfWeek: { type: 'integer', minimum: 0, maximum: 6 },
-              startTime: { type: 'string', example: '09:00' },
-              endTime: { type: 'string', example: '17:00' },
-              isActive: { type: 'boolean' },
-            },
-          },
-        },
-        exceptions: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              startDate: { type: 'string', format: 'date-time' },
-              endDate: { type: 'string', format: 'date-time' },
-              reason: { type: 'string', nullable: true },
-            },
-          },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeAvailabilityUpdateResponseDto, description: 'Updated availability windows and exceptions' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   updateAvailabilityEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateAvailabilityDto,
-  ) {
+  ): Promise<EmployeeAvailabilityUpdateResponseDto> {
     return this.updateAvailability.execute({
       employeeId: id,
       windows: body.windows,
@@ -280,25 +175,9 @@ export class DashboardPeopleEmployeeScheduleController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: "List availability exceptions for an employee" })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'List of availability exceptions',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          employeeId: { type: 'string', format: 'uuid' },
-          startDate: { type: 'string', format: 'date-time' },
-          endDate: { type: 'string', format: 'date-time' },
-          reason: { type: 'string', nullable: true },
-          isStartTimeOnly: { type: 'boolean' },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ type: EmployeeAvailabilityExceptionRecordDto, isArray: true, description: 'List of availability exceptions' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  listEmployeeExceptionsEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  listEmployeeExceptionsEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeAvailabilityExceptionRecordDto[]> {
     return this.listEmployeeExceptions.execute({ employeeId: id });
   }
 
@@ -307,25 +186,12 @@ export class DashboardPeopleEmployeeScheduleController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an availability exception for an employee' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({
-    description: 'Exception created',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        employeeId: { type: 'string', format: 'uuid' },
-        startDate: { type: 'string', format: 'date-time' },
-        endDate: { type: 'string', format: 'date-time' },
-        reason: { type: 'string', nullable: true },
-        isStartTimeOnly: { type: 'boolean' },
-      },
-    },
-  })
+  @ApiCreatedResponse({ type: EmployeeAvailabilityExceptionRecordDto, description: 'Exception created' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   createEmployeeExceptionEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CreateEmployeeExceptionDto,
-  ) {
+  ): Promise<EmployeeAvailabilityExceptionRecordDto> {
     return this.createEmployeeException.execute({ employeeId: id, ...body });
   }
 
@@ -337,10 +203,10 @@ export class DashboardPeopleEmployeeScheduleController {
   @ApiParam({ name: 'exceptionId', description: 'Exception UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Exception deleted' })
   @ApiNotFoundResponse({ description: 'Employee or exception not found' })
-  deleteEmployeeExceptionEndpoint(
+  async deleteEmployeeExceptionEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('exceptionId', ParseUUIDPipe) exceptionId: string,
-  ) {
-    return this.deleteEmployeeException.execute({ employeeId: id, exceptionId });
+  ): Promise<void> {
+    await this.deleteEmployeeException.execute({ employeeId: id, exceptionId });
   }
 }

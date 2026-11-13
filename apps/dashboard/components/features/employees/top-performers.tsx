@@ -89,7 +89,7 @@ export function TopPerformers({ employees }: TopPerformersProps) {
                     </span>
                   </div>
                   <span className="text-xs tabular-nums text-muted-foreground">
-                    {p._count?.bookings ?? 0} {t("employees.card.bookings")}
+                    {p.bookingCount} {t("employees.card.bookings")}
                   </span>
                 </div>
               </div>
