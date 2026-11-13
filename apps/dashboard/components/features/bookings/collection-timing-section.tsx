@@ -23,6 +23,7 @@
  * render this component at all (e.g. hide it on the credit/package path).
  */
 
+import type { JSX } from "react"
 import { useEffect, useRef } from "react"
 
 import { useLocale } from "@/components/locale-provider"

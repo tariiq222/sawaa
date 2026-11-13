@@ -37,7 +37,7 @@ const FOCUSABLE_SELECTOR = [
 export function useDialogFocus<T extends HTMLElement = HTMLElement>({
   active,
   onClose,
-}: UseDialogFocusOptions): RefObject<T> {
+}: UseDialogFocusOptions): RefObject<T | null> {
   const containerRef = useRef<T | null>(null);
   // Keep the latest handler without re-running the focus effect on every
   // render; refs are only touched inside effects (never during render).

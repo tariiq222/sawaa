@@ -21,6 +21,7 @@
 // in shape and reusing the same `CollapsibleSection` /
 // `PosSectionHint` primitives.
 
+import type { JSX } from "react"
 import { useMemo } from "react"
 
 import { Button } from "@sawaa/ui"
