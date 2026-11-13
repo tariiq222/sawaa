@@ -17592,6 +17592,30 @@
         ],
         "type": "object"
       },
+      "PaginatedServicesResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Services on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/ServiceListItemResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata for the full result set"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "PaymentMethod": {
         "description": "Payment method used",
         "enum": [
@@ -19774,6 +19798,440 @@
         ],
         "type": "object"
       },
+      "ServiceAvailabilityWindowRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "description": "Day of week (0 = Sunday, 6 = Saturday)",
+            "example": 1,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Window end time (HH:MM)",
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability window UUID",
+            "example": "00000000-0000-4000-a000-000000000080",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the window is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Window start time (HH:MM)",
+            "example": "09:00",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "deliveryType",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ServiceBookingConfigResponseDto": {
+        "properties": {
+          "availabilityWindows": {
+            "description": "Custom availability windows scoped to this delivery type",
+            "items": {
+              "$ref": "#/components/schemas/ServiceAvailabilityWindowRecordDto"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Default duration in minutes for this delivery type",
+            "example": 60,
+            "type": "integer"
+          },
+          "durationOptions": {
+            "description": "Duration options scoped to this delivery type",
+            "items": {
+              "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Booking config UUID",
+            "example": "00000000-0000-4000-a000-000000000070",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether this delivery type is bookable",
+            "example": true,
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Price in halalas, decimal string",
+            "example": "30000",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "useCustomAvailability": {
+            "description": "Whether the service uses its own availability windows for this delivery type",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "deliveryType",
+          "price",
+          "durationMins",
+          "isActive",
+          "useCustomAvailability",
+          "createdAt",
+          "updatedAt",
+          "durationOptions",
+          "availabilityWindows"
+        ],
+        "type": "object"
+      },
+      "ServiceCategoryDepartmentRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic department description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English department description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Department icon identifier",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the department is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isVisible": {
+            "description": "Whether the department is shown in public navigation",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic department name",
+            "example": "قسم الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English department name",
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Department display order",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "icon",
+          "isVisible",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ServiceDetailResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session",
+            "example": 0,
+            "type": "integer"
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceEmbeddedCategoryDto"
+              }
+            ],
+            "description": "Owning category row",
+            "nullable": true,
+            "type": "object"
+          },
+          "categoryId": {
+            "description": "Owning category UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "commissionRateOverride": {
+            "description": "Per-service commission rate override (0–1), decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit amount in halalas, decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether a deposit is required",
+            "example": false,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Description (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Description (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Default duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "durationOptions": {
+            "description": "Service-level duration options ordered by sortOrder",
+            "items": {
+              "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+            },
+            "type": "array"
+          },
+          "hideDurationOnBooking": {
+            "description": "Whether the duration is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "hidePriceOnBooking": {
+            "description": "Whether the price is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour token",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the service is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isHidden": {
+            "description": "Whether the service is hidden from the catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "maxAdvanceDays": {
+            "description": "Maximum advance booking window in days",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minLeadMinutes": {
+            "description": "Minimum lead time in minutes",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Service name (Arabic)",
+            "example": "استشارة أسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "Service name (English)",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, decimal string",
+            "example": "30000",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential service reference",
+            "example": 42,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "categoryId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "durationMins",
+          "price",
+          "currency",
+          "imageUrl",
+          "isActive",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isHidden",
+          "hidePriceOnBooking",
+          "hideDurationOnBooking",
+          "iconName",
+          "iconBgColor",
+          "bufferMinutes",
+          "minLeadMinutes",
+          "maxAdvanceDays",
+          "depositEnabled",
+          "depositAmount",
+          "commissionRateOverride",
+          "category",
+          "durationOptions"
+        ],
+        "type": "object"
+      },
       "ServiceDurationOptionRecordDto": {
         "properties": {
           "createdAt": {
@@ -19871,6 +20329,681 @@
           "createdAt",
           "updatedAt",
           "employeeServiceId"
+        ],
+        "type": "object"
+      },
+      "ServiceEmbeddedCategoryDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background colour",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Category image; signed into a short-lived URL by the list/detail/create/update paths",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "integer"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "kind",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ServiceEmbeddedCategoryListItemDto": {
+        "properties": {
+          "bookingMode": {
+            "description": "Category booking mode",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "department": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceCategoryDepartmentRecordDto"
+              }
+            ],
+            "description": "Owning department row",
+            "nullable": true,
+            "type": "object"
+          },
+          "departmentId": {
+            "description": "Owning department UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Category icon background colour",
+            "example": "#F0F4FF",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Category icon name",
+            "example": "family",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Category image; signed into a short-lived URL by the list/detail/create/update paths",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "Category kind, independent of department and name",
+            "enum": [
+              "CLINIC",
+              "SERVICE_GROUP"
+            ],
+            "example": "CLINIC",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic category name",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English category name",
+            "example": "Family Guidance",
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential category reference",
+            "example": 101,
+            "type": "integer"
+          },
+          "sortOrder": {
+            "description": "Category display order",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "departmentId",
+          "nameAr",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "bookingMode",
+          "kind",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt",
+          "department"
+        ],
+        "type": "object"
+      },
+      "ServiceEmployeeAssignmentDto": {
+        "properties": {
+          "availableTypes": {
+            "description": "Delivery types the service offers",
+            "example": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session",
+            "example": 10,
+            "type": "integer"
+          },
+          "customDuration": {
+            "description": "Deprecated; the handler always emits null",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "disabledDeliveryTypes": {
+            "description": "Delivery types this practitioner opts out of for the service",
+            "example": [],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "effectiveDurations": {
+            "description": "Effective durations grouped by delivery type",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeEffectiveDurationGroupDto"
+            },
+            "type": "array"
+          },
+          "employee": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceEmployeePractitionerDto"
+              }
+            ],
+            "description": "The practitioner offering the service"
+          },
+          "hasCustomPricing": {
+            "description": "Whether any delivery type carries a price or duration override",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "EmployeeService link UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the assignment is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "serviceTypes": {
+            "description": "Bookable delivery types with effective price and duration",
+            "items": {
+              "$ref": "#/components/schemas/ServiceEmployeeServiceTypeDto"
+            },
+            "type": "array"
+          },
+          "useCustomPricing": {
+            "description": "Whether the practitioner prices this service from owned duration rows",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "employee",
+          "serviceTypes",
+          "hasCustomPricing",
+          "customDuration",
+          "bufferMinutes",
+          "availableTypes",
+          "disabledDeliveryTypes",
+          "useCustomPricing",
+          "isActive",
+          "effectiveDurations"
+        ],
+        "type": "object"
+      },
+      "ServiceEmployeePractitionerDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Signed portrait URL, or null when the employee has no portrait",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "branchIds": {
+            "description": "Branches the employee works at",
+            "example": [],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the employee is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Employee name (Arabic)",
+            "example": "سارة الحربي",
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "Professional title",
+            "example": "Family counselor",
+            "nullable": true,
+            "type": "string"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceEmployeeUserNameDto"
+              }
+            ],
+            "description": "Display name split into first and last parts"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "title",
+          "avatarUrl",
+          "isActive",
+          "branchIds",
+          "user"
+        ],
+        "type": "object"
+      },
+      "ServiceEmployeeServiceTypeDto": {
+        "properties": {
+          "baseDurationMins": {
+            "description": "Service-level base duration in minutes",
+            "example": 50,
+            "type": "integer"
+          },
+          "basePrice": {
+            "description": "Service-level base price in halalas",
+            "example": 25000,
+            "type": "integer"
+          },
+          "bookingType": {
+            "description": "Legacy alias of deliveryType (deprecated)",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Effective duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Synthetic type id (`<employeeServiceId>:<deliveryType>`)",
+            "example": "link-uuid:IN_PERSON",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Always true for returned entries",
+            "example": true,
+            "type": "boolean"
+          },
+          "isCustom": {
+            "description": "Whether the practitioner has a price or duration override",
+            "example": true,
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Effective price in halalas",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "deliveryType",
+          "bookingType",
+          "price",
+          "durationMins",
+          "basePrice",
+          "baseDurationMins",
+          "isCustom",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "ServiceEmployeeUserNameDto": {
+        "properties": {
+          "firstName": {
+            "description": "First part of the display name",
+            "example": "Sara",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Remaining display-name parts",
+            "example": "Al-Harbi",
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ],
+        "type": "object"
+      },
+      "ServiceListItemResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session",
+            "example": 0,
+            "type": "integer"
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceEmbeddedCategoryListItemDto"
+              }
+            ],
+            "description": "Owning category row with its department",
+            "nullable": true,
+            "type": "object"
+          },
+          "categoryId": {
+            "description": "Owning category UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "commissionRateOverride": {
+            "description": "Per-service commission rate override (0–1), decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit amount in halalas, decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether a deposit is required",
+            "example": false,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Description (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Description (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Default duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "durationOptions": {
+            "description": "Service-level duration options ordered by sortOrder",
+            "items": {
+              "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+            },
+            "type": "array"
+          },
+          "employeeCount": {
+            "description": "Active employees offering this service; 0 means the booking wizard disables it",
+            "example": 2,
+            "type": "integer"
+          },
+          "hideDurationOnBooking": {
+            "description": "Whether the duration is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "hidePriceOnBooking": {
+            "description": "Whether the price is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour token",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the service is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isHidden": {
+            "description": "Whether the service is hidden from the catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "maxAdvanceDays": {
+            "description": "Maximum advance booking window in days",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minLeadMinutes": {
+            "description": "Minimum lead time in minutes",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Service name (Arabic)",
+            "example": "استشارة أسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "Service name (English)",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, decimal string",
+            "example": "30000",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential service reference",
+            "example": 42,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "categoryId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "durationMins",
+          "price",
+          "currency",
+          "imageUrl",
+          "isActive",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isHidden",
+          "hidePriceOnBooking",
+          "hideDurationOnBooking",
+          "iconName",
+          "iconBgColor",
+          "bufferMinutes",
+          "minLeadMinutes",
+          "maxAdvanceDays",
+          "depositEnabled",
+          "depositAmount",
+          "commissionRateOverride",
+          "category",
+          "durationOptions",
+          "employeeCount"
         ],
         "type": "object"
       },
@@ -20050,6 +21183,204 @@
           "depositEnabled",
           "depositAmount",
           "commissionRateOverride"
+        ],
+        "type": "object"
+      },
+      "ServiceRestoreResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session",
+            "example": 0,
+            "type": "integer"
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceEmbeddedCategoryDto"
+              }
+            ],
+            "description": "Owning category row (image reference not signed)",
+            "nullable": true,
+            "type": "object"
+          },
+          "categoryId": {
+            "description": "Owning category UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "commissionRateOverride": {
+            "description": "Per-service commission rate override (0–1), decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit amount in halalas, decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether a deposit is required",
+            "example": false,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Description (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Description (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Default duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "durationOptions": {
+            "description": "Service-level duration options ordered by sortOrder",
+            "items": {
+              "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+            },
+            "type": "array"
+          },
+          "hideDurationOnBooking": {
+            "description": "Whether the duration is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "hidePriceOnBooking": {
+            "description": "Whether the price is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour token",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Persisted image reference returned without signing; may be a storage key or a legacy external URL",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the service is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isHidden": {
+            "description": "Whether the service is hidden from the catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "maxAdvanceDays": {
+            "description": "Maximum advance booking window in days",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minLeadMinutes": {
+            "description": "Minimum lead time in minutes",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Service name (Arabic)",
+            "example": "استشارة أسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "Service name (English)",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, decimal string",
+            "example": "30000",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential service reference",
+            "example": 42,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "categoryId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "durationMins",
+          "price",
+          "currency",
+          "imageUrl",
+          "isActive",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isHidden",
+          "hidePriceOnBooking",
+          "hideDurationOnBooking",
+          "iconName",
+          "iconBgColor",
+          "bufferMinutes",
+          "minLeadMinutes",
+          "maxAdvanceDays",
+          "depositEnabled",
+          "depositAmount",
+          "commissionRateOverride",
+          "category",
+          "durationOptions"
         ],
         "type": "object"
       },
@@ -43820,10 +45151,40 @@
               "example": "haircut",
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedServicesResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of services"
           },
           "400": {
@@ -43892,6 +45253,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceDetailResponseDto"
+                }
+              }
+            },
             "description": "Service created"
           },
           "400": {
@@ -43923,6 +45291,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "409": {
+            "description": "A non-archived service with the same Arabic or English name already exists"
           },
           "500": {
             "content": {
@@ -44038,6 +45409,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceDetailResponseDto"
+                }
+              }
+            },
             "description": "Service details"
           },
           "400": {
@@ -44120,6 +45498,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceDetailResponseDto"
+                }
+              }
+            },
             "description": "Service updated"
           },
           "400": {
@@ -44154,6 +45539,9 @@
           },
           "404": {
             "description": "Service not found"
+          },
+          "409": {
+            "description": "Service was modified by someone else (expectedUpdatedAt mismatch) or the name is taken"
           },
           "500": {
             "content": {
@@ -44194,6 +45582,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceBookingConfigResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Booking type configs"
           },
           "400": {
@@ -44276,6 +45674,16 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceBookingConfigResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Booking type configs updated"
           },
           "400": {
@@ -44350,6 +45758,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Duration options for the service"
           },
           "400": {
@@ -44429,6 +45847,16 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Duration options updated"
           },
           "400": {
@@ -44503,6 +45931,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceEmployeeAssignmentDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of employees for the service"
           },
           "400": {
@@ -44534,6 +45972,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Service not found"
           },
           "500": {
             "content": {
@@ -44574,6 +46015,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceRestoreResponseDto"
+                }
+              }
+            },
             "description": "Service restored"
           },
           "400": {

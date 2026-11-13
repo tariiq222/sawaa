@@ -124,15 +124,21 @@ describe("services api", () => {
   })
 
   it("fetchServices sends query params to /dashboard/organization/services", async () => {
-    getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
+    openApiGetMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
     await fetchServices({ isActive: true })
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/services", expect.objectContaining({ isActive: true }))
+    expect(openApiGetMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/services",
+      { query: expect.objectContaining({ isActive: true }) },
+    )
   })
 
-  it("fetchService calls /dashboard/organization/services/:id", async () => {
-    getMock.mockResolvedValueOnce({ id: "svc-1" })
+  it("fetchService calls /dashboard/organization/services/:id through the typed helper", async () => {
+    openApiGetMock.mockResolvedValueOnce({ id: "svc-1" })
     await fetchService("svc-1")
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/services/svc-1")
+    expect(openApiGetMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/services/{serviceId}",
+      { path: { serviceId: "svc-1" } },
+    )
   })
 
   it("createService posts to /dashboard/organization/services", async () => {
@@ -148,9 +154,12 @@ describe("services api", () => {
   })
 
   it("deleteService calls DELETE /dashboard/organization/services/:id", async () => {
-    deleteMock.mockResolvedValueOnce(undefined)
+    openApiDeleteMock.mockResolvedValueOnce(undefined)
     await deleteService("svc-1")
-    expect(deleteMock).toHaveBeenCalledWith("/dashboard/organization/services/svc-1")
+    expect(openApiDeleteMock).toHaveBeenCalledWith(
+      "/api/v1/dashboard/organization/services/{serviceId}",
+      { path: { serviceId: "svc-1" } },
+    )
   })
 
   it("fetchDurationOptions calls /dashboard/organization/services/:id/duration-options", async () => {
@@ -237,7 +246,7 @@ describe("services api", () => {
 
   describe("fetchServices edge cases", () => {
     it("sends all query params including categoryId, search and includeHidden", async () => {
-      getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
+      openApiGetMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
       await fetchServices({
         page: 2,
         limit: 50,
@@ -246,20 +255,25 @@ describe("services api", () => {
         includeHidden: false,
         search: "massage",
       })
-      expect(getMock).toHaveBeenCalledWith("/dashboard/organization/services", expect.objectContaining({
-        page: 2,
-        limit: 50,
-        categoryId: "cat-1",
-        isActive: false,
-        includeHidden: false,
-        search: "massage",
-      }))
+      expect(openApiGetMock).toHaveBeenCalledWith("/api/v1/dashboard/organization/services", {
+        query: expect.objectContaining({
+          page: 2,
+          limit: 50,
+          categoryId: "cat-1",
+          isActive: false,
+          includeHidden: false,
+          search: "massage",
+        }),
+      })
     })
 
     it("defaults to empty query object", async () => {
-      getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
+      openApiGetMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
       await fetchServices()
-      expect(getMock).toHaveBeenCalledWith("/dashboard/organization/services", expect.any(Object))
+      expect(openApiGetMock).toHaveBeenCalledWith(
+        "/api/v1/dashboard/organization/services",
+        { query: expect.any(Object) },
+      )
     })
   })
 
@@ -273,7 +287,7 @@ describe("services api", () => {
 
   describe("fetchServicesListStats", () => {
     it("fetches total and active counts via Promise.all", async () => {
-      getMock
+      openApiGetMock
         .mockResolvedValueOnce({ meta: { total: 25 } })
         .mockResolvedValueOnce({ meta: { total: 18 } })
 
@@ -282,10 +296,16 @@ describe("services api", () => {
       expect(stats.total).toBe(25)
       expect(stats.active).toBe(18)
       expect(stats.inactive).toBe(7)
+      expect(openApiGetMock).toHaveBeenNthCalledWith(1, "/api/v1/dashboard/organization/services", {
+        query: { limit: 1 },
+      })
+      expect(openApiGetMock).toHaveBeenNthCalledWith(2, "/api/v1/dashboard/organization/services", {
+        query: { limit: 1, isActive: true },
+      })
     })
 
     it("handles missing meta gracefully", async () => {
-      getMock.mockResolvedValueOnce({}).mockResolvedValueOnce({})
+      openApiGetMock.mockResolvedValueOnce({}).mockResolvedValueOnce({})
 
       const stats = await fetchServicesListStats()
 
