@@ -41,7 +41,6 @@ export function StepDatetime({
   employeeId,
   serviceId,
   deliveryType,
-  durationOptionId,
   durationMins,
   selectedDate,
   selectedTime,

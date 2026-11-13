@@ -28,7 +28,7 @@ export class SetEmployeeDurationsHandler {
     if (!link) throw new NotFoundException('Employee-service assignment not found');
     const employeeServiceId = link.id;
 
-    await this.rlsTransaction.withTransaction(async (tx: any) => {
+    await this.rlsTransaction.withTransaction(async (tx) => {
       for (const group of cmd.durations) {
         const deliveryType = normalizeDeliveryTypeInput(group.deliveryType);
 

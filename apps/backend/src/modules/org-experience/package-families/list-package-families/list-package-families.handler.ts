@@ -10,7 +10,7 @@ import { resolveVatRate } from '../../../finance/create-invoice/create-invoice.h
 export class ListPackageFamiliesHandler {
   private readonly bucket: string;
   constructor(private readonly prisma: PrismaService, private readonly pricing: ComputePackagePriceService, private readonly storage: MinioService, @Optional() config?: ConfigService) {
-    this.bucket = config && typeof (config as any).getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
+    this.bucket = config && typeof config.getOrThrow === 'function' ? config.getOrThrow<string>('MINIO_BUCKET') : '';
   }
   async execute() {
     const families = await this.prisma.packageFamily.findMany({

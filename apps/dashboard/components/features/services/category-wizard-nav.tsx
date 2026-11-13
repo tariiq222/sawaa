@@ -23,7 +23,7 @@ interface CategoryWizardNavProps {
 }
 
 export function CategoryWizardNav({
-  mode, isFirst, isLast, isSubmitting, isDirty,
+  mode, isFirst, isLast, isSubmitting,
   exitConfirmOpen, onNext, onBack, onCancel, onFinish, onExitConfirm, onExitCancel, t,
 }: CategoryWizardNavProps) {
   return (

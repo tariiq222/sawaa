@@ -1,16 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
-import { DiscountType } from '@prisma/client';
+import { DiscountType, type Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import type { PriceResolverService } from '../services/price-resolver.service';
 import { resolvePackageGroupOfferings, validateGroupedPackageStorageBounds, type PackageGroupInputLike } from '../session-packages/package-group-offering.helper';
 import { allocateSessionNet } from '../session-packages/package-group-pricing';
 import type { GlobalDiscount } from '@sawaa/shared/types';
 import type { PackageFamilyOptionDto } from './package-family.dto';
 
-export type FamilyWriteClient = {
-  sessionPackage: { create(args: any): Promise<any>; update(args: any): Promise<any>; findUnique(args: any): Promise<any> };
-  sessionPackageGroup: { createMany(args: any): Promise<any>; deleteMany(args: any): Promise<any>; updateMany(args: any): Promise<any> };
-  sessionPackageItem: { create(args: any): Promise<any>; deleteMany(args: any): Promise<any> };
-};
+export type FamilyWriteClient = Pick<Prisma.TransactionClient, 'sessionPackage' | 'sessionPackageGroup' | 'sessionPackageItem'>;
 
 function storedDiscount(discount: GlobalDiscount) {
   return {
@@ -24,8 +21,8 @@ export async function writeGroupedFamilyOption(
   tx: FamilyWriteClient,
   option: PackageFamilyOptionDto,
   familyId: string,
-  priceResolverDb: any,
-  priceResolver?: any,
+  priceResolverDb: Parameters<typeof resolvePackageGroupOfferings>[0],
+  priceResolver?: PriceResolverService,
   optionId?: string,
 ) {
   if (!option.groups?.length || !option.globalDiscount) {
@@ -55,7 +52,7 @@ export async function writeGroupedFamilyOption(
     ...(optionId ? {} : { id: randomUUID() }),
     familyId,
     archivedAt: null,
-    modelVersion: 'GROUPED_V2',
+    modelVersion: 'GROUPED_V2' as const,
     ownerEmployeeId: null,
     nameAr: option.nameAr,
     nameEn: option.nameEn ?? null,
@@ -116,9 +113,15 @@ export async function writeGroupedFamilyOption(
   return { id: pkg.id, ...packageData, groups: groupRows.map((row, index) => ({ ...row, items: offerings[index].sessions })) };
 }
 
-export function familySessionCount(option: any): number {
+/** Structural subset of a package option row that the session count reads. */
+type FamilySessionCountSource = {
+  groups?: ReadonlyArray<{ items?: readonly unknown[] | null; sessions?: readonly unknown[] | null }> | null;
+  items?: ReadonlyArray<{ paidQuantity?: unknown; freeQuantity?: unknown }> | null;
+} | null | undefined;
+
+export function familySessionCount(option: FamilySessionCountSource): number {
   if (Array.isArray(option?.groups) && option.groups.length > 0) {
-    return option.groups.reduce((total: number, group: any) => total + (group.items?.length ?? group.sessions?.length ?? 0), 0);
+    return option.groups.reduce((total: number, group) => total + (group.items?.length ?? group.sessions?.length ?? 0), 0);
   }
-  return (option?.items ?? []).reduce((total: number, item: any) => total + Number(item.paidQuantity ?? 0) + Number(item.freeQuantity ?? 0), 0);
+  return (option?.items ?? []).reduce((total: number, item) => total + Number(item.paidQuantity ?? 0) + Number(item.freeQuantity ?? 0), 0);
 }

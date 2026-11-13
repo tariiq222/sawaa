@@ -19,7 +19,7 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/api/bookings", () => apiMocks)
 
-import { useBookings, useBookingMutations } from "@/hooks/use-bookings"
+import { useBookings } from "@/hooks/use-bookings"
 import { todayClinicYmd } from "@/lib/utils"
 
 function makeWrapper() {
