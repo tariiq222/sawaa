@@ -225,14 +225,39 @@ describe("useEmployeeForm service price units", () => {
         existingServices: [
           {
             id: "employee-service-1",
+            employeeId: "emp-1",
             serviceId: "svc-1",
+            bufferMinutes: 0,
             isActive: true,
+            disabledDeliveryTypes: [],
+            useCustomPricing: false,
             service: {
               id: "svc-1",
+              ref: 1,
+              categoryId: null,
               nameAr: "جلسة أسرية",
               nameEn: "Family session",
-              price: 15000,
-              duration: 45,
+              descriptionAr: null,
+              descriptionEn: null,
+              durationMins: 45,
+              price: "15000",
+              currency: "SAR",
+              imageUrl: null,
+              isActive: true,
+              archivedAt: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+              isHidden: false,
+              hidePriceOnBooking: false,
+              hideDurationOnBooking: false,
+              iconName: null,
+              iconBgColor: null,
+              bufferMinutes: 0,
+              minLeadMinutes: null,
+              maxAdvanceDays: null,
+              depositEnabled: false,
+              depositAmount: null,
+              commissionRateOverride: null,
             },
           },
         ],
@@ -339,7 +364,7 @@ describe("useEmployeeForm service price units", () => {
   })
 
   it("removes service links absent from the edited form", async () => {
-    const {result} = renderHook(() => useEmployeeForm({...baseOptions,isEdit:true,employeeId:"emp-1",existingServices:[{serviceId:"removed",id:"link",service:null,isActive:true}],draftServices:[],form:makeForm(employeeFormData) as never}))
+    const {result} = renderHook(() => useEmployeeForm({...baseOptions,isEdit:true,employeeId:"emp-1",existingServices:[{serviceId:"removed",id:"link",employeeId:"emp-1",bufferMinutes:0,service:null,isActive:true,disabledDeliveryTypes:[],useCustomPricing:false}],draftServices:[],form:makeForm(employeeFormData) as never}))
     await act(async () => { await result.current.onSubmit() })
     expect(mocks.removeEmployeeService).toHaveBeenCalledWith("removed")
   })

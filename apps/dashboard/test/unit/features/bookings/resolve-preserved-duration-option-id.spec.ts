@@ -14,6 +14,7 @@ function makeServiceType(optionIds: string[]): EmployeeServiceType {
     id: "st1",
     employeeServiceId: "es1",
     deliveryType: "IN_PERSON",
+    bookingType: "IN_PERSON",
     price: 20000,
     duration: 45,
     useCustomOptions: true,
@@ -22,11 +23,12 @@ function makeServiceType(optionIds: string[]): EmployeeServiceType {
       id,
       employeeServiceTypeId: "st1",
       label: `${45 + i * 15}min`,
-      labelAr: null,
+      labelAr: `${45 + i * 15} دقيقة`,
       durationMinutes: 45 + i * 15,
       price: 20000,
       isDefault: i === 0,
       sortOrder: i,
+      isActive: true,
     })),
   }
 }

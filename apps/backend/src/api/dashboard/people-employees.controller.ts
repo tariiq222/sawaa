@@ -36,6 +36,12 @@ import {
   SetClientActiveResponseDto,
   UploadAvatarResponseDto,
 } from './dto/people-response.dto';
+import {
+  EmployeeDetailResponseDto,
+  EmployeeOnboardResponseDto,
+  EmployeeSlotDto,
+  EmployeeWriteResponseDto,
+} from './dto/employee-response.dto';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { CreateEmployeeHandler } from '../../modules/people/employees/create-employee.handler';
@@ -86,7 +92,8 @@ class EmployeeAvailableDaysQuery {
 @ApiBearerAuth()
 @ApiStandardResponses()
 @ApiExtraModels(
-  ClientResponseDto, EmployeeResponseDto,
+  ClientResponseDto, EmployeeResponseDto, EmployeeDetailResponseDto, EmployeeWriteResponseDto,
+  EmployeeOnboardResponseDto, EmployeeSlotDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
   EmployeeStatsResponseDto, SetClientActiveResponseDto,
   UploadAvatarResponseDto,
@@ -111,8 +118,11 @@ export class DashboardPeopleEmployeesController {
   @CheckPermissions({ action: 'create', subject: 'Employee' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an employee' })
-  @ApiCreatedResponse({ type: EmployeeResponseDto, description: 'Employee created' })
-  createEmployeeEndpoint(@Body() body: CreateEmployeeDto, @Request() req: { user: { sub: string } }) {
+  @ApiCreatedResponse({ type: EmployeeWriteResponseDto, description: 'Employee created (raw employee row with branch and service links)' })
+  createEmployeeEndpoint(
+    @Body() body: CreateEmployeeDto,
+    @Request() req: { user: { sub: string } },
+  ): Promise<EmployeeWriteResponseDto> {
     return this.createEmployee.execute({ ...body, actorUserId: req.user.sub });
   }
 
@@ -120,18 +130,8 @@ export class DashboardPeopleEmployeesController {
   @CheckPermissions({ action: 'create', subject: 'Employee' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Onboard a new employee with full profile details' })
-  @ApiCreatedResponse({
-    description: 'Employee onboarded',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'Employee onboarded successfully' },
-        employee: { $ref: getSchemaPath(EmployeeResponseDto) },
-      },
-    },
-  })
-  onboardEmployeeEndpoint(@Body() body: OnboardEmployeeDto) {
+  @ApiCreatedResponse({ type: EmployeeOnboardResponseDto, description: 'Employee onboarded' })
+  onboardEmployeeEndpoint(@Body() body: OnboardEmployeeDto): Promise<EmployeeOnboardResponseDto> {
     return this.onboardEmployee.execute(body);
   }
 
@@ -150,7 +150,7 @@ export class DashboardPeopleEmployeesController {
   listEmployeesEndpoint(
     @Query() query: ListEmployeesDto,
     @Query('isActive') rawIsActive?: string,
-  ) {
+  ): Promise<PaginatedEmployeesDto> {
     // Global ValidationPipe has enableImplicitConversion: true, which runs
     // Boolean(string) against query params — making any non-empty string truthy
     // (so "false" becomes true). Parse the raw value explicitly instead.
@@ -168,7 +168,7 @@ export class DashboardPeopleEmployeesController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: 'Get employee statistics' })
   @ApiOkResponse({ type: EmployeeStatsResponseDto, description: 'Employee statistics summary' })
-  employeeStatsEndpoint() {
+  employeeStatsEndpoint(): Promise<EmployeeStatsResponseDto> {
     return this.employeeStats.execute();
   }
 
@@ -176,9 +176,9 @@ export class DashboardPeopleEmployeesController {
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: 'Get an employee by ID' })
   @ApiParam({ name: 'id', description: 'Employee UUID or reference (e.g. EMP-1024)', example: 'EMP-1024' })
-  @ApiOkResponse({ type: EmployeeResponseDto, description: 'Employee record' })
+  @ApiOkResponse({ type: EmployeeDetailResponseDto, description: 'Employee record' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  getEmployeeEndpoint(@Param('id') id: string) {
+  getEmployeeEndpoint(@Param('id') id: string): Promise<EmployeeDetailResponseDto> {
     return this.getEmployee.execute({ employeeId: id });
   }
 
@@ -186,13 +186,13 @@ export class DashboardPeopleEmployeesController {
   @CheckPermissions({ action: 'update', subject: 'Employee' })
   @ApiOperation({ summary: 'Update an employee' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ type: EmployeeResponseDto, description: 'Updated employee record' })
+  @ApiOkResponse({ type: EmployeeWriteResponseDto, description: 'Updated employee record (raw employee row with branch and service links)' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   updateEmployeeEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateEmployeeDto,
     @Request() req: { user: { sub: string } },
-  ) {
+  ): Promise<EmployeeWriteResponseDto> {
     return this.updateEmployee.execute({ ...body, employeeId: id, actorUserId: req.user.sub });
   }
 
@@ -201,12 +201,20 @@ export class DashboardPeopleEmployeesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Submit an onboarding step for an employee' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ type: EmployeeResponseDto, description: 'Onboarding step processed — returns updated employee' })
+  @ApiOkResponse({
+    description: 'Onboarding step processed — updated employee, or null if the row disappeared concurrently',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(EmployeeWriteResponseDto) },
+        { type: 'object', nullable: true },
+      ],
+    },
+  })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   employeeOnboardingEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeOnboardingDto,
-  ) {
+  ): Promise<EmployeeWriteResponseDto | null> {
     return this.employeeOnboarding.execute({ employeeId: id, ...body });
   }
 
@@ -217,8 +225,8 @@ export class DashboardPeopleEmployeesController {
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Employee deleted' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  deleteEmployeeEndpoint(@Param('id', ParseUUIDPipe) id: string) {
-    return this.deleteEmployee.execute({ employeeId: id });
+  async deleteEmployeeEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.deleteEmployee.execute({ employeeId: id });
   }
 
   @Get('employees/:id/slots')
@@ -228,24 +236,12 @@ export class DashboardPeopleEmployeesController {
   @ApiQuery({ name: 'date', description: 'Date (ISO 8601, YYYY-MM-DD)', example: '2026-05-01' })
   @ApiQuery({ name: 'branchId', description: 'Branch UUID (defaults to main branch)', required: false, example: '00000000-0000-0000-0000-000000000000' })
   @ApiQuery({ name: 'duration', description: 'Slot duration in minutes', required: false, example: 30 })
-  @ApiOkResponse({
-    description: 'Available slots',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          startTime: { type: 'string', example: '09:00', description: 'HH:MM UTC' },
-          endTime: { type: 'string', example: '09:30', description: 'HH:MM UTC' },
-        },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'Available slots', type: EmployeeSlotDto, isArray: true })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   getEmployeeSlotsEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() q: EmployeeSlotsQuery,
-  ) {
+  ): Promise<EmployeeSlotDto[]> {
     return this.availabilityQuery.slots({ employeeId: id, ...q });
   }
 
@@ -268,7 +264,7 @@ export class DashboardPeopleEmployeesController {
   getEmployeeAvailableDaysEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() q: EmployeeAvailableDaysQuery,
-  ) {
+  ): Promise<string[]> {
     return this.availabilityQuery.availableDays({ employeeId: id, ...q });
   }
 }

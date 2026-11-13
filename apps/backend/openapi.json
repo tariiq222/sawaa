@@ -9808,6 +9808,139 @@
         ],
         "type": "object"
       },
+      "EmployeeAssignedServiceDto": {
+        "properties": {
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session for this link",
+            "example": 10,
+            "type": "integer"
+          },
+          "disabledDeliveryTypes": {
+            "description": "Delivery types this practitioner does not offer for the service",
+            "example": [],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "EmployeeService link UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the link is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "service": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceRecordDto"
+              }
+            ],
+            "description": "Service row; null when the service no longer exists",
+            "nullable": true,
+            "type": "object"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "useCustomPricing": {
+            "description": "Whether the practitioner prices this service from owned duration rows",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "serviceId",
+          "isActive",
+          "bufferMinutes",
+          "disabledDeliveryTypes",
+          "useCustomPricing",
+          "service"
+        ],
+        "type": "object"
+      },
+      "EmployeeAvailabilityExceptionRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-09-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "endDate": {
+            "description": "Inclusive last date of the time-off range",
+            "example": "2026-09-21T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Partial-day end instant; null means end of day",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability exception UUID",
+            "example": "00000000-0000-4000-a000-000000000011",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isStartTimeOnly": {
+            "description": "When true only the start instant matters (full-day leave)",
+            "example": false,
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "Reason for the time-off exception",
+            "example": "Annual leave",
+            "nullable": true,
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Inclusive first date of the time-off range",
+            "example": "2026-09-20T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "startDate",
+          "endDate",
+          "endTime",
+          "isStartTimeOnly",
+          "reason",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "EmployeeAvailabilityExceptionResponseDto": {
         "properties": {
           "endDate": {
@@ -9890,6 +10023,90 @@
         ],
         "type": "object"
       },
+      "EmployeeAvailabilityUpdateResponseDto": {
+        "properties": {
+          "exceptions": {
+            "description": "Persisted availability exceptions",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
+            },
+            "type": "array"
+          },
+          "windows": {
+            "description": "Persisted availability windows",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityWindowRecordDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "windows",
+          "exceptions"
+        ],
+        "type": "object"
+      },
+      "EmployeeAvailabilityWindowRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "description": "Day of week (0 = Sunday, 6 = Saturday)",
+            "example": 1,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Window end time (HH:MM)",
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Availability window UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the window is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "description": "Window start time (HH:MM)",
+            "example": "09:00",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "EmployeeAvailabilityWindowResponseDto": {
         "properties": {
           "dayOfWeek": {
@@ -9924,6 +10141,104 @@
           "startTime",
           "endTime",
           "isActive"
+        ],
+        "type": "object"
+      },
+      "EmployeeBranchRecordDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-0000000000a0",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee branch link UUID",
+            "example": "00000000-0000-4000-a000-000000000090",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "branchId"
+        ],
+        "type": "object"
+      },
+      "EmployeeBreakRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "description": "Day of week (0 = Sunday, 6 = Saturday)",
+            "example": 1,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Break end time (HH:MM)",
+            "example": "14:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Break UUID",
+            "example": "00000000-0000-4000-a000-000000000012",
+            "format": "uuid",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Break start time (HH:MM)",
+            "example": "13:00",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "EmployeeBreaksResponseDto": {
+        "properties": {
+          "breaks": {
+            "description": "Break windows for the employee",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeBreakRecordDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "breaks"
         ],
         "type": "object"
       },
@@ -10069,6 +10384,401 @@
         ],
         "type": "object"
       },
+      "EmployeeCustomPricingResponseDto": {
+        "properties": {
+          "hasCustomPricing": {
+            "description": "Whether any active override carries a custom price or duration",
+            "example": true,
+            "type": "boolean"
+          },
+          "serviceTypes": {
+            "description": "Active overrides grouped by delivery type",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeCustomPricingTypeDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "hasCustomPricing",
+          "serviceTypes"
+        ],
+        "type": "object"
+      },
+      "EmployeeCustomPricingTypeDto": {
+        "properties": {
+          "baseDurationMins": {
+            "description": "Service-level base duration in minutes",
+            "example": 50,
+            "type": "integer"
+          },
+          "basePrice": {
+            "description": "Service-level base price in halalas",
+            "example": 25000,
+            "type": "integer"
+          },
+          "bookingType": {
+            "description": "Legacy alias of deliveryType (deprecated)",
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Effective duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Synthetic type id (`<employeeServiceId>:<deliveryType>`)",
+            "example": "link-uuid:IN_PERSON",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Always true for returned entries",
+            "example": true,
+            "type": "boolean"
+          },
+          "isCustom": {
+            "description": "Whether an override is applied",
+            "example": true,
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Effective price in halalas",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "deliveryType",
+          "bookingType",
+          "price",
+          "durationMins",
+          "basePrice",
+          "baseDurationMins",
+          "isCustom",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "EmployeeDeliveryTypesResponseDto": {
+        "properties": {
+          "disabledDeliveryTypes": {
+            "description": "Persisted disabled delivery types",
+            "example": [
+              "ONLINE"
+            ],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "disabledDeliveryTypes"
+        ],
+        "type": "object"
+      },
+      "EmployeeDetailResponseDto": {
+        "properties": {
+          "availability": {
+            "description": "Active weekly availability windows, ordered by day",
+            "items": {
+              "properties": {
+                "dayOfWeek": {
+                  "example": 1,
+                  "maximum": 6,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "endTime": {
+                  "example": "17:00",
+                  "type": "string"
+                },
+                "isActive": {
+                  "example": true,
+                  "type": "boolean"
+                },
+                "startTime": {
+                  "example": "09:00",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "avatarUrl": {
+            "description": "Avatar URL",
+            "example": "https://cdn.example.com/avatars/khalid.jpg",
+            "nullable": true,
+            "type": "string"
+          },
+          "averageRating": {
+            "description": "Average rating (0–5)",
+            "example": 4.7,
+            "nullable": true,
+            "type": "number"
+          },
+          "bio": {
+            "description": "Short biography in English",
+            "example": "Family therapist with 10 years of experience.",
+            "nullable": true,
+            "type": "string"
+          },
+          "bioAr": {
+            "description": "Short biography in Arabic",
+            "example": "معالج أسري بخبرة 10 سنوات.",
+            "nullable": true,
+            "type": "string"
+          },
+          "bookingCount": {
+            "description": "Total booking count",
+            "example": 120,
+            "type": "number"
+          },
+          "branchIds": {
+            "description": "Assigned branch UUIDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "description": "Creation timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "education": {
+            "description": "Education details in English",
+            "example": "King Saud University",
+            "nullable": true,
+            "type": "string"
+          },
+          "educationAr": {
+            "description": "Education details in Arabic",
+            "example": "جامعة الملك سعود",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "example": "khalid@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "employmentType": {
+            "description": "Employment type",
+            "enum": [
+              "FULL_TIME",
+              "PART_TIME",
+              "CONTRACT"
+            ],
+            "example": "FULL_TIME",
+            "type": "string"
+          },
+          "exceptions": {
+            "description": "Date-range availability exceptions",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
+            },
+            "type": "array"
+          },
+          "experience": {
+            "description": "Years of experience",
+            "example": 8,
+            "nullable": true,
+            "type": "integer"
+          },
+          "gender": {
+            "description": "Gender (uppercase enum)",
+            "enum": [
+              "MALE",
+              "FEMALE"
+            ],
+            "example": "MALE",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isAcceptingBookings": {
+            "description": "Employee activation permits booking admission; does not guarantee a free slot",
+            "example": true,
+            "type": "boolean"
+          },
+          "isActive": {
+            "description": "Whether the employee is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the employee is published in the directory",
+            "example": false,
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Dr. Khalid Al-Otaibi",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "example": "خالد العتيبي",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "example": "Khalid Al-Otaibi",
+            "nullable": true,
+            "type": "string"
+          },
+          "onboardingStatus": {
+            "description": "Onboarding status",
+            "enum": [
+              "PENDING",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ],
+            "example": "COMPLETED",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "publicBioAr": {
+            "description": "Public biography in Arabic",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicBioEn": {
+            "description": "Public biography in English",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicImageUrl": {
+            "description": "Readable selected public portrait URL",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "ratingCount": {
+            "description": "Total rating count",
+            "example": 32,
+            "type": "number"
+          },
+          "ref": {
+            "description": "Sequential employee reference",
+            "example": 1024,
+            "type": "integer"
+          },
+          "serviceIds": {
+            "description": "Assigned service UUIDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "slug": {
+            "description": "Public directory slug",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "specialty": {
+            "description": "Specialty label",
+            "example": "Family Therapy",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Specialty label in Arabic",
+            "example": "علاج أسري",
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "Job title",
+            "example": "Senior Therapist",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Linked user UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "isPublic",
+          "publicBioAr",
+          "publicBioEn",
+          "publicImageUrl",
+          "id",
+          "ref",
+          "userId",
+          "name",
+          "nameAr",
+          "nameEn",
+          "title",
+          "specialty",
+          "specialtyAr",
+          "gender",
+          "bio",
+          "bioAr",
+          "education",
+          "educationAr",
+          "experience",
+          "phone",
+          "email",
+          "avatarUrl",
+          "employmentType",
+          "onboardingStatus",
+          "isActive",
+          "isAcceptingBookings",
+          "averageRating",
+          "ratingCount",
+          "bookingCount",
+          "branchIds",
+          "serviceIds",
+          "availability",
+          "createdAt",
+          "updatedAt",
+          "exceptions"
+        ],
+        "type": "object"
+      },
       "EmployeeDurationItemDto": {
         "properties": {
           "durationMins": {
@@ -10123,6 +10833,77 @@
         "required": [
           "deliveryType",
           "items"
+        ],
+        "type": "object"
+      },
+      "EmployeeEffectiveDurationDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery type",
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Duration option UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isInherited": {
+            "description": "Whether the row is inherited from the service defaults",
+            "example": false,
+            "type": "boolean"
+          },
+          "label": {
+            "description": "Label (English)",
+            "example": "60 min",
+            "type": "string"
+          },
+          "labelAr": {
+            "description": "Label (Arabic)",
+            "example": "60 دقيقة",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas (converted from Decimal)",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "deliveryType",
+          "label",
+          "labelAr",
+          "durationMins",
+          "price",
+          "isInherited"
+        ],
+        "type": "object"
+      },
+      "EmployeeEffectiveDurationGroupDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery type",
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durations": {
+            "description": "Effective duration rows for this type",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeEffectiveDurationDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "deliveryType",
+          "durations"
         ],
         "type": "object"
       },
@@ -10220,19 +11001,244 @@
         },
         "type": "object"
       },
+      "EmployeeOnboardResponseDto": {
+        "properties": {
+          "employee": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmployeeWriteResponseDto"
+              }
+            ],
+            "description": "The created employee with its links"
+          },
+          "message": {
+            "description": "Human-readable result message",
+            "example": "Employee onboarded successfully",
+            "type": "string"
+          },
+          "success": {
+            "description": "Always true",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "employee"
+        ],
+        "type": "object"
+      },
+      "EmployeePricingModeResponseDto": {
+        "properties": {
+          "useCustomPricing": {
+            "description": "Persisted custom-pricing flag",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "useCustomPricing"
+        ],
+        "type": "object"
+      },
+      "EmployeeRatingListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Ratings per page",
+            "example": 20,
+            "type": "integer"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching ratings",
+            "example": 42,
+            "type": "integer"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "EmployeeRatingRecordDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Rated booking UUID",
+            "example": "00000000-0000-4000-a000-000000000070",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-4000-a000-000000000080",
+            "format": "uuid",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Review comment",
+            "example": "Excellent session",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Rating UUID",
+            "example": "00000000-0000-4000-a000-000000000060",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Whether the rating is approved for public display",
+            "example": false,
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Score from one to five",
+            "example": 5,
+            "maximum": 5,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "clientId",
+          "employeeId",
+          "score",
+          "comment",
+          "isPublic",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "EmployeeRatingsResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Ratings on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeRatingRecordDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmployeeRatingListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          },
+          "starCounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Score counts (1–5) across every rating for this employee",
+            "example": {
+              "1": 0,
+              "2": 1,
+              "3": 2,
+              "4": 4,
+              "5": 9
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "items",
+          "meta",
+          "starCounts"
+        ],
+        "type": "object"
+      },
       "EmployeeResponseDto": {
         "properties": {
+          "availability": {
+            "description": "Active weekly availability windows, ordered by day",
+            "items": {
+              "properties": {
+                "dayOfWeek": {
+                  "example": 1,
+                  "maximum": 6,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "endTime": {
+                  "example": "17:00",
+                  "type": "string"
+                },
+                "isActive": {
+                  "example": true,
+                  "type": "boolean"
+                },
+                "startTime": {
+                  "example": "09:00",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
           "avatarUrl": {
             "description": "Avatar URL",
             "example": "https://cdn.example.com/avatars/khalid.jpg",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "averageRating": {
             "description": "Average rating (0–5)",
             "example": 4.7,
             "nullable": true,
-            "type": "object"
+            "type": "number"
+          },
+          "bio": {
+            "description": "Short biography in English",
+            "example": "Family therapist with 10 years of experience.",
+            "nullable": true,
+            "type": "string"
+          },
+          "bioAr": {
+            "description": "Short biography in Arabic",
+            "example": "معالج أسري بخبرة 10 سنوات.",
+            "nullable": true,
+            "type": "string"
           },
           "bookingCount": {
             "description": "Total booking count",
@@ -10252,15 +11258,48 @@
             "format": "date-time",
             "type": "string"
           },
+          "education": {
+            "description": "Education details in English",
+            "example": "King Saud University",
+            "nullable": true,
+            "type": "string"
+          },
+          "educationAr": {
+            "description": "Education details in Arabic",
+            "example": "جامعة الملك سعود",
+            "nullable": true,
+            "type": "string"
+          },
           "email": {
             "description": "Email address",
             "example": "khalid@example.com",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "employmentType": {
             "description": "Employment type",
+            "enum": [
+              "FULL_TIME",
+              "PART_TIME",
+              "CONTRACT"
+            ],
             "example": "FULL_TIME",
+            "type": "string"
+          },
+          "experience": {
+            "description": "Years of experience",
+            "example": 8,
+            "nullable": true,
+            "type": "integer"
+          },
+          "gender": {
+            "description": "Gender (uppercase enum)",
+            "enum": [
+              "MALE",
+              "FEMALE"
+            ],
+            "example": "MALE",
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -10280,6 +11319,7 @@
           },
           "isPublic": {
             "description": "Whether the employee is published in the directory",
+            "example": false,
             "type": "boolean"
           },
           "name": {
@@ -10291,16 +11331,21 @@
             "description": "Arabic name",
             "example": "خالد العتيبي",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "nameEn": {
             "description": "English name",
             "example": "Khalid Al-Otaibi",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "onboardingStatus": {
             "description": "Onboarding status",
+            "enum": [
+              "PENDING",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ],
             "example": "COMPLETED",
             "type": "string"
           },
@@ -10308,20 +11353,23 @@
             "description": "Phone number",
             "example": "+966501234567",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "publicBioAr": {
             "description": "Public biography in Arabic",
+            "example": null,
             "nullable": true,
             "type": "string"
           },
           "publicBioEn": {
             "description": "Public biography in English",
+            "example": null,
             "nullable": true,
             "type": "string"
           },
           "publicImageUrl": {
             "description": "Readable selected public portrait URL",
+            "example": null,
             "nullable": true,
             "type": "string"
           },
@@ -10329,6 +11377,11 @@
             "description": "Total rating count",
             "example": 32,
             "type": "number"
+          },
+          "ref": {
+            "description": "Sequential employee reference",
+            "example": 1024,
+            "type": "integer"
           },
           "serviceIds": {
             "description": "Assigned service UUIDs",
@@ -10339,6 +11392,7 @@
           },
           "slug": {
             "description": "Public directory slug",
+            "example": null,
             "nullable": true,
             "type": "string"
           },
@@ -10346,13 +11400,19 @@
             "description": "Specialty label",
             "example": "Family Therapy",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Specialty label in Arabic",
+            "example": "علاج أسري",
+            "nullable": true,
+            "type": "string"
           },
           "title": {
             "description": "Job title",
             "example": "Senior Therapist",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "updatedAt": {
             "description": "Last update timestamp",
@@ -10364,12 +11424,33 @@
             "description": "Linked user UUID",
             "example": "00000000-0000-0000-0000-000000000000",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           }
         },
         "required": [
+          "slug",
+          "isPublic",
+          "publicBioAr",
+          "publicBioEn",
+          "publicImageUrl",
           "id",
+          "ref",
+          "userId",
           "name",
+          "nameAr",
+          "nameEn",
+          "title",
+          "specialty",
+          "specialtyAr",
+          "gender",
+          "bio",
+          "bioAr",
+          "education",
+          "educationAr",
+          "experience",
+          "phone",
+          "email",
+          "avatarUrl",
           "employmentType",
           "onboardingStatus",
           "isActive",
@@ -10379,8 +11460,32 @@
           "bookingCount",
           "branchIds",
           "serviceIds",
+          "availability",
           "createdAt",
           "updatedAt"
+        ],
+        "type": "object"
+      },
+      "EmployeeScheduleResponseDto": {
+        "properties": {
+          "exceptions": {
+            "description": "Date-range availability exceptions",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
+            },
+            "type": "array"
+          },
+          "schedule": {
+            "description": "Recurring weekly availability windows",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAvailabilityWindowRecordDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "schedule",
+          "exceptions"
         ],
         "type": "object"
       },
@@ -10556,6 +11661,294 @@
         ],
         "type": "object"
       },
+      "EmployeeServiceOptionRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationOption": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServiceDurationOptionRecordDto"
+              }
+            ],
+            "description": "The overridden duration option"
+          },
+          "durationOptionId": {
+            "description": "Service duration option UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "durationOverride": {
+            "description": "Duration override in minutes",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "employeeServiceId": {
+            "description": "EmployeeService link UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee service option UUID",
+            "example": "00000000-0000-4000-a000-000000000050",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the override is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "priceOverride": {
+            "description": "Price override in halalas, decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeServiceId",
+          "durationOptionId",
+          "priceOverride",
+          "durationOverride",
+          "deliveryType",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "durationOption"
+        ],
+        "type": "object"
+      },
+      "EmployeeServiceRecordDto": {
+        "properties": {
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session for this link",
+            "example": 10,
+            "type": "integer"
+          },
+          "disabledDeliveryTypes": {
+            "description": "Delivery types this practitioner does not offer for the service",
+            "example": [],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "EmployeeService link UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the link is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "useCustomPricing": {
+            "description": "Whether the practitioner prices this service from owned duration rows",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "serviceId",
+          "isActive",
+          "bufferMinutes",
+          "disabledDeliveryTypes",
+          "useCustomPricing"
+        ],
+        "type": "object"
+      },
+      "EmployeeServiceTypeDto": {
+        "properties": {
+          "bookingType": {
+            "description": "Legacy alias of deliveryType (deprecated)",
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "duration": {
+            "description": "Top-level duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "durationOptions": {
+            "description": "Effective duration options for this type",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeServiceTypeDurationOptionDto"
+            },
+            "type": "array"
+          },
+          "employeeServiceId": {
+            "description": "EmployeeService link UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Synthetic type id (`<employeeServiceId>:<deliveryType>`)",
+            "example": "link-uuid:IN_PERSON",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the type is bookable",
+            "example": true,
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Top-level price in halalas",
+            "example": 30000,
+            "type": "number"
+          },
+          "useCustomOptions": {
+            "description": "Whether the practitioner has scoped duration rows for this type",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "employeeServiceId",
+          "deliveryType",
+          "bookingType",
+          "price",
+          "duration",
+          "useCustomOptions",
+          "isActive",
+          "durationOptions"
+        ],
+        "type": "object"
+      },
+      "EmployeeServiceTypeDurationOptionDto": {
+        "properties": {
+          "durationMinutes": {
+            "description": "Effective duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "employeeServiceTypeId": {
+            "description": "Synthetic employee-service type id",
+            "example": "link-uuid:IN_PERSON",
+            "type": "string"
+          },
+          "id": {
+            "description": "Duration option UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the option is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isDefault": {
+            "description": "Whether this is the default option",
+            "example": true,
+            "type": "boolean"
+          },
+          "label": {
+            "description": "Label (English)",
+            "example": "60 min",
+            "type": "string"
+          },
+          "labelAr": {
+            "description": "Label (Arabic)",
+            "example": "60 دقيقة",
+            "type": "string"
+          },
+          "price": {
+            "description": "Effective price in halalas",
+            "example": 30000,
+            "type": "number"
+          },
+          "sortOrder": {
+            "description": "Display order",
+            "example": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "employeeServiceTypeId",
+          "label",
+          "labelAr",
+          "durationMinutes",
+          "price",
+          "isDefault",
+          "sortOrder",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "EmployeeSlotDto": {
+        "properties": {
+          "endTime": {
+            "description": "Slot end time (HH:MM UTC)",
+            "example": "09:30",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Slot start time (HH:MM UTC)",
+            "example": "09:00",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startTime",
+          "endTime"
+        ],
+        "type": "object"
+      },
       "EmployeeStatsResponseDto": {
         "properties": {
           "active": {
@@ -10567,7 +11960,7 @@
             "description": "Average rating across all employees",
             "example": 4.5,
             "nullable": true,
-            "type": "object"
+            "type": "number"
           },
           "inactive": {
             "description": "Inactive employee count",
@@ -10583,7 +11976,252 @@
         "required": [
           "total",
           "active",
-          "inactive"
+          "inactive",
+          "avgRating"
+        ],
+        "type": "object"
+      },
+      "EmployeeWriteResponseDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Stored avatar reference",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "bio": {
+            "description": "Short biography (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "bioAr": {
+            "description": "Short biography (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "branches": {
+            "description": "Assigned branches",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeBranchRecordDto"
+            },
+            "type": "array"
+          },
+          "commissionRate": {
+            "description": "Commission rate (0–1), decimal string",
+            "example": "1.0000",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "education": {
+            "description": "Education details (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "educationAr": {
+            "description": "Education details (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "example": "khalid@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "employmentType": {
+            "description": "Employment type",
+            "enum": [
+              "FULL_TIME",
+              "PART_TIME",
+              "CONTRACT"
+            ],
+            "example": "FULL_TIME",
+            "type": "string"
+          },
+          "experience": {
+            "description": "Years of experience",
+            "example": 8,
+            "nullable": true,
+            "type": "integer"
+          },
+          "gender": {
+            "description": "Gender",
+            "enum": [
+              "MALE",
+              "FEMALE"
+            ],
+            "example": "MALE",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the employee is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the employee is published in the directory",
+            "example": false,
+            "type": "boolean"
+          },
+          "languages": {
+            "description": "Spoken languages",
+            "example": [
+              "العربية",
+              "English"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "Full display name",
+            "example": "Dr. Khalid Al-Otaibi",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "example": "خالد العتيبي",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "example": "Khalid Al-Otaibi",
+            "nullable": true,
+            "type": "string"
+          },
+          "onboardingStatus": {
+            "description": "Onboarding status",
+            "enum": [
+              "PENDING",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ],
+            "example": "PENDING",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Phone number",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "publicBioAr": {
+            "description": "Public biography (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicBioEn": {
+            "description": "Public biography (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicImageUrl": {
+            "description": "Stored public portrait reference",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential employee reference",
+            "example": 1024,
+            "type": "integer"
+          },
+          "services": {
+            "description": "Assigned service links",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeServiceRecordDto"
+            },
+            "type": "array"
+          },
+          "slug": {
+            "description": "Public directory slug",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "specialty": {
+            "description": "Specialty label (English)",
+            "example": "Family Therapy",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Specialty label (Arabic)",
+            "example": "علاج أسري",
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "Job title",
+            "example": "Senior Therapist",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Linked user UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "userId",
+          "name",
+          "nameEn",
+          "nameAr",
+          "title",
+          "specialty",
+          "specialtyAr",
+          "phone",
+          "email",
+          "gender",
+          "avatarUrl",
+          "bio",
+          "bioAr",
+          "education",
+          "educationAr",
+          "languages",
+          "experience",
+          "employmentType",
+          "onboardingStatus",
+          "isActive",
+          "commissionRate",
+          "slug",
+          "isPublic",
+          "publicBioAr",
+          "publicBioEn",
+          "publicImageUrl",
+          "createdAt",
+          "updatedAt",
+          "branches",
+          "services"
         ],
         "type": "object"
       },
@@ -14194,13 +15832,19 @@
       "PaginatedEmployeesDto": {
         "properties": {
           "items": {
+            "description": "Employees on the requested page",
             "items": {
               "$ref": "#/components/schemas/EmployeeResponseDto"
             },
             "type": "array"
           },
           "meta": {
-            "$ref": "#/components/schemas/ListMetaDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata for the full result set"
           }
         },
         "required": [
@@ -16412,6 +18056,285 @@
           "dayOfWeek",
           "startTime",
           "endTime"
+        ],
+        "type": "object"
+      },
+      "ServiceDurationOptionRecordDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "employeeServiceId": {
+            "description": "Owning EmployeeService link UUID for practitioner-owned rows",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Duration option UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the option is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isDefault": {
+            "description": "Whether this is the default option",
+            "example": true,
+            "type": "boolean"
+          },
+          "label": {
+            "description": "Label (English)",
+            "example": "60 min",
+            "type": "string"
+          },
+          "labelAr": {
+            "description": "Label (Arabic)",
+            "example": "60 دقيقة",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, decimal string",
+            "example": "30000",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Display order",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "deliveryType",
+          "label",
+          "labelAr",
+          "durationMins",
+          "price",
+          "currency",
+          "isDefault",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "employeeServiceId"
+        ],
+        "type": "object"
+      },
+      "ServiceRecordDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "bufferMinutes": {
+            "description": "Buffer minutes after a session",
+            "example": 0,
+            "type": "integer"
+          },
+          "categoryId": {
+            "description": "Owning category UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "commissionRateOverride": {
+            "description": "Per-service commission rate override (0–1), decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit amount in halalas, decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether a deposit is required",
+            "example": false,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Description (Arabic)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "Description (English)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Default duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "hideDurationOnBooking": {
+            "description": "Whether the duration is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "hidePriceOnBooking": {
+            "description": "Whether the price is hidden on the booking surface",
+            "example": false,
+            "type": "boolean"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour token",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the service is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isHidden": {
+            "description": "Whether the service is hidden from the catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "maxAdvanceDays": {
+            "description": "Maximum advance booking window in days",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minLeadMinutes": {
+            "description": "Minimum lead time in minutes",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Service name (Arabic)",
+            "example": "استشارة أسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "Service name (English)",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas, decimal string",
+            "example": "30000",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Sequential service reference",
+            "example": 42,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "categoryId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "durationMins",
+          "price",
+          "currency",
+          "imageUrl",
+          "isActive",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isHidden",
+          "hidePriceOnBooking",
+          "hideDurationOnBooking",
+          "iconName",
+          "iconBgColor",
+          "bufferMinutes",
+          "minLeadMinutes",
+          "maxAdvanceDays",
+          "depositEnabled",
+          "depositAmount",
+          "commissionRateOverride"
         ],
         "type": "object"
       },
@@ -41789,11 +43712,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmployeeResponseDto"
+                  "$ref": "#/components/schemas/EmployeeWriteResponseDto"
                 }
               }
             },
-            "description": "Employee created"
+            "description": "Employee created (raw employee row with branch and service links)"
           },
           "400": {
             "content": {
@@ -42089,49 +44012,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "hasCustomPricing": {
-                      "example": true,
-                      "type": "boolean"
-                    },
-                    "serviceTypes": {
-                      "items": {
-                        "properties": {
-                          "baseDurationMins": {
-                            "example": 50,
-                            "type": "integer"
-                          },
-                          "basePrice": {
-                            "example": 25000,
-                            "type": "integer"
-                          },
-                          "deliveryType": {
-                            "example": "IN_PERSON",
-                            "type": "string"
-                          },
-                          "durationMins": {
-                            "example": 60,
-                            "type": "integer"
-                          },
-                          "id": {
-                            "example": "link-uuid:IN_PERSON",
-                            "type": "string"
-                          },
-                          "isCustom": {
-                            "example": true,
-                            "type": "boolean"
-                          },
-                          "price": {
-                            "example": 30000,
-                            "type": "integer"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeCustomPricingResponseDto"
                 }
               }
             },
@@ -42284,7 +44165,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmployeeResponseDto"
+                  "$ref": "#/components/schemas/EmployeeDetailResponseDto"
                 }
               }
             },
@@ -42373,11 +44254,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmployeeResponseDto"
+                  "$ref": "#/components/schemas/EmployeeWriteResponseDto"
                 }
               }
             },
-            "description": "Updated employee record"
+            "description": "Updated employee record (raw employee row with branch and service links)"
           },
           "400": {
             "content": {
@@ -42782,39 +44663,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "schedule": {
-                      "items": {
-                        "properties": {
-                          "dayOfWeek": {
-                            "example": 1,
-                            "maximum": 6,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "endTime": {
-                            "example": "17:00",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "isActive": {
-                            "example": true,
-                            "type": "boolean"
-                          },
-                          "startTime": {
-                            "example": "09:00",
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeScheduleResponseDto"
                 }
               }
             },
@@ -42903,61 +44752,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "exceptions": {
-                      "items": {
-                        "properties": {
-                          "endDate": {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "reason": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "startDate": {
-                            "format": "date-time",
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "windows": {
-                      "items": {
-                        "properties": {
-                          "dayOfWeek": {
-                            "maximum": 6,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "endTime": {
-                            "example": "17:00",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "isActive": {
-                            "type": "boolean"
-                          },
-                          "startTime": {
-                            "example": "09:00",
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeAvailabilityUpdateResponseDto"
                 }
               }
             },
@@ -43161,35 +44956,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "breaks": {
-                      "items": {
-                        "properties": {
-                          "dayOfWeek": {
-                            "example": 1,
-                            "maximum": 6,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "endTime": {
-                            "example": "14:00",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "startTime": {
-                            "example": "13:00",
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeBreaksResponseDto"
                 }
               }
             },
@@ -43278,35 +45045,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "breaks": {
-                      "items": {
-                        "properties": {
-                          "dayOfWeek": {
-                            "example": 1,
-                            "maximum": 6,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "endTime": {
-                            "example": "14:00",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "startTime": {
-                            "example": "13:00",
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeBreaksResponseDto"
                 }
               }
             },
@@ -43388,32 +45127,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "properties": {
-                      "employeeId": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "endDate": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "isStartTimeOnly": {
-                        "type": "boolean"
-                      },
-                      "reason": {
-                        "nullable": true,
-                        "type": "string"
-                      },
-                      "startDate": {
-                        "format": "date-time",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
+                    "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
                   },
                   "type": "array"
                 }
@@ -43504,32 +45218,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "employeeId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "endDate": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "isStartTimeOnly": {
-                      "type": "boolean"
-                    },
-                    "reason": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "startDate": {
-                      "format": "date-time",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
                 }
               }
             },
@@ -43704,11 +45393,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmployeeResponseDto"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/EmployeeWriteResponseDto"
+                    },
+                    {
+                      "nullable": true,
+                      "type": "object"
+                    }
+                  ]
                 }
               }
             },
-            "description": "Onboarding step processed — returns updated employee"
+            "description": "Onboarding step processed — updated employee, or null if the row disappeared concurrently"
           },
           "400": {
             "content": {
@@ -43805,72 +45502,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "comment": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          "employeeId": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "isPublic": {
-                            "type": "boolean"
-                          },
-                          "score": {
-                            "example": 5,
-                            "maximum": 5,
-                            "minimum": 1,
-                            "type": "number"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "meta": {
-                      "properties": {
-                        "hasNextPage": {
-                          "type": "boolean"
-                        },
-                        "hasPreviousPage": {
-                          "type": "boolean"
-                        },
-                        "limit": {
-                          "type": "integer"
-                        },
-                        "page": {
-                          "type": "integer"
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "totalPages": {
-                          "type": "integer"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "starCounts": {
-                      "additionalProperties": {
-                        "type": "integer"
-                      },
-                      "description": "Score counts across every rating for this employee",
-                      "type": "object"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeRatingsResponseDto"
                 }
               }
             },
@@ -43952,44 +45584,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "properties": {
-                      "employeeId": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "id": {
-                        "description": "EmployeeService link UUID",
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "service": {
-                        "nullable": true,
-                        "properties": {
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "isActive": {
-                            "example": true,
-                            "type": "boolean"
-                          },
-                          "name": {
-                            "example": "Family Therapy Session",
-                            "type": "string"
-                          },
-                          "price": {
-                            "example": 300,
-                            "type": "number"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "serviceId": {
-                        "format": "uuid",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
+                    "$ref": "#/components/schemas/EmployeeAssignedServiceDto"
                   },
                   "type": "array"
                 }
@@ -44090,25 +45685,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "employeeId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "serviceId": {
-                      "format": "uuid",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeServiceRecordDto"
                 }
               }
             },
@@ -44278,6 +45855,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeServiceRecordDto"
+                }
+              }
+            },
             "description": "Employee-service assignment updated"
           },
           "400": {
@@ -44375,19 +45959,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "disabledDeliveryTypes": {
-                      "items": {
-                        "enum": [
-                          "IN_PERSON",
-                          "ONLINE"
-                        ],
-                        "type": "string"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeDeliveryTypesResponseDto"
                 }
               }
             },
@@ -44485,6 +46057,16 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmployeeEffectiveDurationGroupDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Effective durations after update, grouped by delivery type"
           },
           "400": {
@@ -44579,6 +46161,16 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmployeeServiceOptionRecordDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Employee service options updated"
           },
           "400": {
@@ -44676,12 +46268,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "useCustomPricing": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeePricingModeResponseDto"
                 }
               }
             },
@@ -44773,65 +46360,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "properties": {
-                      "bookingType": {
-                        "example": "in_person",
-                        "type": "string"
-                      },
-                      "duration": {
-                        "example": 60,
-                        "type": "integer"
-                      },
-                      "durationOptions": {
-                        "items": {
-                          "properties": {
-                            "durationMinutes": {
-                              "example": 60,
-                              "type": "integer"
-                            },
-                            "id": {
-                              "format": "uuid",
-                              "type": "string"
-                            },
-                            "isActive": {
-                              "type": "boolean"
-                            },
-                            "isDefault": {
-                              "type": "boolean"
-                            },
-                            "label": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "price": {
-                              "example": 300,
-                              "type": "number"
-                            }
-                          },
-                          "type": "object"
-                        },
-                        "type": "array"
-                      },
-                      "employeeServiceId": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "id": {
-                        "example": "link-uuid:IN_PERSON",
-                        "type": "string"
-                      },
-                      "isActive": {
-                        "type": "boolean"
-                      },
-                      "price": {
-                        "example": 300,
-                        "type": "number"
-                      },
-                      "useCustomOptions": {
-                        "type": "boolean"
-                      }
-                    },
-                    "type": "object"
+                    "$ref": "#/components/schemas/EmployeeServiceTypeDto"
                   },
                   "type": "array"
                 }
@@ -44942,19 +46471,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "properties": {
-                      "endTime": {
-                        "description": "HH:MM UTC",
-                        "example": "09:30",
-                        "type": "string"
-                      },
-                      "startTime": {
-                        "description": "HH:MM UTC",
-                        "example": "09:00",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
+                    "$ref": "#/components/schemas/EmployeeSlotDto"
                   },
                   "type": "array"
                 }
@@ -45038,25 +46555,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "properties": {
-                      "endDate": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "reason": {
-                        "nullable": true,
-                        "type": "string"
-                      },
-                      "startDate": {
-                        "format": "date-time",
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
+                    "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
                   },
                   "type": "array"
                 }
@@ -45147,29 +46646,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "employeeId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "endDate": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "reason": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "startDate": {
-                      "format": "date-time",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeAvailabilityExceptionRecordDto"
                 }
               }
             },
@@ -45333,20 +46810,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "employee": {
-                      "$ref": "#/components/schemas/EmployeeResponseDto"
-                    },
-                    "message": {
-                      "example": "Employee onboarded successfully",
-                      "type": "string"
-                    },
-                    "success": {
-                      "example": true,
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmployeeOnboardResponseDto"
                 }
               }
             },

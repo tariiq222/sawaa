@@ -38,7 +38,7 @@ function convertSavedTypes(types: EmployeeServiceType[]): EmployeeTypeConfigPayl
     durationOptions: st.durationOptions.map((o) => ({
       id: o.id,
       label: o.label,
-      labelAr: o.labelAr ?? undefined,
+      labelAr: o.labelAr,
       durationMinutes: o.durationMinutes,
       isDefault: o.isDefault,
       sortOrder: o.sortOrder,

@@ -8,20 +8,7 @@
 
 import { halalasToSarNumber, sarToHalalas } from "@/lib/money"
 import type { DraftService } from "@/components/features/employees/create/services-tab"
-import type { AvailabilitySlot, EmployeeService } from "@/lib/types/employee"
-
-/**
- * Convert wire-format serviceTypes (from API) into form-display shape
- * (SAR numbers, undefined for empty).
- */
-export function toDisplayTypeConfigs(types: EmployeeService["serviceTypes"] = []) {
-  return types.map((st) => ({
-    deliveryType: st.deliveryType,
-    price: st.price != null ? halalasToSarNumber(st.price) : undefined,
-    duration: st.duration ?? undefined,
-    isActive: st.isActive,
-  }))
-}
+import type { AvailabilitySlot } from "@/lib/types/employee"
 
 /**
  * Convert form-shape type configs into wire-format (integer halalas).

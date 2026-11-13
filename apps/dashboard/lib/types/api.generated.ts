@@ -12755,6 +12755,96 @@ export interface components {
              */
             next: "EmailEntryUnavailableDto";
         };
+        EmployeeAssignedServiceDto: {
+            /**
+             * @description Buffer minutes after a session for this link
+             * @example 10
+             */
+            bufferMinutes: number;
+            /**
+             * @description Delivery types this practitioner does not offer for the service
+             * @example []
+             */
+            disabledDeliveryTypes: ("IN_PERSON" | "ONLINE")[];
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description EmployeeService link UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            id: string;
+            /**
+             * @description Whether the link is active
+             * @example true
+             */
+            isActive: boolean;
+            /** @description Service row; null when the service no longer exists */
+            service: components["schemas"]["ServiceRecordDto"] | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            serviceId: string;
+            /**
+             * @description Whether the practitioner prices this service from owned duration rows
+             * @example false
+             */
+            useCustomPricing: boolean;
+        };
+        EmployeeAvailabilityExceptionRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-09-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * Format: date-time
+             * @description Inclusive last date of the time-off range
+             * @example 2026-09-21T00:00:00.000Z
+             */
+            endDate: string;
+            /**
+             * Format: date-time
+             * @description Partial-day end instant; null means end of day
+             * @example null
+             */
+            endTime: string | null;
+            /**
+             * Format: uuid
+             * @description Availability exception UUID
+             * @example 00000000-0000-4000-a000-000000000011
+             */
+            id: string;
+            /**
+             * @description When true only the start instant matters (full-day leave)
+             * @example false
+             */
+            isStartTimeOnly: boolean;
+            /**
+             * @description Reason for the time-off exception
+             * @example Annual leave
+             */
+            reason: string | null;
+            /**
+             * Format: date-time
+             * @description Inclusive first date of the time-off range
+             * @example 2026-09-20T00:00:00.000Z
+             */
+            startDate: string;
+        };
         EmployeeAvailabilityExceptionResponseDto: {
             /**
              * Format: date-time
@@ -12813,6 +12903,58 @@ export interface components {
              */
             windows: components["schemas"]["EmployeeAvailabilityWindowResponseDto"][];
         };
+        EmployeeAvailabilityUpdateResponseDto: {
+            /** @description Persisted availability exceptions */
+            exceptions: components["schemas"]["EmployeeAvailabilityExceptionRecordDto"][];
+            /** @description Persisted availability windows */
+            windows: components["schemas"]["EmployeeAvailabilityWindowRecordDto"][];
+        };
+        EmployeeAvailabilityWindowRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Day of week (0 = Sunday, 6 = Saturday)
+             * @example 1
+             */
+            dayOfWeek: number;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * @description Window end time (HH:MM)
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * Format: uuid
+             * @description Availability window UUID
+             * @example 00000000-0000-4000-a000-000000000010
+             */
+            id: string;
+            /**
+             * @description Whether the window is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Window start time (HH:MM)
+             * @example 09:00
+             */
+            startTime: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
         EmployeeAvailabilityWindowResponseDto: {
             /**
              * @description Day of week (0=Sunday through 6=Saturday)
@@ -12831,6 +12973,71 @@ export interface components {
             isActive: boolean;
             /** @example 09:00 */
             startTime: string;
+        };
+        EmployeeBranchRecordDto: {
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-0000000000a0
+             */
+            branchId: string;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Employee branch link UUID
+             * @example 00000000-0000-4000-a000-000000000090
+             */
+            id: string;
+        };
+        EmployeeBreakRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Day of week (0 = Sunday, 6 = Saturday)
+             * @example 1
+             */
+            dayOfWeek: number;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * @description Break end time (HH:MM)
+             * @example 14:00
+             */
+            endTime: string;
+            /**
+             * Format: uuid
+             * @description Break UUID
+             * @example 00000000-0000-4000-a000-000000000012
+             */
+            id: string;
+            /**
+             * @description Break start time (HH:MM)
+             * @example 13:00
+             */
+            startTime: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        EmployeeBreaksResponseDto: {
+            /** @description Break windows for the employee */
+            breaks: components["schemas"]["EmployeeBreakRecordDto"][];
         };
         EmployeeCancelBookingDto: {
             /**
@@ -12908,6 +13115,256 @@ export interface components {
             /** @example 60 */
             retryAfterSeconds: number;
         };
+        EmployeeCustomPricingResponseDto: {
+            /**
+             * @description Whether any active override carries a custom price or duration
+             * @example true
+             */
+            hasCustomPricing: boolean;
+            /** @description Active overrides grouped by delivery type */
+            serviceTypes: components["schemas"]["EmployeeCustomPricingTypeDto"][];
+        };
+        EmployeeCustomPricingTypeDto: {
+            /**
+             * @description Service-level base duration in minutes
+             * @example 50
+             */
+            baseDurationMins: number;
+            /**
+             * @description Service-level base price in halalas
+             * @example 25000
+             */
+            basePrice: number;
+            /**
+             * @description Legacy alias of deliveryType (deprecated)
+             * @example IN_PERSON
+             */
+            bookingType: string;
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Effective duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Synthetic type id (`<employeeServiceId>:<deliveryType>`)
+             * @example link-uuid:IN_PERSON
+             */
+            id: string;
+            /**
+             * @description Always true for returned entries
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether an override is applied
+             * @example true
+             */
+            isCustom: boolean;
+            /**
+             * @description Effective price in halalas
+             * @example 30000
+             */
+            price: number;
+        };
+        EmployeeDeliveryTypesResponseDto: {
+            /**
+             * @description Persisted disabled delivery types
+             * @example [
+             *       "ONLINE"
+             *     ]
+             */
+            disabledDeliveryTypes: ("IN_PERSON" | "ONLINE")[];
+        };
+        EmployeeDetailResponseDto: {
+            /** @description Active weekly availability windows, ordered by day */
+            availability: {
+                /** @example 1 */
+                dayOfWeek?: number;
+                /** @example 17:00 */
+                endTime?: string;
+                /** @example true */
+                isActive?: boolean;
+                /** @example 09:00 */
+                startTime?: string;
+            }[];
+            /**
+             * @description Avatar URL
+             * @example https://cdn.example.com/avatars/khalid.jpg
+             */
+            avatarUrl: string | null;
+            /**
+             * @description Average rating (0–5)
+             * @example 4.7
+             */
+            averageRating: number | null;
+            /**
+             * @description Short biography in English
+             * @example Family therapist with 10 years of experience.
+             */
+            bio: string | null;
+            /**
+             * @description Short biography in Arabic
+             * @example معالج أسري بخبرة 10 سنوات.
+             */
+            bioAr: string | null;
+            /**
+             * @description Total booking count
+             * @example 120
+             */
+            bookingCount: number;
+            /** @description Assigned branch UUIDs */
+            branchIds: string[];
+            /**
+             * Format: date-time
+             * @description Creation timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Education details in English
+             * @example King Saud University
+             */
+            education: string | null;
+            /**
+             * @description Education details in Arabic
+             * @example جامعة الملك سعود
+             */
+            educationAr: string | null;
+            /**
+             * @description Email address
+             * @example khalid@example.com
+             */
+            email: string | null;
+            /**
+             * @description Employment type
+             * @example FULL_TIME
+             * @enum {string}
+             */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT";
+            /** @description Date-range availability exceptions */
+            exceptions: components["schemas"]["EmployeeAvailabilityExceptionRecordDto"][];
+            /**
+             * @description Years of experience
+             * @example 8
+             */
+            experience: number | null;
+            /**
+             * @description Gender (uppercase enum)
+             * @example MALE
+             * @enum {string|null}
+             */
+            gender: "MALE" | "FEMALE" | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Employee activation permits booking admission; does not guarantee a free slot
+             * @example true
+             */
+            isAcceptingBookings: boolean;
+            /**
+             * @description Whether the employee is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the employee is published in the directory
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Full display name
+             * @example Dr. Khalid Al-Otaibi
+             */
+            name: string;
+            /**
+             * @description Arabic name
+             * @example خالد العتيبي
+             */
+            nameAr: string | null;
+            /**
+             * @description English name
+             * @example Khalid Al-Otaibi
+             */
+            nameEn: string | null;
+            /**
+             * @description Onboarding status
+             * @example COMPLETED
+             * @enum {string}
+             */
+            onboardingStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+            /**
+             * @description Phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * @description Public biography in Arabic
+             * @example null
+             */
+            publicBioAr: string | null;
+            /**
+             * @description Public biography in English
+             * @example null
+             */
+            publicBioEn: string | null;
+            /**
+             * @description Readable selected public portrait URL
+             * @example null
+             */
+            publicImageUrl: string | null;
+            /**
+             * @description Total rating count
+             * @example 32
+             */
+            ratingCount: number;
+            /**
+             * @description Sequential employee reference
+             * @example 1024
+             */
+            ref: number;
+            /** @description Assigned service UUIDs */
+            serviceIds: string[];
+            /**
+             * @description Public directory slug
+             * @example null
+             */
+            slug: string | null;
+            /**
+             * @description Specialty label
+             * @example Family Therapy
+             */
+            specialty: string | null;
+            /**
+             * @description Specialty label in Arabic
+             * @example علاج أسري
+             */
+            specialtyAr: string | null;
+            /**
+             * @description Job title
+             * @example Senior Therapist
+             */
+            title: string | null;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Linked user UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            userId: string | null;
+        };
         EmployeeDurationItemDto: {
             /**
              * @description Duration in minutes (≥ 1)
@@ -12943,6 +13400,53 @@ export interface components {
             deliveryType: string;
             /** @description Duration items for this delivery type */
             items: components["schemas"]["EmployeeDurationItemDto"][];
+        };
+        EmployeeEffectiveDurationDto: {
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             */
+            deliveryType: string;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * Format: uuid
+             * @description Duration option UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Whether the row is inherited from the service defaults
+             * @example false
+             */
+            isInherited: boolean;
+            /**
+             * @description Label (English)
+             * @example 60 min
+             */
+            label: string;
+            /**
+             * @description Label (Arabic)
+             * @example 60 دقيقة
+             */
+            labelAr: string;
+            /**
+             * @description Price in halalas (converted from Decimal)
+             * @example 30000
+             */
+            price: number;
+        };
+        EmployeeEffectiveDurationGroupDto: {
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             */
+            deliveryType: string;
+            /** @description Effective duration rows for this type */
+            durations: components["schemas"]["EmployeeEffectiveDurationDto"][];
         };
         /**
          * @description Gender
@@ -13005,17 +13509,157 @@ export interface components {
              */
             phone?: string;
         };
+        EmployeeOnboardResponseDto: {
+            /** @description The created employee with its links */
+            employee: components["schemas"]["EmployeeWriteResponseDto"];
+            /**
+             * @description Human-readable result message
+             * @example Employee onboarded successfully
+             */
+            message: string;
+            /**
+             * @description Always true
+             * @example true
+             */
+            success: boolean;
+        };
+        EmployeePricingModeResponseDto: {
+            /**
+             * @description Persisted custom-pricing flag
+             * @example true
+             */
+            useCustomPricing: boolean;
+        };
+        EmployeeRatingListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Ratings per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching ratings
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        EmployeeRatingRecordDto: {
+            /**
+             * Format: uuid
+             * @description Rated booking UUID
+             * @example 00000000-0000-4000-a000-000000000070
+             */
+            bookingId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000080
+             */
+            clientId: string;
+            /**
+             * @description Review comment
+             * @example Excellent session
+             */
+            comment: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Rating UUID
+             * @example 00000000-0000-4000-a000-000000000060
+             */
+            id: string;
+            /**
+             * @description Whether the rating is approved for public display
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Score from one to five
+             * @example 5
+             */
+            score: number;
+        };
+        EmployeeRatingsResponseDto: {
+            /** @description Ratings on the requested page */
+            items: components["schemas"]["EmployeeRatingRecordDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["EmployeeRatingListMetaDto"];
+            /**
+             * @description Score counts (1–5) across every rating for this employee
+             * @example {
+             *       "1": 0,
+             *       "2": 1,
+             *       "3": 2,
+             *       "4": 4,
+             *       "5": 9
+             *     }
+             */
+            starCounts: {
+                [key: string]: number;
+            };
+        };
         EmployeeResponseDto: {
+            /** @description Active weekly availability windows, ordered by day */
+            availability: {
+                /** @example 1 */
+                dayOfWeek?: number;
+                /** @example 17:00 */
+                endTime?: string;
+                /** @example true */
+                isActive?: boolean;
+                /** @example 09:00 */
+                startTime?: string;
+            }[];
             /**
              * @description Avatar URL
              * @example https://cdn.example.com/avatars/khalid.jpg
              */
-            avatarUrl?: Record<string, never> | null;
+            avatarUrl: string | null;
             /**
              * @description Average rating (0–5)
              * @example 4.7
              */
-            averageRating: Record<string, never> | null;
+            averageRating: number | null;
+            /**
+             * @description Short biography in English
+             * @example Family therapist with 10 years of experience.
+             */
+            bio: string | null;
+            /**
+             * @description Short biography in Arabic
+             * @example معالج أسري بخبرة 10 سنوات.
+             */
+            bioAr: string | null;
             /**
              * @description Total booking count
              * @example 120
@@ -13030,15 +13674,37 @@ export interface components {
              */
             createdAt: string;
             /**
+             * @description Education details in English
+             * @example King Saud University
+             */
+            education: string | null;
+            /**
+             * @description Education details in Arabic
+             * @example جامعة الملك سعود
+             */
+            educationAr: string | null;
+            /**
              * @description Email address
              * @example khalid@example.com
              */
-            email?: Record<string, never> | null;
+            email: string | null;
             /**
              * @description Employment type
              * @example FULL_TIME
+             * @enum {string}
              */
-            employmentType: string;
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT";
+            /**
+             * @description Years of experience
+             * @example 8
+             */
+            experience: number | null;
+            /**
+             * @description Gender (uppercase enum)
+             * @example MALE
+             * @enum {string|null}
+             */
+            gender: "MALE" | "FEMALE" | null;
             /**
              * @description Employee UUID
              * @example 00000000-0000-0000-0000-000000000000
@@ -13054,8 +13720,11 @@ export interface components {
              * @example true
              */
             isActive: boolean;
-            /** @description Whether the employee is published in the directory */
-            isPublic?: boolean;
+            /**
+             * @description Whether the employee is published in the directory
+             * @example false
+             */
+            isPublic: boolean;
             /**
              * @description Full display name
              * @example Dr. Khalid Al-Otaibi
@@ -13065,47 +13734,70 @@ export interface components {
              * @description Arabic name
              * @example خالد العتيبي
              */
-            nameAr?: Record<string, never> | null;
+            nameAr: string | null;
             /**
              * @description English name
              * @example Khalid Al-Otaibi
              */
-            nameEn?: Record<string, never> | null;
+            nameEn: string | null;
             /**
              * @description Onboarding status
              * @example COMPLETED
+             * @enum {string}
              */
-            onboardingStatus: string;
+            onboardingStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED";
             /**
              * @description Phone number
              * @example +966501234567
              */
-            phone?: Record<string, never> | null;
-            /** @description Public biography in Arabic */
-            publicBioAr?: string | null;
-            /** @description Public biography in English */
-            publicBioEn?: string | null;
-            /** @description Readable selected public portrait URL */
-            publicImageUrl?: string | null;
+            phone: string | null;
+            /**
+             * @description Public biography in Arabic
+             * @example null
+             */
+            publicBioAr: string | null;
+            /**
+             * @description Public biography in English
+             * @example null
+             */
+            publicBioEn: string | null;
+            /**
+             * @description Readable selected public portrait URL
+             * @example null
+             */
+            publicImageUrl: string | null;
             /**
              * @description Total rating count
              * @example 32
              */
             ratingCount: number;
+            /**
+             * @description Sequential employee reference
+             * @example 1024
+             */
+            ref: number;
             /** @description Assigned service UUIDs */
             serviceIds: string[];
-            /** @description Public directory slug */
-            slug?: string | null;
+            /**
+             * @description Public directory slug
+             * @example null
+             */
+            slug: string | null;
             /**
              * @description Specialty label
              * @example Family Therapy
              */
-            specialty?: Record<string, never> | null;
+            specialty: string | null;
+            /**
+             * @description Specialty label in Arabic
+             * @example علاج أسري
+             */
+            specialtyAr: string | null;
             /**
              * @description Job title
              * @example Senior Therapist
              */
-            title?: Record<string, never> | null;
+            title: string | null;
             /**
              * Format: date-time
              * @description Last update timestamp
@@ -13116,7 +13808,13 @@ export interface components {
              * @description Linked user UUID
              * @example 00000000-0000-0000-0000-000000000000
              */
-            userId?: Record<string, never> | null;
+            userId: string | null;
+        };
+        EmployeeScheduleResponseDto: {
+            /** @description Date-range availability exceptions */
+            exceptions: components["schemas"]["EmployeeAvailabilityExceptionRecordDto"][];
+            /** @description Recurring weekly availability windows */
+            schedule: components["schemas"]["EmployeeAvailabilityWindowRecordDto"][];
         };
         EmployeeScopedClientResponseDto: {
             /**
@@ -13227,6 +13925,206 @@ export interface components {
              */
             priceOverride?: Record<string, never> | null;
         };
+        EmployeeServiceOptionRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /** @description The overridden duration option */
+            durationOption: components["schemas"]["ServiceDurationOptionRecordDto"];
+            /**
+             * Format: uuid
+             * @description Service duration option UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            durationOptionId: string;
+            /**
+             * @description Duration override in minutes
+             * @example null
+             */
+            durationOverride: number | null;
+            /**
+             * @description EmployeeService link UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            employeeServiceId: string;
+            /**
+             * Format: uuid
+             * @description Employee service option UUID
+             * @example 00000000-0000-4000-a000-000000000050
+             */
+            id: string;
+            /**
+             * @description Whether the override is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Price override in halalas, decimal string
+             * @example null
+             */
+            priceOverride: string | null;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        EmployeeServiceRecordDto: {
+            /**
+             * @description Buffer minutes after a session for this link
+             * @example 10
+             */
+            bufferMinutes: number;
+            /**
+             * @description Delivery types this practitioner does not offer for the service
+             * @example []
+             */
+            disabledDeliveryTypes: ("IN_PERSON" | "ONLINE")[];
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description EmployeeService link UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            id: string;
+            /**
+             * @description Whether the link is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            serviceId: string;
+            /**
+             * @description Whether the practitioner prices this service from owned duration rows
+             * @example false
+             */
+            useCustomPricing: boolean;
+        };
+        EmployeeServiceTypeDto: {
+            /**
+             * @description Legacy alias of deliveryType (deprecated)
+             * @example IN_PERSON
+             */
+            bookingType: string;
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Top-level duration in minutes
+             * @example 60
+             */
+            duration: number;
+            /** @description Effective duration options for this type */
+            durationOptions: components["schemas"]["EmployeeServiceTypeDurationOptionDto"][];
+            /**
+             * Format: uuid
+             * @description EmployeeService link UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            employeeServiceId: string;
+            /**
+             * @description Synthetic type id (`<employeeServiceId>:<deliveryType>`)
+             * @example link-uuid:IN_PERSON
+             */
+            id: string;
+            /**
+             * @description Whether the type is bookable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Top-level price in halalas
+             * @example 30000
+             */
+            price: number;
+            /**
+             * @description Whether the practitioner has scoped duration rows for this type
+             * @example true
+             */
+            useCustomOptions: boolean;
+        };
+        EmployeeServiceTypeDurationOptionDto: {
+            /**
+             * @description Effective duration in minutes
+             * @example 60
+             */
+            durationMinutes: number;
+            /**
+             * @description Synthetic employee-service type id
+             * @example link-uuid:IN_PERSON
+             */
+            employeeServiceTypeId: string;
+            /**
+             * Format: uuid
+             * @description Duration option UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Whether the option is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this is the default option
+             * @example true
+             */
+            isDefault: boolean;
+            /**
+             * @description Label (English)
+             * @example 60 min
+             */
+            label: string;
+            /**
+             * @description Label (Arabic)
+             * @example 60 دقيقة
+             */
+            labelAr: string;
+            /**
+             * @description Effective price in halalas
+             * @example 30000
+             */
+            price: number;
+            /**
+             * @description Display order
+             * @example 0
+             */
+            sortOrder: number;
+        };
+        EmployeeSlotDto: {
+            /**
+             * @description Slot end time (HH:MM UTC)
+             * @example 09:30
+             */
+            endTime: string;
+            /**
+             * @description Slot start time (HH:MM UTC)
+             * @example 09:00
+             */
+            startTime: string;
+        };
         EmployeeStatsResponseDto: {
             /**
              * @description Active employee count
@@ -13237,7 +14135,7 @@ export interface components {
              * @description Average rating across all employees
              * @example 4.5
              */
-            avgRating?: Record<string, never> | null;
+            avgRating: number | null;
             /**
              * @description Inactive employee count
              * @example 3
@@ -13248,6 +14146,170 @@ export interface components {
              * @example 15
              */
             total: number;
+        };
+        EmployeeWriteResponseDto: {
+            /**
+             * @description Stored avatar reference
+             * @example null
+             */
+            avatarUrl: string | null;
+            /**
+             * @description Short biography (English)
+             * @example null
+             */
+            bio: string | null;
+            /**
+             * @description Short biography (Arabic)
+             * @example null
+             */
+            bioAr: string | null;
+            /** @description Assigned branches */
+            branches: components["schemas"]["EmployeeBranchRecordDto"][];
+            /**
+             * @description Commission rate (0–1), decimal string
+             * @example 1.0000
+             */
+            commissionRate: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Education details (English)
+             * @example null
+             */
+            education: string | null;
+            /**
+             * @description Education details (Arabic)
+             * @example null
+             */
+            educationAr: string | null;
+            /**
+             * @description Email address
+             * @example khalid@example.com
+             */
+            email: string | null;
+            /**
+             * @description Employment type
+             * @example FULL_TIME
+             * @enum {string}
+             */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT";
+            /**
+             * @description Years of experience
+             * @example 8
+             */
+            experience: number | null;
+            /**
+             * @description Gender
+             * @example MALE
+             * @enum {string|null}
+             */
+            gender: "MALE" | "FEMALE" | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether the employee is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the employee is published in the directory
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Spoken languages
+             * @example [
+             *       "العربية",
+             *       "English"
+             *     ]
+             */
+            languages: string[];
+            /**
+             * @description Full display name
+             * @example Dr. Khalid Al-Otaibi
+             */
+            name: string;
+            /**
+             * @description Arabic name
+             * @example خالد العتيبي
+             */
+            nameAr: string | null;
+            /**
+             * @description English name
+             * @example Khalid Al-Otaibi
+             */
+            nameEn: string | null;
+            /**
+             * @description Onboarding status
+             * @example PENDING
+             * @enum {string}
+             */
+            onboardingStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+            /**
+             * @description Phone number
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * @description Public biography (Arabic)
+             * @example null
+             */
+            publicBioAr: string | null;
+            /**
+             * @description Public biography (English)
+             * @example null
+             */
+            publicBioEn: string | null;
+            /**
+             * @description Stored public portrait reference
+             * @example null
+             */
+            publicImageUrl: string | null;
+            /**
+             * @description Sequential employee reference
+             * @example 1024
+             */
+            ref: number;
+            /** @description Assigned service links */
+            services: components["schemas"]["EmployeeServiceRecordDto"][];
+            /**
+             * @description Public directory slug
+             * @example null
+             */
+            slug: string | null;
+            /**
+             * @description Specialty label (English)
+             * @example Family Therapy
+             */
+            specialty: string | null;
+            /**
+             * @description Specialty label (Arabic)
+             * @example علاج أسري
+             */
+            specialtyAr: string | null;
+            /**
+             * @description Job title
+             * @example Senior Therapist
+             */
+            title: string | null;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Linked user UUID
+             * @example null
+             */
+            userId: string | null;
         };
         /**
          * @description Employment type
@@ -15458,7 +16520,9 @@ export interface components {
             meta: components["schemas"]["DepartmentListMetaDto"];
         };
         PaginatedEmployeesDto: {
+            /** @description Employees on the requested page */
             items: components["schemas"]["EmployeeResponseDto"][];
+            /** @description Pagination metadata for the full result set */
             meta: components["schemas"]["ListMetaDto"];
         };
         PaginatedNotificationsResponseDto: {
@@ -16806,6 +17870,219 @@ export interface components {
              * @example 09:00
              */
             startTime: string;
+        };
+        ServiceDurationOptionRecordDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Owning EmployeeService link UUID for practitioner-owned rows
+             * @example null
+             */
+            employeeServiceId: string | null;
+            /**
+             * Format: uuid
+             * @description Duration option UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Whether the option is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this is the default option
+             * @example true
+             */
+            isDefault: boolean;
+            /**
+             * @description Label (English)
+             * @example 60 min
+             */
+            label: string;
+            /**
+             * @description Label (Arabic)
+             * @example 60 دقيقة
+             */
+            labelAr: string;
+            /**
+             * @description Price in halalas, decimal string
+             * @example 30000
+             */
+            price: string;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            serviceId: string;
+            /**
+             * @description Display order
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        ServiceRecordDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Buffer minutes after a session
+             * @example 0
+             */
+            bufferMinutes: number;
+            /**
+             * @description Owning category UUID
+             * @example null
+             */
+            categoryId: string | null;
+            /**
+             * @description Per-service commission rate override (0–1), decimal string
+             * @example null
+             */
+            commissionRateOverride: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Deposit amount in halalas, decimal string
+             * @example null
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether a deposit is required
+             * @example false
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Description (Arabic)
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description Description (English)
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Default duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Whether the duration is hidden on the booking surface
+             * @example false
+             */
+            hideDurationOnBooking: boolean;
+            /**
+             * @description Whether the price is hidden on the booking surface
+             * @example false
+             */
+            hidePriceOnBooking: boolean;
+            /**
+             * @description Icon background colour token
+             * @example null
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name
+             * @example null
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Stored image reference
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the service is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the service is hidden from the catalog
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @description Maximum advance booking window in days
+             * @example null
+             */
+            maxAdvanceDays: number | null;
+            /**
+             * @description Minimum lead time in minutes
+             * @example null
+             */
+            minLeadMinutes: number | null;
+            /**
+             * @description Service name (Arabic)
+             * @example استشارة أسرية
+             */
+            nameAr: string;
+            /**
+             * @description Service name (English)
+             * @example Family consultation
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in halalas, decimal string
+             * @example 30000
+             */
+            price: string;
+            /**
+             * @description Sequential service reference
+             * @example 42
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
         };
         SetBusinessHoursDto: {
             /**
@@ -35376,13 +36653,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Employee created */
+            /** @description Employee created (raw employee row with branch and service links) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponseDto"];
+                    "application/json": components["schemas"]["EmployeeWriteResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -35599,26 +36876,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example true */
-                        hasCustomPricing?: boolean;
-                        serviceTypes?: {
-                            /** @example 50 */
-                            baseDurationMins?: number;
-                            /** @example 25000 */
-                            basePrice?: number;
-                            /** @example IN_PERSON */
-                            deliveryType?: string;
-                            /** @example 60 */
-                            durationMins?: number;
-                            /** @example link-uuid:IN_PERSON */
-                            id?: string;
-                            /** @example true */
-                            isCustom?: boolean;
-                            /** @example 30000 */
-                            price?: number;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["EmployeeCustomPricingResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -35684,7 +36942,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponseDto"];
+                    "application/json": components["schemas"]["EmployeeDetailResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -35812,13 +37070,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Updated employee record */
+            /** @description Updated employee record (raw employee row with branch and service links) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponseDto"];
+                    "application/json": components["schemas"]["EmployeeWriteResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36123,20 +37381,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        schedule?: {
-                            /** @example 1 */
-                            dayOfWeek?: number;
-                            /** @example 17:00 */
-                            endTime?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            /** @example true */
-                            isActive?: boolean;
-                            /** @example 09:00 */
-                            startTime?: string;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["EmployeeScheduleResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36206,27 +37451,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        exceptions?: {
-                            /** Format: date-time */
-                            endDate?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            reason?: string | null;
-                            /** Format: date-time */
-                            startDate?: string;
-                        }[];
-                        windows?: {
-                            dayOfWeek?: number;
-                            /** @example 17:00 */
-                            endTime?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            isActive?: boolean;
-                            /** @example 09:00 */
-                            startTime?: string;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["EmployeeAvailabilityUpdateResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36364,18 +37589,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        breaks?: {
-                            /** @example 1 */
-                            dayOfWeek?: number;
-                            /** @example 14:00 */
-                            endTime?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            /** @example 13:00 */
-                            startTime?: string;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["EmployeeBreaksResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36445,18 +37659,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        breaks?: {
-                            /** @example 1 */
-                            dayOfWeek?: number;
-                            /** @example 14:00 */
-                            endTime?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            /** @example 13:00 */
-                            startTime?: string;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["EmployeeBreaksResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36522,18 +37725,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: date-time */
-                        endDate?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        isStartTimeOnly?: boolean;
-                        reason?: string | null;
-                        /** Format: date-time */
-                        startDate?: string;
-                    }[];
+                    "application/json": components["schemas"]["EmployeeAvailabilityExceptionRecordDto"][];
                 };
             };
             /** @description Validation failed */
@@ -36603,18 +37795,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: date-time */
-                        endDate?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        isStartTimeOnly?: boolean;
-                        reason?: string | null;
-                        /** Format: date-time */
-                        startDate?: string;
-                    };
+                    "application/json": components["schemas"]["EmployeeAvailabilityExceptionRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -36744,13 +37925,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Onboarding step processed — returns updated employee */
+            /** @description Onboarding step processed — updated employee, or null if the row disappeared concurrently */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponseDto"];
+                    "application/json": components["schemas"]["EmployeeWriteResponseDto"] | (Record<string, never> | null);
                 };
             };
             /** @description Validation failed */
@@ -36821,32 +38002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items?: {
-                            comment?: string | null;
-                            /** Format: date-time */
-                            createdAt?: string;
-                            /** Format: uuid */
-                            employeeId?: string;
-                            /** Format: uuid */
-                            id?: string;
-                            isPublic?: boolean;
-                            /** @example 5 */
-                            score?: number;
-                        }[];
-                        meta?: {
-                            hasNextPage?: boolean;
-                            hasPreviousPage?: boolean;
-                            limit?: number;
-                            page?: number;
-                            total?: number;
-                            totalPages?: number;
-                        };
-                        /** @description Score counts across every rating for this employee */
-                        starCounts?: {
-                            [key: string]: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["EmployeeRatingsResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36912,27 +38068,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /**
-                         * Format: uuid
-                         * @description EmployeeService link UUID
-                         */
-                        id?: string;
-                        service?: {
-                            /** Format: uuid */
-                            id?: string;
-                            /** @example true */
-                            isActive?: boolean;
-                            /** @example Family Therapy Session */
-                            name?: string;
-                            /** @example 300 */
-                            price?: number;
-                        } | null;
-                        /** Format: uuid */
-                        serviceId?: string;
-                    }[];
+                    "application/json": components["schemas"]["EmployeeAssignedServiceDto"][];
                 };
             };
             /** @description Validation failed */
@@ -37008,16 +38144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: uuid */
-                        serviceId?: string;
-                    };
+                    "application/json": components["schemas"]["EmployeeServiceRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -37150,7 +38277,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmployeeServiceRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37221,9 +38350,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        disabledDeliveryTypes?: ("IN_PERSON" | "ONLINE")[];
-                    };
+                    "application/json": components["schemas"]["EmployeeDeliveryTypesResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -37294,7 +38421,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmployeeEffectiveDurationGroupDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37364,7 +38493,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmployeeServiceOptionRecordDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37435,9 +38566,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        useCustomPricing?: boolean;
-                    };
+                    "application/json": components["schemas"]["EmployeePricingModeResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -37505,31 +38634,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example in_person */
-                        bookingType?: string;
-                        /** @example 60 */
-                        duration?: number;
-                        durationOptions?: {
-                            /** @example 60 */
-                            durationMinutes?: number;
-                            /** Format: uuid */
-                            id?: string;
-                            isActive?: boolean;
-                            isDefault?: boolean;
-                            label?: string | null;
-                            /** @example 300 */
-                            price?: number;
-                        }[];
-                        /** Format: uuid */
-                        employeeServiceId?: string;
-                        /** @example link-uuid:IN_PERSON */
-                        id?: string;
-                        isActive?: boolean;
-                        /** @example 300 */
-                        price?: number;
-                        useCustomOptions?: boolean;
-                    }[];
+                    "application/json": components["schemas"]["EmployeeServiceTypeDto"][];
                 };
             };
             /** @description Validation failed */
@@ -37602,18 +38707,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /**
-                         * @description HH:MM UTC
-                         * @example 09:30
-                         */
-                        endTime?: string;
-                        /**
-                         * @description HH:MM UTC
-                         * @example 09:00
-                         */
-                        startTime?: string;
-                    }[];
+                    "application/json": components["schemas"]["EmployeeSlotDto"][];
                 };
             };
             /** @description Validation failed */
@@ -37679,15 +38773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        endDate?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        reason?: string | null;
-                        /** Format: date-time */
-                        startDate?: string;
-                    }[];
+                    "application/json": components["schemas"]["EmployeeAvailabilityExceptionRecordDto"][];
                 };
             };
             /** @description Validation failed */
@@ -37757,17 +38843,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        employeeId?: string;
-                        /** Format: date-time */
-                        endDate?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        reason?: string | null;
-                        /** Format: date-time */
-                        startDate?: string;
-                    };
+                    "application/json": components["schemas"]["EmployeeAvailabilityExceptionRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -37900,13 +38976,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        employee?: components["schemas"]["EmployeeResponseDto"];
-                        /** @example Employee onboarded successfully */
-                        message?: string;
-                        /** @example true */
-                        success?: boolean;
-                    };
+                    "application/json": components["schemas"]["EmployeeOnboardResponseDto"];
                 };
             };
             /** @description Validation failed */

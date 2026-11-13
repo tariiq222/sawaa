@@ -59,68 +59,54 @@ describe("employees api", () => {
       expect(getMock).toHaveBeenCalledWith("/dashboard/people/employees", expect.any(Object))
     })
 
-    it("maps backend rating field to averageRating", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", rating: 4.5, reviewCount: 12 }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].averageRating).toBe(4.5)
-      expect(result.items[0]._count!.ratings).toBe(12)
-    })
-
-    it("prefers averageRating over rating when both present", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", averageRating: 3.8, rating: 4.5, reviewCount: 5 }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].averageRating).toBe(3.8)
-    })
-
-    it("defaults _count.bookings to 0 when not returned by backend", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", rating: 4.0, reviewCount: 3 }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0]!._count!.bookings).toBe(0)
-    })
-
-    it("passes through existing _count from backend", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", _count: { bookings: 10, ratings: 6 } }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0]._count).toEqual({ bookings: 10, ratings: 6 })
-    })
   })
 
   describe("fetchEmployee", () => {
-    it("calls /dashboard/people/employees/:id", async () => {
-      getMock.mockResolvedValueOnce({ id: "p-1", rating: 4.2, reviewCount: 8 })
-
-      await fetchEmployee("p-1")
-
-      expect(getMock).toHaveBeenCalledWith("/dashboard/people/employees/p-1")
-    })
-
-    it("maps backend shape before returning", async () => {
-      getMock.mockResolvedValueOnce({ id: "p-1", rating: 4.2, reviewCount: 8 })
+    it("calls /dashboard/people/employees/:id and returns the detail projection", async () => {
+      getMock.mockResolvedValueOnce({
+        id: "p-1",
+        ref: 7,
+        userId: null,
+        name: "Ali Hassan",
+        nameAr: null,
+        nameEn: "Ali Hassan",
+        title: null,
+        specialty: "Family Therapy",
+        specialtyAr: null,
+        gender: null,
+        bio: null,
+        bioAr: null,
+        education: null,
+        educationAr: null,
+        experience: null,
+        phone: null,
+        email: null,
+        avatarUrl: null,
+        employmentType: "FULL_TIME",
+        onboardingStatus: "COMPLETED",
+        isActive: true,
+        isAcceptingBookings: true,
+        isPublic: false,
+        slug: null,
+        publicBioAr: null,
+        publicBioEn: null,
+        publicImageUrl: null,
+        averageRating: null,
+        ratingCount: 0,
+        bookingCount: 0,
+        branchIds: [],
+        serviceIds: [],
+        availability: [],
+        exceptions: [],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      })
 
       const result = await fetchEmployee("p-1")
 
-      expect(result.averageRating).toBe(4.2)
-      expect(result._count!.ratings).toBe(8)
+      expect(getMock).toHaveBeenCalledWith("/dashboard/people/employees/p-1")
+      expect(result.user.firstName).toBe("Ali")
+      expect(result.exceptions).toEqual([])
     })
   })
 
@@ -181,21 +167,72 @@ describe("employees api", () => {
     })
   })
 
-  describe("mapEmployee edge cases", () => {
-    it("preserves specialty as-is when it is already a string", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", specialty: "Orthopedics" }],
-        meta: { total: 1 },
-      })
+  describe("mapEmployee projection", () => {
+    const wireRow = {
+      id: "p-1",
+      ref: 7,
+      userId: "u-1",
+      name: "Ali Hassan",
+      nameAr: "علي حسن",
+      nameEn: "Ali Hassan",
+      title: null,
+      specialty: "Family Therapy",
+      specialtyAr: "علاج أسري",
+      gender: "MALE",
+      bio: null,
+      bioAr: null,
+      education: null,
+      educationAr: null,
+      experience: 4,
+      phone: "+966500000000",
+      email: "ali@example.com",
+      avatarUrl: null,
+      employmentType: "FULL_TIME",
+      onboardingStatus: "COMPLETED",
+      isActive: true,
+      isAcceptingBookings: true,
+      isPublic: false,
+      slug: null,
+      publicBioAr: null,
+      publicBioEn: null,
+      publicImageUrl: null,
+      averageRating: 4.2,
+      ratingCount: 8,
+      bookingCount: 12,
+      branchIds: ["br-1"],
+      serviceIds: ["svc-1"],
+      availability: [{ dayOfWeek: 1, startTime: "09:00", endTime: "17:00", isActive: true }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    }
+
+    it("splits the display name into the synthetic user projection", async () => {
+      getMock.mockResolvedValueOnce({ items: [wireRow], meta: { total: 1 } })
 
       const result = await fetchEmployees()
 
-      expect(result.items[0].specialty).toBe("Orthopedics")
+      expect(result.items[0].user).toEqual({
+        id: "u-1",
+        firstName: "علي",
+        lastName: "حسن",
+        email: "ali@example.com",
+        phone: "+966500000000",
+      })
     })
 
-    it("sets specialty to empty string when null", async () => {
+    it("keeps the wire counters unchanged", async () => {
+      getMock.mockResolvedValueOnce({ items: [wireRow], meta: { total: 1 } })
+
+      const result = await fetchEmployees()
+
+      expect(result.items[0].averageRating).toBe(4.2)
+      expect(result.items[0].ratingCount).toBe(8)
+      expect(result.items[0].bookingCount).toBe(12)
+    })
+
+    it("normalises a null specialty to an empty string", async () => {
       getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", specialty: null }],
+        items: [{ ...wireRow, specialty: null }],
         meta: { total: 1 },
       })
 
@@ -204,104 +241,15 @@ describe("employees api", () => {
       expect(result.items[0].specialty).toBe("")
     })
 
-    it("uses specialtyAr from raw when specialty is string", async () => {
+    it("falls back to the English name when the Arabic name is absent", async () => {
       getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", specialty: "Orthopedics", specialtyAr: "عظام" }],
+        items: [{ ...wireRow, nameAr: null }],
         meta: { total: 1 },
       })
 
       const result = await fetchEmployees()
 
-      expect(result.items[0].specialtyAr).toBe("عظام")
-    })
-
-    it("sets specialtyAr to null when specialty is null", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", specialty: null }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].specialtyAr).toBeNull()
-    })
-
-    it("sets specialtyAr to null when specialty is string and specialtyAr is missing", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", specialty: "General" }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].specialtyAr).toBeNull()
-    })
-
-    it("extracts avatarUrl from user object", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", user: { avatarUrl: "https://img.url/pic.jpg" } }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].avatarUrl).toBe("https://img.url/pic.jpg")
-    })
-
-    it("falls back to raw avatarUrl when user.avatarUrl is null", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", user: { avatarUrl: null }, avatarUrl: "fallback.jpg" }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].avatarUrl).toBe("fallback.jpg")
-    })
-
-    it("sets avatarUrl to null when both user.avatarUrl and raw.avatarUrl are missing", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", user: {} }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].avatarUrl).toBeNull()
-    })
-
-    it("sets averageRating to undefined when neither averageRating nor rating exist", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", _count: { bookings: 0, ratings: 0 } }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0].averageRating).toBeUndefined()
-    })
-
-    it("defaults _count to {bookings:0, ratings:0} when _count and reviewCount both missing", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1" }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0]._count).toEqual({ bookings: 0, ratings: 0 })
-    })
-
-    it("uses reviewCount as ratings count in default _count", async () => {
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "p-1", reviewCount: 7 }],
-        meta: { total: 1 },
-      })
-
-      const result = await fetchEmployees()
-
-      expect(result.items[0]!._count!.ratings).toBe(7)
-      expect(result.items[0]!._count!.bookings).toBe(0)
+      expect(result.items[0].user.firstName).toBe("Ali")
     })
   })
 })

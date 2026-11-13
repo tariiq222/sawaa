@@ -12,10 +12,9 @@ import { SurfaceRow } from "@sawaa/ui"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { useAuth } from "@/components/providers/auth-provider"
 import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
-import { RemoveServiceDialog } from "@/components/features/shared/remove-service-dialog"
+import { RemoveServiceDialog, type RemoveServiceDialogTarget } from "@/components/features/shared/remove-service-dialog"
 import { toast } from "sonner"
 import type { ServiceEmployee } from "@/lib/types/service"
-import type { EmployeeService } from "@/lib/types/employee"
 import { EmployeeCustomPricingRow } from "@/components/features/shared/employee-custom-pricing-row"
 
 /* ─── Props ─── */
@@ -63,16 +62,11 @@ export function AssignedEmployeeRow({
      mutation) and ps.service.{nameAr,nameEn} (for the dialog title). The
      service name comes from the parent tab, which already resolves it from
      the underlying service (or the hidden anchor service for categories). */
-  const employeeServiceForDialog: EmployeeService = {
-    id: item.id,
+  const employeeServiceForDialog: RemoveServiceDialogTarget = {
     serviceId,
-    isActive: displayedActive,
     service: {
-      id: serviceId,
       nameAr: serviceNameAr ?? "",
-      nameEn: serviceNameEn ?? "",
-      price: 0,
-      duration: 0,
+      nameEn: serviceNameEn ?? null,
     },
   }
 

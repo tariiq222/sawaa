@@ -33,15 +33,18 @@ const baseOpts = {
   date: "2026-03-27",
 }
 
+// Mirrors the GET .../services wire row. Note the embedded service exposes
+// `durationMins`, which the hook deliberately does not use as a fallback.
 const mockEmployeeServices = [
   {
     id: "ps1",
+    employeeId: "p-1",
     serviceId: "svc-1",
-    customDuration: null,
     bufferMinutes: 0,
-    availableTypes: ["in_person"],
     isActive: true,
-    service: { id: "svc-1", nameAr: "استشارة عامة", nameEn: "General", price: 200, duration: 30 },
+    disabledDeliveryTypes: [],
+    useCustomPricing: false,
+    service: { id: "svc-1", nameAr: "استشارة عامة", nameEn: "General", price: "200", durationMins: 30 },
   },
 ]
 
@@ -105,22 +108,24 @@ describe("useCreateBookingSlots", () => {
     expect(fetchEmployeeServiceTypes).not.toHaveBeenCalled()
   })
 
-  it("fetches slots with fallback service duration when no service types returned", async () => {
+  it("does not fall back to the assignment row's base duration when no service type duration exists", async () => {
+    // The embedded service row carries `durationMins`; the historical fallback
+    // read `service.duration` and therefore always produced undefined. This
+    // pins that no fallback is enabled: the hook must not start fetching slots
+    // in a case where it previously did not.
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([])
-    fetchSlots.mockResolvedValue([{ startTime: "09:00", endTime: "09:30" }])
+    fetchSlots.mockResolvedValue([])
 
     const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
       wrapper: makeWrapper(),
     })
 
-    // The slots query stays disabled (and slotsLoading=false) until the
-    // upstream duration resolves; wait for the actual fetch instead.
-    await waitFor(() => expect(fetchSlots).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.serviceTypesLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 30, { serviceId: "svc-1", deliveryType: "in_person" })
-    expect(result.current.selectedDuration).toBe(30)
-    await waitFor(() => expect(result.current.slots).toHaveLength(1))
+    expect(result.current.selectedDuration).toBeUndefined()
+    expect(result.current.canFetchSlots).toBe(false)
+    expect(fetchSlots).not.toHaveBeenCalled()
   })
 
   it("uses service type duration when service type exists for deliveryType", async () => {
@@ -204,7 +209,9 @@ describe("useCreateBookingSlots", () => {
 
   it("uses act to verify state stabilizes", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([])
+    fetchEmployeeServiceTypes.mockResolvedValue([
+      { deliveryType: "in_person", isActive: true, duration: 30, durationOptions: [] },
+    ])
     fetchSlots.mockResolvedValue([])
 
     const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
@@ -220,7 +227,10 @@ describe("useCreateBookingSlots", () => {
 
   it("slots are empty while slotsLoading is true", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([])
+    // An explicit service-type duration is the only path that starts the fetch.
+    fetchEmployeeServiceTypes.mockResolvedValue([
+      { deliveryType: "in_person", isActive: true, duration: 30, durationOptions: [] },
+    ])
     fetchSlots.mockImplementation(
       () =>
         new Promise((r) =>
@@ -242,7 +252,9 @@ describe("useCreateBookingSlots", () => {
 
   it("gracefully returns empty slots when fetchSlots throws", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([])
+    fetchEmployeeServiceTypes.mockResolvedValue([
+      { deliveryType: "in_person", isActive: true, duration: 30, durationOptions: [] },
+    ])
     fetchSlots.mockRejectedValue(new Error("Network error"))
 
     const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {

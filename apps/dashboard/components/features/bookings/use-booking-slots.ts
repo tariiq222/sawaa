@@ -54,9 +54,13 @@ export function useCreateBookingSlots({
     )
     if (pst?.isActive && pst?.duration != null) return pst.duration
 
-    const es = employeeServices.find((s) => s.serviceId === serviceId)
-    return es?.service?.duration
-  }, [serviceTypes, deliveryType, employeeServices, serviceId, durationMins])
+    // No fallback to the assignment row's base duration: the embedded service
+    // exposes `durationMins` (not `duration`), so the previous read always
+    // yielded undefined. Turning this fallback on would let the booking flow
+    // fetch slots it never fetched before — a product decision, not a
+    // type-level fix. Keep returning undefined until the owner decides.
+    return undefined
+  }, [serviceTypes, deliveryType, durationMins])
 
   const canFetchSlots = !!employeeId && !!date && !!selectedDuration
 

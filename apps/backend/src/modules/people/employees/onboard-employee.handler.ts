@@ -13,7 +13,9 @@ export class OnboardEmployeeHandler {
   ) {}
 
   async execute(dto: OnboardEmployeeCommand) {
-    let employee;
+    let employee: Prisma.EmployeeGetPayload<{
+      include: { branches: true; services: true };
+    }>;
     try {
       employee = await this.rlsTransaction.withTransaction((tx) =>
         tx.employee.create({

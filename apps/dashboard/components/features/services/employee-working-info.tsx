@@ -41,7 +41,7 @@ export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: Em
 
   const branchIdsMissing = !propBranchIds || propBranchIds.length === 0
   const { data: employee } = useEmployee(branchIdsMissing ? employeeId : null)
-  const branchIds = propBranchIds ?? employee?.branchIds ?? []
+  const branchIds: string[] = propBranchIds ?? employee?.branchIds ?? []
 
   const branchName = (id: string) => {
     const b = branches.find((x) => x.id === id)
