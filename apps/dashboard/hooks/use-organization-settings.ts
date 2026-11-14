@@ -100,7 +100,7 @@ export function useBookingSettings() {
 export function useBookingSettingsMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: updateBookingSettings,
+    mutationFn: (data: Parameters<typeof updateBookingSettings>[0]) => updateBookingSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookingSettings.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.organizationPublic.settings() })

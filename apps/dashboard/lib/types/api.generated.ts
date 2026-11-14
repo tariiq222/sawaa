@@ -7120,6 +7120,33 @@ export interface components {
              */
             startTime: string;
         };
+        BankTransferAccountResponseDto: {
+            /**
+             * @description Bank name
+             * @example Saudi National Bank
+             */
+            bankName: string;
+            /**
+             * @description Account beneficiary name
+             * @example Sawaa Family Counseling Center
+             */
+            beneficiaryName: string;
+            /**
+             * @description Saudi IBAN
+             * @example SA0380000000608010167519
+             */
+            iban: string;
+            /**
+             * @description Stable account id used by the client app
+             * @example main-account
+             */
+            id: string;
+            /**
+             * @description Account label shown to clients
+             * @example Main account
+             */
+            label: string;
+        };
         BankTransferAccountSettingsDto: {
             /**
              * @description Bank name
@@ -8114,6 +8141,216 @@ export interface components {
              */
             price: number;
         };
+        BookingSettingsRecordResponseDto: {
+            /**
+             * @description Hours after booking start to auto-complete the booking; 0 disables
+             * @example 2
+             */
+            autoCompleteAfterHours: number;
+            /**
+             * @description Whether the auto no-show grace is measured from the appointment end
+             * @example true
+             */
+            autoNoShowAfterEnd: boolean;
+            /**
+             * @description Minutes of grace before auto no-show; 0 disables
+             * @example 30
+             */
+            autoNoShowAfterMinutes: number;
+            /**
+             * @description Whether a cancellation is refunded automatically
+             * @example true
+             */
+            autoRefundOnCancel: boolean;
+            /**
+             * @description Branch UUID; null is the global default row
+             * @example null
+             */
+            branchId: string | null;
+            /**
+             * @description Buffer time between bookings in minutes
+             * @example 0
+             */
+            bufferMinutes: number;
+            /**
+             * @description Minimum hours before start to allow client cancellation
+             * @example null
+             */
+            clientCancelBeforeHours: number | null;
+            /**
+             * @description Client cancellation eligibility cutoff
+             * @example null
+             * @enum {string|null}
+             */
+            clientCancelCutoffMode: "BEFORE_START" | "BEFORE_CHECK_IN" | null;
+            /**
+             * @description Whether the explicit client cancellation policy is enabled
+             * @example false
+             */
+            clientCancellationPolicyEnabled: boolean;
+            /**
+             * @description Minimum hours before start that a client may reschedule
+             * @example 24
+             */
+            clientRescheduleMinHoursBefore: number;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Independent early cancellation partial refund percentage
+             * @example null
+             */
+            earlyCancelRefundPercent: number | null;
+            /**
+             * @description Hours before start that free cancellation is allowed
+             * @example 24
+             */
+            freeCancelBeforeHours: number;
+            /**
+             * @description Refund type when the free cancellation window is used
+             * @example FULL
+             * @enum {string}
+             */
+            freeCancelRefundType: "FULL" | "PARTIAL" | "NONE";
+            /**
+             * @description Booking settings row UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Percentage refunded on late cancellation
+             * @example 0
+             */
+            lateCancelRefundPercent: number;
+            /**
+             * @description Maximum days in advance a booking can be made
+             * @example 90
+             */
+            maxAdvanceBookingDays: number;
+            /**
+             * @description Maximum number of reschedules allowed per booking
+             * @example 3
+             */
+            maxReschedulesPerBooking: number;
+            /**
+             * @description Minimum lead time in minutes before a booking can be created
+             * @example 60
+             */
+            minBookingLeadMinutes: number;
+            /**
+             * @description Whether the pay-at-clinic option is enabled on client surfaces
+             * @example false
+             */
+            payAtClinicEnabled: boolean;
+            /**
+             * @description Whether cancellations require staff approval
+             * @example false
+             */
+            requireCancelApproval: boolean;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        BookingSettingsValuesDto: {
+            /**
+             * @description Hours after booking start to auto-complete the booking; 0 disables
+             * @example 2
+             */
+            autoCompleteAfterHours: number;
+            /**
+             * @description Whether the auto no-show grace is measured from the appointment end
+             * @example true
+             */
+            autoNoShowAfterEnd: boolean;
+            /**
+             * @description Minutes of grace before auto no-show; 0 disables
+             * @example 30
+             */
+            autoNoShowAfterMinutes: number;
+            /**
+             * @description Whether a cancellation is refunded automatically
+             * @example true
+             */
+            autoRefundOnCancel: boolean;
+            /**
+             * @description Buffer time between bookings in minutes
+             * @example 0
+             */
+            bufferMinutes: number;
+            /**
+             * @description Minimum hours before start to allow client cancellation
+             * @example null
+             */
+            clientCancelBeforeHours: number | null;
+            /**
+             * @description Client cancellation eligibility cutoff
+             * @example null
+             * @enum {string|null}
+             */
+            clientCancelCutoffMode: "BEFORE_START" | "BEFORE_CHECK_IN" | null;
+            /**
+             * @description Whether the explicit client cancellation policy is enabled
+             * @example false
+             */
+            clientCancellationPolicyEnabled: boolean;
+            /**
+             * @description Minimum hours before start that a client may reschedule
+             * @example 24
+             */
+            clientRescheduleMinHoursBefore: number;
+            /**
+             * @description Independent early cancellation partial refund percentage
+             * @example null
+             */
+            earlyCancelRefundPercent: number | null;
+            /**
+             * @description Hours before start that free cancellation is allowed
+             * @example 24
+             */
+            freeCancelBeforeHours: number;
+            /**
+             * @description Refund type when the free cancellation window is used
+             * @example FULL
+             * @enum {string}
+             */
+            freeCancelRefundType: "FULL" | "PARTIAL" | "NONE";
+            /**
+             * @description Percentage refunded on late cancellation
+             * @example 0
+             */
+            lateCancelRefundPercent: number;
+            /**
+             * @description Maximum days in advance a booking can be made
+             * @example 90
+             */
+            maxAdvanceBookingDays: number;
+            /**
+             * @description Maximum number of reschedules allowed per booking
+             * @example 3
+             */
+            maxReschedulesPerBooking: number;
+            /**
+             * @description Minimum lead time in minutes before a booking can be created
+             * @example 60
+             */
+            minBookingLeadMinutes: number;
+            /**
+             * @description Whether the pay-at-clinic option is enabled on client surfaces
+             * @example false
+             */
+            payAtClinicEnabled: boolean;
+            /**
+             * @description Whether cancellations require staff approval
+             * @example false
+             */
+            requireCancelApproval: boolean;
+        };
         /**
          * @description Where the booking was created
          * @enum {string}
@@ -8425,6 +8662,62 @@ export interface components {
              * @example 00000000-0000-4000-a000-000000000003
              */
             id: string;
+        };
+        BranchEmployeeListEntryResponseDto: {
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /** @description Employee summary for the assignment */
+            employee: components["schemas"]["BranchEmployeeSummaryResponseDto"];
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            employeeId: string;
+            /**
+             * @description Assignment UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            id: string;
+        };
+        BranchEmployeeSummaryResponseDto: {
+            /**
+             * @description Employee email address
+             * @example khalid@example.com
+             */
+            email: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Whether the employee account is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Display name: the Arabic name when present, otherwise the stored name
+             * @example خالد العتيبي
+             */
+            name: string;
+            /**
+             * @description English display name, falling back to the stored name
+             * @example Khalid Al-Otaibi
+             */
+            nameEn: string;
+            /**
+             * @description Specialty label (English)
+             * @example Family Therapy
+             */
+            specialty: string | null;
+            /**
+             * @description Specialty label (Arabic)
+             * @example علاج أسري
+             */
+            specialtyAr: string | null;
         };
         BranchHolidayResponseDto: {
             /**
@@ -14473,6 +14766,40 @@ export interface components {
              */
             guestPhone: string;
         };
+        HolidayRecordDto: {
+            /**
+             * @description Branch UUID the holiday belongs to
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Holiday date; the column is a calendar date stored at UTC midnight
+             * @example 2026-09-23T00:00:00.000Z
+             */
+            date: string;
+            /**
+             * @description Holiday record UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            id: string;
+            /**
+             * @description Arabic holiday name
+             * @example اليوم الوطني
+             */
+            nameAr: string;
+            /**
+             * @description English holiday name
+             * @example National Day
+             */
+            nameEn: string | null;
+        };
         InitClientPaymentDto: {
             /**
              * @description Invoice UUID
@@ -16200,6 +16527,93 @@ export interface components {
             /** @description Operation state version shown on the action card */
             expectedVersion: number;
         };
+        OrganizationHoursRecordDto: {
+            /**
+             * @description Branch UUID the schedule belongs to
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Day of week, from Sunday (0) to Saturday (6)
+             * @example 0
+             */
+            dayOfWeek: number;
+            /**
+             * @description Closing time in HH:mm format
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * @description Business-hour record UUID
+             * @example 00000000-0000-4000-a000-000000000010
+             */
+            id: string;
+            /**
+             * @description Whether the branch is open on this day
+             * @example true
+             */
+            isOpen: boolean;
+            /**
+             * @description Opening time in HH:mm format
+             * @example 09:00
+             */
+            startTime: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        OrganizationRatingRecordResponseDto: {
+            /**
+             * @description Rated booking UUID
+             * @example 44444444-4444-4444-8444-444444444444
+             */
+            bookingId: string;
+            /**
+             * @description Client UUID
+             * @example 22222222-2222-4222-8222-222222222222
+             */
+            clientId: string;
+            /**
+             * @description Client feedback text
+             * @example Helpful session
+             */
+            comment: string | null;
+            /**
+             * Format: date-time
+             * @description Rating submission time
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Employee UUID
+             * @example 33333333-3333-4333-8333-333333333333
+             */
+            employeeId: string;
+            /**
+             * @description Rating UUID
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            id: string;
+            /**
+             * @description Whether the rating is approved for public display
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Rating score from one to five stars
+             * @example 5
+             */
+            score: number;
+        };
         OrganizationRatingResponseDto: {
             /**
              * Format: uuid
@@ -16339,6 +16753,279 @@ export interface components {
              *     }
              */
             meta: components["schemas"]["OrganizationRatingsMetaDto"];
+        };
+        OrganizationRatingVisibilityResponseDto: {
+            /**
+             * @description Rating UUID
+             * @example 55555555-5555-4555-8555-555555555555
+             */
+            id: string;
+            /**
+             * @description Whether the rating is visible publicly
+             * @example true
+             */
+            isPublic: boolean;
+        };
+        OrganizationSettingsResponseDto: {
+            /**
+             * @description About text in Arabic
+             * @example null
+             */
+            aboutAr: string | null;
+            /**
+             * @description About text in English
+             * @example null
+             */
+            aboutEn: string | null;
+            /**
+             * @description Full address
+             * @example Riyadh, Saudi Arabia
+             */
+            address: string | null;
+            /** @description Bank accounts stored by PATCH /settings as JSON; the column defaults to an empty array and holds the validated write payload */
+            bankTransferAccounts: components["schemas"]["BankTransferAccountResponseDto"][];
+            /**
+             * @description Booking flow order
+             * @example service_first
+             */
+            bookingFlowOrder: string;
+            /**
+             * @description Commercial registration number
+             * @example 1234567890
+             */
+            businessRegistration: string | null;
+            /**
+             * @description Cancellation policy in Arabic
+             * @example null
+             */
+            cancellationPolicyAr: string | null;
+            /**
+             * @description Cancellation policy in English
+             * @example null
+             */
+            cancellationPolicyEn: string | null;
+            /**
+             * @description Company name in Arabic
+             * @example مركز سواء
+             */
+            companyNameAr: string | null;
+            /**
+             * @description Company name in English
+             * @example Sawaa Center
+             */
+            companyNameEn: string | null;
+            /**
+             * @description Contact email address
+             * @example info@clinic.sa
+             */
+            contactEmail: string | null;
+            /**
+             * @description Contact phone number
+             * @example +966500000000
+             */
+            contactPhone: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Custom-domain grace deadline set when CUSTOM_DOMAIN is revoked
+             * @example null
+             */
+            customDomainGraceUntil: string | null;
+            /**
+             * @description Date format string
+             * @example DD/MM/YYYY
+             */
+            dateFormat: string;
+            /**
+             * @description Default app language
+             * @example ar
+             */
+            defaultLanguage: string;
+            /**
+             * @description Instagram handle for email footer
+             * @example null
+             */
+            emailFooterInstagram: string | null;
+            /**
+             * @description LinkedIn URL for email footer
+             * @example null
+             */
+            emailFooterLinkedin: string | null;
+            /**
+             * @description Phone number shown in email footer
+             * @example null
+             */
+            emailFooterPhone: string | null;
+            /**
+             * @description Snapchat handle for email footer
+             * @example null
+             */
+            emailFooterSnapchat: string | null;
+            /**
+             * @description TikTok handle for email footer
+             * @example null
+             */
+            emailFooterTiktok: string | null;
+            /**
+             * @description Twitter/X handle for email footer
+             * @example null
+             */
+            emailFooterTwitter: string | null;
+            /**
+             * @description Website URL shown in email footer
+             * @example null
+             */
+            emailFooterWebsite: string | null;
+            /**
+             * @description YouTube channel URL for email footer
+             * @example null
+             */
+            emailFooterYoutube: string | null;
+            /**
+             * @description Show clinic logo in email header
+             * @example true
+             */
+            emailHeaderShowLogo: boolean;
+            /**
+             * @description Show clinic name in email header
+             * @example true
+             */
+            emailHeaderShowName: boolean;
+            /**
+             * @description Settings row UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Organization city
+             * @example Riyadh
+             */
+            organizationCity: string;
+            /**
+             * @description Whether pay-at-clinic is enabled
+             * @example true
+             */
+            paymentAtClinicEnabled: boolean;
+            /**
+             * @description Whether client bank transfer is enabled
+             * @example false
+             */
+            paymentBankTransferEnabled: boolean;
+            /**
+             * @description Whether Moyasar online payment is enabled
+             * @example true
+             */
+            paymentMoyasarEnabled: boolean;
+            /**
+             * @description Whether "Bank transfer" appears in the record-payment dialog
+             * @example true
+             */
+            payMethodBankEnabled: boolean;
+            /**
+             * @description Whether "Cash" appears in the record-payment dialog
+             * @example true
+             */
+            payMethodCashEnabled: boolean;
+            /**
+             * @description Whether "Network/mada" appears in the record-payment dialog
+             * @example false
+             */
+            payMethodMadaEnabled: boolean;
+            /**
+             * @description Whether "Tabby" appears in the record-payment dialog
+             * @example false
+             */
+            payMethodTabbyEnabled: boolean;
+            /**
+             * @description Postal code
+             * @example 12345
+             */
+            postalCode: string | null;
+            /**
+             * @description Privacy policy in Arabic
+             * @example null
+             */
+            privacyPolicyAr: string | null;
+            /**
+             * @description Privacy policy in English
+             * @example null
+             */
+            privacyPolicyEn: string | null;
+            /**
+             * @description Product tagline / subtitle
+             * @example مركز الاستشارات الأسرية
+             */
+            productTagline: string | null;
+            /**
+             * @description Minutes before an appointment to send a reminder
+             * @example 60
+             */
+            reminderBeforeMinutes: number;
+            /**
+             * @description Seller address used on invoices
+             * @example 123 King Fahad Rd, Riyadh
+             */
+            sellerAddress: string | null;
+            /**
+             * @description Default session duration in minutes
+             * @example 60
+             */
+            sessionDuration: number;
+            /**
+             * @description Free-form social media handles keyed by platform (stored as JSON)
+             * @example {
+             *       "instagram": "clinic_sa"
+             *     }
+             */
+            socialMedia: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description Terms and conditions in Arabic
+             * @example null
+             */
+            termsAr: string | null;
+            /**
+             * @description Terms and conditions in English
+             * @example null
+             */
+            termsEn: string | null;
+            /**
+             * @description Time format string
+             * @example 12h
+             */
+            timeFormat: string;
+            /**
+             * @description IANA timezone identifier
+             * @example Asia/Riyadh
+             */
+            timezone: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT rate as a fraction of 1 (decimal string)
+             * @example 0
+             */
+            vatRate: string;
+            /**
+             * @description VAT registration number
+             * @example 300000000000003
+             */
+            vatRegistrationNumber: string | null;
+            /**
+             * @description Week start day
+             * @example sunday
+             */
+            weekStartDay: string;
         };
         PackageConstraintInputDto: {
             /**
@@ -34394,12 +35081,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current booking settings */
+            /** @description Current booking settings: the persisted row, or the built-in defaults (no id/timestamps) when no global row exists */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BookingSettingsValuesDto"] | components["schemas"]["BookingSettingsRecordResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -34457,9 +35146,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BookingSettingsRecordResponseDto"];
+                };
             };
-            /** @description Validation failed */
+            /** @description The cancellation policy values are inconsistent or out of range */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -34505,9 +35196,9 @@ export interface operations {
                 /** @description Filter by active status */
                 isActive?: boolean;
                 /** @description Results per page */
-                limit?: unknown;
+                limit?: number;
                 /** @description Page number (1-based) */
-                page?: unknown;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -34845,7 +35536,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchEmployeeListEntryResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35379,9 +36072,9 @@ export interface operations {
                 /** @description Search departments by name */
                 search?: string;
                 /** @description Results per page */
-                limit?: unknown;
+                limit?: number;
                 /** @description Page number (1-based) */
-                page?: unknown;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -35478,6 +36171,15 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Department with this Arabic name already exists */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35648,13 +36350,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Department updated */
+            /** @description Department updated; the row is re-read after the write, so a concurrent delete can answer an empty body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DepartmentResponseDto"];
+                    "application/json": components["schemas"]["DepartmentResponseDto"] | null;
                 };
             };
             /** @description Validation failed */
@@ -35693,6 +36395,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Department with this Arabic name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Unhandled server error */
             500: {
                 headers: {
@@ -35723,7 +36434,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HolidayRecordDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35745,6 +36458,15 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Branch not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35781,7 +36503,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HolidayRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35812,6 +36536,15 @@ export interface operations {
             };
             /** @description Branch not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description A holiday already exists for this branch and date */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35909,12 +36642,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Business hours saved */
+            /** @description Business hours saved; the branch schedule after the upsert */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationHoursRecordDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35980,7 +36715,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationHoursRecordDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37198,6 +37935,10 @@ export interface operations {
                 employeeId?: string;
                 /** @description Filter ratings by client UUID */
                 clientId?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -37270,7 +38011,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationRatingRecordResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37292,6 +38035,24 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Rating already submitted for this booking */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37331,7 +38092,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationRatingVisibilityResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37353,6 +38116,15 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Rating not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -38139,12 +38911,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current organization settings */
+            /** @description Current organization settings, or null when no settings row exists yet */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationSettingsResponseDto"] | null;
+                };
             };
             /** @description Validation failed */
             400: {
@@ -38202,9 +38976,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationSettingsResponseDto"];
+                };
             };
-            /** @description Validation failed */
+            /** @description Bank transfer details are incomplete or invalid */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -38222,7 +38998,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Action denied by permission policy */
+            /** @description Only a super-admin may change the VAT rate */
             403: {
                 headers: {
                     [name: string]: unknown;

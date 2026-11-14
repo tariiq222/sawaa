@@ -61,7 +61,7 @@ export function getDepartmentColumns(
       header: label("departments.col.categories", "Categories"),
       cell: ({ row }) => (
         <span className="text-sm tabular-nums text-muted-foreground">
-          {row.original._count?.categories ?? row.original.categories?.length ?? 0}
+          {row.original.categories?.length ?? 0}
         </span>
       ),
     },

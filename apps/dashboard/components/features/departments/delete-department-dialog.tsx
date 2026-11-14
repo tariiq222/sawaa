@@ -35,7 +35,7 @@ export function DeleteDepartmentDialog({
     ? (locale === "ar" ? department.nameAr : department.nameEn)
     : ""
   const categoryCount =
-    department?._count?.categories ?? department?.categories?.length ?? 0
+    department?.categories?.length ?? 0
   const description =
     categoryCount > 0
       ? t("departments.delete.descriptionWithCategories")
