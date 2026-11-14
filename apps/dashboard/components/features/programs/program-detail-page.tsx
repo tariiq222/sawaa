@@ -57,7 +57,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
 
       {canManage && <Link className="text-sm text-primary underline" href={`/programs/${program.id}/edit`}>{t('common.edit')}</Link>}
       <p className="whitespace-pre-wrap text-sm">{program.descriptionAr || program.descriptionEn}</p>
-      <section><h2 className="text-sm font-medium">{t('programs.form.section.supervisors')}</h2><ul>{program.supervisors?.map(s => <li key={s.id}>{s.name}</li>)}</ul></section>
+      <section><h2 className="text-sm font-medium">{t('programs.form.section.supervisors')}</h2><ul>{program.supervisors.map(s => <li key={s.id}>{s.name}</li>)}</ul></section>
       <div className="flex flex-wrap gap-2">
         {canPublish && (
           <Button variant="default" disabled={publish.isPending} onClick={async () => {
@@ -135,7 +135,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
 
       <section className="rounded-lg border border-(--border) bg-(--surface) p-4">
         <h3 className="mb-3 text-base font-semibold">{t('programs.detail.enrollments')}</h3>
-        <ProgramEnrollmentsTable enrollments={program.enrollments ?? []} />
+        <ProgramEnrollmentsTable enrollments={program.enrollments} />
       </section>
 
       <ScheduleProgramDialog

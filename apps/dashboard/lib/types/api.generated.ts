@@ -11719,25 +11719,72 @@ export interface components {
             type: "BUG" | "FEATURE_REQUEST" | "OTHER";
         };
         CreateProgramDto: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
             branchId: string;
-            /** @default SAR */
+            /**
+             * @description Program price currency code
+             * @default SAR
+             * @example SAR
+             */
             currency: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
             daysCount: number;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Owning department identifier
+             * @example 77777777-7777-4777-8777-777777777777
+             */
             departmentId: string;
-            /** @description Deposit amount in integer halalas (must be <= price) */
+            /**
+             * @description Deposit amount in integer halalas (must be <= price)
+             * @example 30000
+             */
             depositAmount?: number;
-            /** @default false */
+            /**
+             * @description Whether the program accepts a deposit
+             * @default false
+             * @example true
+             */
             depositEnabled: boolean;
+            /**
+             * @description Arabic staff-facing description
+             * @example برنامج لتنمية مهارات التواصل الأسري
+             */
             descriptionAr?: string;
+            /**
+             * @description English staff-facing description
+             * @example A program for family communication skills
+             */
             descriptionEn?: string;
+            /**
+             * @description Number of program hours per day
+             * @example 2
+             */
             hoursPerDay: number;
-            /** @default false */
+            /**
+             * @description Whether the program is published in the public catalog
+             * @default false
+             * @example true
+             */
             isPublic: boolean;
-            /** @default 30 */
+            /**
+             * @description Maximum number of enrolled participants
+             * @default 30
+             * @example 12
+             */
             maxParticipants: number;
-            /** @default 1 */
+            /**
+             * @description Minimum participants required for the program
+             * @default 1
+             * @example 3
+             */
             minParticipants: number;
             /** @description Arabic display name */
             nameAr: string;
@@ -11745,7 +11792,15 @@ export interface components {
             nameEn?: string;
             /** @description Price in integer halalas */
             price: number;
+            /**
+             * @description Arabic public catalog description
+             * @example تعرف على مهارات التواصل الأسري
+             */
             publicDescriptionAr?: string;
+            /**
+             * @description English public catalog description
+             * @example Learn family communication skills
+             */
             publicDescriptionEn?: string;
             /** @description Supervising employee IDs */
             supervisorIds: string[];
@@ -18231,6 +18286,132 @@ export interface components {
              */
             id: string;
         };
+        ProgramListItemResponseDto: {
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
+            branchId: string;
+            /**
+             * Format: date-time
+             * @description Cancellation time as an ISO 8601 UTC timestamp, or null when not cancelled
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * Format: date-time
+             * @description Program creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Program price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
+            daysCount: number;
+            /**
+             * Format: uuid
+             * @description Department that owns the program
+             * @example 77777777-7777-4777-8777-777777777777
+             */
+            departmentId: string;
+            /**
+             * @description Deposit in integer halalas as a decimal string, or null when no deposit is set
+             * @example 30000
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether the program accepts a deposit
+             * @example true
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Current number of program enrollments
+             * @example 1
+             */
+            enrolledCount: number;
+            /**
+             * @description Total enrollment rows attached to the program (the list joins them to build this counter)
+             * @example 1
+             */
+            enrollmentCount: number;
+            /**
+             * @description Number of program hours per day
+             * @example 2
+             */
+            hoursPerDay: number;
+            /**
+             * Format: uuid
+             * @description Unique program identifier
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Whether enrolled count has reached the maximum participant capacity
+             * @example false
+             */
+            isFull: boolean;
+            /**
+             * @description Whether the program is published in the public catalog
+             * @example true
+             */
+            isPublic: boolean;
+            /**
+             * @description Maximum number of enrolled participants
+             * @example 12
+             */
+            maxParticipants: number;
+            /**
+             * @description Minimum participants required for the program
+             * @example 3
+             */
+            minParticipants: number;
+            /**
+             * @description Arabic program name
+             * @example برنامج التواصل الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English program name, or null when unspecified
+             * @example Family Communication Program
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in integer halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * @description Numeric program reference accepted by the detail lookup
+             * @example 24
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Program start time as an ISO 8601 UTC timestamp, or null when unscheduled
+             * @example null
+             */
+            startDate: string | null;
+            /**
+             * @description Current program lifecycle status
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+            /**
+             * @description Identifiers of employees supervising the program
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
+            supervisorIds: string[];
+        };
         ProgramParticipantRefundDto: {
             /** @description Additional refund in integer halalas */
             amount: number;
@@ -18240,6 +18421,40 @@ export interface components {
              * @example 11111111-1111-4111-8111-111111111111
              */
             bookingId: string;
+        };
+        ProgramPublishResponseDto: {
+            /**
+             * Format: uuid
+             * @description Unique program identifier
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Program lifecycle status after publishing
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+        };
+        ProgramScheduleResponseDto: {
+            /**
+             * Format: uuid
+             * @description Unique program identifier
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Scheduled program start time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            startDate: string;
+            /**
+             * @description Program lifecycle status after scheduling
+             * @example SCHEDULED
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
         };
         ProgramSupervisorResponseDto: {
             /**
@@ -18258,6 +18473,32 @@ export interface components {
              * @example Program Counselor
              */
             nameEn: string | null;
+        };
+        ProgramWriteResponseDto: {
+            /**
+             * Format: uuid
+             * @description Unique program identifier
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Numeric program reference accepted by the detail lookup
+             * @example 24
+             */
+            ref: number;
+            /**
+             * @description Program lifecycle status after the write
+             * @example DRAFT
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+            /**
+             * @description Identifiers of employees supervising the program after the write
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
+            supervisorIds: string[];
         };
         PublicBrandingDto: {
             /**
@@ -20984,20 +21225,67 @@ export interface components {
             status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
         };
         UpdateProgramDto: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
             branchId?: string;
+            /**
+             * @description Program price currency code
+             * @example SAR
+             */
             currency?: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
             daysCount?: number;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Owning department identifier
+             * @example 77777777-7777-4777-8777-777777777777
+             */
             departmentId?: string;
-            /** @description Deposit amount in integer halalas (must be <= price) */
+            /**
+             * @description Deposit amount in integer halalas (must be <= price)
+             * @example 30000
+             */
             depositAmount?: number;
+            /**
+             * @description Whether the program accepts a deposit
+             * @example true
+             */
             depositEnabled?: boolean;
+            /**
+             * @description Arabic staff-facing description
+             * @example برنامج لتنمية مهارات التواصل الأسري
+             */
             descriptionAr?: string;
+            /**
+             * @description English staff-facing description
+             * @example A program for family communication skills
+             */
             descriptionEn?: string;
+            /**
+             * @description Number of program hours per day
+             * @example 2
+             */
             hoursPerDay?: number;
+            /**
+             * @description Whether the program is published in the public catalog
+             * @example true
+             */
             isPublic?: boolean;
+            /**
+             * @description Maximum number of enrolled participants
+             * @example 12
+             */
             maxParticipants?: number;
+            /**
+             * @description Minimum participants required for the program
+             * @example 3
+             */
             minParticipants?: number;
             /** @description Arabic display name */
             nameAr?: string;
@@ -21005,8 +21293,22 @@ export interface components {
             nameEn?: string;
             /** @description Price in integer halalas */
             price?: number;
+            /**
+             * @description Arabic public catalog description
+             * @example تعرف على مهارات التواصل الأسري
+             */
             publicDescriptionAr?: string;
+            /**
+             * @description English public catalog description
+             * @example Learn family communication skills
+             */
             publicDescriptionEn?: string;
+            /**
+             * @description Supervising employee identifiers; replaces the whole supervisor set
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
             supervisorIds?: string[];
         };
         UpdateRatingVisibilityDto: {
@@ -41452,10 +41754,13 @@ export interface operations {
     };
     DashboardProgramsController_list_v1: {
         parameters: {
-            query: {
-                status: string;
-                departmentId: string;
-                branchId: string;
+            query?: {
+                /** @description Filter by program lifecycle status */
+                status?: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+                /** @description Filter by owning department */
+                departmentId?: string;
+                /** @description Filter by branch */
+                branchId?: string;
             };
             header?: never;
             path?: never;
@@ -41468,7 +41773,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramListItemResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -41526,7 +41833,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramWriteResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -41554,6 +41863,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Department, branch or supervisor not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -41614,6 +41930,13 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Program not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Unhandled server error */
             500: {
                 headers: {
@@ -41640,11 +41963,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Program identity and resulting lifecycle state */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramWriteResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -41672,6 +41998,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Program, department, branch or supervisor not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -41872,11 +42205,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Program identity and resulting lifecycle status */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramPublishResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -41904,6 +42240,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Program not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -41931,11 +42274,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Program identity, resulting lifecycle status and start instant */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgramScheduleResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -41963,6 +42309,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Program not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

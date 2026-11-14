@@ -1,11 +1,12 @@
 /**
  * Programs api — unit tests
  *
- * Covers the dashboard `/dashboard/programs` CRUD wrapper and the public
- * `/api/v1/public/programs` fetcher. The dashboard wrapper delegates to the
- * shared `api.{get,post,patch}` client; the public fetcher hits the
- * same-origin route through the native `fetch`. Both should propagate
- * errors verbatim.
+ * Covers the dashboard `/dashboard/programs` wrappers and the public
+ * `/api/v1/public/programs` fetcher. Reads go through the typed OpenAPI helper
+ * (`lib/api/openapi.ts`), which serializes path/query onto the URL and then
+ * calls the shared client; writes call the shared client directly with an
+ * explicit response type. The public fetcher hits the same-origin route through
+ * native `fetch`. All of them propagate errors verbatim.
  *
  * What we assert (per endpoint):
  *  - HTTP method
@@ -51,10 +52,10 @@ describe("programs api — dashboard endpoints", () => {
   // ─── List ────────────────────────────────────────────────────────────────
 
   describe("fetchPrograms", () => {
-    it("GETs /dashboard/programs with no params when query is empty", async () => {
+    it("GETs /dashboard/programs with no query string when the query is empty", async () => {
       getMock.mockResolvedValueOnce([])
       await fetchPrograms()
-      expect(getMock).toHaveBeenCalledWith("/dashboard/programs", {})
+      expect(getMock).toHaveBeenCalledWith("/dashboard/programs")
     })
 
     it("forwards status, departmentId, and branchId as query params", async () => {
@@ -64,11 +65,16 @@ describe("programs api — dashboard endpoints", () => {
         departmentId: "d-1",
         branchId: "b-1",
       })
-      expect(getMock).toHaveBeenCalledWith("/dashboard/programs", {
-        status: "OPEN",
-        departmentId: "d-1",
-        branchId: "b-1",
-      })
+      // Typed OpenAPI helper: query params are serialized onto the path.
+      expect(getMock).toHaveBeenCalledWith(
+        "/dashboard/programs?status=OPEN&departmentId=d-1&branchId=b-1",
+      )
+    })
+
+    it("drops unset filters instead of sending empty values", async () => {
+      getMock.mockResolvedValueOnce([])
+      await fetchPrograms({ status: "DRAFT" })
+      expect(getMock).toHaveBeenCalledWith("/dashboard/programs?status=DRAFT")
     })
 
     it("propagates api-layer errors", async () => {
