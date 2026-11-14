@@ -1,48 +1,45 @@
 /**
  * Booking Settings API — Sawaa Dashboard
+ *
+ * Every call goes through the typed helper in `lib/api/openapi.ts`. Response
+ * and request shapes are DERIVED from the committed OpenAPI snapshot, so a
+ * backend policy change becomes a type error here instead of drifting silently.
+ *
+ * GET documents `BookingSettingsValuesDto | BookingSettingsRecordResponseDto`:
+ * when no global settings row exists the handler answers the built-in defaults,
+ * which carry the policy values but no row identity. That is why `id`,
+ * `branchId` and the timestamps stay optional below — every reader already
+ * used `settings?.field ?? fallback`.
  */
 
-import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
+import type { components } from "@/lib/types/api.generated"
 
-export type RefundType = "FULL" | "PARTIAL" | "NONE"
+type Schemas = components["schemas"]
 
-export type ClientCancelCutoffMode = "BEFORE_START" | "BEFORE_CHECK_IN"
+/** Wire vocabulary (Prisma enums as the API sends them). */
+export type RefundType = Schemas["RefundType"]
+export type ClientCancelCutoffMode = Schemas["ClientCancelCutoffMode"]
 
-export interface BookingSettings {
-  clientCancellationPolicyEnabled: boolean
-  clientCancelCutoffMode: ClientCancelCutoffMode | null
-  clientCancelBeforeHours: number | null
-  earlyCancelRefundPercent: number | null
-  id?: string
-  organizationId?: string
-  branchId?: string | null
-  bufferMinutes: number
-  freeCancelBeforeHours: number
-  freeCancelRefundType: RefundType
-  lateCancelRefundPercent: number
-  maxReschedulesPerBooking: number
-  autoCompleteAfterHours: number
-  autoNoShowAfterMinutes: number
-  autoNoShowAfterEnd: boolean
-  minBookingLeadMinutes: number
-  maxAdvanceBookingDays: number
-  payAtClinicEnabled: boolean
-  requireCancelApproval: boolean
-  autoRefundOnCancel: boolean
-  clientRescheduleMinHoursBefore: number
-  createdAt?: string
-  updatedAt?: string
-}
+/** The policy values, always present on both documented GET shapes. */
+export type BookingSettingsValues = Schemas["BookingSettingsValuesDto"]
+
+/** A persisted row (PATCH always returns this). */
+export type BookingSettingsRecord = Schemas["BookingSettingsRecordResponseDto"]
+
+/** Dashboard-facing booking settings: the values, plus row identity when persisted. */
+export type BookingSettings = BookingSettingsValues &
+  Partial<Omit<BookingSettingsRecord, keyof BookingSettingsValues>>
+
+/** The PATCH body as the backend validates it. */
+export type UpdateBookingSettingsPayload = Schemas["UpsertBookingSettingsDto"]
 
 export async function fetchBookingSettings(): Promise<BookingSettings> {
-  return api.get<BookingSettings>("/dashboard/organization/booking-settings")
+  return openApi.get("/api/v1/dashboard/organization/booking-settings")
 }
 
 export async function updateBookingSettings(
-  data: Record<string, unknown>,
-): Promise<BookingSettings> {
-  return api.patch<BookingSettings>(
-    "/dashboard/organization/booking-settings",
-    data,
-  )
+  data: UpdateBookingSettingsPayload,
+): Promise<BookingSettingsRecord> {
+  return openApi.patch("/api/v1/dashboard/organization/booking-settings", { body: data })
 }

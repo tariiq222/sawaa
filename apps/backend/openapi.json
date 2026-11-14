@@ -940,6 +940,43 @@
         ],
         "type": "object"
       },
+      "BankTransferAccountResponseDto": {
+        "properties": {
+          "bankName": {
+            "description": "Bank name",
+            "example": "Saudi National Bank",
+            "type": "string"
+          },
+          "beneficiaryName": {
+            "description": "Account beneficiary name",
+            "example": "Sawaa Family Counseling Center",
+            "type": "string"
+          },
+          "iban": {
+            "description": "Saudi IBAN",
+            "example": "SA0380000000608010167519",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable account id used by the client app",
+            "example": "main-account",
+            "type": "string"
+          },
+          "label": {
+            "description": "Account label shown to clients",
+            "example": "Main account",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "bankName",
+          "beneficiaryName",
+          "iban"
+        ],
+        "type": "object"
+      },
       "BankTransferAccountSettingsDto": {
         "properties": {
           "bankName": {
@@ -2418,6 +2455,293 @@
         ],
         "type": "object"
       },
+      "BookingSettingsRecordResponseDto": {
+        "properties": {
+          "autoCompleteAfterHours": {
+            "description": "Hours after booking start to auto-complete the booking; 0 disables",
+            "example": 2,
+            "type": "integer"
+          },
+          "autoNoShowAfterEnd": {
+            "description": "Whether the auto no-show grace is measured from the appointment end",
+            "example": true,
+            "type": "boolean"
+          },
+          "autoNoShowAfterMinutes": {
+            "description": "Minutes of grace before auto no-show; 0 disables",
+            "example": 30,
+            "type": "integer"
+          },
+          "autoRefundOnCancel": {
+            "description": "Whether a cancellation is refunded automatically",
+            "example": true,
+            "type": "boolean"
+          },
+          "branchId": {
+            "description": "Branch UUID; null is the global default row",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "bufferMinutes": {
+            "description": "Buffer time between bookings in minutes",
+            "example": 0,
+            "type": "integer"
+          },
+          "clientCancelBeforeHours": {
+            "description": "Minimum hours before start to allow client cancellation",
+            "example": null,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "clientCancelCutoffMode": {
+            "description": "Client cancellation eligibility cutoff",
+            "enum": [
+              "BEFORE_START",
+              "BEFORE_CHECK_IN"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "clientCancellationPolicyEnabled": {
+            "description": "Whether the explicit client cancellation policy is enabled",
+            "example": false,
+            "type": "boolean"
+          },
+          "clientRescheduleMinHoursBefore": {
+            "description": "Minimum hours before start that a client may reschedule",
+            "example": 24,
+            "type": "integer"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "earlyCancelRefundPercent": {
+            "description": "Independent early cancellation partial refund percentage",
+            "example": null,
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "freeCancelBeforeHours": {
+            "description": "Hours before start that free cancellation is allowed",
+            "example": 24,
+            "type": "integer"
+          },
+          "freeCancelRefundType": {
+            "description": "Refund type when the free cancellation window is used",
+            "enum": [
+              "FULL",
+              "PARTIAL",
+              "NONE"
+            ],
+            "example": "FULL",
+            "type": "string"
+          },
+          "id": {
+            "description": "Booking settings row UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "type": "string"
+          },
+          "lateCancelRefundPercent": {
+            "description": "Percentage refunded on late cancellation",
+            "example": 0,
+            "type": "integer"
+          },
+          "maxAdvanceBookingDays": {
+            "description": "Maximum days in advance a booking can be made",
+            "example": 90,
+            "type": "integer"
+          },
+          "maxReschedulesPerBooking": {
+            "description": "Maximum number of reschedules allowed per booking",
+            "example": 3,
+            "type": "integer"
+          },
+          "minBookingLeadMinutes": {
+            "description": "Minimum lead time in minutes before a booking can be created",
+            "example": 60,
+            "type": "integer"
+          },
+          "payAtClinicEnabled": {
+            "description": "Whether the pay-at-clinic option is enabled on client surfaces",
+            "example": false,
+            "type": "boolean"
+          },
+          "requireCancelApproval": {
+            "description": "Whether cancellations require staff approval",
+            "example": false,
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientCancellationPolicyEnabled",
+          "clientCancelCutoffMode",
+          "clientCancelBeforeHours",
+          "earlyCancelRefundPercent",
+          "bufferMinutes",
+          "freeCancelBeforeHours",
+          "freeCancelRefundType",
+          "lateCancelRefundPercent",
+          "maxReschedulesPerBooking",
+          "autoCompleteAfterHours",
+          "autoNoShowAfterMinutes",
+          "autoNoShowAfterEnd",
+          "minBookingLeadMinutes",
+          "maxAdvanceBookingDays",
+          "payAtClinicEnabled",
+          "requireCancelApproval",
+          "autoRefundOnCancel",
+          "clientRescheduleMinHoursBefore",
+          "id",
+          "branchId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "BookingSettingsValuesDto": {
+        "properties": {
+          "autoCompleteAfterHours": {
+            "description": "Hours after booking start to auto-complete the booking; 0 disables",
+            "example": 2,
+            "type": "integer"
+          },
+          "autoNoShowAfterEnd": {
+            "description": "Whether the auto no-show grace is measured from the appointment end",
+            "example": true,
+            "type": "boolean"
+          },
+          "autoNoShowAfterMinutes": {
+            "description": "Minutes of grace before auto no-show; 0 disables",
+            "example": 30,
+            "type": "integer"
+          },
+          "autoRefundOnCancel": {
+            "description": "Whether a cancellation is refunded automatically",
+            "example": true,
+            "type": "boolean"
+          },
+          "bufferMinutes": {
+            "description": "Buffer time between bookings in minutes",
+            "example": 0,
+            "type": "integer"
+          },
+          "clientCancelBeforeHours": {
+            "description": "Minimum hours before start to allow client cancellation",
+            "example": null,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "clientCancelCutoffMode": {
+            "description": "Client cancellation eligibility cutoff",
+            "enum": [
+              "BEFORE_START",
+              "BEFORE_CHECK_IN"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "clientCancellationPolicyEnabled": {
+            "description": "Whether the explicit client cancellation policy is enabled",
+            "example": false,
+            "type": "boolean"
+          },
+          "clientRescheduleMinHoursBefore": {
+            "description": "Minimum hours before start that a client may reschedule",
+            "example": 24,
+            "type": "integer"
+          },
+          "earlyCancelRefundPercent": {
+            "description": "Independent early cancellation partial refund percentage",
+            "example": null,
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "freeCancelBeforeHours": {
+            "description": "Hours before start that free cancellation is allowed",
+            "example": 24,
+            "type": "integer"
+          },
+          "freeCancelRefundType": {
+            "description": "Refund type when the free cancellation window is used",
+            "enum": [
+              "FULL",
+              "PARTIAL",
+              "NONE"
+            ],
+            "example": "FULL",
+            "type": "string"
+          },
+          "lateCancelRefundPercent": {
+            "description": "Percentage refunded on late cancellation",
+            "example": 0,
+            "type": "integer"
+          },
+          "maxAdvanceBookingDays": {
+            "description": "Maximum days in advance a booking can be made",
+            "example": 90,
+            "type": "integer"
+          },
+          "maxReschedulesPerBooking": {
+            "description": "Maximum number of reschedules allowed per booking",
+            "example": 3,
+            "type": "integer"
+          },
+          "minBookingLeadMinutes": {
+            "description": "Minimum lead time in minutes before a booking can be created",
+            "example": 60,
+            "type": "integer"
+          },
+          "payAtClinicEnabled": {
+            "description": "Whether the pay-at-clinic option is enabled on client surfaces",
+            "example": false,
+            "type": "boolean"
+          },
+          "requireCancelApproval": {
+            "description": "Whether cancellations require staff approval",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clientCancellationPolicyEnabled",
+          "clientCancelCutoffMode",
+          "clientCancelBeforeHours",
+          "earlyCancelRefundPercent",
+          "bufferMinutes",
+          "freeCancelBeforeHours",
+          "freeCancelRefundType",
+          "lateCancelRefundPercent",
+          "maxReschedulesPerBooking",
+          "autoCompleteAfterHours",
+          "autoNoShowAfterMinutes",
+          "autoNoShowAfterEnd",
+          "minBookingLeadMinutes",
+          "maxAdvanceBookingDays",
+          "payAtClinicEnabled",
+          "requireCancelApproval",
+          "autoRefundOnCancel",
+          "clientRescheduleMinHoursBefore"
+        ],
+        "type": "object"
+      },
       "BookingSource": {
         "description": "Where the booking was created",
         "enum": [
@@ -2939,6 +3263,92 @@
           "id",
           "employeeId",
           "branchId"
+        ],
+        "type": "object"
+      },
+      "BranchEmployeeListEntryResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "employee": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BranchEmployeeSummaryResponseDto"
+              }
+            ],
+            "description": "Employee summary for the assignment"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "id": {
+            "description": "Assignment UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "employeeId",
+          "branchId",
+          "employee"
+        ],
+        "type": "object"
+      },
+      "BranchEmployeeSummaryResponseDto": {
+        "properties": {
+          "email": {
+            "description": "Employee email address",
+            "example": "khalid@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the employee account is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Display name: the Arabic name when present, otherwise the stored name",
+            "example": "خالد العتيبي",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English display name, falling back to the stored name",
+            "example": "Khalid Al-Otaibi",
+            "type": "string"
+          },
+          "specialty": {
+            "description": "Specialty label (English)",
+            "example": "Family Therapy",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Specialty label (Arabic)",
+            "example": "علاج أسري",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "isActive",
+          "specialty",
+          "specialtyAr",
+          "name",
+          "nameEn",
+          "email"
         ],
         "type": "object"
       },
@@ -12513,6 +12923,52 @@
         ],
         "type": "object"
       },
+      "HolidayRecordDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID the holiday belongs to",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "date": {
+            "description": "Holiday date; the column is a calendar date stored at UTC midnight",
+            "example": "2026-09-23T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Holiday record UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic holiday name",
+            "example": "اليوم الوطني",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English holiday name",
+            "example": "National Day",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "date",
+          "nameAr",
+          "nameEn",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "InitClientPaymentDto": {
         "properties": {
           "invoiceId": {
@@ -15279,6 +15735,124 @@
         ],
         "type": "object"
       },
+      "OrganizationHoursRecordDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID the schedule belongs to",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "description": "Day of week, from Sunday (0) to Saturday (6)",
+            "example": 0,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "endTime": {
+            "description": "Closing time in HH:mm format",
+            "example": "17:00",
+            "type": "string"
+          },
+          "id": {
+            "description": "Business-hour record UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "type": "string"
+          },
+          "isOpen": {
+            "description": "Whether the branch is open on this day",
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "description": "Opening time in HH:mm format",
+            "example": "09:00",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isOpen",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "OrganizationRatingRecordResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Rated booking UUID",
+            "example": "44444444-4444-4444-8444-444444444444",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "22222222-2222-4222-8222-222222222222",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Client feedback text",
+            "example": "Helpful session",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Rating submission time",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "33333333-3333-4333-8333-333333333333",
+            "type": "string"
+          },
+          "id": {
+            "description": "Rating UUID",
+            "example": "55555555-5555-4555-8555-555555555555",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Whether the rating is approved for public display",
+            "example": false,
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Rating score from one to five stars",
+            "example": 5,
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "clientId",
+          "employeeId",
+          "score",
+          "comment",
+          "isPublic",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "OrganizationRatingResponseDto": {
         "properties": {
           "bookingId": {
@@ -15475,6 +16049,374 @@
           "items",
           "meta",
           "averageRating"
+        ],
+        "type": "object"
+      },
+      "OrganizationRatingVisibilityResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Rating UUID",
+            "example": "55555555-5555-4555-8555-555555555555",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Whether the rating is visible publicly",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "isPublic"
+        ],
+        "type": "object"
+      },
+      "OrganizationSettingsResponseDto": {
+        "properties": {
+          "aboutAr": {
+            "description": "About text in Arabic",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "aboutEn": {
+            "description": "About text in English",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "address": {
+            "description": "Full address",
+            "example": "Riyadh, Saudi Arabia",
+            "nullable": true,
+            "type": "string"
+          },
+          "bankTransferAccounts": {
+            "description": "Bank accounts stored by PATCH /settings as JSON; the column defaults to an empty array and holds the validated write payload",
+            "items": {
+              "$ref": "#/components/schemas/BankTransferAccountResponseDto"
+            },
+            "type": "array"
+          },
+          "bookingFlowOrder": {
+            "description": "Booking flow order",
+            "example": "service_first",
+            "type": "string"
+          },
+          "businessRegistration": {
+            "description": "Commercial registration number",
+            "example": "1234567890",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationPolicyAr": {
+            "description": "Cancellation policy in Arabic",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationPolicyEn": {
+            "description": "Cancellation policy in English",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "companyNameAr": {
+            "description": "Company name in Arabic",
+            "example": "مركز سواء",
+            "nullable": true,
+            "type": "string"
+          },
+          "companyNameEn": {
+            "description": "Company name in English",
+            "example": "Sawaa Center",
+            "nullable": true,
+            "type": "string"
+          },
+          "contactEmail": {
+            "description": "Contact email address",
+            "example": "info@clinic.sa",
+            "nullable": true,
+            "type": "string"
+          },
+          "contactPhone": {
+            "description": "Contact phone number",
+            "example": "+966500000000",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "customDomainGraceUntil": {
+            "description": "Custom-domain grace deadline set when CUSTOM_DOMAIN is revoked",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "dateFormat": {
+            "description": "Date format string",
+            "example": "DD/MM/YYYY",
+            "type": "string"
+          },
+          "defaultLanguage": {
+            "description": "Default app language",
+            "example": "ar",
+            "type": "string"
+          },
+          "emailFooterInstagram": {
+            "description": "Instagram handle for email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterLinkedin": {
+            "description": "LinkedIn URL for email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterPhone": {
+            "description": "Phone number shown in email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterSnapchat": {
+            "description": "Snapchat handle for email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterTiktok": {
+            "description": "TikTok handle for email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterTwitter": {
+            "description": "Twitter/X handle for email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterWebsite": {
+            "description": "Website URL shown in email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailFooterYoutube": {
+            "description": "YouTube channel URL for email footer",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "emailHeaderShowLogo": {
+            "description": "Show clinic logo in email header",
+            "example": true,
+            "type": "boolean"
+          },
+          "emailHeaderShowName": {
+            "description": "Show clinic name in email header",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Settings row UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "organizationCity": {
+            "description": "Organization city",
+            "example": "Riyadh",
+            "type": "string"
+          },
+          "paymentAtClinicEnabled": {
+            "description": "Whether pay-at-clinic is enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "paymentBankTransferEnabled": {
+            "description": "Whether client bank transfer is enabled",
+            "example": false,
+            "type": "boolean"
+          },
+          "paymentMoyasarEnabled": {
+            "description": "Whether Moyasar online payment is enabled",
+            "example": true,
+            "type": "boolean"
+          },
+          "payMethodBankEnabled": {
+            "description": "Whether \"Bank transfer\" appears in the record-payment dialog",
+            "example": true,
+            "type": "boolean"
+          },
+          "payMethodCashEnabled": {
+            "description": "Whether \"Cash\" appears in the record-payment dialog",
+            "example": true,
+            "type": "boolean"
+          },
+          "payMethodMadaEnabled": {
+            "description": "Whether \"Network/mada\" appears in the record-payment dialog",
+            "example": false,
+            "type": "boolean"
+          },
+          "payMethodTabbyEnabled": {
+            "description": "Whether \"Tabby\" appears in the record-payment dialog",
+            "example": false,
+            "type": "boolean"
+          },
+          "postalCode": {
+            "description": "Postal code",
+            "example": "12345",
+            "nullable": true,
+            "type": "string"
+          },
+          "privacyPolicyAr": {
+            "description": "Privacy policy in Arabic",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "privacyPolicyEn": {
+            "description": "Privacy policy in English",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "productTagline": {
+            "description": "Product tagline / subtitle",
+            "example": "مركز الاستشارات الأسرية",
+            "nullable": true,
+            "type": "string"
+          },
+          "reminderBeforeMinutes": {
+            "description": "Minutes before an appointment to send a reminder",
+            "example": 60,
+            "type": "integer"
+          },
+          "sellerAddress": {
+            "description": "Seller address used on invoices",
+            "example": "123 King Fahad Rd, Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionDuration": {
+            "description": "Default session duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "socialMedia": {
+            "additionalProperties": true,
+            "description": "Free-form social media handles keyed by platform (stored as JSON)",
+            "example": {
+              "instagram": "clinic_sa"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "termsAr": {
+            "description": "Terms and conditions in Arabic",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "termsEn": {
+            "description": "Terms and conditions in English",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "timeFormat": {
+            "description": "Time format string",
+            "example": "12h",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA timezone identifier",
+            "example": "Asia/Riyadh",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vatRate": {
+            "description": "VAT rate as a fraction of 1 (decimal string)",
+            "example": "0",
+            "type": "string"
+          },
+          "vatRegistrationNumber": {
+            "description": "VAT registration number",
+            "example": "300000000000003",
+            "nullable": true,
+            "type": "string"
+          },
+          "weekStartDay": {
+            "description": "Week start day",
+            "example": "sunday",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "companyNameAr",
+          "companyNameEn",
+          "productTagline",
+          "businessRegistration",
+          "vatRegistrationNumber",
+          "vatRate",
+          "sellerAddress",
+          "organizationCity",
+          "postalCode",
+          "contactPhone",
+          "contactEmail",
+          "address",
+          "socialMedia",
+          "aboutAr",
+          "aboutEn",
+          "privacyPolicyAr",
+          "privacyPolicyEn",
+          "termsAr",
+          "termsEn",
+          "cancellationPolicyAr",
+          "cancellationPolicyEn",
+          "defaultLanguage",
+          "timezone",
+          "weekStartDay",
+          "dateFormat",
+          "timeFormat",
+          "emailHeaderShowLogo",
+          "emailHeaderShowName",
+          "emailFooterPhone",
+          "emailFooterWebsite",
+          "emailFooterInstagram",
+          "emailFooterTwitter",
+          "emailFooterSnapchat",
+          "emailFooterTiktok",
+          "emailFooterLinkedin",
+          "emailFooterYoutube",
+          "sessionDuration",
+          "reminderBeforeMinutes",
+          "bookingFlowOrder",
+          "paymentMoyasarEnabled",
+          "paymentAtClinicEnabled",
+          "paymentBankTransferEnabled",
+          "bankTransferAccounts",
+          "payMethodCashEnabled",
+          "payMethodBankEnabled",
+          "payMethodMadaEnabled",
+          "payMethodTabbyEnabled",
+          "customDomainGraceUntil",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -41497,7 +42439,21 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Current booking settings"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BookingSettingsValuesDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BookingSettingsRecordResponseDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Current booking settings: the persisted row, or the built-in defaults (no id/timestamps) when no global row exists"
           },
           "400": {
             "content": {
@@ -41565,6 +42521,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettingsRecordResponseDto"
+                }
+              }
+            },
             "description": "Booking settings updated"
           },
           "400": {
@@ -41575,7 +42538,7 @@
                 }
               }
             },
-            "description": "Validation failed"
+            "description": "The cancellation policy values are inconsistent or out of range"
           },
           "401": {
             "content": {
@@ -41649,7 +42612,11 @@
             "name": "limit",
             "required": false,
             "schema": {
-              "example": 20
+              "default": 20,
+              "example": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
             }
           },
           {
@@ -41658,7 +42625,10 @@
             "name": "page",
             "required": false,
             "schema": {
-              "example": 1
+              "default": 1,
+              "example": 1,
+              "minimum": 1,
+              "type": "integer"
             }
           }
         ],
@@ -42080,6 +43050,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BranchEmployeeListEntryResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of employees in the branch"
           },
           "400": {
@@ -42833,7 +43813,11 @@
             "name": "limit",
             "required": false,
             "schema": {
-              "example": 20
+              "default": 20,
+              "example": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
             }
           },
           {
@@ -42842,7 +43826,10 @@
             "name": "page",
             "required": false,
             "schema": {
-              "example": 1
+              "default": 1,
+              "example": 1,
+              "minimum": 1,
+              "type": "integer"
             }
           }
         ],
@@ -42961,6 +43948,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Department with this Arabic name already exists"
           },
           "500": {
             "content": {
@@ -43185,11 +44182,16 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/DepartmentResponseDto"
+                    }
+                  ],
+                  "nullable": true
                 }
               }
             },
-            "description": "Department updated"
+            "description": "Department updated; the row is re-read after the write, so a concurrent delete can answer an empty body"
           },
           "400": {
             "content": {
@@ -43230,6 +44232,16 @@
               }
             },
             "description": "Department not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Department with this Arabic name already exists"
           },
           "500": {
             "content": {
@@ -43274,12 +44286,24 @@
             "required": false,
             "schema": {
               "example": 2025,
+              "maximum": 3000,
+              "minimum": 2000,
               "type": "number"
             }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HolidayRecordDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of holidays"
           },
           "400": {
@@ -43311,6 +44335,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Branch not found"
           },
           "500": {
             "content": {
@@ -43348,6 +44382,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayRecordDto"
+                }
+              }
+            },
             "description": "Holiday added"
           },
           "400": {
@@ -43389,6 +44430,16 @@
               }
             },
             "description": "Branch not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "A holiday already exists for this branch and date"
           },
           "500": {
             "content": {
@@ -43509,7 +44560,17 @@
         },
         "responses": {
           "201": {
-            "description": "Business hours saved"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationHoursRecordDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Business hours saved; the branch schedule after the upsert"
           },
           "400": {
             "content": {
@@ -43590,6 +44651,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationHoursRecordDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Business hours schedule"
           },
           "400": {
@@ -45157,6 +46228,31 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "example": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -45236,6 +46332,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationRatingRecordResponseDto"
+                }
+              }
+            },
             "description": "Rating submitted"
           },
           "400": {
@@ -45267,6 +46370,26 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Rating already submitted for this booking"
           },
           "500": {
             "content": {
@@ -45317,6 +46440,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationRatingVisibilityResponseDto"
+                }
+              }
+            },
             "description": "Visibility updated"
           },
           "400": {
@@ -45348,6 +46478,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Rating not found"
           },
           "500": {
             "content": {
@@ -46419,7 +47559,19 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Current organization settings"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/OrganizationSettingsResponseDto"
+                    }
+                  ],
+                  "nullable": true
+                }
+              }
+            },
+            "description": "Current organization settings, or null when no settings row exists yet"
           },
           "400": {
             "content": {
@@ -46487,6 +47639,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSettingsResponseDto"
+                }
+              }
+            },
             "description": "Organization settings updated"
           },
           "400": {
@@ -46497,7 +47656,7 @@
                 }
               }
             },
-            "description": "Validation failed"
+            "description": "Bank transfer details are incomplete or invalid"
           },
           "401": {
             "content": {
@@ -46517,7 +47676,7 @@
                 }
               }
             },
-            "description": "Action denied by permission policy"
+            "description": "Only a super-admin may change the VAT rate"
           },
           "500": {
             "content": {

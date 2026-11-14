@@ -34,6 +34,24 @@ describe("organization api", () => {
     expect(getMock).toHaveBeenCalledWith("/dashboard/organization/hours/branch-1")
   })
 
+  it("fetchOrganizationHours maps the wire isOpen flag to the grid isActive field", async () => {
+    getMock.mockResolvedValueOnce([
+      {
+        id: "hour-1",
+        branchId: "branch-1",
+        dayOfWeek: 0,
+        startTime: "09:00",
+        endTime: "17:00",
+        isOpen: false,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ])
+    await expect(fetchOrganizationHours("branch-1")).resolves.toEqual([
+      { id: "hour-1", dayOfWeek: 0, startTime: "09:00", endTime: "17:00", isActive: false },
+    ])
+  })
+
   it("updateOrganizationHours posts backend schedule shape", async () => {
     postMock.mockResolvedValueOnce([])
     await updateOrganizationHours("branch-1", [
@@ -50,13 +68,16 @@ describe("organization api", () => {
   it("fetchOrganizationHolidays passes required branchId", async () => {
     getMock.mockResolvedValueOnce([])
     await fetchOrganizationHolidays("branch-1")
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/holidays", { branchId: "branch-1" })
+    // The typed helper serialises the query, so assert the final request URL.
+    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/holidays?branchId=branch-1")
   })
 
   it("fetchOrganizationHolidays passes branchId and year params", async () => {
     getMock.mockResolvedValueOnce([])
     await fetchOrganizationHolidays("branch-1", 2026)
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/holidays", { branchId: "branch-1", year: 2026 })
+    expect(getMock).toHaveBeenCalledWith(
+      "/dashboard/organization/holidays?branchId=branch-1&year=2026",
+    )
   })
 
   it("createOrganizationHoliday includes branchId", async () => {

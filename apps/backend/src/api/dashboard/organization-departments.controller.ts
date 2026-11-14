@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
-  ApiOkResponse, ApiCreatedResponse, ApiResponse,
+  ApiOkResponse, ApiCreatedResponse, ApiResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
@@ -19,6 +19,9 @@ import { ListDepartmentsDto } from '../../modules/org-config/departments/list-de
 import { DeleteDepartmentHandler } from '../../modules/org-config/departments/delete-department.handler';
 import {
   DeleteDepartmentResponseDto,
+  DepartmentCategoryResponseDto,
+  DepartmentListItemResponseDto,
+  DepartmentListMetaDto,
   DepartmentResponseDto,
   PaginatedDepartmentsResponseDto,
 } from './dto/organization-department-response.dto';
@@ -26,6 +29,7 @@ import {
 @ApiTags('Dashboard / Org Config')
 @ApiBearerAuth()
 @ApiStandardResponses()
+@ApiExtraModels(DepartmentListItemResponseDto, DepartmentCategoryResponseDto, DepartmentListMetaDto)
 @UseGuards(JwtGuard, CaslGuard)
 @Controller('dashboard/organization')
 export class DashboardOrganizationDepartmentsController {
@@ -41,7 +45,8 @@ export class DashboardOrganizationDepartmentsController {
   @CheckPermissions({ action: 'create', subject: 'Department' })
   @ApiOperation({ summary: 'Create a department' })
   @ApiCreatedResponse({ description: 'Department created', type: DepartmentResponseDto })
-  createDepartmentEndpoint(@Body() body: CreateDepartmentDto) {
+  @ApiResponse({ status: 409, description: 'Department with this Arabic name already exists', type: ApiErrorDto })
+  createDepartmentEndpoint(@Body() body: CreateDepartmentDto): Promise<DepartmentResponseDto> {
     return this.createDepartment.execute(body);
   }
 
@@ -50,10 +55,10 @@ export class DashboardOrganizationDepartmentsController {
   @ApiOperation({ summary: 'List departments' })
   @ApiQuery({ name: 'isActive', required: false, description: 'Filter by active status', example: true })
   @ApiQuery({ name: 'search', required: false, description: 'Search departments by name', example: 'dental' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', schema: { type: 'integer', minimum: 1, default: 1, example: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', schema: { type: 'integer', minimum: 1, maximum: 200, default: 20, example: 20 } })
   @ApiOkResponse({ description: 'Paginated list of departments', type: PaginatedDepartmentsResponseDto })
-  listDepartmentsEndpoint(@Query() query: ListDepartmentsDto) {
+  listDepartmentsEndpoint(@Query() query: ListDepartmentsDto): Promise<PaginatedDepartmentsResponseDto> {
     return this.listDepartments.execute(query);
   }
 
@@ -63,7 +68,7 @@ export class DashboardOrganizationDepartmentsController {
   @ApiParam({ name: 'departmentId', description: 'Department UUID' })
   @ApiOkResponse({ description: 'Department details', type: DepartmentResponseDto })
   @ApiResponse({ status: 404, description: 'Department not found', type: ApiErrorDto })
-  getDepartmentEndpoint(@Param('departmentId', ParseUUIDPipe) departmentId: string) {
+  getDepartmentEndpoint(@Param('departmentId', ParseUUIDPipe) departmentId: string): Promise<DepartmentResponseDto> {
     return this.getDepartment.execute({ departmentId });
   }
 
@@ -71,12 +76,20 @@ export class DashboardOrganizationDepartmentsController {
   @CheckPermissions({ action: 'update', subject: 'Department' })
   @ApiOperation({ summary: 'Update a department' })
   @ApiParam({ name: 'departmentId', description: 'Department UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Department updated', type: DepartmentResponseDto })
+  @ApiOkResponse({
+    description:
+      'Department updated; the row is re-read after the write, so a concurrent delete can answer an empty body',
+    schema: {
+      allOf: [{ $ref: getSchemaPath(DepartmentResponseDto) }],
+      nullable: true,
+    },
+  })
   @ApiResponse({ status: 404, description: 'Department not found', type: ApiErrorDto })
+  @ApiResponse({ status: 409, description: 'Department with this Arabic name already exists', type: ApiErrorDto })
   updateDepartmentEndpoint(
     @Param('departmentId', ParseUUIDPipe) departmentId: string,
     @Body() body: UpdateDepartmentDto,
-  ) {
+  ): Promise<DepartmentResponseDto | null> {
     return this.updateDepartment.execute({ departmentId, ...body });
   }
 
@@ -86,7 +99,9 @@ export class DashboardOrganizationDepartmentsController {
   @ApiParam({ name: 'departmentId', description: 'Department UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Department deleted', type: DeleteDepartmentResponseDto })
   @ApiResponse({ status: 404, description: 'Department not found', type: ApiErrorDto })
-  deleteDepartmentEndpoint(@Param('departmentId', ParseUUIDPipe) departmentId: string) {
+  deleteDepartmentEndpoint(
+    @Param('departmentId', ParseUUIDPipe) departmentId: string,
+  ): Promise<DeleteDepartmentResponseDto> {
     return this.deleteDepartment.execute({ departmentId });
   }
 }

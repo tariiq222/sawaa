@@ -25,6 +25,7 @@ import {
   BranchAssignmentDeletedResponseDto,
   BranchDetailResponseDto,
   BranchEmployeeAssignmentResponseDto,
+  BranchEmployeeListEntryResponseDto,
   BranchResponseDto,
   PaginatedBranchesDto,
 } from './dto/organization-branch-response.dto';
@@ -50,7 +51,7 @@ export class DashboardOrganizationBranchesController {
   @CheckPermissions({ action: 'create', subject: 'Branch' })
   @ApiOperation({ summary: 'Create a branch' })
   @ApiCreatedResponse({ description: 'Branch created', type: BranchResponseDto })
-  createBranchEndpoint(@Body() body: CreateBranchDto) {
+  createBranchEndpoint(@Body() body: CreateBranchDto): Promise<BranchResponseDto> {
     return this.createBranch.execute(body);
   }
 
@@ -59,10 +60,10 @@ export class DashboardOrganizationBranchesController {
   @ApiOperation({ summary: 'List branches' })
   @ApiQuery({ name: 'search', required: false, description: 'Search branches by name or city', example: 'Riyadh' })
   @ApiQuery({ name: 'isActive', required: false, description: 'Filter by active status', example: true })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', schema: { type: 'integer', minimum: 1, default: 1, example: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', schema: { type: 'integer', minimum: 1, maximum: 200, default: 20, example: 20 } })
   @ApiOkResponse({ description: 'Paginated list of branches', type: PaginatedBranchesDto })
-  listBranchesEndpoint(@Query() query: ListBranchesDto) {
+  listBranchesEndpoint(@Query() query: ListBranchesDto): Promise<PaginatedBranchesDto> {
     return this.listBranches.execute(query);
   }
 
@@ -72,7 +73,7 @@ export class DashboardOrganizationBranchesController {
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Branch details', type: BranchDetailResponseDto })
   @ApiResponse({ status: 404, description: 'Branch not found', type: ApiErrorDto })
-  getBranchEndpoint(@Param('branchId', ParseUUIDPipe) branchId: string) {
+  getBranchEndpoint(@Param('branchId', ParseUUIDPipe) branchId: string): Promise<BranchDetailResponseDto> {
     return this.getBranch.execute({ branchId });
   }
 
@@ -85,7 +86,7 @@ export class DashboardOrganizationBranchesController {
   updateBranchEndpoint(
     @Param('branchId', ParseUUIDPipe) branchId: string,
     @Body() body: UpdateBranchDto,
-  ) {
+  ): Promise<BranchResponseDto> {
     return this.updateBranch.execute({ branchId, ...body });
   }
 
@@ -96,17 +97,23 @@ export class DashboardOrganizationBranchesController {
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Branch deleted' })
   @ApiResponse({ status: 404, description: 'Branch not found', type: ApiErrorDto })
-  deleteBranchEndpoint(@Param('branchId', ParseUUIDPipe) branchId: string) {
-    return this.deleteBranch.execute({ branchId });
+  async deleteBranchEndpoint(@Param('branchId', ParseUUIDPipe) branchId: string): Promise<void> {
+    await this.deleteBranch.execute({ branchId });
   }
 
   @Get('branches/:branchId/employees')
   @CheckPermissions({ action: 'read', subject: 'Branch' })
   @ApiOperation({ summary: 'List employees assigned to a branch' })
   @ApiParam({ name: 'branchId', description: 'Branch UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'List of employees in the branch' })
+  @ApiOkResponse({
+    description: 'List of employees in the branch',
+    type: BranchEmployeeListEntryResponseDto,
+    isArray: true,
+  })
   @ApiResponse({ status: 404, description: 'Branch not found', type: ApiErrorDto })
-  listBranchEmployeesEndpoint(@Param('branchId', ParseUUIDPipe) branchId: string) {
+  listBranchEmployeesEndpoint(
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+  ): Promise<BranchEmployeeListEntryResponseDto[]> {
     return this.listBranchEmployees.execute({ branchId });
   }
 
@@ -122,7 +129,7 @@ export class DashboardOrganizationBranchesController {
   assignEmployeeEndpoint(
     @Param('branchId', ParseUUIDPipe) branchId: string,
     @Body() body: AssignEmployeeToBranchDto,
-  ) {
+  ): Promise<BranchEmployeeAssignmentResponseDto> {
     return this.assignEmployee.execute({ branchId, ...body });
   }
 
@@ -139,7 +146,7 @@ export class DashboardOrganizationBranchesController {
   unassignEmployeeEndpoint(
     @Param('branchId', ParseUUIDPipe) branchId: string,
     @Param('employeeId', ParseUUIDPipe) employeeId: string,
-  ) {
+  ): Promise<BranchAssignmentDeletedResponseDto> {
     return this.unassignEmployee.execute({ branchId, employeeId });
   }
 }
