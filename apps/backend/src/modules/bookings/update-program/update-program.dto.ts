@@ -18,12 +18,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
  * the existing form values without translation.
  */
 export class UpdateProgramDto {
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid', description: 'Owning department identifier', example: '77777777-7777-4777-8777-777777777777' })
   @IsOptional()
   @IsUUID()
   departmentId?: string;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid', description: 'Branch where the program is offered', example: '88888888-8888-4888-8888-888888888888' })
   @IsOptional()
   @IsUUID()
   branchId?: string;
@@ -38,35 +38,35 @@ export class UpdateProgramDto {
   @IsString()
   nameEn?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Arabic staff-facing description', example: 'برنامج لتنمية مهارات التواصل الأسري' })
   @IsOptional()
   @IsString()
   descriptionAr?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'English staff-facing description', example: 'A program for family communication skills' })
   @IsOptional()
   @IsString()
   descriptionEn?: string;
 
-  @ApiPropertyOptional({ minimum: 1 })
+  @ApiPropertyOptional({ minimum: 1, description: 'Number of program days', example: 3 })
   @IsOptional()
   @IsInt()
   @Min(1)
   daysCount?: number;
 
-  @ApiPropertyOptional({ minimum: 1 })
+  @ApiPropertyOptional({ minimum: 1, description: 'Number of program hours per day', example: 2 })
   @IsOptional()
   @IsInt()
   @Min(1)
   hoursPerDay?: number;
 
-  @ApiPropertyOptional({ minimum: 1 })
+  @ApiPropertyOptional({ minimum: 1, description: 'Minimum participants required for the program', example: 3 })
   @IsOptional()
   @IsInt()
   @Min(1)
   minParticipants?: number;
 
-  @ApiPropertyOptional({ minimum: 1 })
+  @ApiPropertyOptional({ minimum: 1, description: 'Maximum number of enrolled participants', example: 12 })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -78,40 +78,41 @@ export class UpdateProgramDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Program price currency code', example: 'SAR' })
   @IsOptional()
   @IsString()
   currency?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Whether the program accepts a deposit', example: true })
   @IsOptional()
   @IsBoolean()
   depositEnabled?: boolean;
 
   @ApiPropertyOptional({
     description: 'Deposit amount in integer halalas (must be <= price)',
+    example: 30000,
   })
   @IsOptional()
   @IsInt()
   @Min(0)
   depositAmount?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Whether the program is published in the public catalog', example: true })
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Arabic public catalog description', example: 'تعرف على مهارات التواصل الأسري' })
   @IsOptional()
   @IsString()
   publicDescriptionAr?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'English public catalog description', example: 'Learn family communication skills' })
   @IsOptional()
   @IsString()
   publicDescriptionEn?: string;
 
-  @ApiPropertyOptional({ type: [String] })
+  @ApiPropertyOptional({ type: [String], description: 'Supervising employee identifiers; replaces the whole supervisor set', example: ['33333333-3333-4333-8333-333333333333'] })
   @IsOptional()
   @IsArray()
   @IsUUID('all', { each: true })

@@ -44,7 +44,10 @@ function isEnrollable(p: ProgramSummary): boolean {
 }
 
 function isProgramFull(p: ProgramSummary): boolean {
-  return p.isFull ?? p.enrolledCount >= p.maxParticipants
+  // `isFull` is a required boolean on every list row (`ListProgramsHandler`
+  // computes it as `enrolledCount >= maxParticipants`), so the old
+  // `?? enrolledCount >= maxParticipants` fallback could never fire.
+  return p.isFull
 }
 
 /* ─── Skeleton ─────────────────────────────────────────────────────── */

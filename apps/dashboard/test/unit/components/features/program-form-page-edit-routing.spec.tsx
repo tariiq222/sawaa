@@ -115,11 +115,10 @@ function paginatedEmpty() {
 }
 
 function setupApiMocksForEdit() {
-  // GET /dashboard/programs/:id (real fetchProgram via api.get)
+  // GET /dashboard/programs/:id goes through the typed OpenAPI helper
+  // (`lib/api/openapi.ts`) after the MNT-08 migration; every other read stays
+  // on the shared adapter.
   apiGet.mockImplementation((endpoint: string) => {
-    if (endpoint.startsWith("/dashboard/programs/")) {
-      return Promise.resolve(existingProgramDetail())
-    }
     if (endpoint.startsWith("/dashboard/employees")) {
       return Promise.resolve(paginatedEmpty())
     }
@@ -133,7 +132,12 @@ function setupApiMocksForEdit() {
   })
   apiPatch.mockResolvedValueOnce({ id: PROGRAM_ID, ref: 1, status: "DRAFT", supervisorIds: [SUPERVISOR_ID] })
   apiPost.mockReset()
-  openApiGet.mockResolvedValue(paginatedEmpty())
+  openApiGet.mockImplementation((endpoint: string) => {
+    if (endpoint === "/api/v1/dashboard/programs/{id}") {
+      return Promise.resolve(existingProgramDetail())
+    }
+    return Promise.resolve(paginatedEmpty())
+  })
 }
 
 function setupApiMocksForCreate() {
@@ -281,11 +285,13 @@ describe("ProgramFormPage — real component tree, edit vs create routing", () =
 
       // Wait for the useProgram GET to resolve + the form.reset effect to
       // populate valid values — at that point RHF validation passes on submit.
-      // fetchProgram(id) calls api.get(endpoint) with a single argument.
+      // fetchProgram(id) is a typed OpenAPI call: the template path is the first
+      // argument and the UUID travels in `options.path`.
       await waitFor(() => {
-        expect(apiGet).toHaveBeenCalled()
-        const calls = apiGet.mock.calls.map((args) => args[0] as string)
-        expect(calls.some((url) => url.includes(`/dashboard/programs/${PROGRAM_ID}`))).toBe(true)
+        const calls = openApiGet.mock.calls.map((args) => args as [string, { path?: { id?: string } }])
+        expect(
+          calls.some(([path, options]) => path === "/api/v1/dashboard/programs/{id}" && options?.path?.id === PROGRAM_ID),
+        ).toBe(true)
       }, { timeout: 3000 })
 
       fireEvent.click(container.querySelector('[name="isPublic"]')!)

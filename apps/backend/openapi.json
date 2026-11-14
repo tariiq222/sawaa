@@ -8678,50 +8678,73 @@
       "CreateProgramDto": {
         "properties": {
           "branchId": {
+            "description": "Branch where the program is offered",
+            "example": "88888888-8888-4888-8888-888888888888",
             "format": "uuid",
             "type": "string"
           },
           "currency": {
             "default": "SAR",
+            "description": "Program price currency code",
+            "example": "SAR",
             "type": "string"
           },
           "daysCount": {
+            "description": "Number of program days",
+            "example": 3,
             "minimum": 1,
             "type": "number"
           },
           "departmentId": {
+            "description": "Owning department identifier",
+            "example": "77777777-7777-4777-8777-777777777777",
             "format": "uuid",
             "type": "string"
           },
           "depositAmount": {
             "description": "Deposit amount in integer halalas (must be <= price)",
+            "example": 30000,
             "type": "number"
           },
           "depositEnabled": {
             "default": false,
+            "description": "Whether the program accepts a deposit",
+            "example": true,
             "type": "boolean"
           },
           "descriptionAr": {
+            "description": "Arabic staff-facing description",
+            "example": "برنامج لتنمية مهارات التواصل الأسري",
             "type": "string"
           },
           "descriptionEn": {
+            "description": "English staff-facing description",
+            "example": "A program for family communication skills",
             "type": "string"
           },
           "hoursPerDay": {
+            "description": "Number of program hours per day",
+            "example": 2,
             "minimum": 1,
             "type": "number"
           },
           "isPublic": {
             "default": false,
+            "description": "Whether the program is published in the public catalog",
+            "example": true,
             "type": "boolean"
           },
           "maxParticipants": {
             "default": 30,
+            "description": "Maximum number of enrolled participants",
+            "example": 12,
             "minimum": 1,
             "type": "number"
           },
           "minParticipants": {
             "default": 1,
+            "description": "Minimum participants required for the program",
+            "example": 3,
             "minimum": 1,
             "type": "number"
           },
@@ -8739,9 +8762,13 @@
             "type": "number"
           },
           "publicDescriptionAr": {
+            "description": "Arabic public catalog description",
+            "example": "تعرف على مهارات التواصل الأسري",
             "type": "string"
           },
           "publicDescriptionEn": {
+            "description": "English public catalog description",
+            "example": "Learn family communication skills",
             "type": "string"
           },
           "supervisorIds": {
@@ -19472,6 +19499,174 @@
         ],
         "type": "object"
       },
+      "ProgramListItemResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the program is offered",
+            "example": "88888888-8888-4888-8888-888888888888",
+            "format": "uuid",
+            "type": "string"
+          },
+          "cancelledAt": {
+            "description": "Cancellation time as an ISO 8601 UTC timestamp, or null when not cancelled",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Program creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Program price currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "daysCount": {
+            "description": "Number of program days",
+            "example": 3,
+            "type": "integer"
+          },
+          "departmentId": {
+            "description": "Department that owns the program",
+            "example": "77777777-7777-4777-8777-777777777777",
+            "format": "uuid",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit in integer halalas as a decimal string, or null when no deposit is set",
+            "example": "30000",
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether the program accepts a deposit",
+            "example": true,
+            "type": "boolean"
+          },
+          "enrolledCount": {
+            "description": "Current number of program enrollments",
+            "example": 1,
+            "type": "integer"
+          },
+          "enrollmentCount": {
+            "description": "Total enrollment rows attached to the program (the list joins them to build this counter)",
+            "example": 1,
+            "type": "integer"
+          },
+          "hoursPerDay": {
+            "description": "Number of program hours per day",
+            "example": 2,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Unique program identifier",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isFull": {
+            "description": "Whether enrolled count has reached the maximum participant capacity",
+            "example": false,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the program is published in the public catalog",
+            "example": true,
+            "type": "boolean"
+          },
+          "maxParticipants": {
+            "description": "Maximum number of enrolled participants",
+            "example": 12,
+            "type": "integer"
+          },
+          "minParticipants": {
+            "description": "Minimum participants required for the program",
+            "example": 3,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Arabic program name",
+            "example": "برنامج التواصل الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English program name, or null when unspecified",
+            "example": "Family Communication Program",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas, serialized as a decimal string",
+            "example": "150000",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Numeric program reference accepted by the detail lookup",
+            "example": 24,
+            "type": "integer"
+          },
+          "startDate": {
+            "description": "Program start time as an ISO 8601 UTC timestamp, or null when unscheduled",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current program lifecycle status",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "OPEN",
+            "type": "string"
+          },
+          "supervisorIds": {
+            "description": "Identifiers of employees supervising the program",
+            "example": [
+              "33333333-3333-4333-8333-333333333333"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "departmentId",
+          "branchId",
+          "startDate",
+          "daysCount",
+          "hoursPerDay",
+          "minParticipants",
+          "maxParticipants",
+          "enrolledCount",
+          "price",
+          "currency",
+          "depositEnabled",
+          "depositAmount",
+          "status",
+          "isPublic",
+          "cancelledAt",
+          "createdAt",
+          "supervisorIds",
+          "isFull",
+          "enrollmentCount"
+        ],
+        "type": "object"
+      },
       "ProgramParticipantRefundDto": {
         "properties": {
           "amount": {
@@ -19489,6 +19684,69 @@
         "required": [
           "bookingId",
           "amount"
+        ],
+        "type": "object"
+      },
+      "ProgramPublishResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Unique program identifier",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Program lifecycle status after publishing",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "OPEN",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ProgramScheduleResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Unique program identifier",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Scheduled program start time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "description": "Program lifecycle status after scheduling",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "SCHEDULED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "startDate"
         ],
         "type": "object"
       },
@@ -19516,6 +19774,51 @@
           "id",
           "name",
           "nameEn"
+        ],
+        "type": "object"
+      },
+      "ProgramWriteResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Unique program identifier",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Numeric program reference accepted by the detail lookup",
+            "example": 24,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Program lifecycle status after the write",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "DRAFT",
+            "type": "string"
+          },
+          "supervisorIds": {
+            "description": "Identifiers of employees supervising the program after the write",
+            "example": [
+              "33333333-3333-4333-8333-333333333333"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "status",
+          "supervisorIds"
         ],
         "type": "object"
       },
@@ -23720,45 +24023,68 @@
       "UpdateProgramDto": {
         "properties": {
           "branchId": {
+            "description": "Branch where the program is offered",
+            "example": "88888888-8888-4888-8888-888888888888",
             "format": "uuid",
             "type": "string"
           },
           "currency": {
+            "description": "Program price currency code",
+            "example": "SAR",
             "type": "string"
           },
           "daysCount": {
+            "description": "Number of program days",
+            "example": 3,
             "minimum": 1,
             "type": "number"
           },
           "departmentId": {
+            "description": "Owning department identifier",
+            "example": "77777777-7777-4777-8777-777777777777",
             "format": "uuid",
             "type": "string"
           },
           "depositAmount": {
             "description": "Deposit amount in integer halalas (must be <= price)",
+            "example": 30000,
             "type": "number"
           },
           "depositEnabled": {
+            "description": "Whether the program accepts a deposit",
+            "example": true,
             "type": "boolean"
           },
           "descriptionAr": {
+            "description": "Arabic staff-facing description",
+            "example": "برنامج لتنمية مهارات التواصل الأسري",
             "type": "string"
           },
           "descriptionEn": {
+            "description": "English staff-facing description",
+            "example": "A program for family communication skills",
             "type": "string"
           },
           "hoursPerDay": {
+            "description": "Number of program hours per day",
+            "example": 2,
             "minimum": 1,
             "type": "number"
           },
           "isPublic": {
+            "description": "Whether the program is published in the public catalog",
+            "example": true,
             "type": "boolean"
           },
           "maxParticipants": {
+            "description": "Maximum number of enrolled participants",
+            "example": 12,
             "minimum": 1,
             "type": "number"
           },
           "minParticipants": {
+            "description": "Minimum participants required for the program",
+            "example": 3,
             "minimum": 1,
             "type": "number"
           },
@@ -23776,12 +24102,20 @@
             "type": "number"
           },
           "publicDescriptionAr": {
+            "description": "Arabic public catalog description",
+            "example": "تعرف على مهارات التواصل الأسري",
             "type": "string"
           },
           "publicDescriptionEn": {
+            "description": "English public catalog description",
+            "example": "Learn family communication skills",
             "type": "string"
           },
           "supervisorIds": {
+            "description": "Supervising employee identifiers; replaces the whole supervisor set",
+            "example": [
+              "33333333-3333-4333-8333-333333333333"
+            ],
             "items": {
               "type": "string"
             },
@@ -51715,32 +52049,55 @@
         "operationId": "DashboardProgramsController_list_v1",
         "parameters": [
           {
+            "description": "Filter by program lifecycle status",
             "in": "query",
             "name": "status",
-            "required": true,
+            "required": false,
             "schema": {
+              "enum": [
+                "DRAFT",
+                "OPEN",
+                "MIN_REACHED",
+                "SCHEDULED",
+                "COMPLETED",
+                "CANCELLED"
+              ],
               "type": "string"
             }
           },
           {
+            "description": "Filter by owning department",
             "in": "query",
             "name": "departmentId",
-            "required": true,
+            "required": false,
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
           {
+            "description": "Filter by branch",
             "in": "query",
             "name": "branchId",
-            "required": true,
+            "required": false,
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramListItemResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "List of programs with computed isFull badge"
           },
           "400": {
@@ -51809,6 +52166,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramWriteResponseDto"
+                }
+              }
+            },
             "description": "Program created in DRAFT status"
           },
           "400": {
@@ -51840,6 +52204,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Department, branch or supervisor not found"
           },
           "500": {
             "content": {
@@ -51918,6 +52285,9 @@
             },
             "description": "Action denied by permission policy"
           },
+          "404": {
+            "description": "Program not found"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -51964,7 +52334,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramWriteResponseDto"
+                }
+              }
+            },
+            "description": "Program identity and resulting lifecycle state"
           },
           "400": {
             "content": {
@@ -51995,6 +52372,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Program, department, branch or supervisor not found"
           },
           "500": {
             "content": {
@@ -52278,7 +52658,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramPublishResponseDto"
+                }
+              }
+            },
+            "description": "Program identity and resulting lifecycle status"
           },
           "400": {
             "content": {
@@ -52309,6 +52696,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Program not found"
           },
           "500": {
             "content": {
@@ -52358,7 +52748,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramScheduleResponseDto"
+                }
+              }
+            },
+            "description": "Program identity, resulting lifecycle status and start instant"
           },
           "400": {
             "content": {
@@ -52389,6 +52786,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Program not found"
           },
           "500": {
             "content": {

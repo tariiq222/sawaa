@@ -55,7 +55,7 @@ function fromExisting(existing: ProgramDetail | undefined): CreateProgramFormVal
     isPublic: existing.isPublic,
     publicDescriptionAr: existing.publicDescriptionAr ?? '',
     publicDescriptionEn: existing.publicDescriptionEn ?? '',
-    supervisorIds: existing.supervisorIds ?? [],
+    supervisorIds: existing.supervisorIds,
   };
 }
 

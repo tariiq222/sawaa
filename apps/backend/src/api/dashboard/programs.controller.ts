@@ -1,4 +1,10 @@
 import { ProgramDetailResponseDto } from './dto/program-detail-response.dto';
+import {
+  ProgramListItemResponseDto,
+  ProgramPublishResponseDto,
+  ProgramScheduleResponseDto,
+  ProgramWriteResponseDto,
+} from './dto/program-response.dto';
 import { ProgramCancellationPreviewDto, ProgramCancellationResultDto } from '../../modules/bookings/cancel-program/program-cancellation.dto';
 import { UserId } from '../../common/auth/user-id.decorator';
 import {
@@ -12,7 +18,16 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiBearerAuth, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ProgramStatus } from '@prisma/client';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
@@ -53,20 +68,24 @@ export class DashboardProgramsController {
   @Post()
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Create a new program (DRAFT)' })
-  @ApiCreatedResponse({ description: 'Program created in DRAFT status' })
-  async create(@Body() dto: CreateProgramDto) {
+  @ApiCreatedResponse({ description: 'Program created in DRAFT status', type: ProgramWriteResponseDto })
+  @ApiResponse({ status: 404, description: 'Department, branch or supervisor not found' })
+  async create(@Body() dto: CreateProgramDto): Promise<ProgramWriteResponseDto> {
     return this.createProgram.execute({ ...dto, createdBy: 'dashboard' });
   }
 
   @Get()
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'List programs (filterable by status, department, branch)' })
-  @ApiOkResponse({ description: 'List of programs with computed isFull badge' })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by program lifecycle status', enum: ProgramStatus, example: 'OPEN' })
+  @ApiQuery({ name: 'departmentId', required: false, description: 'Filter by owning department', schema: { type: 'string', format: 'uuid' } })
+  @ApiQuery({ name: 'branchId', required: false, description: 'Filter by branch', schema: { type: 'string', format: 'uuid' } })
+  @ApiOkResponse({ description: 'List of programs with computed isFull badge', type: ProgramListItemResponseDto, isArray: true })
   async list(
     @Query('status') status?: ProgramStatus,
     @Query('departmentId') departmentId?: string,
     @Query('branchId') branchId?: string,
-  ) {
+  ): Promise<ProgramListItemResponseDto[]> {
     return this.listPrograms.execute({ status, departmentId, branchId });
   }
 
@@ -75,7 +94,8 @@ export class DashboardProgramsController {
   @ApiOperation({ summary: 'Get a single program by UUID or numeric ref' })
   @ApiParam({ name: 'id', description: 'UUID or numeric ref' })
   @ApiOkResponse({ description: 'Program detail with enrollments and supervisors', type: ProgramDetailResponseDto })
-  async getOne(@Param('id') id: string) {
+  @ApiResponse({ status: 404, description: 'Program not found' })
+  async getOne(@Param('id') id: string): Promise<ProgramDetailResponseDto> {
     return this.getProgram.execute(id);
   }
 
@@ -83,10 +103,12 @@ export class DashboardProgramsController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Update an existing program (DRAFT|OPEN|MIN_REACHED|SCHEDULED)' })
   @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ description: 'Program identity and resulting lifecycle state', type: ProgramWriteResponseDto })
+  @ApiResponse({ status: 404, description: 'Program, department, branch or supervisor not found' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProgramDto,
-  ) {
+  ): Promise<ProgramWriteResponseDto> {
     return this.updateProgram.execute(id, dto);
   }
 
@@ -94,7 +116,9 @@ export class DashboardProgramsController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Publish a DRAFT program (DRAFT → OPEN)' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  async publish(@Param('id', ParseUUIDPipe) id: string) {
+  @ApiOkResponse({ description: 'Program identity and resulting lifecycle status', type: ProgramPublishResponseDto })
+  @ApiResponse({ status: 404, description: 'Program not found' })
+  async publish(@Param('id', ParseUUIDPipe) id: string): Promise<ProgramPublishResponseDto> {
     return this.publishProgram.execute(id);
   }
 
@@ -102,10 +126,12 @@ export class DashboardProgramsController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Schedule a program (OPEN|MIN_REACHED → SCHEDULED)' })
   @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ description: 'Program identity, resulting lifecycle status and start instant', type: ProgramScheduleResponseDto })
+  @ApiResponse({ status: 404, description: 'Program not found' })
   async schedule(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ScheduleProgramDto,
-  ) {
+  ): Promise<ProgramScheduleResponseDto> {
     return this.scheduleProgram.execute(id, dto);
   }
 
@@ -114,7 +140,7 @@ export class DashboardProgramsController {
   @ApiOperation({ summary: 'Preview participant refunds for center cancellation' })
   @ApiOkResponse({ type: ProgramCancellationPreviewDto })
   @ApiParam({ name: 'id', format: 'uuid' })
-  async cancellationPreview(@Param('id', ParseUUIDPipe) id: string) {
+  async cancellationPreview(@Param('id', ParseUUIDPipe) id: string): Promise<ProgramCancellationPreviewDto> {
     return this.cancelProgram.preview(id);
   }
 
