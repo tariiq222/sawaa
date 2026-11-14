@@ -7,11 +7,11 @@ import { usePackage } from "@/hooks/use-packages"
 import { useLocale } from "@/components/locale-provider"
 import { groupedPackageSchema, type GroupedPackageFormData } from "@/lib/schemas/package-groups.schema"
 import { groupedFormDefaults, groupedPricePreview } from "@/lib/package-groups-form"
-import type { SessionPackage } from "@/lib/types/package"
+import type { PackageEditorEntity } from "@/lib/types/package"
 
 export function usePackageGroupsEditor(
   packageId: string | null,
-  initialPackage?: SessionPackage | null,
+  initialPackage?: PackageEditorEntity | null,
 ) {
   const { t } = useLocale()
   const query = usePackage(initialPackage ? null : packageId)

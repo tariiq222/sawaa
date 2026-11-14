@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { DiscountType } from '@prisma/client';
+import { DiscountType, Prisma } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { toHalalas } from '../../../finance/money.helper';
 import { UpdateSessionPackageDto } from './update-session-package.dto';
@@ -22,6 +22,18 @@ import { decorateGroupedPackage } from '../package-group-catalog.helper';
 import type { GroupedCatalogPackage } from '../package-group-catalog.helper';
 import type { GlobalDiscount } from '@sawaa/shared/types';
 
+/**
+ * Mirrors the `include` of the grouped `sessionPackage.update` call below, so
+ * the grouped branch's inferred return type is the row the endpoint serializes
+ * instead of `unknown`.
+ */
+type GroupedUpdateResult = Prisma.SessionPackageGetPayload<{
+  include: {
+    items: { include: { constraints: { include: { targets: true } } } };
+    groups: { include: { items: { include: { constraints: { include: { targets: true } } } } } };
+  };
+}>;
+
 type GroupedUpdateTransaction = {
   sessionPackageItem: {
     deleteMany(args: { where: Record<string, unknown> }): Promise<unknown>;
@@ -33,7 +45,7 @@ type GroupedUpdateTransaction = {
     createMany(args: { data: Record<string, unknown>[] }): Promise<unknown>;
   };
   sessionPackage: {
-    update(args: { where: Record<string, unknown>; data: Record<string, unknown>; include: Record<string, unknown> }): Promise<unknown>;
+    update(args: { where: Record<string, unknown>; data: Record<string, unknown>; include: Record<string, unknown> }): Promise<GroupedUpdateResult>;
   };
 };
 

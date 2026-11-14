@@ -13,7 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
+  ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiExtraModels, ApiQuery,
   ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
@@ -28,10 +28,46 @@ import { ListSessionPackagesDto } from '../../modules/org-experience/session-pac
 import { GetSessionPackageHandler } from '../../modules/org-experience/session-packages/get-session-package/get-session-package.handler';
 import { ArchiveSessionPackageHandler } from '../../modules/org-experience/session-packages/archive-session-package/archive-session-package.handler';
 import { AuditControllerName } from '../../common/interceptors/audit-controller-name.decorator';
+import {
+  PACKAGE_WRITE_RESPONSE_SCHEMA,
+  PackageDetailResponseDto,
+  PackageFixedGlobalDiscountDto,
+  PackageGroupReadDto,
+  PackageGroupSessionReadDto,
+  PackageGroupedWriteResponseDto,
+  PackageItemConstraintRecordDto,
+  PackageItemRecordDto,
+  PackageItemUnitPriceDto,
+  PackageLegacyWriteResponseDto,
+  PackageListRowDto,
+  PackageNoGlobalDiscountDto,
+  PackagePercentageGlobalDiscountDto,
+  PackagePriceBreakdownDto,
+  PackagePriceLineDto,
+  PackageWriteResponseDto,
+  PaginatedPackagesDto,
+} from './dto/package-response.dto';
 
 @ApiTags('Dashboard / Org Experience')
 @ApiBearerAuth()
 @ApiStandardResponses()
+@ApiExtraModels(
+  PackageDetailResponseDto,
+  PackageListRowDto,
+  PaginatedPackagesDto,
+  PackageLegacyWriteResponseDto,
+  PackageGroupedWriteResponseDto,
+  PackageItemRecordDto,
+  PackageItemConstraintRecordDto,
+  PackageGroupReadDto,
+  PackageGroupSessionReadDto,
+  PackagePriceBreakdownDto,
+  PackagePriceLineDto,
+  PackageItemUnitPriceDto,
+  PackageNoGlobalDiscountDto,
+  PackagePercentageGlobalDiscountDto,
+  PackageFixedGlobalDiscountDto,
+)
 @UseGuards(JwtGuard, CaslGuard)
 @Controller('dashboard/organization')
 @AuditControllerName('DashboardOrganizationSettingsController')
@@ -47,17 +83,36 @@ export class DashboardOrganizationPackagesController {
   @Post('packages')
   @CheckPermissions({ action: 'create', subject: 'Service' })
   @ApiOperation({ summary: 'Create a session package' })
-  @ApiCreatedResponse({ description: 'Session package created' })
+  @ApiCreatedResponse({
+    schema: PACKAGE_WRITE_RESPONSE_SCHEMA,
+    description: 'Session package created (raw persisted row: legacy items, or grouped groups and items)',
+  })
   @ApiResponse({ status: 400, description: 'Validation failed (invalid items, missing employee-service link, or invalid discount)' })
-  createSessionPackageEndpoint(@Body() body: CreateSessionPackageDto) {
+  createSessionPackageEndpoint(@Body() body: CreateSessionPackageDto): Promise<PackageWriteResponseDto> {
     return this.createSessionPackage.execute(body);
   }
 
   @Get('packages')
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'List session packages' })
-  @ApiOkResponse({ description: 'Paginated list of session packages' })
-  listSessionPackagesEndpoint(@Query() query: ListSessionPackagesDto) {
+  @ApiQuery({
+    // `ListSessionPackagesDto` inherits `page`/`limit` from `PaginationDto`, whose
+    // fields carry no `@ApiProperty` (and this repo has no Swagger CLI plugin),
+    // so without these the snapshot emits them with an example but no `type`.
+    // The bounds mirror `@Min(1)` / `@Max(200)` in `common/dto/pagination.dto.ts`.
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+    schema: { type: 'integer', minimum: 1, example: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Results per page',
+    schema: { type: 'integer', minimum: 1, maximum: 200, example: 20 },
+  })
+  @ApiOkResponse({ type: PaginatedPackagesDto, description: 'Paginated list of session packages with their computed price' })
+  listSessionPackagesEndpoint(@Query() query: ListSessionPackagesDto): Promise<PaginatedPackagesDto> {
     return this.listSessionPackages.execute(query);
   }
 
@@ -65,9 +120,9 @@ export class DashboardOrganizationPackagesController {
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'Get a session package by id' })
   @ApiParam({ name: 'packageId', description: 'Session package UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Session package details including the computed price' })
+  @ApiOkResponse({ type: PackageDetailResponseDto, description: 'Session package details including the computed price' })
   @ApiResponse({ status: 404, description: 'Session package not found' })
-  getSessionPackageEndpoint(@Param('packageId', ParseUUIDPipe) packageId: string) {
+  getSessionPackageEndpoint(@Param('packageId', ParseUUIDPipe) packageId: string): Promise<PackageDetailResponseDto> {
     return this.getSessionPackage.execute({ packageId });
   }
 
@@ -75,13 +130,16 @@ export class DashboardOrganizationPackagesController {
   @CheckPermissions({ action: 'update', subject: 'Service' })
   @ApiOperation({ summary: 'Update a session package' })
   @ApiParam({ name: 'packageId', description: 'Session package UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Session package updated' })
+  @ApiOkResponse({
+    schema: PACKAGE_WRITE_RESPONSE_SCHEMA,
+    description: 'Session package updated (raw persisted row: legacy items, or grouped groups and items)',
+  })
   @ApiResponse({ status: 400, description: 'Validation failed (invalid items or invalid discount)' })
   @ApiResponse({ status: 404, description: 'Session package not found' })
   updateSessionPackageEndpoint(
     @Param('packageId', ParseUUIDPipe) packageId: string,
     @Body() body: UpdateSessionPackageDto,
-  ) {
+  ): Promise<PackageWriteResponseDto> {
     // Path param must win — body's `packageId` (if any) is not part of the API contract.
     return this.updateSessionPackage.execute({ ...body, packageId });
   }
@@ -93,7 +151,7 @@ export class DashboardOrganizationPackagesController {
   @ApiParam({ name: 'packageId', description: 'Session package UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Session package archived' })
   @ApiResponse({ status: 404, description: 'Session package not found' })
-  archiveSessionPackageEndpoint(@Param('packageId', ParseUUIDPipe) packageId: string) {
-    return this.archiveSessionPackage.execute({ packageId });
+  async archiveSessionPackageEndpoint(@Param('packageId', ParseUUIDPipe) packageId: string): Promise<void> {
+    await this.archiveSessionPackage.execute({ packageId });
   }
 }

@@ -139,7 +139,9 @@ export function SellPackageForm({ clientId, onClose }: SellPackageFormProps) {
     const option = sellable.find((pkg) => pkg.id === packageSelection)
     return option ? { option, familyId: undefined, familyNameAr: undefined, familyNameEn: undefined } : undefined
   }, [familyChoices, packageSelection, sellable])
-  const selectedPkg = selectedChoice?.option as SessionPackage | undefined
+  // A family option has no flattened price columns; the preview reads them as
+  // 0 (unchanged behaviour) instead of being cast to the list-row shape.
+  const selectedPkg = selectedChoice?.option
   const packageId = selectedChoice?.option.id ?? ""
 
   // The activeMethod handles the late-loads-settings race: if the user

@@ -15,10 +15,25 @@ import { Label } from "@sawaa/ui"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useLocale } from "@/components/locale-provider"
 import { vatHalalas } from "@/lib/money"
-import type { SessionPackage } from "@/lib/types/package"
+
+/**
+ * The flattened price columns a package LIST row carries.
+ *
+ * A package FAMILY option carries its server-computed price as a nested
+ * `price` breakdown instead, so none of these keys exist on it. They are
+ * therefore optional: a missing key still renders as 0, which is exactly what
+ * this dialog showed before the package types were derived (see the MNT-08
+ * dead-read note — wiring `price.*` in here would be a behaviour change).
+ */
+export interface PackagePriceColumns {
+  subtotal?: number | string
+  discountAmount?: number | string
+  finalPrice?: number | string
+  vatRate?: number
+}
 
 interface Props {
-  pkg: SessionPackage | undefined
+  pkg: PackagePriceColumns | undefined
 }
 
 export function SellPackagePricePreview({ pkg }: Props) {

@@ -1,45 +1,53 @@
 /**
  * Session Packages API — Sawaa Dashboard
  *
- * App-local thin client for the new `/dashboard/organization/packages`
- * endpoints (Phase 1 of the session-packages rebuild). Mirrors the
- * pre-rebuild conventions (paginated list, single-detail, create /
- * update / soft-archive) and reuses the dashboard's `api` instance, so
- * cookie-bearing refresh + envelope-unwrap are inherited for free.
+ * Thin client for `/dashboard/organization/packages`. Response types come from
+ * the committed OpenAPI snapshot through `@/lib/api/openapi`, so a backend
+ * response change is a type error here instead of a silent drift:
+ *
+ *  - GET list returns decorated rows with the price flattened onto the row;
+ *  - GET detail returns the decorated package with a nested `price` breakdown;
+ *  - POST and PATCH return the RAW persisted row (legacy `items`, or grouped
+ *    `groups`) and carry no computed price — the forms use them for the id only
+ *    and refresh the catalog afterwards.
  */
 
 import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   CreateSessionPackagePayload,
   PackageListQuery,
+  PackageWriteResponse,
   SessionPackage,
+  SessionPackageDetail,
   UpdateSessionPackagePayload,
 } from "@/lib/types/package"
 
 export async function fetchPackages(
   query: PackageListQuery = {},
 ): Promise<PaginatedResponse<SessionPackage>> {
-  return api.get<PaginatedResponse<SessionPackage>>(
-    "/dashboard/organization/packages",
-    {
+  return openApi.get("/api/v1/dashboard/organization/packages", {
+    query: {
       page: query.page,
       limit: query.limit,
       search: query.search,
       isActive: query.isActive,
       isPublic: query.isPublic,
     },
-  )
+  })
 }
 
-export async function fetchPackage(id: string): Promise<SessionPackage> {
-  return api.get<SessionPackage>(`/dashboard/organization/packages/${id}`)
+export async function fetchPackage(id: string): Promise<SessionPackageDetail> {
+  return openApi.get("/api/v1/dashboard/organization/packages/{packageId}", {
+    path: { packageId: id },
+  })
 }
 
 export async function createPackage(
   payload: CreateSessionPackagePayload,
-): Promise<SessionPackage> {
-  return api.post<SessionPackage>(
+): Promise<PackageWriteResponse> {
+  return api.post<PackageWriteResponse>(
     "/dashboard/organization/packages",
     payload,
   )
@@ -48,8 +56,8 @@ export async function createPackage(
 export async function updatePackage(
   id: string,
   payload: UpdateSessionPackagePayload,
-): Promise<SessionPackage> {
-  return api.patch<SessionPackage>(
+): Promise<PackageWriteResponse> {
+  return api.patch<PackageWriteResponse>(
     `/dashboard/organization/packages/${id}`,
     payload,
   )
@@ -77,12 +85,15 @@ export async function uploadPackageMedia(file: File): Promise<PackageMediaUpload
   return api.postForm<PackageMediaUpload>("/dashboard/media/upload", formData)
 }
 
-/** Step 2: persist the storage key on the package (image-only PATCH). */
+/**
+ * Step 2: persist the storage key on the package (image-only PATCH). The
+ * response is the raw persisted row; callers only await success.
+ */
 export async function attachPackageImage(
   packageId: string,
   storageKey: string,
-): Promise<SessionPackage> {
-  return api.patch<SessionPackage>(
+): Promise<PackageWriteResponse> {
+  return api.patch<PackageWriteResponse>(
     `/dashboard/organization/packages/${packageId}`,
     { imageUrl: storageKey },
   )
@@ -105,7 +116,7 @@ export async function deletePackageMedia(mediaId: string): Promise<void> {
 export async function uploadPackageImage(
   packageId: string,
   file: File,
-): Promise<SessionPackage> {
+): Promise<PackageWriteResponse> {
   const uploaded = await uploadPackageMedia(file)
   return attachPackageImage(packageId, uploaded.storageKey)
 }

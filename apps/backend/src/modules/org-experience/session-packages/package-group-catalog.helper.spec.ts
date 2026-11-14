@@ -1,7 +1,7 @@
 import { applyGroupedPackagePrice, decorateGroupedPackage } from './package-group-catalog.helper';
 
 const packageFixture = {
-  modelVersion: 'GROUPED_V2',
+  modelVersion: 'GROUPED_V2' as const,
   discountType: 'PERCENTAGE',
   discountValue: 10,
   groups: [{

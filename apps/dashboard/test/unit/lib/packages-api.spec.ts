@@ -35,13 +35,10 @@ describe("packages api", () => {
       isActive: true,
       isPublic: true,
     })
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/packages", {
-      page: 3,
-      limit: 20,
-      search: "استشارة",
-      isActive: true,
-      isPublic: true,
-    })
+    // Typed OpenAPI helper: query params are serialized onto the path.
+    expect(getMock).toHaveBeenCalledWith(
+      "/dashboard/organization/packages?page=3&limit=20&search=%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D8%A9&isActive=true&isPublic=true",
+    )
   })
 
   it("fetchPackage GETs the detail endpoint", async () => {

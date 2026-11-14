@@ -13,16 +13,31 @@ import { CacheService } from '../../../../infrastructure/cache';
 import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 import { allocateSessionNet } from '../package-group-pricing';
 import { resolvePackageGroupOfferings, validateGroupedPackageStorageBounds } from '../package-group-offering.helper';
-import type { CreatedGroupedCatalogPackage } from '../package-group-catalog.helper';
 import { PriceResolverService } from '../../services/price-resolver.service';
 import { randomUUID } from 'node:crypto';
 import type { GlobalDiscount } from '@sawaa/shared/types';
 import type { PackageGroupInputLike } from '../package-group-offering.helper';
 
+/**
+ * The grouped write path casts `tx` to this structural stub, so the payload
+ * type has to be declared. It is exactly what the `findUnique` below returns:
+ * `include: { groups: { include: { items: { include: { constraints: {
+ * include: { targets: true } } } } } }, items: { include: { constraints:
+ * { include: { targets: true } } } } }`. Declaring it here (rather than the
+ * loose `CreatedGroupedCatalogPackage`) keeps the handler's inferred return
+ * type equal to the row the endpoint actually serializes.
+ */
+type GroupedWriteResult = Prisma.SessionPackageGetPayload<{
+  include: {
+    items: { include: { constraints: { include: { targets: true } } } };
+    groups: { include: { items: { include: { constraints: { include: { targets: true } } } } } };
+  };
+}>;
+
 type GroupedWriteTransaction = {
   sessionPackage: {
     create(args: { data: Record<string, unknown> }): Promise<{ id: string }>;
-    findUnique(args: unknown): Promise<CreatedGroupedCatalogPackage>;
+    findUnique(args: unknown): Promise<GroupedWriteResult>;
   };
   sessionPackageGroup: {
     createMany(args: { data: Record<string, unknown>[] }): Promise<unknown>;
