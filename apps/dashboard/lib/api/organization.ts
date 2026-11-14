@@ -1,13 +1,30 @@
 /**
  * Clinic API — Sawaa Dashboard
  *
- * Working hours and holidays management.
+ * Working hours and holidays management. Every call goes through the typed
+ * helper in `lib/api/openapi.ts`, so a renamed route or changed payload is a
+ * type error here; the wire shapes come from the committed OpenAPI snapshot.
  */
 
-import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
+import type { components } from "@/lib/types/api.generated"
 
-/* ─── Types ─── */
+type Schemas = components["schemas"]
 
+/* ─── Types (derived from OpenAPI) ─── */
+
+/** A stored business-hour row (`OrganizationHoursRecordDto`). */
+export type BusinessHourRecord = Schemas["OrganizationHoursRecordDto"]
+
+/** A stored holiday row (`HolidayRecordDto`). */
+type HolidayRecord = Schemas["HolidayRecordDto"]
+
+/**
+ * The dashboard's editable weekly grid.
+ *
+ * The endpoint models openness as `isOpen`; the grid has always edited
+ * `isActive`. `fromBusinessHour` maps the two and nothing else.
+ */
 export interface OrganizationHour {
   id?: string
   dayOfWeek: number
@@ -16,15 +33,7 @@ export interface OrganizationHour {
   isActive: boolean
 }
 
-interface BackendBusinessHour {
-  id?: string
-  dayOfWeek: number
-  startTime: string
-  endTime: string
-  isOpen?: boolean
-  isActive?: boolean
-}
-
+/** Dashboard-facing holiday: the fields of the stored row the dashboard reads. */
 export interface OrganizationHoliday {
   id: string
   date: string
@@ -33,39 +42,49 @@ export interface OrganizationHoliday {
   createdAt: string
 }
 
-/* ─── Working Hours ─── */
+function toHoliday(holiday: HolidayRecord): OrganizationHoliday {
+  // Passed through unchanged, as before the types were derived; the row's extra
+  // `branchId` is simply not part of the dashboard-facing type.
+  return holiday
+}
 
-export async function fetchOrganizationHours(branchId: string): Promise<OrganizationHour[]> {
-  const rows = await api.get<BackendBusinessHour[]>(`/dashboard/organization/hours/${branchId}`)
-  return rows.map((row) => ({
+function fromBusinessHour(row: BusinessHourRecord): OrganizationHour {
+  return {
     id: row.id,
     dayOfWeek: row.dayOfWeek,
     startTime: row.startTime,
     endTime: row.endTime,
-    isActive: row.isActive ?? row.isOpen ?? false,
-  }))
+    // The row carries `isOpen`; the old `row.isActive ??` prefix read a key the
+    // wire never sends, so the expression's value is unchanged by dropping it.
+    isActive: row.isOpen ?? false,
+  }
+}
+
+/* ─── Working Hours ─── */
+
+export async function fetchOrganizationHours(branchId: string): Promise<OrganizationHour[]> {
+  const rows = await openApi.get("/api/v1/dashboard/organization/hours/{branchId}", {
+    path: { branchId },
+  })
+  return rows.map(fromBusinessHour)
 }
 
 export async function updateOrganizationHours(
   branchId: string,
   hours: Omit<OrganizationHour, "id">[],
 ): Promise<OrganizationHour[]> {
-  const rows = await api.post<BackendBusinessHour[]>("/dashboard/organization/hours", {
-    branchId,
-    schedule: hours.map(({ dayOfWeek, startTime, endTime, isActive }) => ({
-      dayOfWeek,
-      startTime,
-      endTime,
-      isOpen: isActive,
-    })),
+  const rows = await openApi.post("/api/v1/dashboard/organization/hours", {
+    body: {
+      branchId,
+      schedule: hours.map(({ dayOfWeek, startTime, endTime, isActive }) => ({
+        dayOfWeek,
+        startTime,
+        endTime,
+        isOpen: isActive,
+      })),
+    },
   })
-  return rows.map((row) => ({
-    id: row.id,
-    dayOfWeek: row.dayOfWeek,
-    startTime: row.startTime,
-    endTime: row.endTime,
-    isActive: row.isActive ?? row.isOpen ?? false,
-  }))
+  return rows.map(fromBusinessHour)
 }
 
 /* ─── Holidays ─── */
@@ -74,10 +93,10 @@ export async function fetchOrganizationHolidays(
   branchId: string,
   year?: number,
 ): Promise<OrganizationHoliday[]> {
-  return api.get<OrganizationHoliday[]>(
-    "/dashboard/organization/holidays",
-    { branchId, year },
-  )
+  const rows = await openApi.get("/api/v1/dashboard/organization/holidays", {
+    query: { branchId, year },
+  })
+  return rows.map(toHoliday)
 }
 
 export async function createOrganizationHoliday(branchId: string, data: {
@@ -85,12 +104,14 @@ export async function createOrganizationHoliday(branchId: string, data: {
   nameAr: string
   nameEn: string
 }): Promise<OrganizationHoliday> {
-  return api.post<OrganizationHoliday>(
-    "/dashboard/organization/holidays",
-    { branchId, ...data },
-  )
+  const holiday = await openApi.post("/api/v1/dashboard/organization/holidays", {
+    body: { branchId, ...data },
+  })
+  return toHoliday(holiday)
 }
 
 export async function deleteOrganizationHoliday(id: string): Promise<void> {
-  await api.delete(`/dashboard/organization/holidays/${id}`)
+  await openApi.delete("/api/v1/dashboard/organization/holidays/{holidayId}", {
+    path: { holidayId: id },
+  })
 }

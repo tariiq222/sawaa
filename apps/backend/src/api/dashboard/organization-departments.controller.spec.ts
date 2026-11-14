@@ -68,17 +68,33 @@ describe('DashboardOrganizationDepartmentsController (e2e)', () => {
     it.each([
       ['post', '201', '#/components/schemas/DepartmentResponseDto'],
       ['get', '200', '#/components/schemas/PaginatedDepartmentsResponseDto'],
-      ['patch', '200', '#/components/schemas/DepartmentResponseDto'],
     ] as const)('documents the %s department response', (method, status, schemaRef) => {
-      const path = method === 'patch'
-        ? '/dashboard/organization/departments/{departmentId}'
-        : '/dashboard/organization/departments';
-      const response = openApiDocument.paths[path]?.[method]?.responses?.[status];
+      const response = openApiDocument.paths['/dashboard/organization/departments']?.[method]
+        ?.responses?.[status];
 
       expect(response).toMatchObject({
         content: {
           'application/json': {
             schema: { $ref: schemaRef },
+          },
+        },
+      });
+    });
+
+    it('documents the update response as the row, or null after a concurrent delete', () => {
+      const response = openApiDocument.paths[
+        '/dashboard/organization/departments/{departmentId}'
+      ]?.patch?.responses?.['200'];
+
+      // PATCH re-reads the row after the write, so a concurrent delete is the
+      // one case where the body is empty. The schema keeps that nullable.
+      expect(response).toMatchObject({
+        content: {
+          'application/json': {
+            schema: {
+              allOf: [{ $ref: '#/components/schemas/DepartmentResponseDto' }],
+              nullable: true,
+            },
           },
         },
       });

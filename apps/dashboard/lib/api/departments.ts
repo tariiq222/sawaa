@@ -1,9 +1,12 @@
-import { api } from "@/lib/api"
-import {
-  openApi,
-  type OpenApiRequestBody,
-  type OpenApiResponse,
-} from "@/lib/api/openapi"
+/**
+ * Departments API — Sawaa Dashboard
+ *
+ * Every call goes through the typed helper in `lib/api/openapi.ts`, so a
+ * renamed route or a changed payload is a type error here. Response types come
+ * from the committed OpenAPI snapshot (`lib/types/department.ts`).
+ */
+
+import { openApi } from "@/lib/api/openapi"
 import type {
   Department,
   DepartmentListQuery,
@@ -11,15 +14,21 @@ import type {
   UpdateDepartmentPayload,
 } from "@/lib/types/department"
 import type { PaginatedResponse } from "@/lib/types/common"
+import type { components } from "@/lib/types/api.generated"
 
-type DepartmentsPath = "/api/v1/dashboard/organization/departments"
-type DepartmentPath = "/api/v1/dashboard/organization/departments/{departmentId}"
-type DepartmentWire = OpenApiResponse<DepartmentPath, "patch">
-type DepartmentListItemWire = OpenApiResponse<DepartmentsPath, "get">["items"][number]
-type CreateDepartmentBody = OpenApiRequestBody<DepartmentsPath, "post">
-type UpdateDepartmentBody = OpenApiRequestBody<DepartmentPath, "patch">
+type DepartmentReadWire = components["schemas"]["DepartmentResponseDto"]
 
-function toDepartment(department: DepartmentWire | DepartmentListItemWire): Department {
+/**
+ * The API sends `nameEn: null`; the dashboard has always rendered it as a
+ * string, so it is normalised once, here.
+ *
+ * PATCH re-reads the row after the write, so a concurrent delete is the only
+ * way to receive `null`. Before this change the helper dereferenced the body
+ * unconditionally, which threw on that path; a null body has therefore always
+ * been a failure. Keep it a failure, with a message instead of a TypeError.
+ */
+function toDepartment(department: DepartmentReadWire | null): Department {
+  if (!department) throw new Error("Department not found")
   return { ...department, nameEn: department.nameEn ?? "" }
 }
 
@@ -38,15 +47,19 @@ export async function fetchDepartments(
 }
 
 export async function fetchDepartment(id: string): Promise<Department> {
-  const department = await api.get<Department>(`/dashboard/organization/departments/${id}`)
-  return { ...department, nameEn: department.nameEn ?? "" }
+  const department = await openApi.get(
+    "/api/v1/dashboard/organization/departments/{departmentId}",
+    { path: { departmentId: id } },
+  )
+  return toDepartment(department)
 }
 
 export async function createDepartment(
   payload: CreateDepartmentPayload,
 ): Promise<Department> {
-  const body = payload satisfies CreateDepartmentBody
-  const department = await openApi.post("/api/v1/dashboard/organization/departments", { body })
+  const department = await openApi.post("/api/v1/dashboard/organization/departments", {
+    body: payload,
+  })
   return toDepartment(department)
 }
 
@@ -54,11 +67,10 @@ export async function updateDepartment(
   id: string,
   payload: UpdateDepartmentPayload,
 ): Promise<Department> {
-  const body = payload satisfies UpdateDepartmentBody
-  const department = await openApi.patch(
-    "/api/v1/dashboard/organization/departments/{departmentId}",
-    { path: { departmentId: id }, body },
-  )
+  const department = await openApi.patch("/api/v1/dashboard/organization/departments/{departmentId}", {
+    path: { departmentId: id },
+    body: payload,
+  })
   return toDepartment(department)
 }
 

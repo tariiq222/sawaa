@@ -38,9 +38,10 @@ const EMPTY_FORM: FormState = {
   vatRatePercent: "0",
 }
 
-/** Stored as a fraction; edited as a percentage. */
-function toPercent(rate: number | null | undefined): string {
-  return String(Math.round((rate ?? 0) * 10000) / 100)
+/** Stored as a decimal-string fraction; edited as a percentage. */
+function toPercent(rate: number | string | null | undefined): string {
+  // The row stores a Prisma Decimal, so the wire value is a decimal string.
+  return String(Math.round(Number(rate ?? 0) * 10000) / 100)
 }
 
 function toFraction(percent: string): number | null {

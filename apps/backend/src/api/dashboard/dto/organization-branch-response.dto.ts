@@ -144,3 +144,48 @@ export class BranchAssignmentDeletedResponseDto {
   @ApiProperty({ description: 'Deleted assignment UUID', example: '00000000-0000-4000-a000-000000000003' })
   id!: string;
 }
+
+/**
+ * The employee summary embedded in a branch assignment row
+ * (`list-branch-employees.handler.ts` maps it from a Prisma `select`).
+ */
+export class BranchEmployeeSummaryResponseDto {
+  @ApiProperty({ description: 'Employee UUID', example: '00000000-0000-4000-a000-000000000002' })
+  id!: string;
+
+  @ApiProperty({ description: 'Whether the employee account is active', example: true })
+  isActive!: boolean;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Specialty label (English)', example: 'Family Therapy' })
+  specialty!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Specialty label (Arabic)', example: 'علاج أسري' })
+  specialtyAr!: string | null;
+
+  @ApiProperty({ description: 'Display name: the Arabic name when present, otherwise the stored name', example: 'خالد العتيبي' })
+  name!: string;
+
+  @ApiProperty({ description: 'English display name, falling back to the stored name', example: 'Khalid Al-Otaibi' })
+  nameEn!: string;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Employee email address', example: 'khalid@example.com' })
+  email!: string | null;
+}
+
+/**
+ * One row of GET `/dashboard/organization/branches/:branchId/employees`.
+ * The handler returns the `EmployeeBranch` link plus the employee summary.
+ */
+export class BranchEmployeeListEntryResponseDto {
+  @ApiProperty({ description: 'Assignment UUID', example: '00000000-0000-4000-a000-000000000003' })
+  id!: string;
+
+  @ApiProperty({ description: 'Employee UUID', example: '00000000-0000-4000-a000-000000000002' })
+  employeeId!: string;
+
+  @ApiProperty({ description: 'Branch UUID', example: '00000000-0000-4000-a000-000000000001' })
+  branchId!: string;
+
+  @ApiProperty({ type: BranchEmployeeSummaryResponseDto, description: 'Employee summary for the assignment' })
+  employee!: BranchEmployeeSummaryResponseDto;
+}
