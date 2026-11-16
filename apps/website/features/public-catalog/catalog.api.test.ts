@@ -37,11 +37,14 @@ const sampleCatalog: PublicCatalog = {
       sortOrder: 1,
       isVisible: true,
       isActive: true,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
     },
   ],
   categories: [
     {
       id: 'c-1',
+      ref: 1,
       departmentId: 'd-1',
       nameAr: 'جلسات فردية',
       nameEn: 'Individual Sessions',
@@ -50,6 +53,8 @@ const sampleCatalog: PublicCatalog = {
       imageUrl: null,
       iconName: null,
       iconBgColor: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
     },
   ],
   services: [

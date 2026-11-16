@@ -4206,16 +4206,49 @@
               "DIRECT",
               "SERVICES"
             ],
+            "example": "SERVICES",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Owning department UUID, or null when the category sits at the root",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": "#2FA694",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Lucide icon name, or null",
+            "example": "HeartHandshake",
+            "nullable": true,
             "type": "string"
           },
           "id": {
+            "description": "Category UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
             "format": "uuid",
             "type": "string"
           },
           "imageUrl": {
             "description": "Short-lived presigned image URL (signed per response), or null",
+            "example": "https://media.example.com/cat.png?sig=abc",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the category is active",
+            "example": true,
+            "type": "boolean"
           },
           "kind": {
             "description": "Category kind, independent of department and name",
@@ -4227,74 +4260,150 @@
             "type": "string"
           },
           "nameAr": {
+            "description": "Arabic category name",
             "example": "استشارات",
             "type": "string"
           },
           "nameEn": {
+            "description": "English category name, or null",
             "example": "Consultations",
             "nullable": true,
-            "type": "object"
+            "type": "string"
+          },
+          "ref": {
+            "description": "Human-facing sequential category reference",
+            "example": 1024,
+            "type": "integer"
           },
           "sortOrder": {
             "description": "Display order",
             "example": 0,
-            "type": "number"
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
           }
         },
         "required": [
           "id",
+          "ref",
+          "departmentId",
           "nameAr",
           "nameEn",
-          "imageUrl",
           "sortOrder",
+          "isActive",
           "bookingMode",
-          "kind"
+          "kind",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
       "CatalogDepartmentDto": {
         "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "icon": {
+            "description": "Icon identifier, or null",
+            "example": "HeartHandshake",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
+            "description": "Department UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
             "format": "uuid",
             "type": "string"
           },
+          "isActive": {
+            "description": "Whether the department is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isVisible": {
+            "description": "Whether the department header is shown; false means its categories render at the root",
+            "example": true,
+            "type": "boolean"
+          },
           "nameAr": {
+            "description": "Arabic department name",
             "example": "الاستشارات الأسرية",
             "type": "string"
           },
           "nameEn": {
+            "description": "English department name, or null",
             "example": "Family Counseling",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "sortOrder": {
             "description": "Display order",
             "example": 0,
-            "type": "number"
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "nameAr",
           "nameEn",
-          "sortOrder"
+          "descriptionAr",
+          "descriptionEn",
+          "icon",
+          "isVisible",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
       "CatalogServiceBookingConfigDto": {
         "properties": {
           "deliveryType": {
+            "description": "Delivery channel",
             "enum": [
               "IN_PERSON",
               "ONLINE"
             ],
+            "example": "IN_PERSON",
             "type": "string"
           },
           "durationMins": {
+            "description": "Default duration in minutes for this channel",
             "example": 45,
-            "type": "number"
+            "type": "integer"
           },
           "id": {
+            "description": "Booking-config UUID",
+            "example": "00000000-0000-4000-a000-000000000041",
             "format": "uuid",
             "type": "string"
           },
@@ -4316,31 +4425,40 @@
         "properties": {
           "bookingConfigs": {
             "description": "Active per-delivery-type booking configs",
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/CatalogServiceBookingConfigDto"
             },
             "type": "array"
           },
           "categoryId": {
-            "description": "Owning service category",
+            "description": "Owning service category UUID, or null for an uncategorized service",
+            "example": "00000000-0000-4000-a000-000000000020",
             "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "currency": {
+            "description": "Currency code",
             "example": "SAR",
             "type": "string"
           },
           "descriptionAr": {
+            "description": "Arabic description, or null",
+            "example": null,
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "descriptionEn": {
+            "description": "English description, or null",
+            "example": null,
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "durationMins": {
+            "description": "Default session duration in minutes",
             "example": 45,
-            "type": "number"
+            "type": "integer"
           },
           "durationOptions": {
             "description": "Service-level duration options (practitioner-owned rows excluded)",
@@ -4350,34 +4468,44 @@
             "type": "array"
           },
           "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": null,
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "iconName": {
+            "description": "Lucide icon name, or null",
+            "example": null,
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "id": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
             "format": "uuid",
             "type": "string"
           },
           "imageUrl": {
             "description": "Short-lived presigned image URL (signed per response), or null",
+            "example": null,
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "isHidden": {
             "description": "Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services",
+            "example": false,
             "type": "boolean"
           },
           "nameAr": {
+            "description": "Arabic service name",
             "example": "جلسة استشارة فردية",
             "type": "string"
           },
           "nameEn": {
+            "description": "English service name, or null",
             "example": "Individual Counseling Session",
             "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "price": {
             "description": "Price in integer halalas (Prisma Decimal serialized as string)",
@@ -4385,11 +4513,13 @@
             "type": "string"
           },
           "showDuration": {
-            "description": "Whether to display the duration on the booking surface",
+            "description": "Whether to display the duration on the booking surface (inverse of hideDurationOnBooking)",
+            "example": true,
             "type": "boolean"
           },
           "showPrice": {
-            "description": "Whether to display the price on the booking surface",
+            "description": "Whether to display the price on the booking surface (inverse of hidePriceOnBooking)",
+            "example": true,
             "type": "boolean"
           }
         },
@@ -4416,17 +4546,20 @@
       "CatalogServiceDurationOptionDto": {
         "properties": {
           "durationMins": {
+            "description": "Duration in minutes",
             "example": 45,
-            "type": "number"
+            "type": "integer"
           },
           "id": {
+            "description": "Duration-option UUID",
+            "example": "00000000-0000-4000-a000-000000000031",
             "format": "uuid",
             "type": "string"
           },
           "label": {
+            "description": "Localized option label (`ServiceDurationOption.label`, non-null in the schema)",
             "example": "45 دقيقة",
-            "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "price": {
             "description": "Price in integer halalas (Prisma Decimal serialized as string)",
@@ -4436,7 +4569,7 @@
           "sortOrder": {
             "description": "Display order",
             "example": 0,
-            "type": "number"
+            "type": "integer"
           }
         },
         "required": [
@@ -23315,6 +23448,259 @@
         ],
         "type": "object"
       },
+      "PublicAvailabilityDayDto": {
+        "properties": {
+          "date": {
+            "description": "Calendar day in the business timezone (YYYY-MM-DD)",
+            "example": "2026-05-20",
+            "type": "string"
+          },
+          "hasSlots": {
+            "description": "Whether the day has at least one open slot for the requested context",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "hasSlots"
+        ],
+        "type": "object"
+      },
+      "PublicAvailabilitySlotDto": {
+        "properties": {
+          "endTime": {
+            "description": "Slot end as an ISO 8601 UTC timestamp",
+            "example": "2026-05-20T07:45:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Slot start as an ISO 8601 UTC timestamp",
+            "example": "2026-05-20T07:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startTime",
+          "endTime"
+        ],
+        "type": "object"
+      },
+      "PublicBranchDetailDto": {
+        "properties": {
+          "addressAr": {
+            "description": "Arabic street address, or null",
+            "example": "شارع الملك فهد",
+            "nullable": true,
+            "type": "string"
+          },
+          "addressEn": {
+            "description": "English street address, or null",
+            "example": "King Fahd Road",
+            "nullable": true,
+            "type": "string"
+          },
+          "businessHours": {
+            "description": "Weekly business hours ordered by dayOfWeek",
+            "items": {
+              "$ref": "#/components/schemas/PublicBusinessHourDto"
+            },
+            "type": "array"
+          },
+          "city": {
+            "description": "City, or null",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isMain": {
+            "description": "Whether this is the centre main branch (main branch sorts first)",
+            "example": true,
+            "type": "boolean"
+          },
+          "latitude": {
+            "description": "Latitude, or null",
+            "example": 24.7136,
+            "nullable": true,
+            "type": "number"
+          },
+          "longitude": {
+            "description": "Longitude, or null",
+            "example": 46.6753,
+            "nullable": true,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic branch name",
+            "example": "الفرع الرئيسي",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English branch name, or null",
+            "example": "Main Branch",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Public phone number, or null",
+            "example": "+966112345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA timezone the branch schedules in",
+            "example": "Asia/Riyadh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "city",
+          "addressAr",
+          "isMain",
+          "addressEn",
+          "phone",
+          "latitude",
+          "longitude",
+          "timezone",
+          "businessHours"
+        ],
+        "type": "object"
+      },
+      "PublicBranchEmployeeDto": {
+        "properties": {
+          "id": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic display name, or null",
+            "example": "أحمد الغامدي",
+            "nullable": true,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English display name, or null",
+            "example": "Ahmed Al-Ghamdi",
+            "nullable": true,
+            "type": "string"
+          },
+          "publicBioAr": {
+            "description": "Arabic public bio, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicBioEn": {
+            "description": "English public bio, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicImageUrl": {
+            "description": "Public profile image URL (normalized/signature-renewing), or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "slug": {
+            "description": "Public URL slug, or null",
+            "example": "dr-ahmed",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialty": {
+            "description": "Specialty, or null",
+            "example": "Family Therapy",
+            "nullable": true,
+            "type": "string"
+          },
+          "specialtyAr": {
+            "description": "Arabic specialty, or null",
+            "example": "علاج أسري",
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "Job title, or null",
+            "example": "Family Therapist",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "nameAr",
+          "nameEn",
+          "title",
+          "specialty",
+          "specialtyAr",
+          "publicBioAr",
+          "publicBioEn",
+          "publicImageUrl"
+        ],
+        "type": "object"
+      },
+      "PublicBranchListItemDto": {
+        "properties": {
+          "addressAr": {
+            "description": "Arabic street address, or null",
+            "example": "شارع الملك فهد",
+            "nullable": true,
+            "type": "string"
+          },
+          "city": {
+            "description": "City, or null",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isMain": {
+            "description": "Whether this is the centre main branch (main branch sorts first)",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic branch name",
+            "example": "الفرع الرئيسي",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English branch name, or null",
+            "example": "Main Branch",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "city",
+          "addressAr",
+          "isMain"
+        ],
+        "type": "object"
+      },
       "PublicBrandingDto": {
         "properties": {
           "colorAccent": {
@@ -23436,21 +23822,60 @@
         ],
         "type": "object"
       },
+      "PublicBusinessHourDto": {
+        "properties": {
+          "dayOfWeek": {
+            "description": "Day of week (0=Sunday … 6=Saturday)",
+            "example": 0,
+            "maximum": 6,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "endTime": {
+            "description": "Closing time (HH:mm)",
+            "example": "17:00",
+            "type": "string"
+          },
+          "isOpen": {
+            "description": "Whether the branch is open that day",
+            "example": true,
+            "type": "boolean"
+          },
+          "startTime": {
+            "description": "Opening time (HH:mm)",
+            "example": "09:00",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "isOpen"
+        ],
+        "type": "object"
+      },
       "PublicCatalogDto": {
         "properties": {
           "categories": {
+            "description": "Active categories ordered by sortOrder",
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/CatalogCategoryDto"
             },
             "type": "array"
           },
           "departments": {
+            "description": "Active, visible departments ordered by sortOrder",
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/CatalogDepartmentDto"
             },
             "type": "array"
           },
           "services": {
+            "description": "Active services; internal direct-clinic services only with includeDirectClinics=true",
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/CatalogServiceDto"
             },
@@ -23467,6 +23892,186 @@
           "categories",
           "services",
           "vatRate"
+        ],
+        "type": "object"
+      },
+      "PublicEmployeeProfileDto": {
+        "properties": {
+          "availableDaysOfWeek": {
+            "description": "Days of week (0=Sun..6=Sat) the employee has at least one active availability rule on",
+            "example": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "branchIds": {
+            "description": "Branch ids this employee works from",
+            "example": [
+              "br_1"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "employmentType": {
+            "description": "Employment type",
+            "example": "FULL_TIME",
+            "type": "string"
+          },
+          "experience": {
+            "description": "Years of experience",
+            "example": 8,
+            "type": "number"
+          },
+          "gender": {
+            "description": "Gender",
+            "nullable": true,
+            "type": "object"
+          },
+          "id": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "isAvailableToday": {
+            "description": "Whether employee has availability today",
+            "example": true,
+            "type": "boolean"
+          },
+          "isBookable": {
+            "description": "True only if employee has ≥1 service, ≥1 branch, and ≥1 active availability rule",
+            "example": true,
+            "type": "boolean"
+          },
+          "languages": {
+            "description": "Spoken languages",
+            "example": [
+              "العربية",
+              "English"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "minServicePrice": {
+            "description": "Minimum service price in SAR",
+            "example": 250,
+            "nullable": true,
+            "type": "object"
+          },
+          "nameAr": {
+            "description": "Arabic display name",
+            "example": "أحمد الغامدي",
+            "nullable": true,
+            "type": "object"
+          },
+          "nameEn": {
+            "description": "English display name",
+            "example": "Ahmed Al-Ghamdi",
+            "nullable": true,
+            "type": "object"
+          },
+          "publicBioAr": {
+            "description": "Arabic public bio",
+            "nullable": true,
+            "type": "object"
+          },
+          "publicBioEn": {
+            "description": "English public bio",
+            "nullable": true,
+            "type": "object"
+          },
+          "publicImageUrl": {
+            "description": "Public profile image URL",
+            "nullable": true,
+            "type": "object"
+          },
+          "rating": {
+            "description": "Legacy alias of ratingAverage; 0 when there are no public ratings",
+            "example": 4.8,
+            "type": "number"
+          },
+          "ratingAverage": {
+            "description": "Average public rating",
+            "example": 4.8,
+            "nullable": true,
+            "type": "object"
+          },
+          "ratingCount": {
+            "description": "Public rating count",
+            "example": 18,
+            "type": "number"
+          },
+          "reviewCount": {
+            "description": "Legacy alias of ratingCount",
+            "example": 18,
+            "type": "number"
+          },
+          "serviceIds": {
+            "description": "Service ids this employee can deliver",
+            "example": [
+              "svc_1"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "slug": {
+            "description": "Public URL slug",
+            "example": "dr-ahmed",
+            "nullable": true,
+            "type": "object"
+          },
+          "specialty": {
+            "description": "Specialty",
+            "example": "Family Therapy",
+            "nullable": true,
+            "type": "object"
+          },
+          "specialtyAr": {
+            "description": "Arabic specialty",
+            "nullable": true,
+            "type": "object"
+          },
+          "title": {
+            "description": "Job title",
+            "example": "Family Therapist",
+            "nullable": true,
+            "type": "object"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicEmployeeSyntheticUserDto"
+              }
+            ],
+            "description": "Synthetic user shape kept for legacy consumers"
+          }
+        },
+        "required": [
+          "languages",
+          "experience",
+          "id",
+          "employmentType",
+          "ratingCount",
+          "isAvailableToday",
+          "serviceIds",
+          "branchIds",
+          "isBookable",
+          "availableDaysOfWeek",
+          "user",
+          "rating",
+          "reviewCount"
         ],
         "type": "object"
       },
@@ -23629,6 +24234,51 @@
         ],
         "type": "object"
       },
+      "PublicEmployeeSyntheticUserDto": {
+        "properties": {
+          "avatarUrl": {
+            "description": "Mirror of publicImageUrl, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Always an empty string on the public surface",
+            "example": "",
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First token of the display name",
+            "example": "أحمد",
+            "type": "string"
+          },
+          "id": {
+            "description": "Synthetic user UUID (equal to the employee UUID)",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Remaining tokens of the display name (empty string for a single-token name)",
+            "example": "الغامدي",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Always null on the public surface",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "avatarUrl"
+        ],
+        "type": "object"
+      },
       "PublicMobileHomeCardDto": {
         "properties": {
           "descriptionAr": {
@@ -23692,6 +24342,803 @@
           "imageAltAr",
           "imageAltEn",
           "destination"
+        ],
+        "type": "object"
+      },
+      "PublicPackageFamilyWithVatResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Archive instant, or null while the family is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Family UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Signed image URL, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the family is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the family is public",
+            "example": false,
+            "type": "boolean"
+          },
+          "isStandalone": {
+            "description": "True when the row is a standalone package projected into the family shape",
+            "example": false,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Arabic family name",
+            "example": "باقة الاستشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English family name",
+            "example": "Consultation pack",
+            "nullable": true,
+            "type": "string"
+          },
+          "options": {
+            "description": "Sellable options of the family",
+            "items": {
+              "$ref": "#/components/schemas/PackageFamilyOptionResponseDto"
+            },
+            "type": "array"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vatRate": {
+            "description": "VAT rate the sale invoice adds on top of option prices (fraction; 0 unless enabled)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "isStandalone",
+          "options",
+          "vatRate"
+        ],
+        "type": "object"
+      },
+      "PublicPackageResponseDto": {
+        "properties": {
+          "archivedAt": {
+            "description": "Soft-archive instant, or null while the package is live",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Package-level discount type (deprecated; per-item discounts are authoritative)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Package-level discount value (deprecated), decimal string",
+            "example": "0",
+            "type": "string"
+          },
+          "familyId": {
+            "description": "Owning package family UUID, or null for a standalone package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "globalDiscount": {
+            "description": "Package-wide discount derived from the stored columns",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PackageNoGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackagePercentageGlobalDiscountDto"
+              },
+              {
+                "$ref": "#/components/schemas/PackageFixedGlobalDiscountDto"
+              }
+            ]
+          },
+          "groups": {
+            "description": "Editor projection of the groups (empty for LEGACY packages)",
+            "items": {
+              "$ref": "#/components/schemas/PackageGroupReadDto"
+            },
+            "type": "array"
+          },
+          "iconBgColor": {
+            "description": "Icon background colour (hex), or null",
+            "example": "#FFD8A8",
+            "nullable": true,
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Icon name, or null",
+            "example": "package",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Stored image reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the package is visible in the public catalog",
+            "example": false,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Persisted items with their constraints",
+            "items": {
+              "$ref": "#/components/schemas/PackageItemRecordDto"
+            },
+            "type": "array"
+          },
+          "modelVersion": {
+            "description": "Catalog model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "nameAr": {
+            "description": "Arabic package name",
+            "example": "أربع جلسات استشارة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English package name",
+            "example": "Four consultation sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEmployeeId": {
+            "description": "Package-level practitioner UUID; null for a general package",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PackagePriceBreakdownDto"
+              }
+            ],
+            "description": "Canonical computed price breakdown"
+          },
+          "sortOrder": {
+            "description": "Catalog ordering",
+            "example": 0,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "vatRate": {
+            "description": "VAT rate the purchase invoice adds on top of the net price (fraction; 0 unless enabled)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "familyId",
+          "ownerEmployeeId",
+          "modelVersion",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "discountType",
+          "discountValue",
+          "isActive",
+          "isPublic",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt",
+          "items",
+          "groups",
+          "globalDiscount",
+          "price",
+          "vatRate"
+        ],
+        "type": "object"
+      },
+      "PublicPractitionerBookingOptionDto": {
+        "properties": {
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery channel of this option",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Session duration in minutes",
+            "example": 45,
+            "type": "integer"
+          },
+          "durationOptionId": {
+            "description": "Duration-option UUID; empty string when the option is priced from the service booking config fallback",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "type": "string"
+          },
+          "label": {
+            "description": "Option label, or null",
+            "example": "45 دقيقة",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas",
+            "example": 30000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "deliveryType",
+          "durationOptionId",
+          "durationMins",
+          "price",
+          "currency",
+          "label"
+        ],
+        "type": "object"
+      },
+      "PublicPractitionerBookingOptionsDto": {
+        "properties": {
+          "disabledDeliveryTypes": {
+            "description": "Delivery channels this practitioner does not offer",
+            "example": [],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "options": {
+            "description": "Bookable options; empty when the practitioner is inactive",
+            "items": {
+              "$ref": "#/components/schemas/PublicPractitionerBookingOptionDto"
+            },
+            "type": "array"
+          },
+          "useCustomPricing": {
+            "description": "Whether this practitioner uses their own duration rows instead of the service defaults",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "useCustomPricing",
+          "disabledDeliveryTypes",
+          "options"
+        ],
+        "type": "object"
+      },
+      "PublicProgramDetailResponseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the program is offered",
+            "example": "88888888-8888-4888-8888-888888888888",
+            "format": "uuid",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Program price currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "daysCount": {
+            "description": "Number of program days",
+            "example": 3,
+            "type": "integer"
+          },
+          "departmentId": {
+            "description": "Department that owns the program",
+            "example": "77777777-7777-4777-8777-777777777777",
+            "format": "uuid",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit in integer halalas as a decimal string, or null when none is set",
+            "example": "30000",
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether the program accepts a deposit",
+            "example": true,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Arabic description, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "enrolledCount": {
+            "description": "Current number of program enrollments",
+            "example": 1,
+            "type": "integer"
+          },
+          "hoursPerDay": {
+            "description": "Program hours per day",
+            "example": 2,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Program UUID",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isFull": {
+            "description": "Whether enrolled count has reached the maximum participant capacity",
+            "example": false,
+            "type": "boolean"
+          },
+          "isOpenForEnrollment": {
+            "description": "Whether the stored status still accepts self-enrollment (OPEN or MIN_REACHED)",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the program is published in the public catalog",
+            "example": true,
+            "type": "boolean"
+          },
+          "maxParticipants": {
+            "description": "Maximum number of enrolled participants",
+            "example": 12,
+            "type": "integer"
+          },
+          "minParticipants": {
+            "description": "Minimum participants required for the program",
+            "example": 3,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Arabic program name",
+            "example": "برنامج التواصل الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English program name, or null",
+            "example": "Family Communication Program",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas, serialized as a decimal string",
+            "example": "150000",
+            "type": "string"
+          },
+          "publicDescriptionAr": {
+            "description": "Arabic public description override, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicDescriptionEn": {
+            "description": "English public description override, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Numeric program reference accepted by the detail lookup",
+            "example": 24,
+            "type": "integer"
+          },
+          "startDate": {
+            "description": "Program start time as an ISO 8601 UTC timestamp, or null when unscheduled",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current program lifecycle status",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "OPEN",
+            "type": "string"
+          },
+          "supervisorIds": {
+            "description": "Identifiers of employees supervising the program",
+            "example": [
+              "33333333-3333-4333-8333-333333333333"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "publicDescriptionAr",
+          "publicDescriptionEn",
+          "departmentId",
+          "branchId",
+          "startDate",
+          "daysCount",
+          "hoursPerDay",
+          "minParticipants",
+          "maxParticipants",
+          "enrolledCount",
+          "price",
+          "currency",
+          "depositEnabled",
+          "depositAmount",
+          "status",
+          "isPublic",
+          "supervisorIds",
+          "isFull",
+          "isOpenForEnrollment"
+        ],
+        "type": "object"
+      },
+      "PublicProgramListItemDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the program is offered",
+            "example": "88888888-8888-4888-8888-888888888888",
+            "format": "uuid",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Program price currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "daysCount": {
+            "description": "Number of program days",
+            "example": 3,
+            "type": "integer"
+          },
+          "departmentId": {
+            "description": "Department that owns the program",
+            "example": "77777777-7777-4777-8777-777777777777",
+            "format": "uuid",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit in integer halalas as a decimal string, or null when none is set",
+            "example": "30000",
+            "nullable": true,
+            "type": "string"
+          },
+          "depositEnabled": {
+            "description": "Whether the program accepts a deposit",
+            "example": true,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "description": "Arabic description, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "enrolledCount": {
+            "description": "Current number of program enrollments",
+            "example": 1,
+            "type": "integer"
+          },
+          "hoursPerDay": {
+            "description": "Program hours per day",
+            "example": 2,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Program UUID",
+            "example": "66666666-6666-4666-8666-666666666666",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isFull": {
+            "description": "Whether enrolled count has reached the maximum participant capacity",
+            "example": false,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the program is published in the public catalog",
+            "example": true,
+            "type": "boolean"
+          },
+          "maxParticipants": {
+            "description": "Maximum number of enrolled participants",
+            "example": 12,
+            "type": "integer"
+          },
+          "minParticipants": {
+            "description": "Minimum participants required for the program",
+            "example": 3,
+            "type": "integer"
+          },
+          "nameAr": {
+            "description": "Arabic program name",
+            "example": "برنامج التواصل الأسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English program name, or null",
+            "example": "Family Communication Program",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas, serialized as a decimal string",
+            "example": "150000",
+            "type": "string"
+          },
+          "publicDescriptionAr": {
+            "description": "Arabic public description override, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "publicDescriptionEn": {
+            "description": "English public description override, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "ref": {
+            "description": "Numeric program reference accepted by the detail lookup",
+            "example": 24,
+            "type": "integer"
+          },
+          "startDate": {
+            "description": "Program start time as an ISO 8601 UTC timestamp, or null when unscheduled",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current program lifecycle status",
+            "enum": [
+              "DRAFT",
+              "OPEN",
+              "MIN_REACHED",
+              "SCHEDULED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "example": "OPEN",
+            "type": "string"
+          },
+          "supervisorIds": {
+            "description": "Identifiers of employees supervising the program",
+            "example": [
+              "33333333-3333-4333-8333-333333333333"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "publicDescriptionAr",
+          "publicDescriptionEn",
+          "departmentId",
+          "branchId",
+          "startDate",
+          "daysCount",
+          "hoursPerDay",
+          "minParticipants",
+          "maxParticipants",
+          "enrolledCount",
+          "price",
+          "currency",
+          "depositEnabled",
+          "depositAmount",
+          "status",
+          "isPublic",
+          "supervisorIds",
+          "isFull"
+        ],
+        "type": "object"
+      },
+      "PublicProgramsListResponseDto": {
+        "properties": {
+          "programs": {
+            "description": "Public programs with at least one open spot",
+            "example": [],
+            "items": {
+              "$ref": "#/components/schemas/PublicProgramListItemDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "programs"
+        ],
+        "type": "object"
+      },
+      "PublicTestimonialResponseDto": {
+        "properties": {
+          "date": {
+            "description": "Rating creation instant as an ISO 8601 UTC timestamp",
+            "example": "2026-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Rating UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "letter": {
+            "description": "First character of the client name, used as an avatar initial",
+            "example": "س",
+            "type": "string"
+          },
+          "name": {
+            "description": "Anonymized client name (first two characters plus ****)",
+            "example": "سا****",
+            "type": "string"
+          },
+          "rating": {
+            "description": "Rating score",
+            "example": 5,
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "text": {
+            "description": "Public comment text",
+            "example": "تجربة مريحة ومهنية",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "name",
+          "letter",
+          "rating",
+          "date"
         ],
         "type": "object"
       },
@@ -65185,6 +66632,16 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicBranchListItemDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Array of public-safe branch records"
           },
           "400": {
@@ -65231,6 +66688,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBranchDetailDto"
+                }
+              }
+            },
             "description": "Public-safe branch detail with business hours"
           },
           "400": {
@@ -65277,6 +66741,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicBranchEmployeeDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Public-safe employees linked to the branch"
           },
           "400": {
@@ -65744,7 +67218,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/PublicEmployeeResponseDto"
+                    "$ref": "#/components/schemas/PublicEmployeeProfileDto"
                   },
                   "type": "array"
                 }
@@ -65854,6 +67328,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicAvailabilitySlotDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Array of available time slots"
           },
           "400": {
@@ -65978,6 +67462,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicAvailabilityDayDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Per-day boolean: does this day have at least one open slot?"
           },
           "400": {
@@ -66036,7 +67530,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicEmployeeResponseDto"
+                  "$ref": "#/components/schemas/PublicEmployeeProfileDto"
                 }
               }
             },
@@ -68495,6 +69989,16 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicPackageFamilyWithVatResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Public package families with sellable options"
           },
           "400": {
@@ -68540,6 +70044,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPackageFamilyWithVatResponseDto"
+                }
+              }
+            },
             "description": "Public package family details"
           },
           "400": {
@@ -68578,6 +70089,16 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicPackageResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Public, active session packages with computed prices"
           },
           "400": {
@@ -68624,6 +70145,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPackageResponseDto"
+                }
+              }
+            },
             "description": "The public session package with its computed price"
           },
           "400": {
@@ -68918,6 +70446,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProgramsListResponseDto"
+                }
+              }
+            },
             "description": "Array of programs with computed isFull badge"
           },
           "400": {
@@ -68963,6 +70498,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProgramDetailResponseDto"
+                }
+              }
+            },
             "description": "Program detail"
           },
           "400": {
@@ -69210,53 +70752,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "disabledDeliveryTypes": {
-                      "items": {
-                        "enum": [
-                          "IN_PERSON",
-                          "ONLINE"
-                        ],
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "options": {
-                      "items": {
-                        "properties": {
-                          "currency": {
-                            "type": "string"
-                          },
-                          "deliveryType": {
-                            "enum": [
-                              "IN_PERSON",
-                              "ONLINE"
-                            ],
-                            "type": "string"
-                          },
-                          "durationMins": {
-                            "type": "number"
-                          },
-                          "durationOptionId": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "price": {
-                            "type": "number"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "useCustomPricing": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicPractitionerBookingOptionsDto"
                 }
               }
             },
@@ -69347,22 +70843,20 @@
               "minimum": 1,
               "type": "number"
             }
-          },
-          {
-            "description": "Max testimonials to return",
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 6,
-              "maximum": 20,
-              "minimum": 1,
-              "type": "number"
-            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicTestimonialResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Array of public testimonials"
           },
           "400": {

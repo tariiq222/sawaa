@@ -1,15 +1,20 @@
 import { GetPublicEmployeeImageHandler } from '../../modules/people/employees/public/get-public-employee-image.handler';
 import { Controller, Get, Param, Query, Header, Redirect } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { PublicEmployeeResponseDto } from '../dashboard/dto/people-response.dto';
+import { PublicEmployeeProfileDto } from './employee-response.dto';
 import { ListPublicEmployeesHandler } from '../../modules/people/employees/public/list-public-employees.handler';
 import { GetPublicEmployeeHandler } from '../../modules/people/employees/public/get-public-employee.handler';
 
 @ApiTags('Public / Employees')
 @ApiPublicResponses()
+// The base schema stays in the snapshot even though every route now answers
+// with the richer `PublicEmployeeProfileDto`; dropping a component that
+// clients may already have generated types from would be a contract loss.
+@ApiExtraModels(PublicEmployeeResponseDto)
 @Controller('public/employees')
 export class PublicEmployeesController {
   constructor(
@@ -35,9 +40,9 @@ export class PublicEmployeesController {
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @Get()
   @ApiOperation({ summary: 'List public-facing employees' })
-  @ApiOkResponse({ type: [PublicEmployeeResponseDto], description: 'Public employees with slug + bio + image' })
+  @ApiOkResponse({ type: [PublicEmployeeProfileDto], description: 'Public employees with slug + bio + image' })
   @ApiQuery({ name: 'includeDirectClinics', required: false, type: Boolean, description: 'Include direct clinic booking service links' })
-  list(@Query('includeDirectClinics') includeDirectClinics?: string) {
+  list(@Query('includeDirectClinics') includeDirectClinics?: string): Promise<PublicEmployeeProfileDto[]> {
     return this.listHandler.execute({ includeDirectClinics: includeDirectClinics === 'true' });
   }
 
@@ -46,10 +51,10 @@ export class PublicEmployeesController {
   @Get(':key')
   @ApiOperation({ summary: 'Get single public employee by slug or id' })
   @ApiParam({ name: 'key', description: 'Public slug or employee UUID', example: 'dr-ahmed' })
-  @ApiOkResponse({ type: PublicEmployeeResponseDto, description: 'Single public employee' })
+  @ApiOkResponse({ type: PublicEmployeeProfileDto, description: 'Single public employee' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
   @ApiQuery({ name: 'includeDirectClinics', required: false, type: Boolean, description: 'Include hidden booking links for direct clinics' })
-  getOne(@Param('key') key: string, @Query('includeDirectClinics') includeDirectClinics?: string) {
+  getOne(@Param('key') key: string, @Query('includeDirectClinics') includeDirectClinics?: string): Promise<PublicEmployeeProfileDto> {
     return this.getHandler.execute(key, { includeDirectClinics: includeDirectClinics === 'true' });
   }
 }

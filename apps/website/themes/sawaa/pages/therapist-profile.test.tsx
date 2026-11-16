@@ -4,7 +4,7 @@ import type { PublicEmployee } from '@sawaa/api-client';
 import type { PublicService } from '@/features/public-catalog/types';
 import { SawaaTherapistProfilePage } from './therapist-profile';
 
-const therapist: PublicEmployee = { id: 'e1', slug: 'sara', nameAr: 'د. سارة أحمد', nameEn: 'Dr. Sara Ahmed', title: null, specialty: null, specialtyAr: null, publicBioAr: null, publicBioEn: null, publicImageUrl: null, gender: null, employmentType: 'FULL_TIME', ratingAverage: null, ratingCount: 0, minServicePrice: null, isAvailableToday: false, serviceIds: ['visible', 'hidden', 'disabled', 'archived'], branchIds: ['branch'], isBookable: true, availableDaysOfWeek: [] };
+const therapist: PublicEmployee = { id: 'e1', slug: 'sara', nameAr: 'د. سارة أحمد', nameEn: 'Dr. Sara Ahmed', title: null, specialty: null, specialtyAr: null, publicBioAr: null, publicBioEn: null, experience: 0, languages: [], publicImageUrl: null, gender: null, employmentType: 'FULL_TIME', ratingAverage: null, ratingCount: 0, minServicePrice: null, isAvailableToday: false, serviceIds: ['visible', 'hidden', 'disabled', 'archived'], branchIds: ['branch'], isBookable: true, availableDaysOfWeek: [], user: { id: 'e1', firstName: 'سارة', lastName: 'أحمد', email: '', phone: null, avatarUrl: null }, rating: 0, reviewCount: 0 };
 const service: PublicService = { id: 'visible', categoryId: 'clinic', nameAr: 'جلسة', nameEn: 'Visible session', descriptionAr: null, descriptionEn: null, durationMins: 45, price: '5000', currency: 'SAR', imageUrl: null, iconName: null, iconBgColor: null };
 function setResponses(employee = therapist, showDuration = true) {
   vi.stubGlobal('fetch', vi.fn((url: string) => {

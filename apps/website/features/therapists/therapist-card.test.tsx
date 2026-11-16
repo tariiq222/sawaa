@@ -3,6 +3,15 @@ import { render, screen } from '@testing-library/react';
 import { TherapistCard } from './therapist-card';
 import type { PublicEmployee } from '@sawaa/api-client';
 
+const syntheticUser = {
+  id: 'e1',
+  firstName: 'سارة',
+  lastName: 'علي',
+  email: '',
+  phone: null,
+  avatarUrl: 'https://cdn.test/sara.jpg',
+};
+
 const full: PublicEmployee = {
   id: 'e1',
   slug: 'sara-ali',
@@ -13,6 +22,8 @@ const full: PublicEmployee = {
   specialtyAr: 'القلق والاكتئاب',
   publicBioAr: 'سيرة بالعربية',
   publicBioEn: 'English bio',
+  experience: 8,
+  languages: ['العربية', 'English'],
   publicImageUrl: 'https://cdn.test/sara.jpg',
   gender: null,
   employmentType: 'FULL_TIME',
@@ -24,6 +35,9 @@ const full: PublicEmployee = {
   branchIds: [],
   isBookable: false,
   availableDaysOfWeek: [],
+  user: syntheticUser,
+  rating: 0,
+  reviewCount: 0,
 };
 
 describe('TherapistCard', () => {
@@ -66,6 +80,8 @@ describe('TherapistCard', () => {
       specialtyAr: null,
       publicBioAr: null,
       publicBioEn: null,
+      experience: 0,
+      languages: [],
       publicImageUrl: null,
       gender: null,
       employmentType: 'FULL_TIME',
@@ -77,6 +93,16 @@ describe('TherapistCard', () => {
       branchIds: [],
       isBookable: false,
       availableDaysOfWeek: [],
+      user: {
+        id: 'e2',
+        firstName: 'محمد',
+        lastName: '',
+        email: '',
+        phone: null,
+        avatarUrl: null,
+      },
+      rating: 0,
+      reviewCount: 0,
     };
     render(<TherapistCard therapist={minimal} locale="ar" />);
     expect(screen.queryByRole('link')).toBeNull();

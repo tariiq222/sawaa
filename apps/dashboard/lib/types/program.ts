@@ -104,34 +104,13 @@ export interface EnrollInProgramResult {
 }
 
 /**
- * Public `/api/v1/public/programs` payload. Those routes belong to the public
- * unit and carry no response schema yet, so this shape stays hand-written and is
- * NOT derived from the dashboard snapshot.
+ * Public `/api/v1/public/programs` row, derived from the committed snapshot.
+ *
+ * The list response is documented as `PublicProgramsListResponseDto.programs`;
+ * the detail adds `isOpenForEnrollment`. Both fetchers in `lib/api/programs.ts`
+ * return the same local type, so the detail-only flag stays optional here.
  */
-export interface PublicProgramListItem {
-  id: string
-  ref: number
-  nameAr: string
-  nameEn: string | null
-  descriptionAr: string | null
-  descriptionEn: string | null
-  publicDescriptionAr: string | null
-  publicDescriptionEn: string | null
-  departmentId: string
-  branchId: string
-  startDate: string | null
-  daysCount: number
-  hoursPerDay: number
-  minParticipants: number
-  maxParticipants: number
-  enrolledCount: number
-  price: string
-  currency: string
-  depositEnabled: boolean
-  depositAmount: string | null
-  status: ProgramStatus
-  isPublic: boolean
-  supervisorIds: string[]
-  isFull: boolean
+export type PublicProgramListItem = Schemas["PublicProgramListItemDto"] & {
+  /** Present only on the detail response (`PublicProgramDetailResponseDto`). */
   isOpenForEnrollment?: boolean
 }

@@ -6,6 +6,11 @@ import { ApiPublicResponses } from '../../common/swagger';
 import { GetPublicBranchesHandler } from '../../modules/org-config/branches/public/get-public-branches.handler';
 import { GetPublicBranchHandler } from '../../modules/org-config/branches/public/get-public-branch.handler';
 import { ListPublicBranchEmployeesHandler } from '../../modules/org-config/branches/public/list-public-branch-employees.handler';
+import {
+  PublicBranchDetailDto,
+  PublicBranchEmployeeDto,
+  PublicBranchListItemDto,
+} from './branch-response.dto';
 
 @ApiTags('Public / Branches')
 @ApiPublicResponses()
@@ -21,8 +26,8 @@ export class PublicBranchesController {
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get()
   @ApiOperation({ summary: 'List active branches for the booking wizard' })
-  @ApiOkResponse({ description: 'Array of public-safe branch records' })
-  list() {
+  @ApiOkResponse({ type: [PublicBranchListItemDto], description: 'Array of public-safe branch records' })
+  list(): Promise<PublicBranchListItemDto[]> {
     return this.listHandler.execute();
   }
 
@@ -31,8 +36,8 @@ export class PublicBranchesController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a single active branch by id (public-safe)' })
   @ApiParam({ name: 'id', description: 'Branch id', example: 'b_123' })
-  @ApiOkResponse({ description: 'Public-safe branch detail with business hours' })
-  getOne(@Param('id') id: string) {
+  @ApiOkResponse({ type: PublicBranchDetailDto, description: 'Public-safe branch detail with business hours' })
+  getOne(@Param('id') id: string): Promise<PublicBranchDetailDto> {
     return this.getHandler.execute(id);
   }
 
@@ -41,8 +46,8 @@ export class PublicBranchesController {
   @Get(':id/employees')
   @ApiOperation({ summary: 'List public employees assigned to a branch' })
   @ApiParam({ name: 'id', description: 'Branch id', example: 'b_123' })
-  @ApiOkResponse({ description: 'Public-safe employees linked to the branch' })
-  employees(@Param('id') id: string) {
+  @ApiOkResponse({ type: [PublicBranchEmployeeDto], description: 'Public-safe employees linked to the branch' })
+  employees(@Param('id') id: string): Promise<PublicBranchEmployeeDto[]> {
     return this.employeesHandler.execute(id);
   }
 }

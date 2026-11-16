@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { listPublicEmployees, getPublicEmployee } from './therapists.api';
 import type { PublicEmployee } from '@sawaa/api-client';
 
+const syntheticUser = {
+  id: 'e1',
+  firstName: 'سارة',
+  lastName: '',
+  email: '',
+  phone: null,
+  avatarUrl: null,
+};
+
 const sample: PublicEmployee = {
   id: 'e1',
   slug: 'sara',
@@ -12,6 +21,8 @@ const sample: PublicEmployee = {
   specialtyAr: null,
   publicBioAr: null,
   publicBioEn: null,
+  experience: 0,
+  languages: [],
   publicImageUrl: null,
   gender: null,
   employmentType: 'FULL_TIME',
@@ -23,6 +34,9 @@ const sample: PublicEmployee = {
   branchIds: ['br-1'],
   isBookable: true,
   availableDaysOfWeek: [],
+  user: syntheticUser,
+  rating: 0,
+  reviewCount: 0,
 };
 
 const unbookable: PublicEmployee = {
