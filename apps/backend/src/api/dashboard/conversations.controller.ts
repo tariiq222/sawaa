@@ -1,5 +1,15 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser, type JwtUser } from '../../common/auth/current-user.decorator';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
@@ -21,6 +31,13 @@ import { ReleaseConversationHandler } from '../../modules/comms/chat/staff/relea
 import { ReplyConversationHandler } from '../../modules/comms/chat/staff/reply-conversation.handler';
 import { toStaffConversationResponse } from '../../modules/comms/chat/staff/staff-conversation.mapper';
 import { ListChatMessagesDto } from '../../modules/comms/chat/messages/list-chat-messages.dto';
+import {
+  ConversationInboxResponseDto,
+  ConversationMessageResponseDto,
+  ConversationMessagesResponseDto,
+  ConversationReadResponseDto,
+  ConversationResponseDto,
+} from './dto/conversation-response.dto';
 
 @ApiTags('Dashboard / Comms')
 @ApiBearerAuth()
@@ -49,9 +66,14 @@ export class DashboardConversationsController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
-  @ApiQuery({ name: 'cursor', required: false })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  list(@Query() dto: ListInboxDto, @UserId() staffUserId: string, @CurrentUser() user: JwtUser) {
+  @ApiQuery({ name: 'cursor', required: false, description: 'Conversation UUID keyset cursor', schema: { type: 'string', format: 'uuid', example: '00000000-0000-4000-a000-000000000001' } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Number of conversations to return', schema: { type: 'number', minimum: 1, maximum: 100, example: 20 } })
+  @ApiOkResponse({ description: 'Cursor-paginated reception inbox', type: ConversationInboxResponseDto })
+  list(
+    @Query() dto: ListInboxDto,
+    @UserId() staffUserId: string,
+    @CurrentUser() user: JwtUser,
+  ): Promise<ConversationInboxResponseDto> {
     return this.listInbox.execute({
       staffUserId,
       staffRole: user.role,
@@ -70,11 +92,13 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'read', subject: 'Conversation' })
   @ApiOperation({ summary: 'Get a reception chat conversation' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
+  @ApiOkResponse({ description: 'Conversation detail', type: ConversationResponseDto })
+  @ApiNotFoundResponse({ description: 'Conversation not found' })
   get(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @UserId() staffUserId: string,
     @CurrentUser() user: JwtUser,
-  ) {
+  ): Promise<ConversationResponseDto> {
     return this.getConversation.execute({ conversationId, staffUserId, staffRole: user.role });
   }
 
@@ -82,14 +106,16 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'read', subject: 'Conversation' })
   @ApiOperation({ summary: 'List reception chat conversation messages' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
-  @ApiQuery({ name: 'cursor', required: false })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor (message UUID) for keyset pagination', schema: { type: 'string', format: 'uuid', example: '00000000-0000-0000-0000-000000000000' } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Number of web chat messages to return', schema: { type: 'number', minimum: 1, maximum: 100, example: 20 } })
+  @ApiOkResponse({ description: 'Cursor-paginated conversation messages', type: ConversationMessagesResponseDto })
+  @ApiNotFoundResponse({ description: 'Conversation or message cursor not found' })
   messages(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Query() dto: ListChatMessagesDto,
     @UserId() staffUserId: string,
     @CurrentUser() user: JwtUser,
-  ) {
+  ): Promise<ConversationMessagesResponseDto> {
     return this.listMessages.execute({
       conversationId,
       staffUserId,
@@ -103,7 +129,13 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'update', subject: 'Conversation' })
   @ApiOperation({ summary: 'Claim a waiting reception conversation' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
-  async claim(@Param('conversationId', ParseUUIDPipe) conversationId: string, @UserId() staffUserId: string) {
+  @ApiCreatedResponse({ description: 'Conversation claimed by the calling staff user', type: ConversationResponseDto })
+  @ApiNotFoundResponse({ description: 'Conversation not found' })
+  @ApiConflictResponse({ description: 'Conversation is no longer available to claim' })
+  async claim(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @UserId() staffUserId: string,
+  ): Promise<ConversationResponseDto> {
     return toStaffConversationResponse(await this.claimConversation.execute({ conversationId, staffUserId }));
   }
 
@@ -112,11 +144,13 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'update', subject: 'Conversation' })
   @ApiOperation({ summary: 'Mark owned visitor and client messages as read' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
+  @ApiOkResponse({ description: 'Messages marked read', type: ConversationReadResponseDto })
+  @ApiNotFoundResponse({ description: 'Assigned conversation or owned message cursor not found' })
   read(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: MarkConversationReadDto,
     @UserId() staffUserId: string,
-  ) {
+  ): Promise<ConversationReadResponseDto> {
     return this.markRead.execute({
       conversationId,
       staffUserId,
@@ -130,11 +164,13 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'update', subject: 'Conversation' })
   @ApiOperation({ summary: 'Reply to an assigned reception conversation' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
+  @ApiCreatedResponse({ description: 'Staff reply message', type: ConversationMessageResponseDto })
+  @ApiNotFoundResponse({ description: 'Assigned conversation not found' })
   async reply(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendChatMessageDto,
     @UserId() staffUserId: string,
-  ) {
+  ): Promise<ConversationMessageResponseDto> {
     return toChatMessageResponse(await this.replyConversation.execute({ conversationId, staffUserId, ...dto }));
   }
 
@@ -143,12 +179,15 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'manage', subject: 'Conversation' })
   @ApiOperation({ summary: 'Assign a reception conversation to a dashboard user' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
+  @ApiOkResponse({ description: 'Conversation assigned to the target user', type: ConversationResponseDto })
+  @ApiNotFoundResponse({ description: 'Conversation or active dashboard user not found' })
+  @ApiConflictResponse({ description: 'Conversation cannot be assigned in its current state' })
   async assign(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: AssignConversationDto,
     @UserId() actorUserId: string,
     @CurrentUser() user: JwtUser,
-  ) {
+  ): Promise<ConversationResponseDto> {
     return toStaffConversationResponse(await this.assignConversation.execute({
       conversationId, targetStaffUserId: dto.targetStaffUserId, actorUserId, actorRole: user.role,
     }));
@@ -159,11 +198,14 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'update', subject: 'Conversation' })
   @ApiOperation({ summary: 'Release a staff conversation back to the assistant' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
+  @ApiOkResponse({ description: 'Conversation released back to the assistant', type: ConversationResponseDto })
+  @ApiNotFoundResponse({ description: 'Conversation not found' })
+  @ApiConflictResponse({ description: 'Conversation is not staff-active or cannot be released' })
   async release(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @UserId() actorUserId: string,
     @CurrentUser() user: JwtUser,
-  ) {
+  ): Promise<ConversationResponseDto> {
     return toStaffConversationResponse(await this.releaseConversation.execute({ conversationId, actorUserId, actorRole: user.role }));
   }
 
@@ -172,11 +214,14 @@ export class DashboardConversationsController {
   @CheckPermissions({ action: 'update', subject: 'Conversation' })
   @ApiOperation({ summary: 'Close a reception conversation' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Conversation UUID' })
+  @ApiOkResponse({ description: 'Conversation closed', type: ConversationResponseDto })
+  @ApiNotFoundResponse({ description: 'Conversation not found' })
+  @ApiConflictResponse({ description: 'Conversation is already closed or changed state' })
   async close(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @UserId() actorUserId: string,
     @CurrentUser() user: JwtUser,
-  ) {
+  ): Promise<ConversationResponseDto> {
     return toStaffConversationResponse(await this.closeConversation.execute({ conversationId, actorUserId, actorRole: user.role }));
   }
 }

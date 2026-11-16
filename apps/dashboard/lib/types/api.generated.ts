@@ -10642,6 +10642,351 @@ export interface components {
              */
             subject: string | null;
         };
+        ConversationAssistantRecoveryMetadataDto: {
+            /**
+             * @description Metadata discriminator
+             * @example ASSISTANT_RECOVERY
+             * @enum {string}
+             */
+            action: "ASSISTANT_RECOVERY";
+            /**
+             * @description Whether the visitor may retry the failed message
+             * @example true
+             */
+            canRetry: boolean;
+        };
+        ConversationCursorMetaDto: {
+            /**
+             * @description Whether another page exists
+             * @example false
+             */
+            hasMore: boolean;
+            /**
+             * @description Page size used for the response
+             * @example 20
+             */
+            limit: number;
+            /**
+             * Format: uuid
+             * @description Cursor for the next page, or null when exhausted
+             * @example null
+             */
+            nextCursor: string | null;
+        };
+        ConversationHandoffMessageMetadataDto: {
+            /**
+             * @description Metadata discriminator
+             * @example OFFER_HANDOFF
+             * @enum {string}
+             */
+            action: "OFFER_HANDOFF";
+            /**
+             * @description Why the assistant offered a hand-off
+             * @example USER_REQUESTED
+             * @enum {string}
+             */
+            reason: "OUT_OF_SCOPE" | "USER_REQUESTED" | "LIMIT_REACHED";
+        };
+        ConversationHandoffSummaryDto: {
+            /**
+             * @description Alternative options the visitor accepted, when provided
+             * @example [
+             *       "صباحاً",
+             *       "بعد العصر"
+             *     ]
+             */
+            acceptableAlternatives?: string[];
+            /**
+             * @description Staff-facing hand-off category
+             * @example USER_REQUESTED
+             * @enum {string}
+             */
+            category: "USER_REQUESTED" | "COMPLAINT" | "FINANCIAL_EXCEPTION" | "UNAVAILABLE_APPOINTMENT" | "OTHER";
+            /**
+             * @description Outcome the visitor is looking for
+             * @example تعديل موعد الجلسة القادمة
+             */
+            desiredOutcome: string;
+            /**
+             * Format: uuid
+             * @description Practitioner UUID mentioned in the hand-off, when provided
+             * @example 00000000-4000-4000-a000-000000000003
+             */
+            practitionerId?: string;
+            /**
+             * @description Short summary of what the visitor asked for
+             * @example العميل يطلب التحدث مع موظفة الاستقبال
+             */
+            requestSummary: string;
+            /**
+             * Format: uuid
+             * @description Service UUID mentioned in the hand-off, when provided
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            serviceId?: string;
+        };
+        ConversationInboxResponseDto: {
+            /** @description Conversations on the requested page */
+            data: components["schemas"]["ConversationResponseDto"][];
+            /** @description Keyset pagination metadata */
+            meta: components["schemas"]["ConversationCursorMetaDto"];
+        };
+        ConversationMessageResponseDto: {
+            /**
+             * @description Message body
+             * @example مرحباً، كيف أستطيع مساعدتك؟
+             */
+            body: string;
+            /**
+             * @description Client-generated idempotency identifier, or null
+             * @example staff-1
+             */
+            clientMessageId: string | null;
+            /**
+             * Format: uuid
+             * @description Conversation the message belongs to
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            conversationId: string;
+            /**
+             * Format: date-time
+             * @description Message creation timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Message identifier
+             * @example 00000000-4000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Message kind
+             * @example TEXT
+             * @enum {string}
+             */
+            kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
+            /** @description Safe public metadata; omitted when the stored metadata is missing or unsafe */
+            metadata?: components["schemas"]["ConversationHandoffMessageMetadataDto"] | components["schemas"]["ConversationAssistantRecoveryMetadataDto"] | components["schemas"]["ConversationOperationMetadataDto"] | components["schemas"]["ConversationOperationResultMetadataDto"];
+            /**
+             * @description Message author type
+             * @example STAFF
+             * @enum {string}
+             */
+            senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
+        };
+        ConversationMessagesResponseDto: {
+            /** @description Messages on the requested page */
+            data: components["schemas"]["ConversationMessageResponseDto"][];
+            /** @description Keyset pagination metadata */
+            meta: components["schemas"]["ConversationCursorMetaDto"];
+        };
+        ConversationOperationMetadataDto: {
+            /**
+             * @description Metadata discriminator
+             * @example CHAT_OPERATION
+             * @enum {string}
+             */
+            action: "CHAT_OPERATION";
+            /** @description Public operation card */
+            operation: components["schemas"]["ConversationPublicOperationDto"];
+        };
+        ConversationOperationResultMetadataDto: {
+            /**
+             * Format: uuid
+             * @description Booking referenced by the result; omitted for declined operations
+             */
+            bookingId?: string | null;
+            /**
+             * @description Operation identifier
+             * @example op-1
+             */
+            operationId: string;
+            /**
+             * @description Result outcome label; omitted for declined operations
+             * @example BOOKING_CREATED
+             */
+            outcome?: string;
+            /**
+             * @description Terminal operation status
+             * @example SUCCEEDED
+             * @enum {string}
+             */
+            status: "SUCCEEDED" | "FAILED" | "DECLINED";
+            /**
+             * @description Set to true only when the booking still needs provider sync
+             * @example true
+             */
+            syncPending?: boolean;
+            /**
+             * @description Operation type
+             * @example CREATE_BOOKING
+             * @enum {string}
+             */
+            type: "LIST_OWN_APPOINTMENTS" | "CREATE_BOOKING" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING";
+        };
+        ConversationPublicOperationDto: {
+            /**
+             * Format: uuid
+             * @description Booking created by the operation, or null
+             * @example null
+             */
+            bookingId: string | null;
+            /**
+             * @description Confirmations collected so far
+             * @example 0
+             */
+            confirmationCount: number;
+            /**
+             * @description Failure code, or null when the operation has not failed
+             * @example null
+             */
+            errorCode: string | null;
+            /**
+             * Format: date-time
+             * @description Operation expiry as an ISO 8601 timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            expiresAt: string;
+            /**
+             * @description Operation identifier
+             * @example op-1
+             */
+            id: string;
+            /**
+             * @description Confirmations required before execution
+             * @example 1
+             */
+            requiredConfirmations: number;
+            /**
+             * @description Operation lifecycle status
+             * @example AWAITING_CONFIRMATION
+             * @enum {string}
+             */
+            status: "AWAITING_AUTH" | "AWAITING_EXISTING_BOOKING_ACK" | "AWAITING_CONFIRMATION" | "EXECUTING" | "SUCCEEDED" | "FAILED" | "DECLINED" | "EXPIRED";
+            /** @description Sanitized display summary of the operation */
+            summary: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Operation type
+             * @example CREATE_BOOKING
+             * @enum {string}
+             */
+            type: "LIST_OWN_APPOINTMENTS" | "CREATE_BOOKING" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING";
+            /**
+             * @description Optimistic concurrency version
+             * @example 1
+             */
+            version: number;
+        };
+        ConversationReadResponseDto: {
+            /**
+             * @description How many messages were marked read by this call
+             * @example 3
+             */
+            markedReadCount: number;
+            /**
+             * Format: date-time
+             * @description Timestamp written to the marked messages
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            readAt: string;
+        };
+        ConversationResponseDto: {
+            /**
+             * Format: uuid
+             * @description Dashboard user currently handling the conversation, or null
+             * @example null
+             */
+            assignedStaffUserId: string | null;
+            /**
+             * Format: uuid
+             * @description Owning client UUID, or null for a guest conversation
+             * @example null
+             */
+            clientId: string | null;
+            /**
+             * @description Unread messages for the visitor
+             * @example 0
+             */
+            clientUnreadCount: number;
+            /**
+             * Format: date-time
+             * @description When the conversation was closed, or null
+             * @example null
+             */
+            closedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Conversation creation timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Guest display name, or null for a signed-in client
+             * @example سارة
+             */
+            guestName: string | null;
+            /**
+             * @description Guest phone number, or null when not supplied
+             * @example +966501234567
+             */
+            guestPhone: string | null;
+            /**
+             * Format: date-time
+             * @description When the visitor requested a human hand-off, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            handoffRequestedAt: string | null;
+            /** @description Safe hand-off summary, or null when no hand-off was requested */
+            handoffSummary: components["schemas"]["ConversationHandoffSummaryDto"] | null;
+            /**
+             * Format: uuid
+             * @description Conversation identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the conversation is handled by the administrative assistant
+             * @example true
+             */
+            isAiChat: boolean;
+            /**
+             * @description Conversation language code
+             * @example ar
+             */
+            language: string;
+            /**
+             * Format: date-time
+             * @description Timestamp of the latest message, or null for an empty conversation
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            lastMessageAt: string | null;
+            /**
+             * Format: date-time
+             * @description When a dashboard user claimed the conversation, or null
+             * @example null
+             */
+            staffClaimedAt: string | null;
+            /**
+             * @description Unread messages for staff
+             * @example 2
+             */
+            staffUnreadCount: number;
+            /**
+             * @description Conversation lifecycle status
+             * @example WAITING_FOR_STAFF
+             * @enum {string}
+             */
+            status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
+            /**
+             * Format: date-time
+             * @description Conversation update timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
         CreateBookingDto: {
             /**
              * @description Booking type
@@ -16439,6 +16784,109 @@ export interface components {
              */
             refreshToken: string;
         };
+        NotificationDeliveryLogListMetaDto: {
+            /**
+             * @description Items per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description Current page (1-based)
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching rows
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        NotificationDeliveryLogRecordDto: {
+            /**
+             * @description Number of delivery attempts
+             * @example 1
+             */
+            attempts: number;
+            /**
+             * @description Delivery channel
+             * @example EMAIL
+             * @enum {string}
+             */
+            channel: "EMAIL" | "SMS" | "PUSH" | "IN_APP";
+            /**
+             * Format: date-time
+             * @description Row creation timestamp
+             * @example 2026-03-01T10:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Last error message, or null
+             * @example null
+             */
+            errorMessage: string | null;
+            /**
+             * Format: uuid
+             * @description Delivery log identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Last attempt timestamp, or null
+             * @example 2026-03-01T10:00:00.000Z
+             */
+            lastAttemptAt: string | null;
+            /**
+             * @description Notification priority
+             * @example STANDARD
+             * @enum {string}
+             */
+            priority: "CRITICAL" | "STANDARD";
+            /**
+             * @description Provider that handled the delivery, or null while pending
+             * @example RESEND
+             */
+            providerName: string | null;
+            /**
+             * @description Recipient identifier (client or employee UUID depending on the notification type)
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            recipientId: string;
+            /**
+             * @description Actor the notification was sent on behalf of
+             * @example TENANT
+             * @enum {string}
+             */
+            senderActor: "PLATFORM" | "TENANT" | "PLATFORM_FALLBACK";
+            /**
+             * Format: date-time
+             * @description Successful send timestamp, or null
+             * @example 2026-03-01T10:00:00.000Z
+             */
+            sentAt: string | null;
+            /**
+             * @description Delivery status
+             * @example SENT
+             * @enum {string}
+             */
+            status: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+            /**
+             * @description Destination address used for this delivery, or null
+             * @example client@example.com
+             */
+            toAddress: string | null;
+            /**
+             * @description Notification type that produced this delivery
+             * @example BOOKING_CONFIRMED
+             * @enum {string}
+             */
+            type: "BOOKING_CREATED" | "BOOKING_CONFIRMED" | "BOOKING_CANCELLED" | "BOOKING_REMINDER" | "PAYMENT_RECEIVED" | "PAYMENT_FAILED" | "PAYMENT_COMPLETED" | "PAYMENT_REMINDER" | "WELCOME" | "GENERAL";
+        };
         NotificationListMetaDto: {
             /** @description Whether a next page exists */
             hasNextPage: boolean;
@@ -18374,6 +18822,12 @@ export interface components {
             items: components["schemas"]["EmployeeResponseDto"][];
             /** @description Pagination metadata for the full result set */
             meta: components["schemas"]["ListMetaDto"];
+        };
+        PaginatedNotificationDeliveryLogsDto: {
+            /** @description Delivery logs, newest first */
+            items: components["schemas"]["NotificationDeliveryLogRecordDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["NotificationDeliveryLogListMetaDto"];
         };
         PaginatedNotificationsResponseDto: {
             /** @description Notifications on the requested page */
@@ -21134,6 +21588,440 @@ export interface components {
              * @example clinic@example.com
              */
             user: string;
+        };
+        StaffChatConversationCountDto: {
+            /**
+             * @description Number of messages in the conversation
+             * @example 12
+             */
+            messages: number;
+        };
+        StaffChatConversationDetailDto: {
+            /**
+             * Format: uuid
+             * @description Client UUID, or null for a guest conversation
+             * @example 00000000-4000-4000-a000-000000000003
+             */
+            clientId: string | null;
+            /**
+             * Format: uuid
+             * @description Employee UUID, or null when not tied to a practitioner
+             * @example 00000000-4000-4000-a000-000000000004
+             */
+            employeeId: string | null;
+            /**
+             * Format: date-time
+             * @description End time for closed conversations, or null while open
+             * @example null
+             */
+            endedAt: string | null;
+            /**
+             * @description Whether the conversation is assigned to an employee
+             * @example true
+             */
+            handedOff: boolean;
+            /**
+             * Format: uuid
+             * @description Conversation identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Timestamp of the latest message, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            lastMessageAt: string | null;
+            /** @description All messages in ascending creation order */
+            messages: components["schemas"]["StaffChatConversationMessageDto"][];
+            /**
+             * Format: date-time
+             * @description Conversation start time (the row creation time)
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            startedAt: string;
+            /** @description Client identity projection */
+            user: components["schemas"]["StaffChatConversationUserDto"];
+        };
+        StaffChatConversationListResponseDto: {
+            /** @description Conversations on the requested page */
+            items: components["schemas"]["StaffChatConversationListRowDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["StaffChatListMetaDto"];
+        };
+        StaffChatConversationListRowDto: {
+            /** @description Joined message counter */
+            _count: components["schemas"]["StaffChatConversationCountDto"];
+            /**
+             * Format: uuid
+             * @description Client UUID, or null for a guest conversation
+             * @example 00000000-4000-4000-a000-000000000003
+             */
+            clientId: string | null;
+            /**
+             * Format: uuid
+             * @description Employee UUID, or null when not tied to a practitioner
+             * @example null
+             */
+            employeeId: string | null;
+            /**
+             * Format: date-time
+             * @description End time for closed conversations, or null while open
+             * @example null
+             */
+            endedAt: string | null;
+            /**
+             * @description Whether the conversation was handed off to a staff member
+             * @example false
+             */
+            handedOff: boolean;
+            /**
+             * Format: uuid
+             * @description Conversation identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Timestamp of the latest message, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            lastMessageAt: string | null;
+            /**
+             * Format: date-time
+             * @description Conversation start time (the row creation time)
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            startedAt: string;
+            /** @description Client identity projection */
+            user: components["schemas"]["StaffChatConversationUserDto"];
+        };
+        StaffChatConversationMessageDto: {
+            /**
+             * @description Message body
+             * @example أرغب بمعرفة مواعيد الجلسات
+             */
+            content: string;
+            /**
+             * Format: uuid
+             * @description Conversation the message belongs to
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            conversationId: string;
+            /**
+             * Format: date-time
+             * @description Message creation timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Message identifier
+             * @example 00000000-4000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Legacy role derived from the stored sender type
+             * @example user
+             * @enum {string}
+             */
+            role: "user" | "staff" | "assistant";
+        };
+        StaffChatConversationRecordDto: {
+            /**
+             * Format: uuid
+             * @description Dashboard user handling the conversation, or null
+             * @example null
+             */
+            assignedStaffUserId: string | null;
+            /**
+             * Format: date-time
+             * @description Assistant lease expiry, or null
+             * @example null
+             */
+            assistantLeaseExpiresAt: string | null;
+            /**
+             * @description Administrative-assistant lease owner, or null
+             * @example null
+             */
+            assistantLeaseOwner: string | null;
+            /**
+             * Format: uuid
+             * @description Client UUID, or null for a guest conversation
+             * @example null
+             */
+            clientId: string | null;
+            /**
+             * @description Unread messages for the visitor
+             * @example 0
+             */
+            clientUnreadCount: number;
+            /**
+             * Format: date-time
+             * @description When the conversation was closed, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            closedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Conversation creation timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Stored customer-context JSON (arbitrary Prisma Json value), or null
+             * @example null
+             */
+            customerContext: (string | null) | (number | null) | (boolean | null) | unknown[] | ({
+                [key: string]: unknown;
+            } | null);
+            /**
+             * @description Customer-context schema version
+             * @example 0
+             */
+            customerContextVersion: number;
+            /**
+             * Format: uuid
+             * @description Employee UUID, or null
+             * @example 00000000-4000-4000-a000-000000000004
+             */
+            employeeId: string | null;
+            /**
+             * @description Guest display name, or null
+             * @example سارة
+             */
+            guestName: string | null;
+            /**
+             * @description Guest phone number, or null
+             * @example +966501234567
+             */
+            guestPhone: string | null;
+            /**
+             * @description Stored guest token hash, or null for signed-in clients
+             * @example null
+             */
+            guestTokenHash: string | null;
+            /**
+             * Format: date-time
+             * @description When the visitor requested a human hand-off, or null
+             * @example null
+             */
+            handoffRequestedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Conversation identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the administrative assistant handles the conversation
+             * @example true
+             */
+            isAiChat: boolean;
+            /**
+             * @description Conversation language code
+             * @example ar
+             */
+            language: string;
+            /**
+             * Format: date-time
+             * @description Timestamp of the latest message, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            lastMessageAt: string | null;
+            /**
+             * Format: date-time
+             * @description When a dashboard user claimed the conversation, or null
+             * @example null
+             */
+            staffClaimedAt: string | null;
+            /**
+             * @description Unread messages for staff
+             * @example 0
+             */
+            staffUnreadCount: number;
+            /**
+             * @description Optimistic concurrency version
+             * @example 3
+             */
+            stateVersion: number;
+            /**
+             * @description Conversation lifecycle status
+             * @example CLOSED
+             * @enum {string}
+             */
+            status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
+            /**
+             * Format: date-time
+             * @description Conversation update timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        StaffChatConversationUserDto: {
+            /**
+             * @description Client first name, or an empty string when the client row is missing
+             * @example سارة
+             */
+            firstName: string;
+            /**
+             * Format: uuid
+             * @description Client UUID, or null for a guest conversation
+             * @example 00000000-4000-4000-a000-000000000003
+             */
+            id: string | null;
+            /**
+             * @description Client last name, or an empty string when the client row is missing
+             * @example أحمد
+             */
+            lastName: string;
+        };
+        StaffChatCursorMetaDto: {
+            /**
+             * @description Whether another page exists
+             * @example false
+             */
+            hasMore: boolean;
+            /**
+             * @description Page size used for the response
+             * @example 20
+             */
+            limit: number;
+            /**
+             * Format: uuid
+             * @description Cursor for the next page, or null when exhausted
+             * @example null
+             */
+            nextCursor: string | null;
+        };
+        StaffChatListMetaDto: {
+            /**
+             * @description Whether a next page exists
+             * @example true
+             */
+            hasNextPage: boolean;
+            /**
+             * @description Whether a previous page exists
+             * @example false
+             */
+            hasPreviousPage: boolean;
+            /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
+             * @description 1-based page number
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Total matching conversations
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total number of pages
+             * @example 3
+             */
+            totalPages: number;
+        };
+        StaffChatMessageListResponseDto: {
+            /** @description Messages on the requested page (newest first) */
+            data: components["schemas"]["StaffChatMessageRecordDto"][];
+            /** @description Keyset pagination metadata */
+            meta: components["schemas"]["StaffChatCursorMetaDto"];
+        };
+        StaffChatMessageRecordDto: {
+            /**
+             * @description Message body
+             * @example تم تأكيد موعدك.
+             */
+            body: string;
+            /**
+             * @description Client-generated idempotency identifier, or null
+             * @example null
+             */
+            clientMessageId: string | null;
+            /**
+             * Format: uuid
+             * @description Conversation the message belongs to
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            conversationId: string;
+            /**
+             * Format: date-time
+             * @description Message creation timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Message identifier
+             * @example 00000000-4000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Whether the message has been read
+             * @example false
+             */
+            isRead: boolean;
+            /**
+             * @description Message kind
+             * @example TEXT
+             * @enum {string}
+             */
+            kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
+            /**
+             * @description Assistant latency in milliseconds, or null
+             * @example null
+             */
+            latencyMs: number | null;
+            /**
+             * @description Stored metadata JSON (arbitrary Prisma Json value), or null
+             * @example null
+             */
+            metadata: (string | null) | (number | null) | (boolean | null) | unknown[] | ({
+                [key: string]: unknown;
+            } | null);
+            /**
+             * @description AI model that produced the message, or null
+             * @example null
+             */
+            model: string | null;
+            /**
+             * Format: date-time
+             * @description Read timestamp, or null
+             * @example null
+             */
+            readAt: string | null;
+            /**
+             * @description Message this row answers, or null
+             * @example null
+             */
+            responseForMessageId: string | null;
+            /**
+             * @description Dashboard user that sent the message, or null
+             * @example null
+             */
+            senderId: string | null;
+            /**
+             * @description Stored sender type
+             * @example EMPLOYEE
+             * @enum {string}
+             */
+            senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
+            /**
+             * Format: int64
+             * @description Monotonic message sequence (Prisma BigInt)
+             * @example 42
+             */
+            sequence: number;
+            /**
+             * @description Tokens consumed by the assistant reply
+             * @example 0
+             */
+            tokensUsed: number;
         };
         SubmitIntakeResponseDto: {
             /**
@@ -29243,6 +30131,10 @@ export interface operations {
                 clientId?: string;
                 /** @description Filter conversations by employee UUID */
                 employeeId?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -29255,7 +30147,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StaffChatConversationListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29312,7 +30206,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StaffChatConversationDetailDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29340,6 +30236,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -29369,7 +30272,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StaffChatConversationRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29397,6 +30302,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -29431,7 +30343,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StaffChatMessageListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29459,6 +30373,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -29492,7 +30413,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StaffChatMessageRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -29520,6 +30443,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -29685,12 +30615,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paginated delivery log */
+            /** @description Paginated delivery log, newest first */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedNotificationDeliveryLogsDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30618,11 +31550,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Cursor-paginated reception inbox */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationInboxResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30674,11 +31609,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Conversation detail */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30706,6 +31644,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -30734,11 +31679,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Conversation assigned to the target user */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30766,6 +31714,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation or active dashboard user not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conversation cannot be assigned in its current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -30790,11 +31752,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Conversation claimed by the calling staff user */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30822,6 +31787,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conversation is no longer available to claim */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -30846,11 +31825,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Conversation closed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30878,6 +31860,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conversation is already closed or changed state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -30907,11 +31903,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Cursor-paginated conversation messages */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationMessagesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30939,6 +31938,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation or message cursor not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -30967,11 +31973,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Staff reply message */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationMessageResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30999,6 +32008,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Assigned conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -31027,11 +32043,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Messages marked read */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationReadResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31059,6 +32078,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Assigned conversation or owned message cursor not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -31083,11 +32109,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Conversation released back to the assistant */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ConversationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31115,6 +32144,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Conversation not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conversation is not staff-active or cannot be released */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

@@ -87,12 +87,12 @@ function getColumns(
       ),
     },
     {
-      accessorKey: "language",
+      id: "language",
       header: t("chatbot.col.language"),
-      cell: ({ row }) => (
-        <span className="text-sm uppercase">
-          {row.original.language ?? "—"}
-        </span>
+      cell: () => (
+        // `language` is not part of the documented list row, so this cell has
+        // always rendered the fallback. Keep the exact visible output.
+        <span className="text-sm uppercase">—</span>
       ),
     },
     {

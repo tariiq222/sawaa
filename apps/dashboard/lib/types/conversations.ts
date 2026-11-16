@@ -1,108 +1,71 @@
-export type ConversationStatus =
-  | "OPEN"
-  | "AI_ACTIVE"
-  | "WAITING_FOR_STAFF"
-  | "STAFF_ACTIVE"
-  | "CLOSED"
+/**
+ * Reception chat (conversation inbox) types — Sawaa Dashboard
+ *
+ * Every shape here is derived from the committed OpenAPI snapshot
+ * (`lib/types/api.generated.ts`), so a backend response/query change becomes a
+ * type error instead of drifting silently.
+ * `test/unit/lib/conversation-type-contract.spec.ts` pins the derivation.
+ *
+ * The inbox routes (`/dashboard/conversations/*`) are the reception chat;
+ * "handoffSummary" is the safe projection the backend builds with
+ * `parseHandoffSummary`, never the raw customer context.
+ */
 
-export type ConversationAssignmentFilter = "all" | "me" | "unassigned"
+import type { components, paths } from "@/lib/types/api.generated"
 
-export type ConversationSenderType =
-  | "CLIENT"
-  | "EMPLOYEE"
-  | "VISITOR"
-  | "AI"
-  | "STAFF"
-  | "SYSTEM"
+type Schemas = components["schemas"]
 
-export type ConversationMessageKind =
-  | "TEXT"
-  | "ACTION_CARD"
-  | "OPERATION_RESULT"
-  | "SYSTEM_EVENT"
+/* ─── Entities (derived from OpenAPI) ─── */
 
-export type HandoffSummary = {
-  category: "USER_REQUESTED" | "COMPLAINT" | "FINANCIAL_EXCEPTION" | "UNAVAILABLE_APPOINTMENT" | "OTHER"
-  requestSummary: string
-  desiredOutcome: string
-  serviceId?: string
-  practitionerId?: string
-  acceptableAlternatives?: string[]
-}
+/** Conversation lifecycle status (Prisma `ConversationStatus`). */
+export type ConversationStatus = Schemas["ConversationResponseDto"]["status"]
 
-export interface Conversation {
-  id: string
-  clientId: string | null
-  isAiChat: boolean
-  status: ConversationStatus
-  guestName: string | null
-  guestPhone: string | null
-  language: string
-  assignedStaffUserId: string | null
-  handoffRequestedAt: string | null
-  staffClaimedAt: string | null
-  closedAt: string | null
-  staffUnreadCount: number
-  clientUnreadCount: number
-  lastMessageAt: string | null
-  createdAt: string
-  updatedAt: string
-  handoffSummary?: HandoffSummary | null
-}
+/** Inbox assignment filter accepted by `GET /dashboard/conversations`. */
+export type ConversationAssignmentFilter = NonNullable<ConversationFilters["assigned"]>
 
-export interface ConversationMessage {
-  id: string
-  conversationId: string
-  senderType: ConversationSenderType
-  body: string
-  kind: ConversationMessageKind
-  clientMessageId: string | null
-  createdAt: string
-}
+/** Message author type (Prisma `MessageSenderType`). */
+export type ConversationSenderType = Schemas["ConversationMessageResponseDto"]["senderType"]
 
-export interface CursorMeta {
-  limit: number
-  nextCursor: string | null
-  hasMore: boolean
-}
+/** Message kind (Prisma `ChatMessageKind`). */
+export type ConversationMessageKind = Schemas["ConversationMessageResponseDto"]["kind"]
 
-export interface ConversationListResponse {
-  data: Conversation[]
-  meta: CursorMeta
-}
+/** Safe hand-off summary projection; `null` when no hand-off was requested. */
+export type HandoffSummary = NonNullable<Schemas["ConversationResponseDto"]["handoffSummary"]>
 
-export interface ConversationMessagesResponse {
-  data: ConversationMessage[]
-  meta: CursorMeta
-}
+/** Inbox row / conversation detail (`GET /dashboard/conversations`). */
+export type Conversation = Schemas["ConversationResponseDto"]
 
-export interface ConversationFilters {
-  status?: ConversationStatus
-  unreadOnly?: boolean
-  assigned?: ConversationAssignmentFilter
-  search?: string
-  from?: string
-  to?: string
-  cursor?: string
-  limit?: number
-}
+/** One transcript message (`GET .../messages` and the reply response). */
+export type ConversationMessage = Schemas["ConversationMessageResponseDto"]
 
-export interface ConversationMessageFilters {
-  cursor?: string
-  limit?: number
-}
+/** Keyset pagination metadata used by both cursor lists. */
+export type CursorMeta = Schemas["ConversationCursorMetaDto"]
 
-export interface ReplyConversationPayload {
-  body: string
-  clientMessageId: string
-}
+/** `GET /dashboard/conversations` response. */
+export type ConversationListResponse = Schemas["ConversationInboxResponseDto"]
 
-export interface MarkConversationReadPayload {
-  throughMessageId?: string
-  throughSequence?: string
-}
+/** `GET /dashboard/conversations/:conversationId/messages` response. */
+export type ConversationMessagesResponse = Schemas["ConversationMessagesResponseDto"]
 
-export interface MarkConversationReadResponse {
-  markedReadCount: number
-  readAt: string
-}
+/** `POST /dashboard/conversations/:conversationId/read` response. */
+export type MarkConversationReadResponse = Schemas["ConversationReadResponseDto"]
+
+/* ─── Queries (derived from OpenAPI) ─── */
+
+/** `GET /dashboard/conversations` query surface. */
+export type ConversationFilters = NonNullable<
+  paths["/api/v1/dashboard/conversations"]["get"]["parameters"]["query"]
+>
+
+/** `GET /dashboard/conversations/:conversationId/messages` query surface. */
+export type ConversationMessageFilters = NonNullable<
+  paths["/api/v1/dashboard/conversations/{conversationId}/messages"]["get"]["parameters"]["query"]
+>
+
+/* ─── Write payloads (derived from OpenAPI) ─── */
+
+/** `POST /dashboard/conversations/:conversationId/messages` body. */
+export type ReplyConversationPayload = Schemas["SendChatMessageDto"]
+
+/** `POST /dashboard/conversations/:conversationId/read` body. */
+export type MarkConversationReadPayload = Schemas["MarkConversationReadDto"]

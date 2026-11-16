@@ -6759,6 +6759,591 @@
         ],
         "type": "object"
       },
+      "ConversationAssistantRecoveryMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "ASSISTANT_RECOVERY"
+            ],
+            "example": "ASSISTANT_RECOVERY",
+            "type": "string"
+          },
+          "canRetry": {
+            "description": "Whether the visitor may retry the failed message",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "canRetry"
+        ],
+        "type": "object"
+      },
+      "ConversationCursorMetaDto": {
+        "properties": {
+          "hasMore": {
+            "description": "Whether another page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Page size used for the response",
+            "example": 20,
+            "type": "integer"
+          },
+          "nextCursor": {
+            "description": "Cursor for the next page, or null when exhausted",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "nextCursor",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "ConversationHandoffMessageMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "OFFER_HANDOFF"
+            ],
+            "example": "OFFER_HANDOFF",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why the assistant offered a hand-off",
+            "enum": [
+              "OUT_OF_SCOPE",
+              "USER_REQUESTED",
+              "LIMIT_REACHED"
+            ],
+            "example": "USER_REQUESTED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "ConversationHandoffSummaryDto": {
+        "properties": {
+          "acceptableAlternatives": {
+            "description": "Alternative options the visitor accepted, when provided",
+            "example": [
+              "صباحاً",
+              "بعد العصر"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "category": {
+            "description": "Staff-facing hand-off category",
+            "enum": [
+              "USER_REQUESTED",
+              "COMPLAINT",
+              "FINANCIAL_EXCEPTION",
+              "UNAVAILABLE_APPOINTMENT",
+              "OTHER"
+            ],
+            "example": "USER_REQUESTED",
+            "type": "string"
+          },
+          "desiredOutcome": {
+            "description": "Outcome the visitor is looking for",
+            "example": "تعديل موعد الجلسة القادمة",
+            "type": "string"
+          },
+          "practitionerId": {
+            "description": "Practitioner UUID mentioned in the hand-off, when provided",
+            "example": "00000000-4000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "requestSummary": {
+            "description": "Short summary of what the visitor asked for",
+            "example": "العميل يطلب التحدث مع موظفة الاستقبال",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID mentioned in the hand-off, when provided",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "requestSummary",
+          "desiredOutcome"
+        ],
+        "type": "object"
+      },
+      "ConversationInboxResponseDto": {
+        "properties": {
+          "data": {
+            "description": "Conversations on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/ConversationResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursorMetaDto"
+              }
+            ],
+            "description": "Keyset pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "ConversationMessageResponseDto": {
+        "properties": {
+          "body": {
+            "description": "Message body",
+            "example": "مرحباً، كيف أستطيع مساعدتك؟",
+            "type": "string"
+          },
+          "clientMessageId": {
+            "description": "Client-generated idempotency identifier, or null",
+            "example": "staff-1",
+            "nullable": true,
+            "type": "string"
+          },
+          "conversationId": {
+            "description": "Conversation the message belongs to",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Message creation timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message identifier",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Message kind",
+            "enum": [
+              "TEXT",
+              "ACTION_CARD",
+              "OPERATION_RESULT",
+              "SYSTEM_EVENT"
+            ],
+            "example": "TEXT",
+            "type": "string"
+          },
+          "metadata": {
+            "description": "Safe public metadata; omitted when the stored metadata is missing or unsafe",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationHandoffMessageMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/ConversationAssistantRecoveryMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/ConversationOperationMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/ConversationOperationResultMetadataDto"
+              }
+            ]
+          },
+          "senderType": {
+            "description": "Message author type",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE",
+              "VISITOR",
+              "AI",
+              "STAFF",
+              "SYSTEM"
+            ],
+            "example": "STAFF",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "body",
+          "kind",
+          "clientMessageId",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ConversationMessagesResponseDto": {
+        "properties": {
+          "data": {
+            "description": "Messages on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/ConversationMessageResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursorMetaDto"
+              }
+            ],
+            "description": "Keyset pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "ConversationOperationMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "CHAT_OPERATION"
+            ],
+            "example": "CHAT_OPERATION",
+            "type": "string"
+          },
+          "operation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConversationPublicOperationDto"
+              }
+            ],
+            "description": "Public operation card"
+          }
+        },
+        "required": [
+          "action",
+          "operation"
+        ],
+        "type": "object"
+      },
+      "ConversationOperationResultMetadataDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking referenced by the result; omitted for declined operations",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "operationId": {
+            "description": "Operation identifier",
+            "example": "op-1",
+            "type": "string"
+          },
+          "outcome": {
+            "description": "Result outcome label; omitted for declined operations",
+            "example": "BOOKING_CREATED",
+            "type": "string"
+          },
+          "status": {
+            "description": "Terminal operation status",
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED"
+            ],
+            "example": "SUCCEEDED",
+            "type": "string"
+          },
+          "syncPending": {
+            "description": "Set to true only when the booking still needs provider sync",
+            "example": true,
+            "type": "boolean"
+          },
+          "type": {
+            "description": "Operation type",
+            "enum": [
+              "LIST_OWN_APPOINTMENTS",
+              "CREATE_BOOKING",
+              "RESCHEDULE_BOOKING",
+              "CANCEL_BOOKING"
+            ],
+            "example": "CREATE_BOOKING",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operationId",
+          "type",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ConversationPublicOperationDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking created by the operation, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmationCount": {
+            "description": "Confirmations collected so far",
+            "example": 0,
+            "type": "integer"
+          },
+          "errorCode": {
+            "description": "Failure code, or null when the operation has not failed",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "Operation expiry as an ISO 8601 timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Operation identifier",
+            "example": "op-1",
+            "type": "string"
+          },
+          "requiredConfirmations": {
+            "description": "Confirmations required before execution",
+            "example": 1,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Operation lifecycle status",
+            "enum": [
+              "AWAITING_AUTH",
+              "AWAITING_EXISTING_BOOKING_ACK",
+              "AWAITING_CONFIRMATION",
+              "EXECUTING",
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED",
+              "EXPIRED"
+            ],
+            "example": "AWAITING_CONFIRMATION",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "description": "Sanitized display summary of the operation",
+            "type": "object"
+          },
+          "type": {
+            "description": "Operation type",
+            "enum": [
+              "LIST_OWN_APPOINTMENTS",
+              "CREATE_BOOKING",
+              "RESCHEDULE_BOOKING",
+              "CANCEL_BOOKING"
+            ],
+            "example": "CREATE_BOOKING",
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic concurrency version",
+            "example": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "version",
+          "requiredConfirmations",
+          "confirmationCount",
+          "expiresAt",
+          "bookingId",
+          "errorCode",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "ConversationReadResponseDto": {
+        "properties": {
+          "markedReadCount": {
+            "description": "How many messages were marked read by this call",
+            "example": 3,
+            "type": "integer"
+          },
+          "readAt": {
+            "description": "Timestamp written to the marked messages",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "markedReadCount",
+          "readAt"
+        ],
+        "type": "object"
+      },
+      "ConversationResponseDto": {
+        "properties": {
+          "assignedStaffUserId": {
+            "description": "Dashboard user currently handling the conversation, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Owning client UUID, or null for a guest conversation",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "clientUnreadCount": {
+            "description": "Unread messages for the visitor",
+            "example": 0,
+            "type": "integer"
+          },
+          "closedAt": {
+            "description": "When the conversation was closed, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Conversation creation timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "guestName": {
+            "description": "Guest display name, or null for a signed-in client",
+            "example": "سارة",
+            "nullable": true,
+            "type": "string"
+          },
+          "guestPhone": {
+            "description": "Guest phone number, or null when not supplied",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "handoffRequestedAt": {
+            "description": "When the visitor requested a human hand-off, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "handoffSummary": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConversationHandoffSummaryDto"
+              }
+            ],
+            "description": "Safe hand-off summary, or null when no hand-off was requested",
+            "nullable": true,
+            "type": "object"
+          },
+          "id": {
+            "description": "Conversation identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "description": "Whether the conversation is handled by the administrative assistant",
+            "example": true,
+            "type": "boolean"
+          },
+          "language": {
+            "description": "Conversation language code",
+            "example": "ar",
+            "type": "string"
+          },
+          "lastMessageAt": {
+            "description": "Timestamp of the latest message, or null for an empty conversation",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "staffClaimedAt": {
+            "description": "When a dashboard user claimed the conversation, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "staffUnreadCount": {
+            "description": "Unread messages for staff",
+            "example": 2,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Conversation lifecycle status",
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "example": "WAITING_FOR_STAFF",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Conversation update timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "isAiChat",
+          "status",
+          "guestName",
+          "guestPhone",
+          "language",
+          "assignedStaffUserId",
+          "handoffRequestedAt",
+          "staffClaimedAt",
+          "closedAt",
+          "staffUnreadCount",
+          "clientUnreadCount",
+          "lastMessageAt",
+          "createdAt",
+          "updatedAt",
+          "handoffSummary"
+        ],
+        "type": "object"
+      },
       "CreateBookingDto": {
         "properties": {
           "bookingType": {
@@ -15472,6 +16057,175 @@
         ],
         "type": "object"
       },
+      "NotificationDeliveryLogListMetaDto": {
+        "properties": {
+          "limit": {
+            "description": "Items per page",
+            "example": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page (1-based)",
+            "example": 1,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching rows",
+            "example": 42,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "totalPages": {
+            "description": "Total pages",
+            "example": 3,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ],
+        "type": "object"
+      },
+      "NotificationDeliveryLogRecordDto": {
+        "properties": {
+          "attempts": {
+            "description": "Number of delivery attempts",
+            "example": 1,
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Delivery channel",
+            "enum": [
+              "EMAIL",
+              "SMS",
+              "PUSH",
+              "IN_APP"
+            ],
+            "example": "EMAIL",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Row creation timestamp",
+            "example": "2026-03-01T10:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "errorMessage": {
+            "description": "Last error message, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Delivery log identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastAttemptAt": {
+            "description": "Last attempt timestamp, or null",
+            "example": "2026-03-01T10:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "priority": {
+            "description": "Notification priority",
+            "enum": [
+              "CRITICAL",
+              "STANDARD"
+            ],
+            "example": "STANDARD",
+            "type": "string"
+          },
+          "providerName": {
+            "description": "Provider that handled the delivery, or null while pending",
+            "example": "RESEND",
+            "nullable": true,
+            "type": "string"
+          },
+          "recipientId": {
+            "description": "Recipient identifier (client or employee UUID depending on the notification type)",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "type": "string"
+          },
+          "senderActor": {
+            "description": "Actor the notification was sent on behalf of",
+            "enum": [
+              "PLATFORM",
+              "TENANT",
+              "PLATFORM_FALLBACK"
+            ],
+            "example": "TENANT",
+            "type": "string"
+          },
+          "sentAt": {
+            "description": "Successful send timestamp, or null",
+            "example": "2026-03-01T10:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Delivery status",
+            "enum": [
+              "PENDING",
+              "SENT",
+              "FAILED",
+              "SKIPPED"
+            ],
+            "example": "SENT",
+            "type": "string"
+          },
+          "toAddress": {
+            "description": "Destination address used for this delivery, or null",
+            "example": "client@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "description": "Notification type that produced this delivery",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_CONFIRMED",
+              "BOOKING_CANCELLED",
+              "BOOKING_REMINDER",
+              "PAYMENT_RECEIVED",
+              "PAYMENT_FAILED",
+              "PAYMENT_COMPLETED",
+              "PAYMENT_REMINDER",
+              "WELCOME",
+              "GENERAL"
+            ],
+            "example": "BOOKING_CONFIRMED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipientId",
+          "type",
+          "priority",
+          "channel",
+          "status",
+          "senderActor",
+          "toAddress",
+          "providerName",
+          "attempts",
+          "lastAttemptAt",
+          "sentAt",
+          "errorMessage",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "NotificationListMetaDto": {
         "properties": {
           "hasNextPage": {
@@ -18505,6 +19259,30 @@
               }
             ],
             "description": "Pagination metadata for the full result set"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PaginatedNotificationDeliveryLogsDto": {
+        "properties": {
+          "items": {
+            "description": "Delivery logs, newest first",
+            "items": {
+              "$ref": "#/components/schemas/NotificationDeliveryLogRecordDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationDeliveryLogListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
           }
         },
         "required": [
@@ -22863,6 +23641,709 @@
           "port",
           "user",
           "pass"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationCountDto": {
+        "properties": {
+          "messages": {
+            "description": "Number of messages in the conversation",
+            "example": 12,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "messages"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationDetailDto": {
+        "properties": {
+          "clientId": {
+            "description": "Client UUID, or null for a guest conversation",
+            "example": "00000000-4000-4000-a000-000000000003",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID, or null when not tied to a practitioner",
+            "example": "00000000-4000-4000-a000-000000000004",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "endedAt": {
+            "description": "End time for closed conversations, or null while open",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "handedOff": {
+            "description": "Whether the conversation is assigned to an employee",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Conversation identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastMessageAt": {
+            "description": "Timestamp of the latest message, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "messages": {
+            "description": "All messages in ascending creation order",
+            "items": {
+              "$ref": "#/components/schemas/StaffChatConversationMessageDto"
+            },
+            "type": "array"
+          },
+          "startedAt": {
+            "description": "Conversation start time (the row creation time)",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffChatConversationUserDto"
+              }
+            ],
+            "description": "Client identity projection"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "employeeId",
+          "handedOff",
+          "startedAt",
+          "endedAt",
+          "lastMessageAt",
+          "user",
+          "messages"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationListResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Conversations on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/StaffChatConversationListRowDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffChatListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationListRowDto": {
+        "properties": {
+          "_count": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffChatConversationCountDto"
+              }
+            ],
+            "description": "Joined message counter"
+          },
+          "clientId": {
+            "description": "Client UUID, or null for a guest conversation",
+            "example": "00000000-4000-4000-a000-000000000003",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID, or null when not tied to a practitioner",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "endedAt": {
+            "description": "End time for closed conversations, or null while open",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "handedOff": {
+            "description": "Whether the conversation was handed off to a staff member",
+            "example": false,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Conversation identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastMessageAt": {
+            "description": "Timestamp of the latest message, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "startedAt": {
+            "description": "Conversation start time (the row creation time)",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffChatConversationUserDto"
+              }
+            ],
+            "description": "Client identity projection"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "employeeId",
+          "handedOff",
+          "startedAt",
+          "endedAt",
+          "lastMessageAt",
+          "user",
+          "_count"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationMessageDto": {
+        "properties": {
+          "content": {
+            "description": "Message body",
+            "example": "أرغب بمعرفة مواعيد الجلسات",
+            "type": "string"
+          },
+          "conversationId": {
+            "description": "Conversation the message belongs to",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Message creation timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message identifier",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "description": "Legacy role derived from the stored sender type",
+            "enum": [
+              "user",
+              "staff",
+              "assistant"
+            ],
+            "example": "user",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "role",
+          "content",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationRecordDto": {
+        "properties": {
+          "assignedStaffUserId": {
+            "description": "Dashboard user handling the conversation, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "assistantLeaseExpiresAt": {
+            "description": "Assistant lease expiry, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "assistantLeaseOwner": {
+            "description": "Administrative-assistant lease owner, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID, or null for a guest conversation",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "clientUnreadCount": {
+            "description": "Unread messages for the visitor",
+            "example": 0,
+            "type": "integer"
+          },
+          "closedAt": {
+            "description": "When the conversation was closed, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Conversation creation timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "customerContext": {
+            "description": "Stored customer-context JSON (arbitrary Prisma Json value), or null",
+            "example": null,
+            "oneOf": [
+              {
+                "nullable": true,
+                "type": "string"
+              },
+              {
+                "nullable": true,
+                "type": "number"
+              },
+              {
+                "nullable": true,
+                "type": "boolean"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "customerContextVersion": {
+            "description": "Customer-context schema version",
+            "example": 0,
+            "type": "integer"
+          },
+          "employeeId": {
+            "description": "Employee UUID, or null",
+            "example": "00000000-4000-4000-a000-000000000004",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "guestName": {
+            "description": "Guest display name, or null",
+            "example": "سارة",
+            "nullable": true,
+            "type": "string"
+          },
+          "guestPhone": {
+            "description": "Guest phone number, or null",
+            "example": "+966501234567",
+            "nullable": true,
+            "type": "string"
+          },
+          "guestTokenHash": {
+            "description": "Stored guest token hash, or null for signed-in clients",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "handoffRequestedAt": {
+            "description": "When the visitor requested a human hand-off, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Conversation identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "description": "Whether the administrative assistant handles the conversation",
+            "example": true,
+            "type": "boolean"
+          },
+          "language": {
+            "description": "Conversation language code",
+            "example": "ar",
+            "type": "string"
+          },
+          "lastMessageAt": {
+            "description": "Timestamp of the latest message, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "staffClaimedAt": {
+            "description": "When a dashboard user claimed the conversation, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "staffUnreadCount": {
+            "description": "Unread messages for staff",
+            "example": 0,
+            "type": "integer"
+          },
+          "stateVersion": {
+            "description": "Optimistic concurrency version",
+            "example": 3,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Conversation lifecycle status",
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "example": "CLOSED",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Conversation update timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "employeeId",
+          "isAiChat",
+          "status",
+          "stateVersion",
+          "guestTokenHash",
+          "guestName",
+          "guestPhone",
+          "language",
+          "assignedStaffUserId",
+          "handoffRequestedAt",
+          "staffClaimedAt",
+          "closedAt",
+          "staffUnreadCount",
+          "clientUnreadCount",
+          "customerContext",
+          "customerContextVersion",
+          "assistantLeaseOwner",
+          "assistantLeaseExpiresAt",
+          "lastMessageAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "StaffChatConversationUserDto": {
+        "properties": {
+          "firstName": {
+            "description": "Client first name, or an empty string when the client row is missing",
+            "example": "سارة",
+            "type": "string"
+          },
+          "id": {
+            "description": "Client UUID, or null for a guest conversation",
+            "example": "00000000-4000-4000-a000-000000000003",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Client last name, or an empty string when the client row is missing",
+            "example": "أحمد",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ],
+        "type": "object"
+      },
+      "StaffChatCursorMetaDto": {
+        "properties": {
+          "hasMore": {
+            "description": "Whether another page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Page size used for the response",
+            "example": 20,
+            "type": "integer"
+          },
+          "nextCursor": {
+            "description": "Cursor for the next page, or null when exhausted",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "nextCursor",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "StaffChatListMetaDto": {
+        "properties": {
+          "hasNextPage": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "integer"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching conversations",
+            "example": 42,
+            "type": "integer"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "example": 3,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "type": "object"
+      },
+      "StaffChatMessageListResponseDto": {
+        "properties": {
+          "data": {
+            "description": "Messages on the requested page (newest first)",
+            "items": {
+              "$ref": "#/components/schemas/StaffChatMessageRecordDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffChatCursorMetaDto"
+              }
+            ],
+            "description": "Keyset pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "StaffChatMessageRecordDto": {
+        "properties": {
+          "body": {
+            "description": "Message body",
+            "example": "تم تأكيد موعدك.",
+            "type": "string"
+          },
+          "clientMessageId": {
+            "description": "Client-generated idempotency identifier, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "conversationId": {
+            "description": "Conversation the message belongs to",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Message creation timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message identifier",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isRead": {
+            "description": "Whether the message has been read",
+            "example": false,
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "Message kind",
+            "enum": [
+              "TEXT",
+              "ACTION_CARD",
+              "OPERATION_RESULT",
+              "SYSTEM_EVENT"
+            ],
+            "example": "TEXT",
+            "type": "string"
+          },
+          "latencyMs": {
+            "description": "Assistant latency in milliseconds, or null",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "metadata": {
+            "description": "Stored metadata JSON (arbitrary Prisma Json value), or null",
+            "example": null,
+            "oneOf": [
+              {
+                "nullable": true,
+                "type": "string"
+              },
+              {
+                "nullable": true,
+                "type": "number"
+              },
+              {
+                "nullable": true,
+                "type": "boolean"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "model": {
+            "description": "AI model that produced the message, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "readAt": {
+            "description": "Read timestamp, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "responseForMessageId": {
+            "description": "Message this row answers, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "senderId": {
+            "description": "Dashboard user that sent the message, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "senderType": {
+            "description": "Stored sender type",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE",
+              "VISITOR",
+              "AI",
+              "STAFF",
+              "SYSTEM"
+            ],
+            "example": "EMPLOYEE",
+            "type": "string"
+          },
+          "sequence": {
+            "description": "Monotonic message sequence (Prisma BigInt)",
+            "example": 42,
+            "format": "int64",
+            "type": "integer"
+          },
+          "tokensUsed": {
+            "description": "Tokens consumed by the assistant reply",
+            "example": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "senderId",
+          "body",
+          "kind",
+          "metadata",
+          "clientMessageId",
+          "responseForMessageId",
+          "sequence",
+          "model",
+          "tokensUsed",
+          "latencyMs",
+          "isRead",
+          "readAt",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -34167,10 +35648,40 @@
               "example": "00000000-0000-0000-0000-000000000000",
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "minimum": 1,
+              "type": "number"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffChatConversationListResponseDto"
+                }
+              }
+            },
             "description": "Paginated conversation list"
           },
           "400": {
@@ -34242,6 +35753,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffChatConversationDetailDto"
+                }
+              }
+            },
             "description": "Conversation details"
           },
           "400": {
@@ -34273,6 +35791,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
           },
           "500": {
             "content": {
@@ -34313,6 +35834,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffChatConversationRecordDto"
+                }
+              }
+            },
             "description": "Conversation closed"
           },
           "400": {
@@ -34344,6 +35872,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
           },
           "500": {
             "content": {
@@ -34388,6 +35919,7 @@
             "required": false,
             "schema": {
               "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -34398,12 +35930,20 @@
             "required": false,
             "schema": {
               "example": 20,
+              "minimum": 1,
               "type": "number"
             }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffChatMessageListResponseDto"
+                }
+              }
+            },
             "description": "Cursor-paginated message list"
           },
           "400": {
@@ -34435,6 +35975,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
           },
           "500": {
             "content": {
@@ -34483,6 +36026,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffChatMessageRecordDto"
+                }
+              }
+            },
             "description": "Message sent"
           },
           "400": {
@@ -34514,6 +36064,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
           },
           "500": {
             "content": {
@@ -34796,7 +36349,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Paginated delivery log"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedNotificationDeliveryLogsDto"
+                }
+              }
+            },
+            "description": "Paginated delivery log, newest first"
           },
           "400": {
             "content": {
@@ -35986,6 +37546,7 @@
             "required": false,
             "schema": {
               "example": "00000000-0000-4000-a000-000000000001",
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -36004,7 +37565,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationInboxResponseDto"
+                }
+              }
+            },
+            "description": "Cursor-paginated reception inbox"
           },
           "400": {
             "content": {
@@ -36075,7 +37643,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto"
+                }
+              }
+            },
+            "description": "Conversation detail"
           },
           "400": {
             "content": {
@@ -36106,6 +37681,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
           },
           "500": {
             "content": {
@@ -36156,7 +37734,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto"
+                }
+              }
+            },
+            "description": "Conversation assigned to the target user"
           },
           "400": {
             "content": {
@@ -36187,6 +37772,12 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation or active dashboard user not found"
+          },
+          "409": {
+            "description": "Conversation cannot be assigned in its current state"
           },
           "500": {
             "content": {
@@ -36227,7 +37818,14 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto"
+                }
+              }
+            },
+            "description": "Conversation claimed by the calling staff user"
           },
           "400": {
             "content": {
@@ -36258,6 +37856,12 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
+          },
+          "409": {
+            "description": "Conversation is no longer available to claim"
           },
           "500": {
             "content": {
@@ -36298,7 +37902,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto"
+                }
+              }
+            },
+            "description": "Conversation closed"
           },
           "400": {
             "content": {
@@ -36329,6 +37940,12 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
+          },
+          "409": {
+            "description": "Conversation is already closed or changed state"
           },
           "500": {
             "content": {
@@ -36385,13 +38002,21 @@
             "schema": {
               "example": 20,
               "maximum": 100,
+              "minimum": 1,
               "type": "number"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationMessagesResponseDto"
+                }
+              }
+            },
+            "description": "Cursor-paginated conversation messages"
           },
           "400": {
             "content": {
@@ -36422,6 +38047,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation or message cursor not found"
           },
           "500": {
             "content": {
@@ -36470,7 +38098,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationMessageResponseDto"
+                }
+              }
+            },
+            "description": "Staff reply message"
           },
           "400": {
             "content": {
@@ -36501,6 +38136,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Assigned conversation not found"
           },
           "500": {
             "content": {
@@ -36551,7 +38189,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationReadResponseDto"
+                }
+              }
+            },
+            "description": "Messages marked read"
           },
           "400": {
             "content": {
@@ -36582,6 +38227,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Assigned conversation or owned message cursor not found"
           },
           "500": {
             "content": {
@@ -36622,7 +38270,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponseDto"
+                }
+              }
+            },
+            "description": "Conversation released back to the assistant"
           },
           "400": {
             "content": {
@@ -36653,6 +38308,12 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Conversation not found"
+          },
+          "409": {
+            "description": "Conversation is not staff-active or cannot be released"
           },
           "500": {
             "content": {
