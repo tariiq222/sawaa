@@ -144,22 +144,28 @@ type _CancelRefundItem = Expect<
 type _CancelRefundAmountIsInteger = Expect<Equal<Schemas["ProgramParticipantRefundDto"]["amount"], number>>
 
 /**
- * The enrollment route and the public listing have no response schema in the
- * snapshot yet, so those two shapes stay local. This pins the fields the
- * dashboard actually reads so they cannot silently grow.
+ * The enrollment route has no response schema in the snapshot yet, so that shape
+ * stays local. This pins the fields the dashboard actually reads so they cannot
+ * silently grow.
  */
 type _EnrollResultKeys = Expect<Equal<keyof EnrollInProgramResult, "type" | "bookingId" | "status" | "invoiceId">>
 type _EnrollPayloadKeys = Expect<Equal<keyof EnrollInProgramPayload, "programId" | "clientId">>
-type _PublicListKeepsItsLocalKeys = Expect<
-  Equal<
-    Extract<keyof PublicProgramListItem, "isOpenForEnrollment" | "descriptionAr" | "publicDescriptionEn">,
-    "isOpenForEnrollment" | "descriptionAr" | "publicDescriptionEn"
-  >
+
+/**
+ * The public list row is now derived from `PublicProgramListItemDto`; only the
+ * detail-only `isOpenForEnrollment` flag is added locally, and it must stay
+ * optional because the list response never carries it.
+ */
+type _PublicListIsTheWireRow = Expect<
+  Equal<Omit<PublicProgramListItem, "isOpenForEnrollment">, Schemas["PublicProgramListItemDto"]>
 >
-type _PublicListFlagIsLocal = Expect<
+type _PublicListAddsOnlyTheDetailFlag = Expect<
+  Equal<Exclude<keyof PublicProgramListItem, keyof Schemas["PublicProgramListItemDto"]>, "isOpenForEnrollment">
+>
+type _PublicListFlagOptional = Expect<
   Equal<PublicProgramListItem["isOpenForEnrollment"], boolean | undefined>
 >
-/** The flagged local shape is not the dashboard list row: it has no `enrollmentCount`. */
+/** The public row is not the dashboard list row: it has no `enrollmentCount`. */
 type _PublicListHasNoDashboardCounter = Expect<
   Equal<"enrollmentCount" extends keyof PublicProgramListItem ? true : false, false>
 >

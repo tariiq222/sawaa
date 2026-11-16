@@ -7,6 +7,7 @@ import { GetPublicAvailabilityHandler } from '../../modules/bookings/availabilit
 import { GetPublicAvailabilityDto } from '../../modules/bookings/availability/public/get-public-availability.dto';
 import { GetPublicAvailabilityDaysHandler } from '../../modules/bookings/availability/public/get-public-availability-days.handler';
 import { GetPublicAvailabilityDaysDto } from '../../modules/bookings/availability/public/get-public-availability-days.dto';
+import { PublicAvailabilityDayDto, PublicAvailabilitySlotDto } from './availability-response.dto';
 
 @ApiTags('Public / Employees')
 @ApiPublicResponses()
@@ -22,8 +23,8 @@ export class PublicAvailabilityController {
   @Get(':id/availability')
   @ApiOperation({ summary: 'Get available time slots for an employee' })
   @ApiParam({ name: 'id', description: 'Employee ID or slug', example: '00000000-0000-0000-0000-000000000001' })
-  @ApiOkResponse({ description: 'Array of available time slots' })
-  async getAvailability(@Param('id') id: string, @Query() query: GetPublicAvailabilityDto) {
+  @ApiOkResponse({ type: [PublicAvailabilitySlotDto], description: 'Array of available time slots' })
+  async getAvailability(@Param('id') id: string, @Query() query: GetPublicAvailabilityDto): Promise<PublicAvailabilitySlotDto[]> {
     return this.availabilityHandler.execute({
       ...query,
       employeeId: id,
@@ -35,11 +36,11 @@ export class PublicAvailabilityController {
   @Get(':id/availability/days')
   @ApiOperation({ summary: 'Probe which days in a window have any open slots' })
   @ApiParam({ name: 'id', description: 'Employee ID', example: '00000000-0000-0000-0000-000000000001' })
-  @ApiOkResponse({ description: 'Per-day boolean: does this day have at least one open slot?' })
+  @ApiOkResponse({ type: [PublicAvailabilityDayDto], description: 'Per-day boolean: does this day have at least one open slot?' })
   async getAvailabilityDays(
     @Param('id') id: string,
     @Query() query: GetPublicAvailabilityDaysDto,
-  ) {
+  ): Promise<PublicAvailabilityDayDto[]> {
     return this.daysHandler.execute({
       ...query,
       employeeId: id,

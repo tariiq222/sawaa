@@ -11,6 +11,7 @@ import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { ListPublicPackagesHandler } from '../../modules/org-experience/session-packages/list-public-packages/list-public-packages.handler';
 import { GetPublicPackageHandler } from '../../modules/org-experience/session-packages/get-public-package/get-public-package.handler';
+import { PublicPackageResponseDto } from './package-response.dto';
 
 /**
  * Public, unauthenticated catalog of self-purchasable session packages
@@ -32,9 +33,10 @@ export class PublicPackagesController {
   @Get()
   @ApiOperation({ summary: 'Get the public session-package catalog' })
   @ApiOkResponse({
+    type: [PublicPackageResponseDto],
     description: 'Public, active session packages with computed prices',
   })
-  list() {
+  list(): Promise<PublicPackageResponseDto[]> {
     return this.listPublicPackages.execute();
   }
 
@@ -47,9 +49,9 @@ export class PublicPackagesController {
     description: 'SessionPackage UUID',
     example: '00000000-0000-0000-0000-000000000000',
   })
-  @ApiOkResponse({ description: 'The public session package with its computed price' })
+  @ApiOkResponse({ type: PublicPackageResponseDto, description: 'The public session package with its computed price' })
   @ApiNotFoundResponse({ description: 'Package not found or not public' })
-  get(@Param('packageId', ParseUUIDPipe) packageId: string) {
+  get(@Param('packageId', ParseUUIDPipe) packageId: string): Promise<PublicPackageResponseDto> {
     return this.getPublicPackage.execute({ packageId });
   }
 }

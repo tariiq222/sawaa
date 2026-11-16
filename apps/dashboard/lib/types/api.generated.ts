@@ -9291,48 +9291,157 @@ export interface components {
         CatalogCategoryDto: {
             /**
              * @description Whether booking starts at the clinic or with a service selection
+             * @example SERVICES
              * @enum {string}
              */
             bookingMode: "DIRECT" | "SERVICES";
-            /** Format: uuid */
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Owning department UUID, or null when the category sits at the root
+             * @example 00000000-0000-4000-a000-000000000010
+             */
+            departmentId: string | null;
+            /**
+             * @description Icon background colour (hex), or null
+             * @example #2FA694
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Lucide icon name, or null
+             * @example HeartHandshake
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Category UUID
+             * @example 00000000-0000-4000-a000-000000000020
+             */
             id: string;
-            /** @description Short-lived presigned image URL (signed per response), or null */
-            imageUrl: Record<string, never> | null;
+            /**
+             * @description Short-lived presigned image URL (signed per response), or null
+             * @example https://media.example.com/cat.png?sig=abc
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the category is active
+             * @example true
+             */
+            isActive: boolean;
             /**
              * @description Category kind, independent of department and name
              * @example CLINIC
              * @enum {string}
              */
             kind: "CLINIC" | "SERVICE_GROUP";
-            /** @example استشارات */
+            /**
+             * @description Arabic category name
+             * @example استشارات
+             */
             nameAr: string;
-            /** @example Consultations */
-            nameEn: Record<string, never> | null;
+            /**
+             * @description English category name, or null
+             * @example Consultations
+             */
+            nameEn: string | null;
+            /**
+             * @description Human-facing sequential category reference
+             * @example 1024
+             */
+            ref: number;
             /**
              * @description Display order
              * @example 0
              */
             sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
         };
         CatalogDepartmentDto: {
-            /** Format: uuid */
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description, or null
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description, or null
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Icon identifier, or null
+             * @example HeartHandshake
+             */
+            icon: string | null;
+            /**
+             * Format: uuid
+             * @description Department UUID
+             * @example 00000000-0000-4000-a000-000000000010
+             */
             id: string;
-            /** @example الاستشارات الأسرية */
+            /**
+             * @description Whether the department is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the department header is shown; false means its categories render at the root
+             * @example true
+             */
+            isVisible: boolean;
+            /**
+             * @description Arabic department name
+             * @example الاستشارات الأسرية
+             */
             nameAr: string;
-            /** @example Family Counseling */
-            nameEn: Record<string, never> | null;
+            /**
+             * @description English department name, or null
+             * @example Family Counseling
+             */
+            nameEn: string | null;
             /**
              * @description Display order
              * @example 0
              */
             sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
         };
         CatalogServiceBookingConfigDto: {
-            /** @enum {string} */
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             * @enum {string}
+             */
             deliveryType: "IN_PERSON" | "ONLINE";
-            /** @example 45 */
+            /**
+             * @description Default duration in minutes for this channel
+             * @example 45
+             */
             durationMins: number;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Booking-config UUID
+             * @example 00000000-0000-4000-a000-000000000041
+             */
             id: string;
             /**
              * @description Price in integer halalas (Prisma Decimal serialized as string)
@@ -9341,50 +9450,108 @@ export interface components {
             price: string;
         };
         CatalogServiceDto: {
-            /** @description Active per-delivery-type booking configs */
+            /**
+             * @description Active per-delivery-type booking configs
+             * @example []
+             */
             bookingConfigs: components["schemas"]["CatalogServiceBookingConfigDto"][];
             /**
              * Format: uuid
-             * @description Owning service category
+             * @description Owning service category UUID, or null for an uncategorized service
+             * @example 00000000-0000-4000-a000-000000000020
              */
-            categoryId: string;
-            /** @example SAR */
+            categoryId: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
             currency: string;
-            descriptionAr: Record<string, never> | null;
-            descriptionEn: Record<string, never> | null;
-            /** @example 45 */
+            /**
+             * @description Arabic description, or null
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description, or null
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Default session duration in minutes
+             * @example 45
+             */
             durationMins: number;
             /** @description Service-level duration options (practitioner-owned rows excluded) */
             durationOptions: components["schemas"]["CatalogServiceDurationOptionDto"][];
-            iconBgColor: Record<string, never> | null;
-            iconName: Record<string, never> | null;
-            /** Format: uuid */
+            /**
+             * @description Icon background colour (hex), or null
+             * @example null
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Lucide icon name, or null
+             * @example null
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
             id: string;
-            /** @description Short-lived presigned image URL (signed per response), or null */
-            imageUrl: Record<string, never> | null;
-            /** @description Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services */
+            /**
+             * @description Short-lived presigned image URL (signed per response), or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Present for includeDirectClinics; internal direct-clinic services are not listed as standalone services
+             * @example false
+             */
             isHidden?: boolean;
-            /** @example جلسة استشارة فردية */
+            /**
+             * @description Arabic service name
+             * @example جلسة استشارة فردية
+             */
             nameAr: string;
-            /** @example Individual Counseling Session */
-            nameEn: Record<string, never> | null;
+            /**
+             * @description English service name, or null
+             * @example Individual Counseling Session
+             */
+            nameEn: string | null;
             /**
              * @description Price in integer halalas (Prisma Decimal serialized as string)
              * @example 15000
              */
             price: string;
-            /** @description Whether to display the duration on the booking surface */
+            /**
+             * @description Whether to display the duration on the booking surface (inverse of hideDurationOnBooking)
+             * @example true
+             */
             showDuration: boolean;
-            /** @description Whether to display the price on the booking surface */
+            /**
+             * @description Whether to display the price on the booking surface (inverse of hidePriceOnBooking)
+             * @example true
+             */
             showPrice: boolean;
         };
         CatalogServiceDurationOptionDto: {
-            /** @example 45 */
+            /**
+             * @description Duration in minutes
+             * @example 45
+             */
             durationMins: number;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Duration-option UUID
+             * @example 00000000-0000-4000-a000-000000000031
+             */
             id: string;
-            /** @example 45 دقيقة */
-            label: Record<string, never> | null;
+            /**
+             * @description Localized option label (`ServiceDurationOption.label`, non-null in the schema)
+             * @example 45 دقيقة
+             */
+            label: string;
             /**
              * @description Price in integer halalas (Prisma Decimal serialized as string)
              * @example 15000
@@ -19789,6 +19956,178 @@ export interface components {
              */
             supervisorIds: string[];
         };
+        PublicAvailabilityDayDto: {
+            /**
+             * @description Calendar day in the business timezone (YYYY-MM-DD)
+             * @example 2026-05-20
+             */
+            date: string;
+            /**
+             * @description Whether the day has at least one open slot for the requested context
+             * @example true
+             */
+            hasSlots: boolean;
+        };
+        PublicAvailabilitySlotDto: {
+            /**
+             * Format: date-time
+             * @description Slot end as an ISO 8601 UTC timestamp
+             * @example 2026-05-20T07:45:00.000Z
+             */
+            endTime: string;
+            /**
+             * Format: date-time
+             * @description Slot start as an ISO 8601 UTC timestamp
+             * @example 2026-05-20T07:00:00.000Z
+             */
+            startTime: string;
+        };
+        PublicBranchDetailDto: {
+            /**
+             * @description Arabic street address, or null
+             * @example شارع الملك فهد
+             */
+            addressAr: string | null;
+            /**
+             * @description English street address, or null
+             * @example King Fahd Road
+             */
+            addressEn: string | null;
+            /** @description Weekly business hours ordered by dayOfWeek */
+            businessHours: components["schemas"]["PublicBusinessHourDto"][];
+            /**
+             * @description City, or null
+             * @example Riyadh
+             */
+            city: string | null;
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether this is the centre main branch (main branch sorts first)
+             * @example true
+             */
+            isMain: boolean;
+            /**
+             * @description Latitude, or null
+             * @example 24.7136
+             */
+            latitude: number | null;
+            /**
+             * @description Longitude, or null
+             * @example 46.6753
+             */
+            longitude: number | null;
+            /**
+             * @description Arabic branch name
+             * @example الفرع الرئيسي
+             */
+            nameAr: string;
+            /**
+             * @description English branch name, or null
+             * @example Main Branch
+             */
+            nameEn: string | null;
+            /**
+             * @description Public phone number, or null
+             * @example +966112345678
+             */
+            phone: string | null;
+            /**
+             * @description IANA timezone the branch schedules in
+             * @example Asia/Riyadh
+             */
+            timezone: string;
+        };
+        PublicBranchEmployeeDto: {
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Arabic display name, or null
+             * @example أحمد الغامدي
+             */
+            nameAr: string | null;
+            /**
+             * @description English display name, or null
+             * @example Ahmed Al-Ghamdi
+             */
+            nameEn: string | null;
+            /**
+             * @description Arabic public bio, or null
+             * @example null
+             */
+            publicBioAr: string | null;
+            /**
+             * @description English public bio, or null
+             * @example null
+             */
+            publicBioEn: string | null;
+            /**
+             * @description Public profile image URL (normalized/signature-renewing), or null
+             * @example null
+             */
+            publicImageUrl: string | null;
+            /**
+             * @description Public URL slug, or null
+             * @example dr-ahmed
+             */
+            slug: string | null;
+            /**
+             * @description Specialty, or null
+             * @example Family Therapy
+             */
+            specialty: string | null;
+            /**
+             * @description Arabic specialty, or null
+             * @example علاج أسري
+             */
+            specialtyAr: string | null;
+            /**
+             * @description Job title, or null
+             * @example Family Therapist
+             */
+            title: string | null;
+        };
+        PublicBranchListItemDto: {
+            /**
+             * @description Arabic street address, or null
+             * @example شارع الملك فهد
+             */
+            addressAr: string | null;
+            /**
+             * @description City, or null
+             * @example Riyadh
+             */
+            city: string | null;
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether this is the centre main branch (main branch sorts first)
+             * @example true
+             */
+            isMain: boolean;
+            /**
+             * @description Arabic branch name
+             * @example الفرع الرئيسي
+             */
+            nameAr: string;
+            /**
+             * @description English branch name, or null
+             * @example Main Branch
+             */
+            nameEn: string | null;
+        };
         PublicBrandingDto: {
             /**
              * @description Accent color
@@ -19872,15 +20211,171 @@ export interface components {
              */
             timeFormat: "12h" | "24h";
         };
+        PublicBusinessHourDto: {
+            /**
+             * @description Day of week (0=Sunday … 6=Saturday)
+             * @example 0
+             */
+            dayOfWeek: number;
+            /**
+             * @description Closing time (HH:mm)
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * @description Whether the branch is open that day
+             * @example true
+             */
+            isOpen: boolean;
+            /**
+             * @description Opening time (HH:mm)
+             * @example 09:00
+             */
+            startTime: string;
+        };
         PublicCatalogDto: {
+            /**
+             * @description Active categories ordered by sortOrder
+             * @example []
+             */
             categories: components["schemas"]["CatalogCategoryDto"][];
+            /**
+             * @description Active, visible departments ordered by sortOrder
+             * @example []
+             */
             departments: components["schemas"]["CatalogDepartmentDto"][];
+            /**
+             * @description Active services; internal direct-clinic services only with includeDirectClinics=true
+             * @example []
+             */
             services: components["schemas"]["CatalogServiceDto"][];
             /**
              * @description VAT rate as a fraction of 1 from organization settings; 0 when the center is not VAT-registered or settings are missing
              * @example 0
              */
             vatRate: number;
+        };
+        PublicEmployeeProfileDto: {
+            /**
+             * @description Days of week (0=Sun..6=Sat) the employee has at least one active availability rule on
+             * @example [
+             *       0,
+             *       1,
+             *       2,
+             *       3,
+             *       4
+             *     ]
+             */
+            availableDaysOfWeek: number[];
+            /**
+             * @description Branch ids this employee works from
+             * @example [
+             *       "br_1"
+             *     ]
+             */
+            branchIds: string[];
+            /**
+             * @description Employment type
+             * @example FULL_TIME
+             */
+            employmentType: string;
+            /**
+             * @description Years of experience
+             * @example 8
+             */
+            experience: number;
+            /** @description Gender */
+            gender?: Record<string, never> | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            id: string;
+            /**
+             * @description Whether employee has availability today
+             * @example true
+             */
+            isAvailableToday: boolean;
+            /**
+             * @description True only if employee has ≥1 service, ≥1 branch, and ≥1 active availability rule
+             * @example true
+             */
+            isBookable: boolean;
+            /**
+             * @description Spoken languages
+             * @example [
+             *       "العربية",
+             *       "English"
+             *     ]
+             */
+            languages: string[];
+            /**
+             * @description Minimum service price in SAR
+             * @example 250
+             */
+            minServicePrice?: Record<string, never> | null;
+            /**
+             * @description Arabic display name
+             * @example أحمد الغامدي
+             */
+            nameAr?: Record<string, never> | null;
+            /**
+             * @description English display name
+             * @example Ahmed Al-Ghamdi
+             */
+            nameEn?: Record<string, never> | null;
+            /** @description Arabic public bio */
+            publicBioAr?: Record<string, never> | null;
+            /** @description English public bio */
+            publicBioEn?: Record<string, never> | null;
+            /** @description Public profile image URL */
+            publicImageUrl?: Record<string, never> | null;
+            /**
+             * @description Legacy alias of ratingAverage; 0 when there are no public ratings
+             * @example 4.8
+             */
+            rating: number;
+            /**
+             * @description Average public rating
+             * @example 4.8
+             */
+            ratingAverage?: Record<string, never> | null;
+            /**
+             * @description Public rating count
+             * @example 18
+             */
+            ratingCount: number;
+            /**
+             * @description Legacy alias of ratingCount
+             * @example 18
+             */
+            reviewCount: number;
+            /**
+             * @description Service ids this employee can deliver
+             * @example [
+             *       "svc_1"
+             *     ]
+             */
+            serviceIds: string[];
+            /**
+             * @description Public URL slug
+             * @example dr-ahmed
+             */
+            slug?: Record<string, never> | null;
+            /**
+             * @description Specialty
+             * @example Family Therapy
+             */
+            specialty?: Record<string, never> | null;
+            /** @description Arabic specialty */
+            specialtyAr?: Record<string, never> | null;
+            /**
+             * @description Job title
+             * @example Family Therapist
+             */
+            title?: Record<string, never> | null;
+            /** @description Synthetic user shape kept for legacy consumers */
+            user: components["schemas"]["PublicEmployeeSyntheticUserDto"];
         };
         PublicEmployeeResponseDto: {
             /**
@@ -19992,6 +20487,38 @@ export interface components {
              */
             title?: Record<string, never> | null;
         };
+        PublicEmployeeSyntheticUserDto: {
+            /**
+             * @description Mirror of publicImageUrl, or null
+             * @example null
+             */
+            avatarUrl: string | null;
+            /**
+             * @description Always an empty string on the public surface
+             * @example
+             */
+            email: string;
+            /**
+             * @description First token of the display name
+             * @example أحمد
+             */
+            firstName: string;
+            /**
+             * @description Synthetic user UUID (equal to the employee UUID)
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Remaining tokens of the display name (empty string for a single-token name)
+             * @example الغامدي
+             */
+            lastName: string;
+            /**
+             * @description Always null on the public surface
+             * @example null
+             */
+            phone: string | null;
+        };
         PublicMobileHomeCardDto: {
             /** @description Card description in Arabic. */
             descriptionAr: string | null;
@@ -20014,6 +20541,551 @@ export interface components {
             titleAr: string;
             /** @description Card title in English. */
             titleEn: string | null;
+        };
+        PublicPackageFamilyWithVatResponseDto: {
+            /**
+             * Format: date-time
+             * @description Archive instant, or null while the family is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * Format: uuid
+             * @description Family UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            id: string;
+            /**
+             * @description Signed image URL, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the family is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the family is public
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description True when the row is a standalone package projected into the family shape
+             * @example false
+             */
+            isStandalone: boolean;
+            /**
+             * @description Arabic family name
+             * @example باقة الاستشارة
+             */
+            nameAr: string;
+            /**
+             * @description English family name
+             * @example Consultation pack
+             */
+            nameEn: string | null;
+            /** @description Sellable options of the family */
+            options: components["schemas"]["PackageFamilyOptionResponseDto"][];
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT rate the sale invoice adds on top of option prices (fraction; 0 unless enabled)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        PublicPackageResponseDto: {
+            /**
+             * Format: date-time
+             * @description Soft-archive instant, or null while the package is live
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Package-level discount type (deprecated; per-item discounts are authoritative)
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Package-level discount value (deprecated), decimal string
+             * @example 0
+             */
+            discountValue: string;
+            /**
+             * @description Owning package family UUID, or null for a standalone package
+             * @example null
+             */
+            familyId: string | null;
+            /** @description Package-wide discount derived from the stored columns */
+            globalDiscount: components["schemas"]["PackageNoGlobalDiscountDto"] | components["schemas"]["PackagePercentageGlobalDiscountDto"] | components["schemas"]["PackageFixedGlobalDiscountDto"];
+            /** @description Editor projection of the groups (empty for LEGACY packages) */
+            groups: components["schemas"]["PackageGroupReadDto"][];
+            /**
+             * @description Icon background colour (hex), or null
+             * @example #FFD8A8
+             */
+            iconBgColor: string | null;
+            /**
+             * @description Icon name, or null
+             * @example package
+             */
+            iconName: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Stored image reference, or null
+             * @example null
+             */
+            imageUrl: string | null;
+            /**
+             * @description Whether the package is selectable
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether the package is visible in the public catalog
+             * @example false
+             */
+            isPublic: boolean;
+            /** @description Persisted items with their constraints */
+            items: components["schemas"]["PackageItemRecordDto"][];
+            /**
+             * @description Catalog model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Arabic package name
+             * @example أربع جلسات استشارة
+             */
+            nameAr: string;
+            /**
+             * @description English package name
+             * @example Four consultation sessions
+             */
+            nameEn: string | null;
+            /**
+             * @description Package-level practitioner UUID; null for a general package
+             * @example null
+             */
+            ownerEmployeeId: string | null;
+            /** @description Canonical computed price breakdown */
+            price: components["schemas"]["PackagePriceBreakdownDto"];
+            /**
+             * @description Catalog ordering
+             * @example 0
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT rate the purchase invoice adds on top of the net price (fraction; 0 unless enabled)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        PublicPractitionerBookingOptionDto: {
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel of this option
+             * @example IN_PERSON
+             * @enum {string}
+             */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /**
+             * @description Session duration in minutes
+             * @example 45
+             */
+            durationMins: number;
+            /**
+             * @description Duration-option UUID; empty string when the option is priced from the service booking config fallback
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            durationOptionId: string;
+            /**
+             * @description Option label, or null
+             * @example 45 دقيقة
+             */
+            label: string | null;
+            /**
+             * @description Price in integer halalas
+             * @example 30000
+             */
+            price: number;
+        };
+        PublicPractitionerBookingOptionsDto: {
+            /**
+             * @description Delivery channels this practitioner does not offer
+             * @example []
+             */
+            disabledDeliveryTypes: ("IN_PERSON" | "ONLINE")[];
+            /** @description Bookable options; empty when the practitioner is inactive */
+            options: components["schemas"]["PublicPractitionerBookingOptionDto"][];
+            /**
+             * @description Whether this practitioner uses their own duration rows instead of the service defaults
+             * @example false
+             */
+            useCustomPricing: boolean;
+        };
+        PublicProgramDetailResponseDto: {
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
+            branchId: string;
+            /**
+             * @description Program price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
+            daysCount: number;
+            /**
+             * Format: uuid
+             * @description Department that owns the program
+             * @example 77777777-7777-4777-8777-777777777777
+             */
+            departmentId: string;
+            /**
+             * @description Deposit in integer halalas as a decimal string, or null when none is set
+             * @example 30000
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether the program accepts a deposit
+             * @example true
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Arabic description, or null
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description, or null
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Current number of program enrollments
+             * @example 1
+             */
+            enrolledCount: number;
+            /**
+             * @description Program hours per day
+             * @example 2
+             */
+            hoursPerDay: number;
+            /**
+             * Format: uuid
+             * @description Program UUID
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Whether enrolled count has reached the maximum participant capacity
+             * @example false
+             */
+            isFull: boolean;
+            /**
+             * @description Whether the stored status still accepts self-enrollment (OPEN or MIN_REACHED)
+             * @example true
+             */
+            isOpenForEnrollment: boolean;
+            /**
+             * @description Whether the program is published in the public catalog
+             * @example true
+             */
+            isPublic: boolean;
+            /**
+             * @description Maximum number of enrolled participants
+             * @example 12
+             */
+            maxParticipants: number;
+            /**
+             * @description Minimum participants required for the program
+             * @example 3
+             */
+            minParticipants: number;
+            /**
+             * @description Arabic program name
+             * @example برنامج التواصل الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English program name, or null
+             * @example Family Communication Program
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in integer halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * @description Arabic public description override, or null
+             * @example null
+             */
+            publicDescriptionAr: string | null;
+            /**
+             * @description English public description override, or null
+             * @example null
+             */
+            publicDescriptionEn: string | null;
+            /**
+             * @description Numeric program reference accepted by the detail lookup
+             * @example 24
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Program start time as an ISO 8601 UTC timestamp, or null when unscheduled
+             * @example null
+             */
+            startDate: string | null;
+            /**
+             * @description Current program lifecycle status
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+            /**
+             * @description Identifiers of employees supervising the program
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
+            supervisorIds: string[];
+        };
+        PublicProgramListItemDto: {
+            /**
+             * Format: uuid
+             * @description Branch where the program is offered
+             * @example 88888888-8888-4888-8888-888888888888
+             */
+            branchId: string;
+            /**
+             * @description Program price currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Number of program days
+             * @example 3
+             */
+            daysCount: number;
+            /**
+             * Format: uuid
+             * @description Department that owns the program
+             * @example 77777777-7777-4777-8777-777777777777
+             */
+            departmentId: string;
+            /**
+             * @description Deposit in integer halalas as a decimal string, or null when none is set
+             * @example 30000
+             */
+            depositAmount: string | null;
+            /**
+             * @description Whether the program accepts a deposit
+             * @example true
+             */
+            depositEnabled: boolean;
+            /**
+             * @description Arabic description, or null
+             * @example null
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description, or null
+             * @example null
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Current number of program enrollments
+             * @example 1
+             */
+            enrolledCount: number;
+            /**
+             * @description Program hours per day
+             * @example 2
+             */
+            hoursPerDay: number;
+            /**
+             * Format: uuid
+             * @description Program UUID
+             * @example 66666666-6666-4666-8666-666666666666
+             */
+            id: string;
+            /**
+             * @description Whether enrolled count has reached the maximum participant capacity
+             * @example false
+             */
+            isFull: boolean;
+            /**
+             * @description Whether the program is published in the public catalog
+             * @example true
+             */
+            isPublic: boolean;
+            /**
+             * @description Maximum number of enrolled participants
+             * @example 12
+             */
+            maxParticipants: number;
+            /**
+             * @description Minimum participants required for the program
+             * @example 3
+             */
+            minParticipants: number;
+            /**
+             * @description Arabic program name
+             * @example برنامج التواصل الأسري
+             */
+            nameAr: string;
+            /**
+             * @description English program name, or null
+             * @example Family Communication Program
+             */
+            nameEn: string | null;
+            /**
+             * @description Price in integer halalas, serialized as a decimal string
+             * @example 150000
+             */
+            price: string;
+            /**
+             * @description Arabic public description override, or null
+             * @example null
+             */
+            publicDescriptionAr: string | null;
+            /**
+             * @description English public description override, or null
+             * @example null
+             */
+            publicDescriptionEn: string | null;
+            /**
+             * @description Numeric program reference accepted by the detail lookup
+             * @example 24
+             */
+            ref: number;
+            /**
+             * Format: date-time
+             * @description Program start time as an ISO 8601 UTC timestamp, or null when unscheduled
+             * @example null
+             */
+            startDate: string | null;
+            /**
+             * @description Current program lifecycle status
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "DRAFT" | "OPEN" | "MIN_REACHED" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
+            /**
+             * @description Identifiers of employees supervising the program
+             * @example [
+             *       "33333333-3333-4333-8333-333333333333"
+             *     ]
+             */
+            supervisorIds: string[];
+        };
+        PublicProgramsListResponseDto: {
+            /**
+             * @description Public programs with at least one open spot
+             * @example []
+             */
+            programs: components["schemas"]["PublicProgramListItemDto"][];
+        };
+        PublicTestimonialResponseDto: {
+            /**
+             * Format: date-time
+             * @description Rating creation instant as an ISO 8601 UTC timestamp
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            date: string;
+            /**
+             * Format: uuid
+             * @description Rating UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description First character of the client name, used as an avatar initial
+             * @example س
+             */
+            letter: string;
+            /**
+             * @description Anonymized client name (first two characters plus ****)
+             * @example سا****
+             */
+            name: string;
+            /**
+             * @description Rating score
+             * @example 5
+             */
+            rating: number;
+            /**
+             * @description Public comment text
+             * @example تجربة مريحة ومهنية
+             */
+            text: string;
         };
         RatingClientResponseDto: {
             /**
@@ -50117,7 +51189,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicBranchListItemDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50156,7 +51230,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicBranchDetailDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50195,7 +51271,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicBranchEmployeeDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50563,7 +51641,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicEmployeeResponseDto"][];
+                    "application/json": components["schemas"]["PublicEmployeeProfileDto"][];
                 };
             };
             /** @description Validation failed */
@@ -50616,7 +51694,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicAvailabilitySlotDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50672,7 +51752,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicAvailabilityDayDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50715,7 +51797,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicEmployeeResponseDto"];
+                    "application/json": components["schemas"]["PublicEmployeeProfileDto"];
                 };
             };
             /** @description Validation failed */
@@ -52526,7 +53608,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicPackageFamilyWithVatResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -52565,7 +53649,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicPackageFamilyWithVatResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -52608,7 +53694,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicPackageResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -52647,7 +53735,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicPackageResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -52859,7 +53949,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicProgramsListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -52897,7 +53989,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicProgramDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -53088,19 +54182,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        disabledDeliveryTypes?: ("IN_PERSON" | "ONLINE")[];
-                        options?: {
-                            currency?: string;
-                            /** @enum {string} */
-                            deliveryType?: "IN_PERSON" | "ONLINE";
-                            durationMins?: number;
-                            durationOptionId?: string;
-                            label?: string | null;
-                            price?: number;
-                        }[];
-                        useCustomPricing?: boolean;
-                    };
+                    "application/json": components["schemas"]["PublicPractitionerBookingOptionsDto"];
                 };
             };
             /** @description Validation failed */
@@ -53170,7 +54252,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicTestimonialResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {

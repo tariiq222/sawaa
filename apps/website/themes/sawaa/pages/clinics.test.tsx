@@ -5,7 +5,7 @@ import { SawaaClinicsPage } from './clinics';
 
 vi.mock('@/features/locale/public', () => ({ getLocale: async () => 'en' }));
 
-const category = { id: 'clinic', nameAr: 'عيادة', nameEn: 'Clinic', departmentId: null, sortOrder: 0, isActive: true, imageUrl: null, iconName: null, iconBgColor: null, kind: 'CLINIC' as const, bookingMode: 'SERVICES' as const };
+const category = { id: 'clinic', ref: 1, nameAr: 'عيادة', nameEn: 'Clinic', departmentId: null, sortOrder: 0, isActive: true, imageUrl: null, iconName: null, iconBgColor: null, kind: 'CLINIC' as const, bookingMode: 'SERVICES' as const, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
 const service: PublicService = { id: 'assigned', categoryId: 'clinic', nameAr: 'جلسة', nameEn: 'Session', descriptionAr: 'وصف', descriptionEn: 'Session description', durationMins: 45, price: '5000', currency: 'SAR', imageUrl: null, iconName: null, iconBgColor: null };
 const catalog: PublicCatalog = { departments: [], categories: [category], services: [service, { ...service, id: 'unassigned' }], vatRate: 0 };
 const employee = { id: 'practitioner', isBookable: true, serviceIds: ['assigned'] };

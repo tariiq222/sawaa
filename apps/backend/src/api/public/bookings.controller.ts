@@ -12,6 +12,10 @@ import { GetBookingStatusHandler } from '../../modules/bookings/public/get-booki
 import { ListPublicProgramsHandler } from '../../modules/bookings/public/list-public-programs.handler';
 import { GetPublicProgramHandler } from '../../modules/bookings/public/get-public-program.handler';
 import { EnrollInProgramHandler } from '../../modules/bookings/enroll-in-program/enroll-in-program.handler';
+import {
+  PublicProgramDetailResponseDto,
+  PublicProgramsListResponseDto,
+} from './program-response.dto';
 
 @ApiTags('Public / Bookings')
 @ApiPublicResponses()
@@ -95,8 +99,8 @@ export class PublicProgramsController {
     format: 'uuid',
     description: 'Optional department filter; when omitted, programs from all departments are returned',
   })
-  @ApiOkResponse({ description: 'Array of programs with computed isFull badge' })
-  async list(@Query('departmentId') departmentId?: string) {
+  @ApiOkResponse({ type: PublicProgramsListResponseDto, description: 'Array of programs with computed isFull badge' })
+  async list(@Query('departmentId') departmentId?: string): Promise<PublicProgramsListResponseDto> {
     const programs = await this.listPublicPrograms.execute(departmentId);
     return { programs };
   }
@@ -106,9 +110,9 @@ export class PublicProgramsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a public program by ID' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Program detail' })
+  @ApiOkResponse({ type: PublicProgramDetailResponseDto, description: 'Program detail' })
   @ApiResponse({ status: 404, description: 'Program not found' })
-  async getOne(@Param('id', ParseUUIDPipe) id: string) {
+  async getOne(@Param('id', ParseUUIDPipe) id: string): Promise<PublicProgramDetailResponseDto> {
     return this.getPublicProgram.execute(id);
   }
 
