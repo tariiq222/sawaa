@@ -27220,7 +27220,7 @@
             "type": "string"
           },
           "sequence": {
-            "description": "Monotonic message sequence (Prisma BigInt)",
+            "description": "Monotonic message sequence (Prisma BigInt, serialized as a number; a decimal string only past the safe-integer range)",
             "example": 42,
             "format": "int64",
             "type": "integer"
