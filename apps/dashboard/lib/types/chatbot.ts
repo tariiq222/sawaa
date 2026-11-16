@@ -5,7 +5,10 @@
  * for sessions, messages, knowledge base, config, and analytics.
  */
 
+import type { components } from "@/lib/types/api.generated"
 import type { PaginatedQuery } from "./common"
+
+type Schemas = components["schemas"]
 
 /* ─── Enums ─── */
 
@@ -13,57 +16,42 @@ export type ChatRole = "user" | "assistant" | "system" | "staff"
 
 export type SessionLanguage = "ar" | "en"
 
-export type HandoffType = "live_chat" | "contact_number"
-
 export type KbDocumentStatus = "PENDING" | "EMBEDDED" | "FAILED"
 
 export type KbSourceType = "manual" | "url" | "file"
 
-/* ─── Chat Session ─── */
+/* ─── Chat Session (derived from the OpenAPI snapshot) ─── */
 
-export interface ChatSessionUser {
-  id: string
-  firstName: string
-  lastName: string
-}
+/**
+ * The legacy dashboard chat routes
+ * (`/dashboard/comms/chat/conversations/*`) are documented in the snapshot as
+ * `StaffChat*` schemas. The dashboard names stay the same, but every shape is
+ * now read from the committed contract:
+ *  - the list row is a derived projection (`ListConversationsHandler`);
+ *  - the detail row is a different projection (`GetConversationHandler`);
+ *  - `endChatSession` returns the raw `ChatConversation` row, and
+ *    `sendStaffMessage` the raw `CommsChatMessage` row.
+ */
 
-export interface ChatSession {
-  id: string
-  clientId: string
-  employeeId: string | null
-  startedAt: string
-  endedAt: string | null
-  handedOff: boolean
-  handoffType?: HandoffType | null
-  language?: SessionLanguage | null
-  lastMessageAt: string | null
-  user: ChatSessionUser
-  _count: { messages: number }
-}
+export type ChatSessionUser = Schemas["StaffChatConversationUserDto"]
 
-export interface ChatSessionDetail {
-  id: string
-  clientId: string
-  employeeId: string | null
-  startedAt: string
-  endedAt: string | null
-  handedOff: boolean
-  handoffType?: HandoffType | null
-  language?: SessionLanguage | null
-  lastMessageAt: string | null
-  user: ChatSessionUser
-  messages: ChatMessage[]
-}
+/** `GET /dashboard/comms/chat/conversations` row. */
+export type ChatSession = Schemas["StaffChatConversationListRowDto"]
 
-/* ─── Chat Message ─── */
+/** `GET /dashboard/comms/chat/conversations/:id`. */
+export type ChatSessionDetail = Schemas["StaffChatConversationDetailDto"]
 
-export interface ChatMessage {
-  id: string
-  conversationId: string
-  role: ChatRole
-  content: string
-  createdAt: string
-}
+/** One message embedded in the detail projection. */
+export type ChatMessage = Schemas["StaffChatConversationMessageDto"]
+
+/** `GET /dashboard/comms/chat/conversations` response envelope. */
+export type ChatSessionListResponse = Schemas["StaffChatConversationListResponseDto"]
+
+/** `PATCH /dashboard/comms/chat/conversations/:id/close` raw conversation row. */
+export type EndChatSessionResult = Schemas["StaffChatConversationRecordDto"]
+
+/** `POST /dashboard/comms/chat/conversations/:id/messages` raw message row. */
+export type SendStaffMessageResult = Schemas["StaffChatMessageRecordDto"]
 
 /* ─── Action Card (from handleMessage) ─── */
 

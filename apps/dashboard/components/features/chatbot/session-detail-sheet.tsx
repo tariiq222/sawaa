@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -14,7 +13,6 @@ import {
 } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
-import { Input } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useChatSession, useChatbotMutations } from "@/hooks/use-chatbot"
 import { useLocale } from "@/components/locale-provider"
@@ -42,7 +40,8 @@ function MessageBubble({
 }) {
   const isUser = message.role === "user"
   const isStaff = message.role === "staff"
-  const isSystem = message.role === "system"
+  // The documented role vocabulary is `user | staff | assistant`; this route
+  // never sends `system`, so only the two reachable styles remain.
 
   const roleBadge: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
     user: { label: t("chatbot.role.client"), variant: "default" },
@@ -70,9 +69,7 @@ function MessageBubble({
             ? "bg-primary text-primary-foreground"
             : isStaff
               ? "bg-success/10 border border-success/20 text-foreground"
-              : isSystem
-                ? "bg-muted text-muted-foreground"
-                : "bg-card border text-foreground",
+              : "bg-card border text-foreground",
         )}
       >
         {message.content}
@@ -105,13 +102,17 @@ export function SessionDetailSheet({
   onOpenChange,
 }: SessionDetailSheetProps) {
   const { t } = useLocale()
-  const { session, loading, refetch } = useChatSession(sessionId ?? "")
-  const { endSessionMut, staffMsgMut } = useChatbotMutations()
-  const [staffMsg, setStaffMsg] = useState("")
+  const { session, loading } = useChatSession(sessionId ?? "")
+  const { endSessionMut } = useChatbotMutations()
 
   const isActive = session ? !session.endedAt : false
-  const isLiveChat = session?.handedOff && session?.handoffType === "live_chat"
-  const canReply = isActive && isLiveChat
+  /*
+   * The previous `handoffType === "live_chat"` check was a dead read: the
+   * dashboard chat detail route (`GetConversationHandler`) never sends
+   * `handoffType`, so the staff reply box has never rendered. Turning that into
+   * a live value would change behaviour, so the dead branch was removed and the
+   * reply UI stays absent exactly as before.
+   */
 
   const handleEndSession = async () => {
     if (!sessionId) return
@@ -120,17 +121,6 @@ export function SessionDetailSheet({
       toast.success(t("chatbot.sessionEnded"))
     } catch (err) {
       showApiError(err, { fallback: t("chatbot.sessionEndError"), t })
-    }
-  }
-
-  const handleSendStaff = async () => {
-    if (!sessionId || !staffMsg.trim()) return
-    try {
-      await staffMsgMut.mutateAsync({ sessionId, content: staffMsg.trim() })
-      setStaffMsg("")
-      refetch()
-    } catch (err) {
-      showApiError(err, { fallback: t("chatbot.sendError"), t })
     }
   }
 
@@ -144,11 +134,6 @@ export function SessionDetailSheet({
           {session && (
             <SheetDescription className="flex items-center gap-2">
               <span>{session.user.firstName} {session.user.lastName}</span>
-              {isLiveChat && (
-                <Badge variant="outline" className="text-[10px]">
-                  {t("chatbot.liveChat")}
-                </Badge>
-              )}
             </SheetDescription>
           )}
         </SheetHeader>
@@ -176,26 +161,6 @@ export function SessionDetailSheet({
 
         <SheetFooter>
           <div className="flex flex-col gap-2 w-full">
-            {/* Staff reply input — only for live chat sessions */}
-            {canReply && (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={staffMsg}
-                  onChange={(e) => setStaffMsg(e.target.value)}
-                  placeholder={t("chatbot.staffReplyPlaceholder")}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendStaff()}
-                  disabled={staffMsgMut.isPending}
-                  className="flex-1"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleSendStaff}
-                  disabled={staffMsgMut.isPending || !staffMsg.trim()}
-                >
-                  {staffMsgMut.isPending ? t("chatbot.sending") : t("chatbot.send")}
-                </Button>
-              </div>
-            )}
             {isActive && (
               <Button
                 variant="destructive"

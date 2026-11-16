@@ -1,3 +1,14 @@
+/**
+ * Reception chat (conversation inbox) API — Sawaa Dashboard
+ *
+ * Response, query and body types are derived from the committed OpenAPI
+ * snapshot (`lib/types/conversations.ts`), so a contract change becomes a type
+ * error here. Request construction is deliberately untouched: each function
+ * still calls the shared adapter with the same literal path and the same
+ * argument object, and still returns the wire object as-is (no mapping or key
+ * filtering).
+ */
+
 import { api } from "@/lib/api"
 import type {
   Conversation,

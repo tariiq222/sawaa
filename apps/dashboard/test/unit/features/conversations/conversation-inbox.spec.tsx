@@ -86,6 +86,7 @@ const conversation = (overrides: Partial<Conversation> = {}): Conversation => ({
   lastMessageAt: "2026-08-14T06:00:00.000Z",
   createdAt: "2026-08-14T05:00:00.000Z",
   updatedAt: "2026-08-14T06:00:00.000Z",
+  handoffSummary: null,
   ...overrides,
 })
 

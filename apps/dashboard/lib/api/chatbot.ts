@@ -1,11 +1,25 @@
 /**
  * Chatbot API — Sawaa Dashboard
  * Controller: dashboard/comms/chat
+ *
+ * Only the legacy chat-session calls are covered here. Every response type is
+ * derived from the committed OpenAPI snapshot (`lib/types/chatbot.ts`). The
+ * request URLs, query params and bodies are unchanged byte for byte; the
+ * `lib/api/openapi.ts` helper is intentionally not used for these two list
+ * routes yet because they still send filter params the snapshot does not
+ * document (see `ChatSessionListQuery`).
  */
 
 import { api } from "@/lib/api"
-import type { PaginatedResponse } from "@/lib/types/common"
-import type { ChatSession, ChatSessionDetail, ChatSessionListQuery, ChatbotConfig, UpsertChatbotConfigPayload } from "@/lib/types/chatbot"
+import type {
+  ChatSessionDetail,
+  ChatSessionListQuery,
+  ChatSessionListResponse,
+  ChatbotConfig,
+  EndChatSessionResult,
+  SendStaffMessageResult,
+  UpsertChatbotConfigPayload,
+} from "@/lib/types/chatbot"
 
 export async function fetchChatbotConfig(): Promise<ChatbotConfig> {
   return api.get<ChatbotConfig>("/dashboard/ai/chatbot-config")
@@ -21,18 +35,20 @@ export async function fetchChatSession(id: string): Promise<ChatSessionDetail> {
   return api.get<ChatSessionDetail>(`/dashboard/comms/chat/conversations/${id}`)
 }
 
-export async function endChatSession(id: string): Promise<ChatSessionDetail> {
-  return api.patch<ChatSessionDetail>(`/dashboard/comms/chat/conversations/${id}/close`)
+/** Closes the conversation and returns the raw `ChatConversation` row. */
+export async function endChatSession(id: string): Promise<EndChatSessionResult> {
+  return api.patch<EndChatSessionResult>(`/dashboard/comms/chat/conversations/${id}/close`)
 }
 
-export async function sendStaffMessage(id: string, body: string): Promise<{ id: string; body: string; createdAt: string }> {
-  return api.post<{ id: string; body: string; createdAt: string }>(`/dashboard/comms/chat/conversations/${id}/messages`, { body })
+/** Sends a staff reply and returns the raw `CommsChatMessage` row. */
+export async function sendStaffMessage(id: string, body: string): Promise<SendStaffMessageResult> {
+  return api.post<SendStaffMessageResult>(`/dashboard/comms/chat/conversations/${id}/messages`, { body })
 }
 
 export async function fetchChatSessions(
   query: ChatSessionListQuery = {},
-): Promise<PaginatedResponse<ChatSession>> {
-  return api.get<PaginatedResponse<ChatSession>>(
+): Promise<ChatSessionListResponse> {
+  return api.get<ChatSessionListResponse>(
     "/dashboard/comms/chat/conversations",
     {
       page: query.page,
