@@ -59,12 +59,17 @@ export class DashboardCommsInboxController {
   ) {}
 
   @ApiOperation({ summary: 'List contact messages' })
+  // Left exactly as documented before this unit: the old snapshot says `number`
+  // for both params, and rule 6 of this unit says a pre-existing `number` stays
+  // `number` (the shared PaginationDto is out of scope).
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)', example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Results per page', example: 20 })
   @ApiOkResponse({ description: 'Paginated contact messages', type: PaginatedContactMessagesResponseDto })
   @CheckPermissions({ action: 'read', subject: 'PersonalData' })
   @Get('contact-messages')
-  listContactMessagesEndpoint(@Query() query: ListContactMessagesDto) {
+  listContactMessagesEndpoint(
+    @Query() query: ListContactMessagesDto,
+  ): Promise<PaginatedContactMessagesResponseDto> {
     return this.listContactMessages.execute({
       status: query.status,
       page: query.page ?? 1,
@@ -81,7 +86,7 @@ export class DashboardCommsInboxController {
   updateContactMessageStatusEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateContactMessageStatusDto,
-  ) {
+  ): Promise<ContactMessageResponseDto> {
     return this.updateContactMessageStatus.execute({ id, status: dto.status });
   }
 
@@ -106,7 +111,7 @@ export class DashboardCommsInboxController {
   listNotificationsEndpoint(
     @CurrentUser() user: JwtUser,
     @Query() query: ListNotificationsDto,
-  ) {
+  ): Promise<PaginatedNotificationsResponseDto> {
     return this.listNotifications.execute({
       recipientId: user.sub,
       unreadOnly: query.unreadOnly,
@@ -121,7 +126,7 @@ export class DashboardCommsInboxController {
   @Get('notifications/unread-count')
   getUnreadCountEndpoint(
     @CurrentUser() user: JwtUser,
-  ) {
+  ): Promise<UnreadNotificationCountResponseDto> {
     return this.getUnreadCount.execute({
       recipientId: user.sub,
     });
@@ -132,11 +137,11 @@ export class DashboardCommsInboxController {
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @Patch('notifications/mark-read')
   @HttpCode(HttpStatus.NO_CONTENT)
-  markReadEndpoint(
+  async markReadEndpoint(
     @CurrentUser() user: JwtUser,
     @Body() body: MarkReadDto = {},
-  ) {
-    return this.markRead.execute({
+  ): Promise<void> {
+    await this.markRead.execute({
       recipientId: user.sub,
       ...body,
     });

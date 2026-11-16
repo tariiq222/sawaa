@@ -10522,6 +10522,18 @@ export interface components {
              */
             note?: string;
         };
+        CommsBilingualErrorDto: {
+            /**
+             * @description Arabic error message
+             * @example فشل إرسال رسالة الاختبار: timeout
+             */
+            ar: string;
+            /**
+             * @description English error message
+             * @example Failed to send test email: timeout
+             */
+            en: string;
+        };
         CompleteBookingDto: {
             /**
              * @description Notes recorded at booking completion
@@ -13447,6 +13459,136 @@ export interface components {
              * @enum {string}
              */
             next: "EmailEntryUnavailableDto";
+        };
+        EmailSettingsResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Whether encrypted provider credentials are stored (credentials themselves are never returned)
+             * @example true
+             */
+            credentialsConfigured: boolean;
+            /**
+             * Format: uuid
+             * @description Email configuration row identifier
+             * @example 00000000-0000-4000-a000-0000000000c1
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Last test send time as an ISO 8601 UTC timestamp, or null when never tested
+             * @example null
+             */
+            lastTestAt: string | null;
+            /**
+             * @description Whether the last test send succeeded, or null when never tested
+             * @example null
+             */
+            lastTestOk: boolean | null;
+            /**
+             * @description Configured email provider
+             * @example RESEND
+             * @enum {string}
+             */
+            provider: "NONE" | "SMTP" | "RESEND" | "SENDGRID" | "MAILCHIMP";
+            /**
+             * @description Sender email address, or null when unset
+             * @example noreply@example.com
+             */
+            senderEmail: string | null;
+            /**
+             * @description Sender display name, or null when unset
+             * @example عيادة سواء
+             */
+            senderName: string | null;
+            /**
+             * Format: date-time
+             * @description Last update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        EmailSettingsTestResultDto: {
+            /** @description Bilingual failure reason when the send failed */
+            error?: components["schemas"]["CommsBilingualErrorDto"];
+            /**
+             * @description Provider-assigned message identifier when the send succeeded
+             * @example provider-message-example
+             */
+            messageId?: string;
+            /**
+             * @description Whether the provider accepted the test message
+             * @example true
+             */
+            ok: boolean;
+        };
+        EmailTemplatePreviewResponseDto: {
+            /**
+             * @description Rendered HTML body with context values escaped
+             * @example <p>Hello Fatima</p>
+             */
+            body: string;
+            /**
+             * @description Rendered subject line (plain text, variables interpolated)
+             * @example تم تأكيد حجزك
+             */
+            subject: string;
+        };
+        EmailTemplateResponseDto: {
+            /**
+             * @description Block-builder source of truth (free-form JSON column). Null for legacy raw-HTML templates; otherwise the block array the builder wrote.
+             * @example null
+             */
+            blocks: string | number | boolean | unknown[] | ({
+                [key: string]: unknown;
+            } | null);
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Rendered HTML body; when `blocks` is present this is derived from it
+             * @example <p>Hello {{name}}</p>
+             */
+            htmlBody: string;
+            /**
+             * Format: uuid
+             * @description Template UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Whether the template is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Display name shown to staff
+             * @example تأكيد الحجز
+             */
+            name: string;
+            /**
+             * @description Unique slug the sender code looks the template up by
+             * @example booking-confirmed
+             */
+            slug: string;
+            /**
+             * @description Email subject line (Handlebars variables allowed)
+             * @example تم تأكيد حجزك
+             */
+            subject: string;
+            /**
+             * Format: date-time
+             * @description Last update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
         };
         EmployeeAssignedServiceDto: {
             /**
@@ -18817,6 +18959,12 @@ export interface components {
             /** @description Pagination metadata */
             meta: components["schemas"]["DepartmentListMetaDto"];
         };
+        PaginatedEmailTemplatesResponseDto: {
+            /** @description Templates on the requested page, oldest first */
+            items: components["schemas"]["EmailTemplateResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
         PaginatedEmployeesDto: {
             /** @description Employees on the requested page */
             items: components["schemas"]["EmployeeResponseDto"][];
@@ -21565,6 +21713,124 @@ export interface components {
             /** @description Booking type configurations (must include at least one) */
             types: components["schemas"]["BookingConfigInputDto"][];
         };
+        SmsDeliveryListResponseDto: {
+            /** @description The 50 most recent SMS deliveries, newest first */
+            items: components["schemas"]["SmsDeliveryResponseDto"][];
+        };
+        SmsDeliveryResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Delivery confirmation time as an ISO 8601 UTC timestamp, or null until delivered
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            deliveredAt: string | null;
+            /**
+             * @description Provider error text, or null when the message succeeded
+             * @example null
+             */
+            errorMessage: string | null;
+            /**
+             * Format: uuid
+             * @description Delivery row identifier
+             * @example 00000000-0000-4000-a000-0000000000c1
+             */
+            id: string;
+            /**
+             * @description Provider that handled the message
+             * @example TAQNYAT
+             * @enum {string}
+             */
+            provider: "NONE" | "UNIFONIC" | "TAQNYAT";
+            /**
+             * @description Provider-assigned message identifier, or null before acceptance
+             * @example provider-message-example
+             */
+            providerMessageId: string | null;
+            /**
+             * Format: date-time
+             * @description Send time as an ISO 8601 UTC timestamp, or null while queued
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            sentAt: string | null;
+            /**
+             * @description Current delivery status from the provider callback
+             * @example DELIVERED
+             * @enum {string}
+             */
+            status: "QUEUED" | "SENT" | "DELIVERED" | "FAILED" | "UNKNOWN";
+            /**
+             * @description Recipient phone number as stored
+             * @example +966500000000
+             */
+            toPhone: string;
+        };
+        SmsSettingsResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Whether encrypted provider credentials are stored (credentials themselves are never returned)
+             * @example true
+             */
+            credentialsConfigured: boolean;
+            /**
+             * Format: uuid
+             * @description SMS configuration row identifier
+             * @example 00000000-0000-4000-a000-0000000000c1
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Last test send time as an ISO 8601 UTC timestamp, or null when never tested
+             * @example null
+             */
+            lastTestAt: string | null;
+            /**
+             * @description Whether the last test send succeeded, or null when never tested
+             * @example null
+             */
+            lastTestOk: boolean | null;
+            /**
+             * @description Configured SMS provider
+             * @example TAQNYAT
+             * @enum {string}
+             */
+            provider: "NONE" | "UNIFONIC" | "TAQNYAT";
+            /**
+             * @description Registered sender ID shown to recipients, or null when unset
+             * @example Sawaa
+             */
+            senderId: string | null;
+            /**
+             * Format: date-time
+             * @description Last update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        SmsSettingsTestResultDto: {
+            /** @description Bilingual failure reason when the send failed */
+            error?: components["schemas"]["CommsBilingualErrorDto"];
+            /**
+             * @description Whether the provider accepted the test message
+             * @example true
+             */
+            ok: boolean;
+            /**
+             * @description Provider-assigned message identifier when the send succeeded
+             * @example provider-message-example
+             */
+            providerMessageId?: string;
+        };
         SmtpCredentialsDto: {
             /**
              * @description SMTP host
@@ -23290,9 +23556,25 @@ export interface components {
             webhookSecret?: string;
         };
         UpsertOrgEmailConfigDto: {
+            /**
+             * @description Mailchimp (Transactional) credentials; required when switching to MAILCHIMP, optional to keep the stored ones
+             * @example {
+             *       "apiKey": "example-mailchimp-api-key"
+             *     }
+             */
             mailchimp?: components["schemas"]["MailchimpCredentialsDto"];
-            /** @enum {string} */
+            /**
+             * @description Email provider to configure; NONE disables sending and clears stored credentials
+             * @example RESEND
+             * @enum {string}
+             */
             provider: "NONE" | "SMTP" | "RESEND" | "SENDGRID" | "MAILCHIMP";
+            /**
+             * @description Resend credentials; required when switching to RESEND, optional to keep the stored ones
+             * @example {
+             *       "apiKey": "example-resend-api-key"
+             *     }
+             */
             resend?: components["schemas"]["ResendCredentialsDto"];
             /**
              * @description Sender email address
@@ -23304,7 +23586,23 @@ export interface components {
              * @example عيادة الأمل
              */
             senderName?: string;
+            /**
+             * @description SendGrid credentials; required when switching to SENDGRID, optional to keep the stored ones
+             * @example {
+             *       "apiKey": "example-sendgrid-api-key"
+             *     }
+             */
             sendgrid?: components["schemas"]["SendGridCredentialsDto"];
+            /**
+             * @description SMTP credentials; required when switching to SMTP, optional to keep the stored ones
+             * @example {
+             *       "host": "smtp.example.com",
+             *       "pass": "example-password",
+             *       "port": 587,
+             *       "secure": false,
+             *       "user": "example-user"
+             *     }
+             */
             smtp?: components["schemas"]["SmtpCredentialsDto"];
         };
         UpsertOrgSettingsDto: {
@@ -23521,11 +23819,28 @@ export interface components {
             weekStartDay?: string;
         };
         UpsertOrgSmsConfigDto: {
-            /** @enum {string} */
+            /**
+             * @description SMS provider to configure; NONE disables sending and clears stored credentials
+             * @example TAQNYAT
+             * @enum {string}
+             */
             provider: "NONE" | "UNIFONIC" | "TAQNYAT";
             /** @description Registered sender ID (alphanumeric brand) */
             senderId?: string;
+            /**
+             * @description Taqnyat credentials; required when switching to TAQNYAT, optional to keep the stored ones
+             * @example {
+             *       "apiToken": "example-api-token"
+             *     }
+             */
             taqnyat?: components["schemas"]["TaqnyatCredentialsDto"];
+            /**
+             * @description Unifonic credentials; required when switching to UNIFONIC, optional to keep the stored ones
+             * @example {
+             *       "apiKey": "example-api-key",
+             *       "appSid": "example-app-sid"
+             *     }
+             */
             unifonic?: components["schemas"]["UnifonicCredentialsDto"];
         };
         UpsertZoomConfigDto: {
@@ -30664,7 +30979,12 @@ export interface operations {
     };
     DashboardCommsEmailTemplatesController_listEmailTemplatesEndpoint_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Results per page (1–200, default: 20) */
+                limit?: number;
+                /** @description Page number (1-based, default: 1) */
+                page?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -30676,7 +30996,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedEmailTemplatesResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30734,7 +31056,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30763,6 +31087,13 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description A template with this slug already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Unhandled server error */
             500: {
                 headers: {
@@ -30786,12 +31117,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Email template details */
+            /** @description Email template details; the handler returns null (empty 200 body) when no row matches the id */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateResponseDto"] | null;
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30852,7 +31185,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30880,6 +31215,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Email template not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -30913,7 +31255,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplatePreviewResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -30941,6 +31285,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Email template not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -31144,7 +31495,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailSettingsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31197,12 +31550,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Updated OrganizationEmailConfig view */
+            /** @description Updated OrganizationEmailConfig view (no secrets) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailSettingsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31260,7 +31615,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailSettingsTestResultDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31314,7 +31671,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SmsSettingsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31367,12 +31726,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Updated OrganizationSmsConfig view */
+            /** @description Updated OrganizationSmsConfig view (no secrets) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SmsSettingsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31426,7 +31787,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SmsDeliveryListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -31484,7 +31847,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SmsSettingsTestResultDto"];
+                };
             };
             /** @description Validation failed */
             400: {

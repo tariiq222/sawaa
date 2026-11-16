@@ -26,7 +26,6 @@ describe("email-config api", () => {
     it("GETs the dashboard email config endpoint", async () => {
       const view = {
         id: "ec-1",
-        organizationId: "org-1",
         provider: "RESEND" as const,
         senderName: "Sawaa",
         senderEmail: "no-reply@sawaa.sa",
@@ -44,7 +43,6 @@ describe("email-config api", () => {
     it("returns the parsed EmailConfigView", async () => {
       const view = {
         id: "ec-1",
-        organizationId: "org-1",
         provider: "RESEND" as const,
         senderName: "Sawaa",
         senderEmail: "no-reply@sawaa.sa",

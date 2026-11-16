@@ -50,7 +50,6 @@ function makeWrapper() {
 
 const SAMPLE_CONFIG = {
   id: "ec-1",
-  organizationId: "org-1",
   provider: "RESEND" as const,
   senderName: "Sawaa",
   senderEmail: "no-reply@sawaa.sa",
