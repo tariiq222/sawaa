@@ -140,6 +140,7 @@ export type {
 export type {
   PublicBranch,
   PublicEmployee,
+  PublicEmployeeSyntheticUser,
   ContactMessage,
   ContactMessageStatus,
   CreateContactMessagePayload,
