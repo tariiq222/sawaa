@@ -6,9 +6,9 @@ import {
   retryBookingZoomMeeting,
   testZoomConfig,
   upsertZoomConfig,
-  type RetryZoomMeetingResult,
 } from "@/lib/api/zoom"
 import type {
+  RetryZoomMeetingResult,
   TestZoomResult,
   UpsertZoomConfigInput,
   ZoomConfigView,

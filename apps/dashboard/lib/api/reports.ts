@@ -1,9 +1,18 @@
 /**
  * Reports API — Sawaa Dashboard
- * Backend: POST /dashboard/ops/reports — single polymorphic endpoint, type discriminator.
+ *
+ * Backend: `POST /dashboard/ops/reports` — a single polymorphic endpoint with
+ * a `type` discriminator. Every call goes through the typed helper in
+ * `lib/api/openapi.ts`, so a renamed route or a changed body is a type error
+ * here. Response types come from the committed OpenAPI snapshot through
+ * `lib/types/report.ts`.
+ *
+ * Request bodies are byte-identical to before: the same `buildBody` object,
+ * the same Riyadh-day start/end conversion and the same field order.
  */
 
 import { api } from "@/lib/api"
+import { openApi, type OpenApiRequestBody } from "@/lib/api/openapi"
 import { riyadhDayStart, riyadhDayEnd } from "@/lib/audit-date"
 import type {
   BookingReport,
@@ -16,6 +25,10 @@ import type {
   ServicesReport,
   WithPrevious,
 } from "@/lib/types/report"
+
+const REPORTS_PATH = "/api/v1/dashboard/ops/reports"
+type ReportsPath = typeof REPORTS_PATH
+type ReportsBody = OpenApiRequestBody<ReportsPath, "post">
 
 const startInstant = (value: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) ? riyadhDayStart(value) : value
@@ -35,7 +48,7 @@ type ReportType =
 function buildBody(
   type: ReportType,
   q: ReportQuery & { employeeId?: string }
-): Record<string, unknown> {
+): ReportsBody {
   return {
     type,
     from: startInstant(q.dateFrom),
@@ -49,43 +62,50 @@ function buildBody(
 export async function fetchOverviewReport(
   q: ReportQuery
 ): Promise<WithPrevious<OverviewReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("OVERVIEW", q))
+  const body = buildBody("OVERVIEW", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<OverviewReport>>
 }
 
 export async function fetchRevenueReport(
   q: ReportQuery
 ): Promise<WithPrevious<RevenueReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("REVENUE", q))
+  const body = buildBody("REVENUE", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<RevenueReport>>
 }
 
 export async function fetchBookingReport(
   q: ReportQuery
 ): Promise<WithPrevious<BookingReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("BOOKINGS", q))
+  const body = buildBody("BOOKINGS", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<BookingReport>>
 }
 
 export async function fetchClientsReport(
   q: ReportQuery
 ): Promise<WithPrevious<ClientsReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("CLIENTS", q))
+  const body = buildBody("CLIENTS", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<ClientsReport>>
 }
 
 export async function fetchPractitionersReport(
   q: ReportQuery
 ): Promise<WithPrevious<PractitionersReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("EMPLOYEES", q))
+  const body = buildBody("EMPLOYEES", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<PractitionersReport>>
 }
 
 export async function fetchServicesReport(
   q: ReportQuery
 ): Promise<WithPrevious<ServicesReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("SERVICES", q))
+  const body = buildBody("SERVICES", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<ServicesReport>>
 }
 
 export async function fetchRatingsReport(
   q: ReportQuery
 ): Promise<WithPrevious<RatingsReport>> {
-  return api.post("/dashboard/ops/reports", buildBody("RATINGS", q))
+  const body = buildBody("RATINGS", q)
+  return openApi.post(REPORTS_PATH, { body }) as Promise<WithPrevious<RatingsReport>>
 }
 
 /* ─── Excel Export ─── */
@@ -100,6 +120,11 @@ export type ExportableReportType =
   | "RATINGS"
   | "ACTIVITY"
 
+/**
+ * Downloads the xlsx branch. It stays on the plain client: the response is a
+ * binary body, which the JSON-typed helper does not model, and the request is
+ * byte-identical to before.
+ */
 export async function exportReportExcel(params: {
   type: ExportableReportType
   dateFrom: string

@@ -16712,6 +16712,2263 @@
         ],
         "type": "object"
       },
+      "OpsActivityLogEntryDto": {
+        "properties": {
+          "action": {
+            "description": "Action performed",
+            "enum": [
+              "CREATE",
+              "UPDATE",
+              "DELETE",
+              "LOGIN",
+              "LOGOUT",
+              "EXPORT",
+              "IMPORT",
+              "SYSTEM"
+            ],
+            "example": "UPDATE",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "When the action occurred, as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "Human-readable description of the change",
+            "example": "Updated booking status",
+            "type": "string"
+          },
+          "id": {
+            "description": "Log row identifier",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "ipAddress": {
+            "description": "Client IP address, or null",
+            "example": "127.0.0.1",
+            "nullable": true,
+            "type": "string"
+          },
+          "module": {
+            "description": "Affected entity name (returned under the key `module`)",
+            "example": "Booking",
+            "type": "string"
+          },
+          "resourceId": {
+            "description": "Affected entity UUID, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsActivityLogUserDto"
+              }
+            ],
+            "description": "Current staff user record, or null when the user is gone or the action was systemic",
+            "nullable": true,
+            "type": "object"
+          },
+          "userAgent": {
+            "description": "Client user agent, or null",
+            "example": "Mozilla/5.0",
+            "nullable": true,
+            "type": "string"
+          },
+          "userEmail": {
+            "description": "Email captured on the log row, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "userId": {
+            "description": "Acting staff user UUID, or null for system actions",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "action",
+          "module",
+          "resourceId",
+          "description",
+          "ipAddress",
+          "userAgent",
+          "createdAt",
+          "userEmail",
+          "user"
+        ],
+        "type": "object"
+      },
+      "OpsActivityLogListResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Activity log entries on the requested page, newest first",
+            "items": {
+              "$ref": "#/components/schemas/OpsActivityLogEntryDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "OpsActivityLogUserDto": {
+        "properties": {
+          "email": {
+            "description": "Account email",
+            "example": "staff@example.com",
+            "type": "string"
+          },
+          "firstName": {
+            "description": "First name, or null when unset",
+            "example": "سارة",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Staff user UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name, or null when unset",
+            "example": "العتيبي",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportDayRowDto": {
+        "properties": {
+          "count": {
+            "description": "Actions that day",
+            "example": 9,
+            "type": "number"
+          },
+          "date": {
+            "description": "Calendar day (yyyy-MM-dd)",
+            "example": "2026-01-15",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportDto": {
+        "properties": {
+          "byDay": {
+            "description": "Actions per day",
+            "items": {
+              "$ref": "#/components/schemas/OpsActivityReportDayRowDto"
+            },
+            "type": "array"
+          },
+          "byUser": {
+            "description": "Actions per actor (top twenty)",
+            "items": {
+              "$ref": "#/components/schemas/OpsActivityReportUserRowDto"
+            },
+            "type": "array"
+          },
+          "period": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsActivityReportPeriodDto"
+              }
+            ],
+            "description": "Reported period"
+          },
+          "summary": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsActivityReportSummaryDto"
+              }
+            ],
+            "description": "Aggregate summary of the window"
+          }
+        },
+        "required": [
+          "period",
+          "summary",
+          "byDay",
+          "byUser"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportPeriodDto": {
+        "properties": {
+          "from": {
+            "description": "Window start as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "to": {
+            "description": "Window end as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportSummaryDto": {
+        "properties": {
+          "topActions": {
+            "description": "Actions by count",
+            "items": {
+              "$ref": "#/components/schemas/OpsActivityReportTopActionDto"
+            },
+            "type": "array"
+          },
+          "topEntities": {
+            "description": "Entities by action count (top ten)",
+            "items": {
+              "$ref": "#/components/schemas/OpsActivityReportTopEntityDto"
+            },
+            "type": "array"
+          },
+          "totalActions": {
+            "description": "Log rows in the period",
+            "example": 40,
+            "type": "number"
+          },
+          "uniqueUsers": {
+            "description": "Distinct acting users",
+            "example": 6,
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalActions",
+          "uniqueUsers",
+          "topEntities",
+          "topActions"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportTopActionDto": {
+        "properties": {
+          "action": {
+            "description": "Action name",
+            "example": "UPDATE",
+            "type": "string"
+          },
+          "count": {
+            "description": "Actions of this type",
+            "example": 9,
+            "type": "number"
+          }
+        },
+        "required": [
+          "action",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportTopEntityDto": {
+        "properties": {
+          "count": {
+            "description": "Actions on this entity",
+            "example": 12,
+            "type": "number"
+          },
+          "entity": {
+            "description": "Entity name",
+            "example": "Booking",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsActivityReportUserRowDto": {
+        "properties": {
+          "count": {
+            "description": "Actions by this actor",
+            "example": 5,
+            "type": "number"
+          },
+          "userEmail": {
+            "description": "Staff user email captured with the log row, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "userId": {
+            "description": "Staff user UUID (the builder only emits rows for actions that carry one)",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "userEmail",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsBookingsCancelReasonRowDto": {
+        "properties": {
+          "count": {
+            "description": "Cancellations with this reason",
+            "example": 2,
+            "type": "number"
+          },
+          "reason": {
+            "description": "Cancellation reason, or UNSPECIFIED when none was recorded",
+            "enum": [
+              "CLIENT_REQUESTED",
+              "EMPLOYEE_UNAVAILABLE",
+              "NO_SHOW",
+              "SYSTEM_EXPIRED",
+              "OTHER",
+              "UNSPECIFIED"
+            ],
+            "example": "CLIENT_REQUESTED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsBookingsDayRowDto": {
+        "properties": {
+          "count": {
+            "description": "Bookings that day",
+            "example": 4,
+            "type": "number"
+          },
+          "date": {
+            "description": "Calendar day (yyyy-MM-dd)",
+            "example": "2026-01-15",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsBookingsHourDowRowDto": {
+        "properties": {
+          "count": {
+            "description": "Bookings in this slot",
+            "example": 3,
+            "type": "number"
+          },
+          "dow": {
+            "description": "Day of week (0 = Sunday)",
+            "example": 1,
+            "type": "number"
+          },
+          "hour": {
+            "description": "Hour of day (0–23)",
+            "example": 10,
+            "type": "number"
+          }
+        },
+        "required": [
+          "dow",
+          "hour",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsBookingsReportDto": {
+        "properties": {
+          "avgDurationMins": {
+            "description": "Mean booking duration in minutes",
+            "example": 50,
+            "type": "number"
+          },
+          "byCancelReason": {
+            "description": "Cancellations by reason",
+            "items": {
+              "$ref": "#/components/schemas/OpsBookingsCancelReasonRowDto"
+            },
+            "type": "array"
+          },
+          "byDay": {
+            "description": "Bookings by day",
+            "items": {
+              "$ref": "#/components/schemas/OpsBookingsDayRowDto"
+            },
+            "type": "array"
+          },
+          "byHourDow": {
+            "description": "Bookings by weekday and hour",
+            "items": {
+              "$ref": "#/components/schemas/OpsBookingsHourDowRowDto"
+            },
+            "type": "array"
+          },
+          "byStatus": {
+            "description": "Bookings by status",
+            "items": {
+              "$ref": "#/components/schemas/OpsBookingsStatusRowDto"
+            },
+            "type": "array"
+          },
+          "byType": {
+            "description": "Bookings by type",
+            "items": {
+              "$ref": "#/components/schemas/OpsBookingsTypeRowDto"
+            },
+            "type": "array"
+          },
+          "cancelRate": {
+            "description": "Cancellation rate as a fraction (0–1)",
+            "example": 0.16,
+            "type": "number"
+          },
+          "noShowRate": {
+            "description": "No-show rate as a fraction (0–1)",
+            "example": 0.08,
+            "type": "number"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsBookingsReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "total": {
+            "description": "Bookings in the period",
+            "example": 12,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "byStatus",
+          "byType",
+          "byDay",
+          "noShowRate",
+          "cancelRate",
+          "avgDurationMins",
+          "byHourDow",
+          "byCancelReason"
+        ],
+        "type": "object"
+      },
+      "OpsBookingsStatusRowDto": {
+        "properties": {
+          "count": {
+            "description": "Bookings in this status",
+            "example": 9,
+            "type": "number"
+          },
+          "status": {
+            "description": "Booking status",
+            "enum": [
+              "PENDING",
+              "PENDING_GROUP_FILL",
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "CANCELLED",
+              "COMPLETED",
+              "NO_SHOW",
+              "EXPIRED",
+              "CANCEL_REQUESTED",
+              "DEPOSIT_PAID"
+            ],
+            "example": "COMPLETED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsBookingsTypeRowDto": {
+        "properties": {
+          "count": {
+            "description": "Bookings of this type",
+            "example": 12,
+            "type": "number"
+          },
+          "type": {
+            "description": "Booking type as stored",
+            "example": "INDIVIDUAL",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsClientsAgeGroupRowDto": {
+        "properties": {
+          "count": {
+            "description": "Clients in this bucket",
+            "example": 3,
+            "type": "number"
+          },
+          "group": {
+            "description": "Age bucket, or UNKNOWN when date of birth is unset",
+            "enum": [
+              "<18",
+              "18-29",
+              "30-44",
+              "45-59",
+              "60+",
+              "UNKNOWN"
+            ],
+            "example": "30-44",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsClientsGenderRowDto": {
+        "properties": {
+          "count": {
+            "description": "Clients in this bucket",
+            "example": 4,
+            "type": "number"
+          },
+          "gender": {
+            "description": "Client gender, or UNKNOWN when unset",
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "UNKNOWN"
+            ],
+            "example": "FEMALE",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gender",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsClientsReportDto": {
+        "properties": {
+          "byAgeGroup": {
+            "description": "Clients by age bucket",
+            "items": {
+              "$ref": "#/components/schemas/OpsClientsAgeGroupRowDto"
+            },
+            "type": "array"
+          },
+          "byGender": {
+            "description": "Clients by gender",
+            "items": {
+              "$ref": "#/components/schemas/OpsClientsGenderRowDto"
+            },
+            "type": "array"
+          },
+          "newClients": {
+            "description": "Clients whose first booking fell in the period",
+            "example": 5,
+            "type": "number"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsClientsReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "retentionRate": {
+            "description": "Returning-client share as a fraction (0–1)",
+            "example": 0.72,
+            "type": "number"
+          },
+          "returningClients": {
+            "description": "Clients with an earlier booking",
+            "example": 13,
+            "type": "number"
+          },
+          "topByRevenue": {
+            "description": "Clients by revenue, descending",
+            "items": {
+              "$ref": "#/components/schemas/OpsClientsTopByRevenueDto"
+            },
+            "type": "array"
+          },
+          "total": {
+            "description": "Clients with bookings in the period",
+            "example": 18,
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "newClients",
+          "returningClients",
+          "retentionRate",
+          "byGender",
+          "byAgeGroup",
+          "topByRevenue"
+        ],
+        "type": "object"
+      },
+      "OpsClientsTopByRevenueDto": {
+        "properties": {
+          "bookings": {
+            "description": "Bookings by this client",
+            "example": 4,
+            "type": "number"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-4000-a000-0000000000e3",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Client display name",
+            "example": "عميل تجريبي",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Revenue from this client in integer halalas",
+            "example": 120000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "clientId",
+          "name",
+          "bookings",
+          "revenue"
+        ],
+        "type": "object"
+      },
+      "OpsOutboxFailedEventDto": {
+        "properties": {
+          "attemptCount": {
+            "description": "Publish attempts so far",
+            "example": 5,
+            "type": "number"
+          },
+          "createdAt": {
+            "description": "Event creation instant as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "eventType": {
+            "description": "Domain event type",
+            "example": "bookings.booking.created",
+            "type": "string"
+          },
+          "failedAt": {
+            "description": "When it entered the terminal FAILED state, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "failureReason": {
+            "description": "Sanitized and truncated failure reason, or null",
+            "example": "Provider timeout",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Outbox event UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "attemptCount",
+          "createdAt",
+          "failedAt",
+          "failureReason"
+        ],
+        "type": "object"
+      },
+      "OpsOutboxFailedEventListResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Terminal FAILED events, most recently failed first",
+            "items": {
+              "$ref": "#/components/schemas/OpsOutboxFailedEventDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "OpsOutboxRetryResponseDto": {
+        "properties": {
+          "attemptCount": {
+            "description": "Publish attempts so far",
+            "example": 5,
+            "type": "number"
+          },
+          "createdAt": {
+            "description": "Event creation instant as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "eventType": {
+            "description": "Domain event type",
+            "example": "bookings.booking.created",
+            "type": "string"
+          },
+          "failedAt": {
+            "description": "When it entered the terminal FAILED state, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "failureReason": {
+            "description": "Sanitized and truncated failure reason, or null",
+            "example": "Provider timeout",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Outbox event UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Delivery-lane status the event was reset to",
+            "enum": [
+              "PENDING",
+              "PENDING_V2"
+            ],
+            "example": "PENDING",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "attemptCount",
+          "createdAt",
+          "failedAt",
+          "failureReason",
+          "status"
+        ],
+        "type": "object"
+      },
+      "OpsOverviewReportDto": {
+        "properties": {
+          "completedBookings": {
+            "description": "Bookings with status COMPLETED",
+            "example": 9,
+            "type": "number"
+          },
+          "completionRate": {
+            "description": "completedBookings ÷ totalBookings as a fraction (0–1)",
+            "example": 0.75,
+            "type": "number"
+          },
+          "newClients": {
+            "description": "Clients created in the period",
+            "example": 5,
+            "type": "number"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsOverviewReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "topPractitioners": {
+            "description": "Practitioners by revenue, descending",
+            "items": {
+              "$ref": "#/components/schemas/OpsOverviewTopPractitionerDto"
+            },
+            "type": "array"
+          },
+          "topServices": {
+            "description": "Services by booking count, descending",
+            "items": {
+              "$ref": "#/components/schemas/OpsOverviewTopServiceDto"
+            },
+            "type": "array"
+          },
+          "totalBookings": {
+            "description": "Bookings scheduled in the period",
+            "example": 12,
+            "type": "number"
+          },
+          "totalRevenue": {
+            "description": "Total collected revenue in integer halalas",
+            "example": 250000,
+            "type": "number"
+          },
+          "trend": {
+            "description": "Daily revenue and booking counts",
+            "items": {
+              "$ref": "#/components/schemas/OpsOverviewTrendPointDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "totalRevenue",
+          "totalBookings",
+          "completedBookings",
+          "completionRate",
+          "newClients",
+          "trend",
+          "topServices",
+          "topPractitioners"
+        ],
+        "type": "object"
+      },
+      "OpsOverviewTopPractitionerDto": {
+        "properties": {
+          "bookings": {
+            "description": "Bookings handled by this practitioner",
+            "example": 3,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-0000000000e2",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Practitioner display name",
+            "example": "أخصائي تجريبي",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Revenue attributed to this practitioner in integer halalas",
+            "example": 90000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "employeeId",
+          "name",
+          "revenue",
+          "bookings"
+        ],
+        "type": "object"
+      },
+      "OpsOverviewTopServiceDto": {
+        "properties": {
+          "count": {
+            "description": "Bookings on this service in the period",
+            "example": 3,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic service name",
+            "example": "جلسة إرشاد أسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English service name, or null when unset",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "serviceId",
+          "nameAr",
+          "nameEn",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsOverviewTrendPointDto": {
+        "properties": {
+          "bookings": {
+            "description": "Bookings scheduled that day",
+            "example": 4,
+            "type": "number"
+          },
+          "date": {
+            "description": "Calendar day (yyyy-MM-dd) in the report timezone",
+            "example": "2026-01-15",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Revenue collected that day in integer halalas",
+            "example": 120000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "revenue",
+          "bookings"
+        ],
+        "type": "object"
+      },
+      "OpsPackageConsumptionReportDto": {
+        "properties": {
+          "byEmployee": {
+            "description": "Consumption grouped by practitioner",
+            "items": {
+              "$ref": "#/components/schemas/OpsPackageConsumptionRowDto"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "Report discriminator",
+            "enum": [
+              "CONSUMPTION"
+            ],
+            "example": "CONSUMPTION",
+            "type": "string"
+          },
+          "totalConsumed": {
+            "description": "Package sessions debited in the period",
+            "example": 18,
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "totalConsumed",
+          "byEmployee"
+        ],
+        "type": "object"
+      },
+      "OpsPackageConsumptionRowDto": {
+        "properties": {
+          "attribution": {
+            "description": "Attribution source; omitted when the row comes straight from a confirmed booking",
+            "enum": [
+              "BOOKING",
+              "LEGACY_CREDIT",
+              "UNKNOWN",
+              "MIXED"
+            ],
+            "type": "string"
+          },
+          "count": {
+            "description": "Sessions consumed",
+            "example": 4,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Practitioner UUID",
+            "example": "00000000-0000-4000-a000-0000000000e7",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Practitioner display name",
+            "example": "أخصائي تجريبي",
+            "type": "string"
+          }
+        },
+        "required": [
+          "employeeId",
+          "name",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsPackageOutstandingCreditReportDto": {
+        "properties": {
+          "creditCount": {
+            "description": "Credit buckets with remaining capacity",
+            "example": 7,
+            "type": "number"
+          },
+          "kind": {
+            "description": "Report discriminator",
+            "enum": [
+              "OUTSTANDING_CREDIT"
+            ],
+            "example": "OUTSTANDING_CREDIT",
+            "type": "string"
+          },
+          "outstandingLiability": {
+            "description": "Value of unconsumed sessions at what clients paid, in integer halalas",
+            "example": 480000,
+            "type": "number"
+          },
+          "outstandingSessions": {
+            "description": "Unconsumed sessions across all active credits",
+            "example": 32,
+            "type": "number"
+          },
+          "reservedSessions": {
+            "description": "Unconsumed sessions that already carry a booked appointment",
+            "example": 5,
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "outstandingLiability",
+          "outstandingSessions",
+          "creditCount",
+          "reservedSessions"
+        ],
+        "type": "object"
+      },
+      "OpsPackageSalesBucketDto": {
+        "properties": {
+          "cash": {
+            "description": "Net CASH revenue in integer halalas",
+            "example": 50000,
+            "type": "number"
+          },
+          "electronic": {
+            "description": "Net ONLINE_CARD / TABBY / BANK_TRANSFER revenue in integer halalas",
+            "example": 30000,
+            "type": "number"
+          },
+          "network": {
+            "description": "Net MADA revenue in integer halalas",
+            "example": 70000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "cash",
+          "network",
+          "electronic"
+        ],
+        "type": "object"
+      },
+      "OpsPackageSalesMethodRowDto": {
+        "properties": {
+          "amount": {
+            "description": "Net amount in integer halalas",
+            "example": 70000,
+            "type": "number"
+          },
+          "count": {
+            "description": "Payments with this method",
+            "example": 3,
+            "type": "number"
+          },
+          "method": {
+            "description": "Payment method as stored",
+            "example": "MADA",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "amount",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsPackageSalesReportDto": {
+        "properties": {
+          "byBucket": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsPackageSalesBucketDto"
+              }
+            ],
+            "description": "Net revenue by operational channel"
+          },
+          "byMethod": {
+            "description": "Net revenue by raw payment method",
+            "items": {
+              "$ref": "#/components/schemas/OpsPackageSalesMethodRowDto"
+            },
+            "type": "array"
+          },
+          "grossRevenue": {
+            "description": "Gross settled package payments in integer halalas",
+            "example": 160000,
+            "type": "number"
+          },
+          "kind": {
+            "description": "Report discriminator",
+            "enum": [
+              "SALES"
+            ],
+            "example": "SALES",
+            "type": "string"
+          },
+          "netRevenue": {
+            "description": "Gross revenue less refunds in integer halalas",
+            "example": 150000,
+            "type": "number"
+          },
+          "purchaseCount": {
+            "description": "Package purchases paid for in the period",
+            "example": 6,
+            "type": "number"
+          },
+          "refundedAmount": {
+            "description": "Cumulative refunds on those payments in integer halalas",
+            "example": 10000,
+            "type": "number"
+          },
+          "totalRevenue": {
+            "description": "Legacy alias for netRevenue, in integer halalas",
+            "example": 150000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "purchaseCount",
+          "totalRevenue",
+          "grossRevenue",
+          "refundedAmount",
+          "netRevenue",
+          "byBucket",
+          "byMethod"
+        ],
+        "type": "object"
+      },
+      "OpsPractitionerDetailReportDto": {
+        "properties": {
+          "averageRating": {
+            "description": "Mean rating in the period, 0 when unrated",
+            "example": 4.5,
+            "type": "number"
+          },
+          "bookings": {
+            "description": "Bookings handled in the period",
+            "example": 8,
+            "type": "number"
+          },
+          "byDay": {
+            "description": "Daily bookings and revenue for this practitioner",
+            "items": {
+              "properties": {
+                "bookings": {
+                  "description": "Bookings that day",
+                  "example": 2,
+                  "type": "integer"
+                },
+                "date": {
+                  "description": "Calendar day (yyyy-MM-dd)",
+                  "example": "2026-01-15",
+                  "type": "string"
+                },
+                "revenue": {
+                  "description": "Revenue that day in integer halalas",
+                  "example": 60000,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "date",
+                "bookings",
+                "revenue"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "completedBookings": {
+            "description": "Bookings completed",
+            "example": 6,
+            "type": "number"
+          },
+          "completionRate": {
+            "description": "Completed ÷ booked as a fraction (0–1)",
+            "example": 0.75,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-0000000000e4",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Practitioner display name",
+            "example": "أخصائي تجريبي",
+            "type": "string"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsPractitionerDetailReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "revenue": {
+            "description": "Revenue attributed in integer halalas",
+            "example": 180000,
+            "type": "number"
+          },
+          "role": {
+            "description": "Specialty / role label, or null when unset",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "utilization": {
+            "description": "Booked minutes ÷ available minutes, capped at 1",
+            "example": 0.42,
+            "type": "number"
+          }
+        },
+        "required": [
+          "employeeId",
+          "name",
+          "role",
+          "bookings",
+          "completedBookings",
+          "completionRate",
+          "revenue",
+          "utilization",
+          "averageRating",
+          "byDay"
+        ],
+        "type": "object"
+      },
+      "OpsPractitionerRowDto": {
+        "properties": {
+          "averageRating": {
+            "description": "Mean rating in the period, 0 when unrated",
+            "example": 4.5,
+            "type": "number"
+          },
+          "bookings": {
+            "description": "Bookings handled in the period",
+            "example": 8,
+            "type": "number"
+          },
+          "completedBookings": {
+            "description": "Bookings completed",
+            "example": 6,
+            "type": "number"
+          },
+          "completionRate": {
+            "description": "Completed ÷ booked as a fraction (0–1)",
+            "example": 0.75,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-0000000000e4",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Practitioner display name",
+            "example": "أخصائي تجريبي",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Revenue attributed in integer halalas",
+            "example": 180000,
+            "type": "number"
+          },
+          "role": {
+            "description": "Specialty / role label, or null when unset",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "utilization": {
+            "description": "Booked minutes ÷ available minutes, capped at 1",
+            "example": 0.42,
+            "type": "number"
+          }
+        },
+        "required": [
+          "employeeId",
+          "name",
+          "role",
+          "bookings",
+          "completedBookings",
+          "completionRate",
+          "revenue",
+          "utilization",
+          "averageRating"
+        ],
+        "type": "object"
+      },
+      "OpsPractitionersReportDto": {
+        "properties": {
+          "avgRating": {
+            "description": "Mean rating across rated practitioners, 0 when none",
+            "example": 4.2,
+            "type": "number"
+          },
+          "avgRevenue": {
+            "description": "Mean revenue per practitioner in integer halalas",
+            "example": 150000,
+            "type": "number"
+          },
+          "avgUtilization": {
+            "description": "Mean utilization as a fraction (0–1)",
+            "example": 0.38,
+            "type": "number"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsPractitionersReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "rows": {
+            "description": "One row per practitioner",
+            "items": {
+              "$ref": "#/components/schemas/OpsPractitionerRowDto"
+            },
+            "type": "array"
+          },
+          "totalActive": {
+            "description": "Practitioners with bookings in the period",
+            "example": 4,
+            "type": "number"
+          },
+          "totalCompleted": {
+            "description": "Completed bookings across all practitioners",
+            "example": 24,
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalActive",
+          "avgRevenue",
+          "avgUtilization",
+          "avgRating",
+          "totalCompleted",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "OpsRatingsDistributionRowDto": {
+        "properties": {
+          "count": {
+            "description": "Ratings with this score",
+            "example": 7,
+            "type": "number"
+          },
+          "score": {
+            "description": "Star score",
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "example": 5,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "score",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsRatingsReportDto": {
+        "properties": {
+          "averageScore": {
+            "description": "Mean score in the period, 0 when unrated",
+            "example": 4.4,
+            "type": "number"
+          },
+          "distribution": {
+            "description": "Ratings by star score",
+            "items": {
+              "$ref": "#/components/schemas/OpsRatingsDistributionRowDto"
+            },
+            "type": "array"
+          },
+          "negativeCount": {
+            "description": "Ratings with score ≤ 2",
+            "example": 3,
+            "type": "number"
+          },
+          "positiveCount": {
+            "description": "Ratings with score ≥ 4",
+            "example": 16,
+            "type": "number"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsRatingsReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "recentNegative": {
+            "description": "Most recent low-score ratings",
+            "items": {
+              "$ref": "#/components/schemas/OpsRecentNegativeRatingDto"
+            },
+            "type": "array"
+          },
+          "totalRatings": {
+            "description": "Ratings submitted in the period",
+            "example": 20,
+            "type": "number"
+          },
+          "trend": {
+            "description": "Daily mean score",
+            "items": {
+              "$ref": "#/components/schemas/OpsRatingsTrendPointDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "averageScore",
+          "totalRatings",
+          "positiveCount",
+          "negativeCount",
+          "distribution",
+          "trend",
+          "recentNegative"
+        ],
+        "type": "object"
+      },
+      "OpsRatingsTrendPointDto": {
+        "properties": {
+          "average": {
+            "description": "Mean score that day",
+            "example": 4.5,
+            "type": "number"
+          },
+          "count": {
+            "description": "Ratings that day",
+            "example": 2,
+            "type": "number"
+          },
+          "date": {
+            "description": "Calendar day (yyyy-MM-dd)",
+            "example": "2026-01-15",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "average",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsRecentNegativeRatingDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Rated booking UUID",
+            "example": "00000000-0000-4000-a000-0000000000e6",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientName": {
+            "description": "Client display name",
+            "example": "عميل تجريبي",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Client feedback, or null when none",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Rating submission instant as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeName": {
+            "description": "Practitioner display name",
+            "example": "أخصائي تجريبي",
+            "type": "string"
+          },
+          "id": {
+            "description": "Rating UUID",
+            "example": "00000000-0000-4000-a000-0000000000e5",
+            "format": "uuid",
+            "type": "string"
+          },
+          "score": {
+            "description": "Star score (1–5)",
+            "example": 2,
+            "type": "number"
+          },
+          "serviceName": {
+            "description": "Arabic service name",
+            "example": "جلسة إرشاد أسري",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "score",
+          "comment",
+          "clientName",
+          "employeeName",
+          "serviceName",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "OpsRefundedPackageEventRowDto": {
+        "properties": {
+          "amountPaid": {
+            "description": "Amount charged for the purchase in integer halalas, or null when unknown",
+            "example": 160000,
+            "nullable": true,
+            "type": "integer"
+          },
+          "clientId": {
+            "description": "Client UUID, or null when the purchase row is gone",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "eventId": {
+            "description": "Refund event UUID",
+            "example": "00000000-0000-4000-a000-0000000000e8",
+            "format": "uuid",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Free-text note, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "occurredAt": {
+            "description": "Refund instant as an ISO 8601 UTC timestamp, or null for an undated historical record",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "packageId": {
+            "description": "Package UUID, or null when the purchase row is gone",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "purchaseId": {
+            "description": "Package purchase UUID",
+            "example": "00000000-0000-4000-a000-0000000000e9",
+            "format": "uuid",
+            "type": "string"
+          },
+          "refundAmount": {
+            "description": "Refunded amount in integer halalas",
+            "example": 160000,
+            "type": "number"
+          },
+          "refundType": {
+            "description": "Refund type",
+            "enum": [
+              "FULL",
+              "PARTIAL",
+              "UNKNOWN"
+            ],
+            "example": "FULL",
+            "type": "string"
+          },
+          "source": {
+            "description": "Where the refund record came from",
+            "enum": [
+              "LIVE",
+              "LEGACY_REQUEST",
+              "LEGACY_AGGREGATE"
+            ],
+            "example": "LIVE",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "purchaseId",
+          "packageId",
+          "clientId",
+          "amountPaid",
+          "refundAmount",
+          "refundType",
+          "source",
+          "occurredAt",
+          "notes"
+        ],
+        "type": "object"
+      },
+      "OpsRefundedPackageLegacyRowDto": {
+        "properties": {
+          "amountPaid": {
+            "description": "Amount charged for the purchase in integer halalas",
+            "example": 160000,
+            "type": "number"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-4000-a000-0000000000e3",
+            "format": "uuid",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Free-text note, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "packageId": {
+            "description": "Package UUID",
+            "example": "00000000-0000-4000-a000-0000000000ea",
+            "format": "uuid",
+            "type": "string"
+          },
+          "purchaseId": {
+            "description": "Package purchase UUID",
+            "example": "00000000-0000-4000-a000-0000000000e9",
+            "format": "uuid",
+            "type": "string"
+          },
+          "refundAmount": {
+            "description": "Refunded amount in integer halalas",
+            "example": 80000,
+            "type": "number"
+          },
+          "refundedAt": {
+            "description": "Refund instant as an ISO 8601 UTC timestamp, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchaseId",
+          "packageId",
+          "clientId",
+          "amountPaid",
+          "refundAmount",
+          "refundedAt",
+          "notes"
+        ],
+        "type": "object"
+      },
+      "OpsRefundedPackagesEventsReportDto": {
+        "properties": {
+          "eventCount": {
+            "description": "Refund events, excluding aggregate placeholders",
+            "example": 3,
+            "type": "number"
+          },
+          "historyMode": {
+            "description": "Which refund history was readable",
+            "enum": [
+              "EVENTS"
+            ],
+            "example": "EVENTS",
+            "type": "string"
+          },
+          "historyReconciliation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsRefundHistoryReconciliationDto"
+              }
+            ],
+            "description": "Reconciliation state as stored (this mode is only produced when every refund reconciled)"
+          },
+          "items": {
+            "description": "Dated refund events",
+            "items": {
+              "$ref": "#/components/schemas/OpsRefundedPackageEventRowDto"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "Report discriminator",
+            "enum": [
+              "REFUNDED"
+            ],
+            "example": "REFUNDED",
+            "type": "string"
+          },
+          "purchaseCount": {
+            "description": "Distinct purchases behind those events",
+            "example": 3,
+            "type": "number"
+          },
+          "totalRefunded": {
+            "description": "Total refunded in the period in integer halalas",
+            "example": 90000,
+            "type": "number"
+          },
+          "undatedHistorical": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsRefundedUndatedHistoryDto"
+              }
+            ],
+            "description": "Refunds with no readable date, reported separately"
+          }
+        },
+        "required": [
+          "kind",
+          "historyMode",
+          "historyReconciliation",
+          "eventCount",
+          "purchaseCount",
+          "totalRefunded",
+          "items",
+          "undatedHistorical"
+        ],
+        "type": "object"
+      },
+      "OpsRefundedPackagesLegacyReportDto": {
+        "properties": {
+          "historyMode": {
+            "description": "Which refund history was readable",
+            "enum": [
+              "LEGACY"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "historyReconciliation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsRefundHistoryReconciliationDto"
+              }
+            ],
+            "description": "Reconciliation state as stored (this mode is produced when at least one purchase did not reconcile)"
+          },
+          "items": {
+            "description": "Refunded purchases",
+            "items": {
+              "$ref": "#/components/schemas/OpsRefundedPackageLegacyRowDto"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "Report discriminator",
+            "enum": [
+              "REFUNDED"
+            ],
+            "example": "REFUNDED",
+            "type": "string"
+          },
+          "refundedCount": {
+            "description": "Refunded purchases in the period",
+            "example": 2,
+            "type": "number"
+          },
+          "totalRefunded": {
+            "description": "Total refunded in the period in integer halalas",
+            "example": 60000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "historyMode",
+          "historyReconciliation",
+          "refundedCount",
+          "totalRefunded",
+          "items"
+        ],
+        "type": "object"
+      },
+      "OpsRefundedUndatedHistoryDto": {
+        "properties": {
+          "items": {
+            "description": "The undated historical refund records",
+            "items": {
+              "$ref": "#/components/schemas/OpsRefundedPackageEventRowDto"
+            },
+            "type": "array"
+          },
+          "purchaseCount": {
+            "description": "Distinct purchases behind them",
+            "example": 1,
+            "type": "integer"
+          },
+          "recordCount": {
+            "description": "Undated records",
+            "example": 1,
+            "type": "integer"
+          },
+          "totalRefunded": {
+            "description": "Total refunded in integer halalas",
+            "example": 30000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "recordCount",
+          "purchaseCount",
+          "totalRefunded",
+          "items"
+        ],
+        "type": "object"
+      },
+      "OpsRefundHistoryReconciliationDto": {
+        "properties": {
+          "complete": {
+            "description": "Whether every refund candidate reconciled into an event",
+            "example": true,
+            "type": "boolean"
+          },
+          "unresolvedPurchaseCount": {
+            "description": "Purchases still awaiting reconciliation",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "complete",
+          "unresolvedPurchaseCount"
+        ],
+        "type": "object"
+      },
+      "OpsRevenueCouponRowDto": {
+        "properties": {
+          "code": {
+            "description": "Coupon code",
+            "example": "SAWAA10",
+            "type": "string"
+          },
+          "discountAmount": {
+            "description": "Total discount granted in integer halalas",
+            "example": 15000,
+            "type": "number"
+          },
+          "isActive": {
+            "description": "Whether the coupon is still active and unexpired at report time",
+            "example": true,
+            "type": "boolean"
+          },
+          "uses": {
+            "description": "Redemptions in the period",
+            "example": 3,
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "uses",
+          "discountAmount",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "OpsRevenueDayRowDto": {
+        "properties": {
+          "amount": {
+            "description": "Collected amount that day in integer halalas",
+            "example": 60000,
+            "type": "number"
+          },
+          "count": {
+            "description": "Payment count that day",
+            "example": 2,
+            "type": "number"
+          },
+          "date": {
+            "description": "Collection day (yyyy-MM-dd)",
+            "example": "2026-01-15",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "amount",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsRevenueMethodRowDto": {
+        "properties": {
+          "amount": {
+            "description": "Collected amount in integer halalas",
+            "example": 150000,
+            "type": "number"
+          },
+          "count": {
+            "description": "Payment count for this method",
+            "example": 4,
+            "type": "number"
+          },
+          "method": {
+            "description": "Payment method as stored",
+            "example": "CASH",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "amount",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsRevenueRecentPaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Payment amount in integer halalas",
+            "example": 30000,
+            "type": "number"
+          },
+          "clientName": {
+            "description": "Client display name, empty string when unknown",
+            "example": "عميل تجريبي",
+            "type": "string"
+          },
+          "date": {
+            "description": "Collection date as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Payment UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "description": "Payment method as stored",
+            "example": "CASH",
+            "type": "string"
+          },
+          "processedAt": {
+            "description": "Provider processing instant, or null when not processed",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptEntryReason": {
+            "description": "Reason recorded with the receipt entry, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptEvidenceRef": {
+            "description": "Receipt evidence reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptRecordedBy": {
+            "description": "Staff user UUID that recorded the receipt, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "recordedAt": {
+            "description": "Row creation instant as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceName": {
+            "description": "Arabic service name, empty string when unknown",
+            "example": "جلسة إرشاد أسري",
+            "type": "string"
+          },
+          "status": {
+            "description": "Payment status",
+            "enum": [
+              "PENDING",
+              "PENDING_VERIFICATION",
+              "COMPLETED",
+              "FAILED",
+              "PARTIALLY_REFUNDED",
+              "REFUNDED"
+            ],
+            "example": "COMPLETED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "clientName",
+          "serviceName",
+          "method",
+          "amount",
+          "status"
+        ],
+        "type": "object"
+      },
+      "OpsRevenueReportDto": {
+        "properties": {
+          "averagePerBooking": {
+            "description": "Total revenue ÷ total bookings in integer halalas",
+            "example": 20833,
+            "type": "number"
+          },
+          "byDay": {
+            "description": "Revenue by collection day",
+            "items": {
+              "$ref": "#/components/schemas/OpsRevenueDayRowDto"
+            },
+            "type": "array"
+          },
+          "byMethod": {
+            "description": "Revenue by payment method",
+            "items": {
+              "$ref": "#/components/schemas/OpsRevenueMethodRowDto"
+            },
+            "type": "array"
+          },
+          "byStatus": {
+            "description": "Revenue by payment status",
+            "items": {
+              "$ref": "#/components/schemas/OpsRevenueStatusRowDto"
+            },
+            "type": "array"
+          },
+          "couponsUsed": {
+            "description": "Coupons used, by redemption count",
+            "items": {
+              "$ref": "#/components/schemas/OpsRevenueCouponRowDto"
+            },
+            "type": "array"
+          },
+          "netRevenue": {
+            "description": "Revenue net of refunds in integer halalas",
+            "example": 235000,
+            "type": "number"
+          },
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsRevenueReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "recentPayments": {
+            "description": "The ten most recent payments in the period",
+            "items": {
+              "$ref": "#/components/schemas/OpsRevenueRecentPaymentDto"
+            },
+            "type": "array"
+          },
+          "refundsTotal": {
+            "description": "Refunded amount in integer halalas",
+            "example": 15000,
+            "type": "number"
+          },
+          "totalBookings": {
+            "description": "Bookings summarised in the period",
+            "example": 12,
+            "type": "number"
+          },
+          "totalRevenue": {
+            "description": "Total collected revenue in integer halalas",
+            "example": 250000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalRevenue",
+          "netRevenue",
+          "totalBookings",
+          "averagePerBooking",
+          "refundsTotal",
+          "byMethod",
+          "byStatus",
+          "byDay",
+          "couponsUsed",
+          "recentPayments"
+        ],
+        "type": "object"
+      },
+      "OpsRevenueStatusRowDto": {
+        "properties": {
+          "amount": {
+            "description": "Amount in this status in integer halalas",
+            "example": 150000,
+            "type": "number"
+          },
+          "count": {
+            "description": "Payment count in this status",
+            "example": 4,
+            "type": "number"
+          },
+          "status": {
+            "description": "Payment status",
+            "enum": [
+              "PENDING",
+              "PENDING_VERIFICATION",
+              "COMPLETED",
+              "FAILED",
+              "PARTIALLY_REFUNDED",
+              "REFUNDED"
+            ],
+            "example": "COMPLETED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "amount",
+          "count"
+        ],
+        "type": "object"
+      },
+      "OpsServicesReportDto": {
+        "properties": {
+          "previous": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpsServicesReportDto"
+              }
+            ],
+            "description": "Same-length previous period, present only when compareWithPrevious requested it"
+          },
+          "rows": {
+            "description": "One row per service with bookings in the period",
+            "items": {
+              "$ref": "#/components/schemas/OpsServicesRowDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "type": "object"
+      },
+      "OpsServicesRowDto": {
+        "properties": {
+          "averageRating": {
+            "description": "Mean rating for this service, 0 when unrated",
+            "example": 4.6,
+            "type": "number"
+          },
+          "bookings": {
+            "description": "Bookings on this service",
+            "example": 5,
+            "type": "number"
+          },
+          "cancelRate": {
+            "description": "Cancellation rate as a fraction (0–1)",
+            "example": 0.2,
+            "type": "number"
+          },
+          "completedBookings": {
+            "description": "Completed bookings on this service",
+            "example": 4,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic service name",
+            "example": "جلسة إرشاد أسري",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English service name, or null when unset",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Revenue from this service in integer halalas",
+            "example": 120000,
+            "type": "number"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "serviceId",
+          "nameAr",
+          "nameEn",
+          "bookings",
+          "completedBookings",
+          "revenue",
+          "cancelRate",
+          "averageRating"
+        ],
+        "type": "object"
+      },
       "OrganizationHoursRecordDto": {
         "properties": {
           "branchId": {
@@ -19907,6 +22164,116 @@
         ],
         "type": "object"
       },
+      "PlatformIntegrationListItemResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "hasConfig": {
+            "description": "Whether encrypted provider configuration is stored (the config itself is never returned)",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Integration row identifier",
+            "example": "00000000-0000-4000-a000-0000000000d1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the integration is currently active",
+            "example": true,
+            "type": "boolean"
+          },
+          "provider": {
+            "description": "Integration provider identifier",
+            "example": "MOYASAR",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "isActive",
+          "hasConfig",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PlatformIntegrationResponseDto": {
+        "properties": {
+          "config": {
+            "description": "Stored provider configuration as a free-form JSON value. This route persists the encrypted blob (`{ ciphertext }`) and echoes the row, so plaintext provider secrets are never returned.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Integration row identifier",
+            "example": "00000000-0000-4000-a000-0000000000d1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the integration is currently active",
+            "example": true,
+            "type": "boolean"
+          },
+          "provider": {
+            "description": "Integration provider identifier",
+            "example": "MOYASAR",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "config",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "PreviewEmailTemplateDto": {
         "properties": {
           "context": {
@@ -19918,6 +22285,107 @@
             "type": "object"
           }
         },
+        "type": "object"
+      },
+      "ProblemReportListResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Problem reports on the requested page, newest first",
+            "items": {
+              "$ref": "#/components/schemas/ProblemReportResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "ProblemReportResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "Detailed description of the problem",
+            "example": "Clicking confirm throws a 500 error.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Problem report identifier",
+            "example": "00000000-0000-4000-a000-0000000000d1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "reporterId": {
+            "description": "UUID of the user who submitted the report",
+            "example": "00000000-0000-4000-a000-0000000000d2",
+            "format": "uuid",
+            "type": "string"
+          },
+          "resolution": {
+            "description": "Resolution note, or null while the report is unresolved",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current triage status",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "example": "OPEN",
+            "type": "string"
+          },
+          "title": {
+            "description": "Short descriptive title",
+            "example": "Booking page crashes on submit",
+            "type": "string"
+          },
+          "type": {
+            "description": "Problem category",
+            "enum": [
+              "BUG",
+              "FEATURE_REQUEST",
+              "OTHER"
+            ],
+            "example": "BUG",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reporterId",
+          "type",
+          "title",
+          "description",
+          "status",
+          "resolution",
+          "createdAt",
+          "updatedAt"
+        ],
         "type": "object"
       },
       "ProcessPaymentDto": {
@@ -27240,6 +29708,43 @@
         "required": [
           "challengeId",
           "code"
+        ],
+        "type": "object"
+      },
+      "ZoomConfigResponseDto": {
+        "properties": {
+          "configured": {
+            "description": "Whether Zoom credentials are stored",
+            "example": true,
+            "type": "boolean"
+          },
+          "isActive": {
+            "description": "Whether the stored Zoom integration is active",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "isActive"
+        ],
+        "type": "object"
+      },
+      "ZoomTestResultDto": {
+        "properties": {
+          "error": {
+            "description": "Failure reason when the probe failed (provider error message)",
+            "example": "Invalid client credentials",
+            "type": "string"
+          },
+          "ok": {
+            "description": "Whether the credentials were exchanged for an access token",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
         ],
         "type": "object"
       }
@@ -43081,15 +45586,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "configured": {
-                      "type": "boolean"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ZoomConfigResponseDto"
                 }
               }
             },
@@ -43164,15 +45661,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "configured": {
-                      "type": "boolean"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ZoomConfigResponseDto"
                 }
               }
             },
@@ -43249,16 +45738,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "error": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "ok": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/ZoomTestResultDto"
                 }
               }
             },
@@ -44135,6 +46615,27 @@
               "example": "2026-04-17",
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -44142,101 +46643,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "action": {
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          "description": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "ipAddress": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "module": {
-                            "type": "string"
-                          },
-                          "resourceId": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "user": {
-                            "nullable": true,
-                            "properties": {
-                              "email": {
-                                "type": "string"
-                              },
-                              "firstName": {
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "lastName": {
-                                "nullable": true,
-                                "type": "string"
-                              }
-                            },
-                            "type": "object"
-                          },
-                          "userAgent": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "userEmail": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "userId": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "meta": {
-                      "properties": {
-                        "hasNextPage": {
-                          "type": "boolean"
-                        },
-                        "hasPreviousPage": {
-                          "type": "boolean"
-                        },
-                        "limit": {
-                          "type": "number"
-                        },
-                        "page": {
-                          "type": "number"
-                        },
-                        "total": {
-                          "type": "number"
-                        },
-                        "totalPages": {
-                          "type": "number"
-                        }
-                      },
-                      "type": "object"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/OpsActivityLogListResponseDto"
                 }
               }
             },
@@ -44314,42 +46721,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "attemptCount": {
-                      "type": "number"
-                    },
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "eventType": {
-                      "type": "string"
-                    },
-                    "failedAt": {
-                      "format": "date-time",
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "failureReason": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "status": {
-                      "enum": [
-                        "PENDING"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/OpsOutboxRetryResponseDto"
                 }
               }
             },
-            "description": "Event reset to PENDING with attemptCount 0; the next outbox tick will publish it"
+            "description": "Event reset for publishing (status PENDING, or PENDING_V2 when the row is on the durable v2 lane) with attemptCount 0; the next outbox tick will publish it"
           },
           "400": {
             "content": {
@@ -44439,40 +46815,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "properties": {
-                          "attemptCount": {
-                            "type": "number"
-                          },
-                          "createdAt": {
-                            "format": "date-time",
-                            "type": "string"
-                          },
-                          "eventType": {
-                            "type": "string"
-                          },
-                          "failedAt": {
-                            "format": "date-time",
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "failureReason": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "id": {
-                            "format": "uuid",
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/OpsOutboxFailedEventListResponseDto"
                 }
               }
             },
@@ -44549,7 +46892,35 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/OpsOverviewReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsRevenueReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsBookingsReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsClientsReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsPractitionersReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsPractitionerDetailReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsServicesReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsRatingsReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsActivityReportDto"
+                    }
+                  ]
                 }
               },
               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
@@ -44655,6 +47026,29 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/OpsPackageSalesReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsPackageOutstandingCreditReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsPackageConsumptionReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsRefundedPackagesEventsReportDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OpsRefundedPackagesLegacyReportDto"
+                    }
+                  ]
+                }
+              }
+            },
             "description": "JSON report object by report type. REFUNDED uses historyMode EVENTS with individual refund events and separate undatedHistorical records after reconciliation; otherwise historyMode LEGACY preserves the previous report with an incomplete historyReconciliation indicator."
           },
           "400": {
@@ -53969,6 +56363,16 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlatformIntegrationListItemResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Array of integration records"
           },
           "400": {
@@ -54037,6 +56441,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformIntegrationResponseDto"
+                }
+              }
+            },
             "description": "Integration upserted successfully"
           },
           "400": {
@@ -54110,10 +56521,38 @@
               "example": "OPEN",
               "type": "string"
             }
+          },
+          {
+            "description": "Results per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemReportListResponseDto"
+                }
+              }
+            },
             "description": "Paginated list of problem reports"
           },
           "400": {
@@ -54182,6 +56621,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemReportResponseDto"
+                }
+              }
+            },
             "description": "Problem report created successfully"
           },
           "400": {
@@ -54263,6 +56709,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemReportResponseDto"
+                }
+              }
+            },
             "description": "Problem report status updated"
           },
           "400": {
