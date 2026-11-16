@@ -7,6 +7,7 @@ import { GetZoomConfigHandler } from '../../modules/integrations/zoom/get-zoom-c
 import { UpsertZoomConfigHandler } from '../../modules/integrations/zoom/upsert-zoom-config.handler';
 import { TestZoomConfigHandler } from '../../modules/integrations/zoom/test-zoom-config.handler';
 import { UpsertZoomConfigDto } from '../../modules/integrations/zoom/dto/upsert-zoom-config.dto';
+import { ZoomConfigResponseDto, ZoomTestResultDto } from './dto/zoom-response.dto';
 
 @ApiTags('Dashboard / Integrations')
 @ApiBearerAuth()
@@ -25,15 +26,9 @@ export class DashboardIntegrationsController {
   @ApiOperation({ summary: 'Get Zoom integration status (no secrets returned)' })
   @ApiOkResponse({
     description: 'Configured + active flags',
-    schema: {
-      type: 'object',
-      properties: {
-        configured: { type: 'boolean' },
-        isActive: { type: 'boolean' },
-      },
-    },
+    type: ZoomConfigResponseDto,
   })
-  getZoom() {
+  getZoom(): Promise<ZoomConfigResponseDto> {
     return this.getZoomConfig.execute();
   }
 
@@ -42,15 +37,9 @@ export class DashboardIntegrationsController {
   @ApiOperation({ summary: 'Create or update Zoom S2S OAuth credentials' })
   @ApiOkResponse({
     description: 'Configured + active flags (no secrets returned)',
-    schema: {
-      type: 'object',
-      properties: {
-        configured: { type: 'boolean' },
-        isActive: { type: 'boolean' },
-      },
-    },
+    type: ZoomConfigResponseDto,
   })
-  upsertZoom(@Body() body: UpsertZoomConfigDto) {
+  upsertZoom(@Body() body: UpsertZoomConfigDto): Promise<ZoomConfigResponseDto> {
     return this.upsertZoomConfig.execute(body);
   }
 
@@ -60,15 +49,9 @@ export class DashboardIntegrationsController {
   @ApiOperation({ summary: 'Validate Zoom credentials by exchanging for an access token' })
   @ApiOkResponse({
     description: 'Zoom credential test result',
-    schema: {
-      type: 'object',
-      properties: {
-        ok: { type: 'boolean' },
-        error: { type: 'string', nullable: true },
-      },
-    },
+    type: ZoomTestResultDto,
   })
-  testZoom(@Body() body: UpsertZoomConfigDto) {
+  testZoom(@Body() body: UpsertZoomConfigDto): Promise<ZoomTestResultDto> {
     return this.testZoomConfig.execute(body);
   }
 }

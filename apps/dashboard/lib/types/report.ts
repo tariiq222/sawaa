@@ -1,9 +1,21 @@
 /**
  * Report Types — Sawaa Dashboard
- * Mirrors apps/backend/src/modules/ops/generate-report/*.builder.ts
+ *
+ * Every RESPONSE shape is derived from the committed OpenAPI snapshot: the
+ * `POST /dashboard/ops/reports` union (`Ops…ReportDto`, one per `ReportType`)
+ * that the backend's builders produce. `test/unit/lib/platform-ops-type-contract.spec.ts`
+ * pins each alias to its schema, so a builder change becomes a type error here.
+ *
+ * The query types stay local: they describe what the dashboard form collects
+ * (`dateFrom` / `dateTo` / `branchId` / `compareWithPrevious`), and
+ * `lib/api/reports.ts` maps them onto the documented `GenerateReportDto` body.
  */
 
-/* ─── Query ─── */
+import type { components } from "@/lib/types/api.generated"
+
+type Schemas = components["schemas"]
+
+/* ─── Query (client-side; mapped onto GenerateReportDto by lib/api/reports) ─── */
 
 export interface ReportDateQuery {
   dateFrom: string
@@ -15,171 +27,49 @@ export interface ReportQuery extends ReportDateQuery {
   compareWithPrevious?: boolean
 }
 
-export interface PractitionerReportQuery extends ReportQuery {
-  employeeId?: string
-}
-
-/** Wraps any report with optional previous-period data */
+/**
+ * Wraps a report with the optional previous period. The snapshot already
+ * documents `previous` on every compare-capable report, so this alias is now
+ * the identity on the wire shape — kept for call-site readability.
+ */
 export type WithPrevious<T> = T & { previous?: T }
 
-/* ─── Overview ─── */
+/* ─── Per-report payloads ─── */
 
-export interface OverviewReport {
-  totalRevenue: number
-  totalBookings: number
-  completedBookings: number
-  completionRate: number
-  newClients: number
-  trend: { date: string; revenue: number; bookings: number }[]
-  topServices: {
-    serviceId: string
-    nameAr: string
-    nameEn: string | null
-    count: number
-  }[]
-  topPractitioners: {
-    employeeId: string
-    name: string
-    revenue: number
-    bookings: number
-  }[]
-}
+/** `type: OVERVIEW` (`OpsOverviewReportDto`). */
+export type OverviewReport = Schemas["OpsOverviewReportDto"]
 
-/* ─── Revenue ─── */
+/** `type: REVENUE` (`OpsRevenueReportDto`). */
+export type RevenueReport = Schemas["OpsRevenueReportDto"]
 
-export type PaymentStatusKey =
-  | "PENDING"
-  | "PENDING_VERIFICATION"
-  | "COMPLETED"
-  | "FAILED"
-  | "REFUNDED"
+/** `type: BOOKINGS` (`OpsBookingsReportDto`). */
+export type BookingReport = Schemas["OpsBookingsReportDto"]
 
-export interface RevenueReport {
-  totalRevenue: number
-  netRevenue: number
-  totalBookings: number
-  averagePerBooking: number
-  refundsTotal: number
-  byMethod: { method: string; amount: number; count: number }[]
-  byStatus: { status: PaymentStatusKey; amount: number; count: number }[]
-  byDay: { date: string; amount: number; count: number }[]
-  couponsUsed: {
-    code: string
-    uses: number
-    discountAmount: number
-    isActive: boolean
-  }[]
-  recentPayments: {
-    id: string
-    date: string
-    clientName: string
-    serviceName: string
-    method: string
-    amount: number
-    status: PaymentStatusKey
-  }[]
-}
+/** `type: CLIENTS` (`OpsClientsReportDto`). */
+export type ClientsReport = Schemas["OpsClientsReportDto"]
 
-/* ─── Bookings ─── */
+/** `type: EMPLOYEES` without an `employeeId` filter (`OpsPractitionersReportDto`). */
+export type PractitionersReport = Schemas["OpsPractitionersReportDto"]
 
-export interface BookingReport {
-  total: number
-  byStatus: { status: string; count: number }[]
-  byType: { type: string; count: number }[]
-  byDay: { date: string; count: number }[]
-  noShowRate: number
-  cancelRate: number
-  avgDurationMins: number
-  byHourDow: { dow: number; hour: number; count: number }[]
-  byCancelReason: { reason: string; count: number }[]
-}
+/** `type: EMPLOYEES` with an `employeeId` filter (`OpsPractitionerDetailReportDto`). */
+export type PractitionerDetail = Schemas["OpsPractitionerDetailReportDto"]
 
-/* ─── Clients ─── */
+/** `type: SERVICES` (`OpsServicesReportDto`). */
+export type ServicesReport = Schemas["OpsServicesReportDto"]
 
-export type ClientGenderKey = "MALE" | "FEMALE" | "UNKNOWN"
-export type ClientAgeGroup = "<18" | "18-29" | "30-44" | "45-59" | "60+" | "UNKNOWN"
+/** `type: RATINGS` (`OpsRatingsReportDto`). */
+export type RatingsReport = Schemas["OpsRatingsReportDto"]
 
-export interface ClientsReport {
-  total: number
-  newClients: number
-  returningClients: number
-  retentionRate: number
-  byGender: { gender: ClientGenderKey; count: number }[]
-  byAgeGroup: { group: ClientAgeGroup; count: number }[]
-  topByRevenue: {
-    clientId: string
-    name: string
-    bookings: number
-    revenue: number
-  }[]
-}
+/* ─── Vocabulary re-exports (schema-derived) ─── */
 
-/* ─── Practitioners ─── */
+/** Payment statuses the revenue report buckets by. */
+export type PaymentStatusKey = RevenueReport["byStatus"][number]["status"]
 
-export interface PractitionerRow {
-  employeeId: string
-  name: string
-  role: string | null
-  bookings: number
-  completedBookings: number
-  completionRate: number
-  revenue: number
-  utilization: number
-  averageRating: number
-}
+/** Client genders the clients report buckets by (includes the UNKNOWN bucket). */
+export type ClientGenderKey = ClientsReport["byGender"][number]["gender"]
 
-export interface PractitionersReport {
-  totalActive: number
-  avgRevenue: number
-  avgUtilization: number
-  avgRating: number
-  totalCompleted: number
-  rows: PractitionerRow[]
-}
+/** Age buckets the clients report buckets by. */
+export type ClientAgeGroup = ClientsReport["byAgeGroup"][number]["group"]
 
-/** Per-employee detail (when employeeId is passed) */
-export interface PractitionerDetail extends PractitionerRow {
-  byDay: { date: string; bookings: number; revenue: number }[]
-}
-
-/* ─── Services ─── */
-
-export interface ServicesReport {
-  rows: {
-    serviceId: string
-    nameAr: string
-    nameEn: string | null
-    bookings: number
-    completedBookings: number
-    revenue: number
-    cancelRate: number
-    averageRating: number
-  }[]
-}
-
-/* ─── Ratings ─── */
-
-export interface RatingsReport {
-  averageScore: number
-  totalRatings: number
-  positiveCount: number
-  negativeCount: number
-  distribution: { score: 1 | 2 | 3 | 4 | 5; count: number }[]
-  trend: { date: string; average: number; count: number }[]
-  recentNegative: {
-    id: string
-    bookingId: string
-    score: number
-    comment: string | null
-    clientName: string
-    employeeName: string
-    serviceName: string
-    createdAt: string
-  }[]
-}
-
-/* ─── Backwards-compat exports ─── */
-
-/** Legacy alias kept while we delete the old tab components */
-export type EmployeeReport = PractitionerDetail
-export type TopPractitionersReport = OverviewReport["topPractitioners"][number]
+/** One practitioner summary row. */
+export type PractitionerRow = PractitionersReport["rows"][number]

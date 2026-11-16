@@ -9,6 +9,19 @@ vi.mock("@/lib/api", () => ({
 }))
 
 import { fetchPackageReport } from "@/lib/api/package-reports"
+
+/**
+ * The call now goes through the typed helper in `lib/api/openapi.ts`, which
+ * serialises the query onto the URL and invokes the same `api` client with one
+ * argument. Asserting the built URL keeps this at byte level.
+ */
+function expectedUrl(query: Record<string, string | number | boolean | undefined>): string {
+  const entries = Object.entries(query).filter(([, v]) => v !== undefined && v !== "")
+  const serialized = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()
+  return serialized
+    ? `/dashboard/ops/reports/packages?${serialized}`
+    : "/dashboard/ops/reports/packages"
+}
 import type {
   PackageReport,
   PackageReportType,
@@ -35,11 +48,13 @@ describe("package-reports api", () => {
       from: "2026-01-01",
       to: "2026-01-31",
     })
-    expect(getMock).toHaveBeenCalledWith("/dashboard/ops/reports/packages", {
-      report: "SALES",
-      from: "2025-12-31T21:00:00.000Z",
-      to: "2026-01-31T20:59:59.999Z",
-    })
+    expect(getMock).toHaveBeenCalledWith(
+      expectedUrl({
+        report: "SALES",
+        from: "2025-12-31T21:00:00.000Z",
+        to: "2026-01-31T20:59:59.999Z",
+      }),
+    )
   })
 
   it.each<PackageReportType>([
@@ -50,8 +65,9 @@ describe("package-reports api", () => {
   ])("forwards the report discriminator verbatim — %s", async (report) => {
     getMock.mockResolvedValueOnce(null)
     await fetchPackageReport({ report, from: "2026-01-31T21:00:00.000Z", to: "2026-02-27T21:00:00.000Z" })
-    const [, params] = getMock.mock.calls[0]
-    expect(params).toEqual({ report, from: "2026-01-31T21:00:00.000Z", to: "2026-02-27T21:00:00.000Z" })
+    expect(getMock.mock.calls[0][0]).toBe(
+      expectedUrl({ report, from: "2026-01-31T21:00:00.000Z", to: "2026-02-27T21:00:00.000Z" }),
+    )
   })
 
   it("returns the discriminator-tagged union (SALES shape)", async () => {
@@ -95,7 +111,7 @@ describe("package-reports api", () => {
       from: "2025-12-31T21:00:00.000Z",
       to: "2026-01-31T20:59:59.999Z",
     })
-    const [, params] = getMock.mock.calls[0]
-    expect(params.report).toBe("CONSUMPTION")
+    const url = new URL(getMock.mock.calls[0][0] as string, "http://localhost")
+    expect(url.searchParams.get("report")).toBe("CONSUMPTION")
   })
 })

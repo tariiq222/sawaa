@@ -1,37 +1,41 @@
 /**
  * Package Report Types — Sawaa Dashboard
  *
- * App-local types for the four session-package operational reports
- * (Phase 5 of the session-packages rebuild). Mirrors the backend
- * `PackageReportsHandler` and the four `buildXxx*Report` builders
- * under `apps/backend/src/modules/ops/generate-report/`. The endpoint
- * is `GET /dashboard/ops/reports/packages?report=<type>&from=<ISO>&to=<ISO>`
- * and the `report` discriminator returns a JSON body whose shape
- * depends on the chosen type — that is why the response is a union
- * discriminated by the `kind` tag.
+ * The four session-package operational reports come from
+ * `GET /dashboard/ops/reports/packages?report=<type>&from=<ISO>&to=<ISO>`.
+ * Every RESPONSE shape is derived from the committed OpenAPI snapshot, so the
+ * builders under `apps/backend/src/modules/ops/generate-report/` and the
+ * dashboard cannot drift apart. `test/unit/lib/platform-ops-type-contract.spec.ts`
+ * pins each alias.
  *
- * Money is integer halalas end-to-end. Dates are passed in as
- * `yyyy-MM-dd` strings and become ISO ranges server-side.
+ * The `report` discriminator returns a JSON body whose shape depends on the
+ * chosen type, so the response is a union discriminated by `kind`. Money is
+ * integer halalas end-to-end. Dates are passed in as `yyyy-MM-dd` strings and
+ * become ISO ranges server-side.
  */
 
+import type { components, paths } from "@/lib/types/api.generated"
+
+type Schemas = components["schemas"]
+
+/* ─── Discriminators ─── */
+
+/** The `report` query enum on the endpoint. */
 export type PackageReportType =
-  | "SALES"
-  | "OUTSTANDING_CREDIT"
-  | "CONSUMPTION"
-  | "REFUNDED"
+  paths["/api/v1/dashboard/ops/reports/packages"]["get"]["parameters"]["query"]["report"]
 
 /* ─── SALES ─── */
 
 /**
- * Per-PaymentMethod breakdown. `CASH` carries no real cash off-books;
- * the bucketing in `byBucket` excludes it from "electronic" so the
- * numbers reconcile.
+ * `report=SALES` (`OpsPackageSalesReportDto`).
+ *
+ * `totalRevenue` is a legacy alias the backend keeps for older consumers; it
+ * equals `netRevenue` (gross settled package payments less cumulative refunds).
  */
-export interface PackageSalesMethodRow {
-  method: string
-  amount: number
-  count: number
-}
+export type PackageSalesReport = Schemas["OpsPackageSalesReportDto"]
+
+/** Per-PaymentMethod breakdown. `CASH` carries no real cash off-books; `byBucket` excludes it from "electronic" so the numbers reconcile. */
+export type PackageSalesMethodRow = PackageSalesReport["byMethod"][number]
 
 /**
  * Sales-by-channel bucket the dashboard renders as a donut:
@@ -39,117 +43,54 @@ export interface PackageSalesMethodRow {
  *   network    → MADA
  *   electronic → ONLINE_CARD / TABBY / BANK_TRANSFER
  */
-export interface PackageSalesBuckets {
-  cash: number
-  network: number
-  electronic: number
-}
-
-export interface PackageSalesReport {
-  kind: "SALES"
-  purchaseCount: number
-  /** Legacy alias retained for older consumers; equals netRevenue. */
-  totalRevenue: number
-  grossRevenue: number
-  refundedAmount: number
-  netRevenue: number
-  byBucket: PackageSalesBuckets
-  byMethod: PackageSalesMethodRow[]
-}
+export type PackageSalesBuckets = PackageSalesReport["byBucket"]
 
 /* ─── OUTSTANDING_CREDIT ─── */
 
-/**
- * Point-in-time liability — what the center still owes in pre-paid,
- * unconsumed sessions right now. The date range is accepted but
- * ignored server-side (the metric is a snapshot, not a range).
- */
-export interface OutstandingCreditReport {
-  kind: "OUTSTANDING_CREDIT"
-  outstandingLiability: number
-  outstandingSessions: number
-  creditCount: number
-  /** Σ reservedQuantity — outstanding sessions that already have an appointment booked. */
-  reservedSessions: number
-}
+/** `report=OUTSTANDING_CREDIT` (`OpsPackageOutstandingCreditReportDto`). Point-in-time: the date range is accepted but ignored. */
+export type OutstandingCreditReport = Schemas["OpsPackageOutstandingCreditReportDto"]
 
 /* ─── CONSUMPTION ─── */
 
-export interface PackageConsumptionRow {
-  employeeId: string
-  name: string
-  count: number
-  attribution?: "BOOKING" | "LEGACY_CREDIT" | "UNKNOWN" | "MIXED"
-}
+/** `report=CONSUMPTION` (`OpsPackageConsumptionReportDto`). */
+export type PackageConsumptionReport = Schemas["OpsPackageConsumptionReportDto"]
 
-export interface PackageConsumptionReport {
-  kind: "CONSUMPTION"
-  totalConsumed: number
-  byEmployee: PackageConsumptionRow[]
-}
+/** One practitioner row; `attribution` appears only for legacy/mixed sources. */
+export type PackageConsumptionRow = PackageConsumptionReport["byEmployee"][number]
 
 /* ─── REFUNDED ─── */
 
-export type PackageRefundHistoryMode = "EVENTS" | "LEGACY"
+export type PackageRefundHistoryMode =
+  | Schemas["OpsRefundedPackagesEventsReportDto"]["historyMode"]
+  | Schemas["OpsRefundedPackagesLegacyReportDto"]["historyMode"]
 
-export type PackageRefundEventSource =
-  | "LIVE"
-  | "LEGACY_REQUEST"
-  | "LEGACY_AGGREGATE"
+export type PackageRefundEventSource = Schemas["OpsRefundedPackageEventRowDto"]["source"]
 
-export type PackageRefundType = "FULL" | "PARTIAL" | "UNKNOWN"
+export type PackageRefundType = Schemas["OpsRefundedPackageEventRowDto"]["refundType"]
 
-export interface RefundedPackageEventRow {
-  eventId: string
-  purchaseId: string
-  packageId: string | null
-  clientId: string | null
-  amountPaid: number | null
-  refundAmount: number
-  refundType: PackageRefundType
-  source: PackageRefundEventSource
-  occurredAt: string | null
-  notes: string | null
+/** One dated refund event (or an undated historical record). */
+export type RefundedPackageEventRow = Schemas["OpsRefundedPackageEventRowDto"]
+
+/** One refunded purchase in the legacy history mode. */
+export type RefundedPackageLegacyRow = Schemas["OpsRefundedPackageLegacyRowDto"]
+
+export type PackageRefundHistoryReconciliation = Schemas["OpsRefundHistoryReconciliationDto"]
+
+/**
+ * `report=REFUNDED` with reconciled history (`historyMode: EVENTS`).
+ *
+ * The snapshot documents `complete` as the stored boolean; the dashboard
+ * narrows it to `true` here because the backend only produces this mode when
+ * every purchase reconciled. That narrowing is client-side and cannot misread
+ * a payload — a `false` would have arrived as the LEGACY branch instead.
+ */
+export type RefundedPackagesEventsReport = Schemas["OpsRefundedPackagesEventsReportDto"] & {
+  historyReconciliation: Schemas["OpsRefundHistoryReconciliationDto"] & { complete: true }
 }
 
-export interface RefundedPackageLegacyRow {
-  purchaseId: string
-  packageId: string | null
-  clientId: string | null
-  amountPaid: number | null
-  refundAmount: number
-  refundedAt: string | null
-  notes: string | null
-}
-
-export interface PackageRefundHistoryReconciliation {
-  complete: boolean
-  unresolvedPurchaseCount: number
-}
-
-export interface RefundedPackagesEventsReport {
-  kind: "REFUNDED"
-  historyMode: "EVENTS"
-  historyReconciliation: PackageRefundHistoryReconciliation & { complete: true }
-  eventCount: number
-  purchaseCount: number
-  totalRefunded: number
-  items: RefundedPackageEventRow[]
-  undatedHistorical: {
-    recordCount: number
-    purchaseCount: number
-    totalRefunded: number
-    items: RefundedPackageEventRow[]
-  }
-}
-
-export interface RefundedPackagesLegacyReport {
-  kind: "REFUNDED"
-  historyMode: "LEGACY"
-  historyReconciliation: PackageRefundHistoryReconciliation & { complete: false }
-  refundedCount: number
-  totalRefunded: number
-  items: RefundedPackageLegacyRow[]
+/** `report=REFUNDED` with a legacy history (`historyMode: LEGACY`). */
+export type RefundedPackagesLegacyReport = Schemas["OpsRefundedPackagesLegacyReportDto"] & {
+  historyReconciliation: Schemas["OpsRefundHistoryReconciliationDto"] & { complete: false }
 }
 
 export type RefundedPackagesReport =

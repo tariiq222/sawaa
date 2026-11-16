@@ -17339,6 +17339,1358 @@ export interface components {
             /** @description Operation state version shown on the action card */
             expectedVersion: number;
         };
+        OpsActivityLogEntryDto: {
+            /**
+             * @description Action performed
+             * @example UPDATE
+             * @enum {string}
+             */
+            action: "CREATE" | "UPDATE" | "DELETE" | "LOGIN" | "LOGOUT" | "EXPORT" | "IMPORT" | "SYSTEM";
+            /**
+             * Format: date-time
+             * @description When the action occurred, as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Human-readable description of the change
+             * @example Updated booking status
+             */
+            description: string;
+            /**
+             * Format: uuid
+             * @description Log row identifier
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Client IP address, or null
+             * @example 127.0.0.1
+             */
+            ipAddress: string | null;
+            /**
+             * @description Affected entity name (returned under the key `module`)
+             * @example Booking
+             */
+            module: string;
+            /**
+             * Format: uuid
+             * @description Affected entity UUID, or null
+             * @example null
+             */
+            resourceId: string | null;
+            /** @description Current staff user record, or null when the user is gone or the action was systemic */
+            user: components["schemas"]["OpsActivityLogUserDto"] | null;
+            /**
+             * @description Client user agent, or null
+             * @example Mozilla/5.0
+             */
+            userAgent: string | null;
+            /**
+             * @description Email captured on the log row, or null
+             * @example null
+             */
+            userEmail: string | null;
+            /**
+             * Format: uuid
+             * @description Acting staff user UUID, or null for system actions
+             * @example null
+             */
+            userId: string | null;
+        };
+        OpsActivityLogListResponseDto: {
+            /** @description Activity log entries on the requested page, newest first */
+            items: components["schemas"]["OpsActivityLogEntryDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        OpsActivityLogUserDto: {
+            /**
+             * @description Account email
+             * @example staff@example.com
+             */
+            email: string;
+            /**
+             * @description First name, or null when unset
+             * @example سارة
+             */
+            firstName: string | null;
+            /**
+             * Format: uuid
+             * @description Staff user UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Last name, or null when unset
+             * @example العتيبي
+             */
+            lastName: string | null;
+        };
+        OpsActivityReportDayRowDto: {
+            /**
+             * @description Actions that day
+             * @example 9
+             */
+            count: number;
+            /**
+             * @description Calendar day (yyyy-MM-dd)
+             * @example 2026-01-15
+             */
+            date: string;
+        };
+        OpsActivityReportDto: {
+            /** @description Actions per day */
+            byDay: components["schemas"]["OpsActivityReportDayRowDto"][];
+            /** @description Actions per actor (top twenty) */
+            byUser: components["schemas"]["OpsActivityReportUserRowDto"][];
+            /** @description Reported period */
+            period: components["schemas"]["OpsActivityReportPeriodDto"];
+            /** @description Aggregate summary of the window */
+            summary: components["schemas"]["OpsActivityReportSummaryDto"];
+        };
+        OpsActivityReportPeriodDto: {
+            /**
+             * Format: date-time
+             * @description Window start as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            from: string;
+            /**
+             * Format: date-time
+             * @description Window end as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            to: string;
+        };
+        OpsActivityReportSummaryDto: {
+            /** @description Actions by count */
+            topActions: components["schemas"]["OpsActivityReportTopActionDto"][];
+            /** @description Entities by action count (top ten) */
+            topEntities: components["schemas"]["OpsActivityReportTopEntityDto"][];
+            /**
+             * @description Log rows in the period
+             * @example 40
+             */
+            totalActions: number;
+            /**
+             * @description Distinct acting users
+             * @example 6
+             */
+            uniqueUsers: number;
+        };
+        OpsActivityReportTopActionDto: {
+            /**
+             * @description Action name
+             * @example UPDATE
+             */
+            action: string;
+            /**
+             * @description Actions of this type
+             * @example 9
+             */
+            count: number;
+        };
+        OpsActivityReportTopEntityDto: {
+            /**
+             * @description Actions on this entity
+             * @example 12
+             */
+            count: number;
+            /**
+             * @description Entity name
+             * @example Booking
+             */
+            entity: string;
+        };
+        OpsActivityReportUserRowDto: {
+            /**
+             * @description Actions by this actor
+             * @example 5
+             */
+            count: number;
+            /**
+             * @description Staff user email captured with the log row, or null
+             * @example null
+             */
+            userEmail: string | null;
+            /**
+             * Format: uuid
+             * @description Staff user UUID (the builder only emits rows for actions that carry one)
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            userId: string;
+        };
+        OpsBookingsCancelReasonRowDto: {
+            /**
+             * @description Cancellations with this reason
+             * @example 2
+             */
+            count: number;
+            /**
+             * @description Cancellation reason, or UNSPECIFIED when none was recorded
+             * @example CLIENT_REQUESTED
+             * @enum {string}
+             */
+            reason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | "UNSPECIFIED";
+        };
+        OpsBookingsDayRowDto: {
+            /**
+             * @description Bookings that day
+             * @example 4
+             */
+            count: number;
+            /**
+             * @description Calendar day (yyyy-MM-dd)
+             * @example 2026-01-15
+             */
+            date: string;
+        };
+        OpsBookingsHourDowRowDto: {
+            /**
+             * @description Bookings in this slot
+             * @example 3
+             */
+            count: number;
+            /**
+             * @description Day of week (0 = Sunday)
+             * @example 1
+             */
+            dow: number;
+            /**
+             * @description Hour of day (0–23)
+             * @example 10
+             */
+            hour: number;
+        };
+        OpsBookingsReportDto: {
+            /**
+             * @description Mean booking duration in minutes
+             * @example 50
+             */
+            avgDurationMins: number;
+            /** @description Cancellations by reason */
+            byCancelReason: components["schemas"]["OpsBookingsCancelReasonRowDto"][];
+            /** @description Bookings by day */
+            byDay: components["schemas"]["OpsBookingsDayRowDto"][];
+            /** @description Bookings by weekday and hour */
+            byHourDow: components["schemas"]["OpsBookingsHourDowRowDto"][];
+            /** @description Bookings by status */
+            byStatus: components["schemas"]["OpsBookingsStatusRowDto"][];
+            /** @description Bookings by type */
+            byType: components["schemas"]["OpsBookingsTypeRowDto"][];
+            /**
+             * @description Cancellation rate as a fraction (0–1)
+             * @example 0.16
+             */
+            cancelRate: number;
+            /**
+             * @description No-show rate as a fraction (0–1)
+             * @example 0.08
+             */
+            noShowRate: number;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsBookingsReportDto"];
+            /**
+             * @description Bookings in the period
+             * @example 12
+             */
+            total: number;
+        };
+        OpsBookingsStatusRowDto: {
+            /**
+             * @description Bookings in this status
+             * @example 9
+             */
+            count: number;
+            /**
+             * @description Booking status
+             * @example COMPLETED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
+        };
+        OpsBookingsTypeRowDto: {
+            /**
+             * @description Bookings of this type
+             * @example 12
+             */
+            count: number;
+            /**
+             * @description Booking type as stored
+             * @example INDIVIDUAL
+             */
+            type: string;
+        };
+        OpsClientsAgeGroupRowDto: {
+            /**
+             * @description Clients in this bucket
+             * @example 3
+             */
+            count: number;
+            /**
+             * @description Age bucket, or UNKNOWN when date of birth is unset
+             * @example 30-44
+             * @enum {string}
+             */
+            group: "<18" | "18-29" | "30-44" | "45-59" | "60+" | "UNKNOWN";
+        };
+        OpsClientsGenderRowDto: {
+            /**
+             * @description Clients in this bucket
+             * @example 4
+             */
+            count: number;
+            /**
+             * @description Client gender, or UNKNOWN when unset
+             * @example FEMALE
+             * @enum {string}
+             */
+            gender: "MALE" | "FEMALE" | "UNKNOWN";
+        };
+        OpsClientsReportDto: {
+            /** @description Clients by age bucket */
+            byAgeGroup: components["schemas"]["OpsClientsAgeGroupRowDto"][];
+            /** @description Clients by gender */
+            byGender: components["schemas"]["OpsClientsGenderRowDto"][];
+            /**
+             * @description Clients whose first booking fell in the period
+             * @example 5
+             */
+            newClients: number;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsClientsReportDto"];
+            /**
+             * @description Returning-client share as a fraction (0–1)
+             * @example 0.72
+             */
+            retentionRate: number;
+            /**
+             * @description Clients with an earlier booking
+             * @example 13
+             */
+            returningClients: number;
+            /** @description Clients by revenue, descending */
+            topByRevenue: components["schemas"]["OpsClientsTopByRevenueDto"][];
+            /**
+             * @description Clients with bookings in the period
+             * @example 18
+             */
+            total: number;
+        };
+        OpsClientsTopByRevenueDto: {
+            /**
+             * @description Bookings by this client
+             * @example 4
+             */
+            bookings: number;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-0000000000e3
+             */
+            clientId: string;
+            /**
+             * @description Client display name
+             * @example عميل تجريبي
+             */
+            name: string;
+            /**
+             * @description Revenue from this client in integer halalas
+             * @example 120000
+             */
+            revenue: number;
+        };
+        OpsOutboxFailedEventDto: {
+            /**
+             * @description Publish attempts so far
+             * @example 5
+             */
+            attemptCount: number;
+            /**
+             * Format: date-time
+             * @description Event creation instant as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Domain event type
+             * @example bookings.booking.created
+             */
+            eventType: string;
+            /**
+             * Format: date-time
+             * @description When it entered the terminal FAILED state, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            failedAt: string | null;
+            /**
+             * @description Sanitized and truncated failure reason, or null
+             * @example Provider timeout
+             */
+            failureReason: string | null;
+            /**
+             * Format: uuid
+             * @description Outbox event UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+        };
+        OpsOutboxFailedEventListResponseDto: {
+            /** @description Terminal FAILED events, most recently failed first */
+            items: components["schemas"]["OpsOutboxFailedEventDto"][];
+        };
+        OpsOutboxRetryResponseDto: {
+            /**
+             * @description Publish attempts so far
+             * @example 5
+             */
+            attemptCount: number;
+            /**
+             * Format: date-time
+             * @description Event creation instant as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Domain event type
+             * @example bookings.booking.created
+             */
+            eventType: string;
+            /**
+             * Format: date-time
+             * @description When it entered the terminal FAILED state, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            failedAt: string | null;
+            /**
+             * @description Sanitized and truncated failure reason, or null
+             * @example Provider timeout
+             */
+            failureReason: string | null;
+            /**
+             * Format: uuid
+             * @description Outbox event UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Delivery-lane status the event was reset to
+             * @example PENDING
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_V2";
+        };
+        OpsOverviewReportDto: {
+            /**
+             * @description Bookings with status COMPLETED
+             * @example 9
+             */
+            completedBookings: number;
+            /**
+             * @description completedBookings ÷ totalBookings as a fraction (0–1)
+             * @example 0.75
+             */
+            completionRate: number;
+            /**
+             * @description Clients created in the period
+             * @example 5
+             */
+            newClients: number;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsOverviewReportDto"];
+            /** @description Practitioners by revenue, descending */
+            topPractitioners: components["schemas"]["OpsOverviewTopPractitionerDto"][];
+            /** @description Services by booking count, descending */
+            topServices: components["schemas"]["OpsOverviewTopServiceDto"][];
+            /**
+             * @description Bookings scheduled in the period
+             * @example 12
+             */
+            totalBookings: number;
+            /**
+             * @description Total collected revenue in integer halalas
+             * @example 250000
+             */
+            totalRevenue: number;
+            /** @description Daily revenue and booking counts */
+            trend: components["schemas"]["OpsOverviewTrendPointDto"][];
+        };
+        OpsOverviewTopPractitionerDto: {
+            /**
+             * @description Bookings handled by this practitioner
+             * @example 3
+             */
+            bookings: number;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-0000000000e2
+             */
+            employeeId: string;
+            /**
+             * @description Practitioner display name
+             * @example أخصائي تجريبي
+             */
+            name: string;
+            /**
+             * @description Revenue attributed to this practitioner in integer halalas
+             * @example 90000
+             */
+            revenue: number;
+        };
+        OpsOverviewTopServiceDto: {
+            /**
+             * @description Bookings on this service in the period
+             * @example 3
+             */
+            count: number;
+            /**
+             * @description Arabic service name
+             * @example جلسة إرشاد أسري
+             */
+            nameAr: string;
+            /**
+             * @description English service name, or null when unset
+             * @example null
+             */
+            nameEn: string | null;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            serviceId: string;
+        };
+        OpsOverviewTrendPointDto: {
+            /**
+             * @description Bookings scheduled that day
+             * @example 4
+             */
+            bookings: number;
+            /**
+             * @description Calendar day (yyyy-MM-dd) in the report timezone
+             * @example 2026-01-15
+             */
+            date: string;
+            /**
+             * @description Revenue collected that day in integer halalas
+             * @example 120000
+             */
+            revenue: number;
+        };
+        OpsPackageConsumptionReportDto: {
+            /** @description Consumption grouped by practitioner */
+            byEmployee: components["schemas"]["OpsPackageConsumptionRowDto"][];
+            /**
+             * @description Report discriminator
+             * @example CONSUMPTION
+             * @enum {string}
+             */
+            kind: "CONSUMPTION";
+            /**
+             * @description Package sessions debited in the period
+             * @example 18
+             */
+            totalConsumed: number;
+        };
+        OpsPackageConsumptionRowDto: {
+            /**
+             * @description Attribution source; omitted when the row comes straight from a confirmed booking
+             * @enum {string}
+             */
+            attribution?: "BOOKING" | "LEGACY_CREDIT" | "UNKNOWN" | "MIXED";
+            /**
+             * @description Sessions consumed
+             * @example 4
+             */
+            count: number;
+            /**
+             * Format: uuid
+             * @description Practitioner UUID
+             * @example 00000000-0000-4000-a000-0000000000e7
+             */
+            employeeId: string;
+            /**
+             * @description Practitioner display name
+             * @example أخصائي تجريبي
+             */
+            name: string;
+        };
+        OpsPackageOutstandingCreditReportDto: {
+            /**
+             * @description Credit buckets with remaining capacity
+             * @example 7
+             */
+            creditCount: number;
+            /**
+             * @description Report discriminator
+             * @example OUTSTANDING_CREDIT
+             * @enum {string}
+             */
+            kind: "OUTSTANDING_CREDIT";
+            /**
+             * @description Value of unconsumed sessions at what clients paid, in integer halalas
+             * @example 480000
+             */
+            outstandingLiability: number;
+            /**
+             * @description Unconsumed sessions across all active credits
+             * @example 32
+             */
+            outstandingSessions: number;
+            /**
+             * @description Unconsumed sessions that already carry a booked appointment
+             * @example 5
+             */
+            reservedSessions: number;
+        };
+        OpsPackageSalesBucketDto: {
+            /**
+             * @description Net CASH revenue in integer halalas
+             * @example 50000
+             */
+            cash: number;
+            /**
+             * @description Net ONLINE_CARD / TABBY / BANK_TRANSFER revenue in integer halalas
+             * @example 30000
+             */
+            electronic: number;
+            /**
+             * @description Net MADA revenue in integer halalas
+             * @example 70000
+             */
+            network: number;
+        };
+        OpsPackageSalesMethodRowDto: {
+            /**
+             * @description Net amount in integer halalas
+             * @example 70000
+             */
+            amount: number;
+            /**
+             * @description Payments with this method
+             * @example 3
+             */
+            count: number;
+            /**
+             * @description Payment method as stored
+             * @example MADA
+             */
+            method: string;
+        };
+        OpsPackageSalesReportDto: {
+            /** @description Net revenue by operational channel */
+            byBucket: components["schemas"]["OpsPackageSalesBucketDto"];
+            /** @description Net revenue by raw payment method */
+            byMethod: components["schemas"]["OpsPackageSalesMethodRowDto"][];
+            /**
+             * @description Gross settled package payments in integer halalas
+             * @example 160000
+             */
+            grossRevenue: number;
+            /**
+             * @description Report discriminator
+             * @example SALES
+             * @enum {string}
+             */
+            kind: "SALES";
+            /**
+             * @description Gross revenue less refunds in integer halalas
+             * @example 150000
+             */
+            netRevenue: number;
+            /**
+             * @description Package purchases paid for in the period
+             * @example 6
+             */
+            purchaseCount: number;
+            /**
+             * @description Cumulative refunds on those payments in integer halalas
+             * @example 10000
+             */
+            refundedAmount: number;
+            /**
+             * @description Legacy alias for netRevenue, in integer halalas
+             * @example 150000
+             */
+            totalRevenue: number;
+        };
+        OpsPractitionerDetailReportDto: {
+            /**
+             * @description Mean rating in the period, 0 when unrated
+             * @example 4.5
+             */
+            averageRating: number;
+            /**
+             * @description Bookings handled in the period
+             * @example 8
+             */
+            bookings: number;
+            /** @description Daily bookings and revenue for this practitioner */
+            byDay: {
+                /**
+                 * @description Bookings that day
+                 * @example 2
+                 */
+                bookings: number;
+                /**
+                 * @description Calendar day (yyyy-MM-dd)
+                 * @example 2026-01-15
+                 */
+                date: string;
+                /**
+                 * @description Revenue that day in integer halalas
+                 * @example 60000
+                 */
+                revenue: number;
+            }[];
+            /**
+             * @description Bookings completed
+             * @example 6
+             */
+            completedBookings: number;
+            /**
+             * @description Completed ÷ booked as a fraction (0–1)
+             * @example 0.75
+             */
+            completionRate: number;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-0000000000e4
+             */
+            employeeId: string;
+            /**
+             * @description Practitioner display name
+             * @example أخصائي تجريبي
+             */
+            name: string;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsPractitionerDetailReportDto"];
+            /**
+             * @description Revenue attributed in integer halalas
+             * @example 180000
+             */
+            revenue: number;
+            /**
+             * @description Specialty / role label, or null when unset
+             * @example null
+             */
+            role: string | null;
+            /**
+             * @description Booked minutes ÷ available minutes, capped at 1
+             * @example 0.42
+             */
+            utilization: number;
+        };
+        OpsPractitionerRowDto: {
+            /**
+             * @description Mean rating in the period, 0 when unrated
+             * @example 4.5
+             */
+            averageRating: number;
+            /**
+             * @description Bookings handled in the period
+             * @example 8
+             */
+            bookings: number;
+            /**
+             * @description Bookings completed
+             * @example 6
+             */
+            completedBookings: number;
+            /**
+             * @description Completed ÷ booked as a fraction (0–1)
+             * @example 0.75
+             */
+            completionRate: number;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-0000000000e4
+             */
+            employeeId: string;
+            /**
+             * @description Practitioner display name
+             * @example أخصائي تجريبي
+             */
+            name: string;
+            /**
+             * @description Revenue attributed in integer halalas
+             * @example 180000
+             */
+            revenue: number;
+            /**
+             * @description Specialty / role label, or null when unset
+             * @example null
+             */
+            role: string | null;
+            /**
+             * @description Booked minutes ÷ available minutes, capped at 1
+             * @example 0.42
+             */
+            utilization: number;
+        };
+        OpsPractitionersReportDto: {
+            /**
+             * @description Mean rating across rated practitioners, 0 when none
+             * @example 4.2
+             */
+            avgRating: number;
+            /**
+             * @description Mean revenue per practitioner in integer halalas
+             * @example 150000
+             */
+            avgRevenue: number;
+            /**
+             * @description Mean utilization as a fraction (0–1)
+             * @example 0.38
+             */
+            avgUtilization: number;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsPractitionersReportDto"];
+            /** @description One row per practitioner */
+            rows: components["schemas"]["OpsPractitionerRowDto"][];
+            /**
+             * @description Practitioners with bookings in the period
+             * @example 4
+             */
+            totalActive: number;
+            /**
+             * @description Completed bookings across all practitioners
+             * @example 24
+             */
+            totalCompleted: number;
+        };
+        OpsRatingsDistributionRowDto: {
+            /**
+             * @description Ratings with this score
+             * @example 7
+             */
+            count: number;
+            /**
+             * @description Star score
+             * @example 5
+             * @enum {integer}
+             */
+            score: 1 | 2 | 3 | 4 | 5;
+        };
+        OpsRatingsReportDto: {
+            /**
+             * @description Mean score in the period, 0 when unrated
+             * @example 4.4
+             */
+            averageScore: number;
+            /** @description Ratings by star score */
+            distribution: components["schemas"]["OpsRatingsDistributionRowDto"][];
+            /**
+             * @description Ratings with score ≤ 2
+             * @example 3
+             */
+            negativeCount: number;
+            /**
+             * @description Ratings with score ≥ 4
+             * @example 16
+             */
+            positiveCount: number;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsRatingsReportDto"];
+            /** @description Most recent low-score ratings */
+            recentNegative: components["schemas"]["OpsRecentNegativeRatingDto"][];
+            /**
+             * @description Ratings submitted in the period
+             * @example 20
+             */
+            totalRatings: number;
+            /** @description Daily mean score */
+            trend: components["schemas"]["OpsRatingsTrendPointDto"][];
+        };
+        OpsRatingsTrendPointDto: {
+            /**
+             * @description Mean score that day
+             * @example 4.5
+             */
+            average: number;
+            /**
+             * @description Ratings that day
+             * @example 2
+             */
+            count: number;
+            /**
+             * @description Calendar day (yyyy-MM-dd)
+             * @example 2026-01-15
+             */
+            date: string;
+        };
+        OpsRecentNegativeRatingDto: {
+            /**
+             * Format: uuid
+             * @description Rated booking UUID
+             * @example 00000000-0000-4000-a000-0000000000e6
+             */
+            bookingId: string;
+            /**
+             * @description Client display name
+             * @example عميل تجريبي
+             */
+            clientName: string;
+            /**
+             * @description Client feedback, or null when none
+             * @example null
+             */
+            comment: string | null;
+            /**
+             * Format: date-time
+             * @description Rating submission instant as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Practitioner display name
+             * @example أخصائي تجريبي
+             */
+            employeeName: string;
+            /**
+             * Format: uuid
+             * @description Rating UUID
+             * @example 00000000-0000-4000-a000-0000000000e5
+             */
+            id: string;
+            /**
+             * @description Star score (1–5)
+             * @example 2
+             */
+            score: number;
+            /**
+             * @description Arabic service name
+             * @example جلسة إرشاد أسري
+             */
+            serviceName: string;
+        };
+        OpsRefundedPackageEventRowDto: {
+            /**
+             * @description Amount charged for the purchase in integer halalas, or null when unknown
+             * @example 160000
+             */
+            amountPaid: number | null;
+            /**
+             * Format: uuid
+             * @description Client UUID, or null when the purchase row is gone
+             * @example null
+             */
+            clientId: string | null;
+            /**
+             * Format: uuid
+             * @description Refund event UUID
+             * @example 00000000-0000-4000-a000-0000000000e8
+             */
+            eventId: string;
+            /**
+             * @description Free-text note, or null
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * Format: date-time
+             * @description Refund instant as an ISO 8601 UTC timestamp, or null for an undated historical record
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            occurredAt: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID, or null when the purchase row is gone
+             * @example null
+             */
+            packageId: string | null;
+            /**
+             * Format: uuid
+             * @description Package purchase UUID
+             * @example 00000000-0000-4000-a000-0000000000e9
+             */
+            purchaseId: string;
+            /**
+             * @description Refunded amount in integer halalas
+             * @example 160000
+             */
+            refundAmount: number;
+            /**
+             * @description Refund type
+             * @example FULL
+             * @enum {string}
+             */
+            refundType: "FULL" | "PARTIAL" | "UNKNOWN";
+            /**
+             * @description Where the refund record came from
+             * @example LIVE
+             * @enum {string}
+             */
+            source: "LIVE" | "LEGACY_REQUEST" | "LEGACY_AGGREGATE";
+        };
+        OpsRefundedPackageLegacyRowDto: {
+            /**
+             * @description Amount charged for the purchase in integer halalas
+             * @example 160000
+             */
+            amountPaid: number;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-0000000000e3
+             */
+            clientId: string;
+            /**
+             * @description Free-text note, or null
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * Format: uuid
+             * @description Package UUID
+             * @example 00000000-0000-4000-a000-0000000000ea
+             */
+            packageId: string;
+            /**
+             * Format: uuid
+             * @description Package purchase UUID
+             * @example 00000000-0000-4000-a000-0000000000e9
+             */
+            purchaseId: string;
+            /**
+             * @description Refunded amount in integer halalas
+             * @example 80000
+             */
+            refundAmount: number;
+            /**
+             * Format: date-time
+             * @description Refund instant as an ISO 8601 UTC timestamp, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            refundedAt: string | null;
+        };
+        OpsRefundedPackagesEventsReportDto: {
+            /**
+             * @description Refund events, excluding aggregate placeholders
+             * @example 3
+             */
+            eventCount: number;
+            /**
+             * @description Which refund history was readable
+             * @example EVENTS
+             * @enum {string}
+             */
+            historyMode: "EVENTS";
+            /** @description Reconciliation state as stored (this mode is only produced when every refund reconciled) */
+            historyReconciliation: components["schemas"]["OpsRefundHistoryReconciliationDto"];
+            /** @description Dated refund events */
+            items: components["schemas"]["OpsRefundedPackageEventRowDto"][];
+            /**
+             * @description Report discriminator
+             * @example REFUNDED
+             * @enum {string}
+             */
+            kind: "REFUNDED";
+            /**
+             * @description Distinct purchases behind those events
+             * @example 3
+             */
+            purchaseCount: number;
+            /**
+             * @description Total refunded in the period in integer halalas
+             * @example 90000
+             */
+            totalRefunded: number;
+            /** @description Refunds with no readable date, reported separately */
+            undatedHistorical: components["schemas"]["OpsRefundedUndatedHistoryDto"];
+        };
+        OpsRefundedPackagesLegacyReportDto: {
+            /**
+             * @description Which refund history was readable
+             * @example LEGACY
+             * @enum {string}
+             */
+            historyMode: "LEGACY";
+            /** @description Reconciliation state as stored (this mode is produced when at least one purchase did not reconcile) */
+            historyReconciliation: components["schemas"]["OpsRefundHistoryReconciliationDto"];
+            /** @description Refunded purchases */
+            items: components["schemas"]["OpsRefundedPackageLegacyRowDto"][];
+            /**
+             * @description Report discriminator
+             * @example REFUNDED
+             * @enum {string}
+             */
+            kind: "REFUNDED";
+            /**
+             * @description Refunded purchases in the period
+             * @example 2
+             */
+            refundedCount: number;
+            /**
+             * @description Total refunded in the period in integer halalas
+             * @example 60000
+             */
+            totalRefunded: number;
+        };
+        OpsRefundedUndatedHistoryDto: {
+            /** @description The undated historical refund records */
+            items: components["schemas"]["OpsRefundedPackageEventRowDto"][];
+            /**
+             * @description Distinct purchases behind them
+             * @example 1
+             */
+            purchaseCount: number;
+            /**
+             * @description Undated records
+             * @example 1
+             */
+            recordCount: number;
+            /**
+             * @description Total refunded in integer halalas
+             * @example 30000
+             */
+            totalRefunded: number;
+        };
+        OpsRefundHistoryReconciliationDto: {
+            /**
+             * @description Whether every refund candidate reconciled into an event
+             * @example true
+             */
+            complete: boolean;
+            /**
+             * @description Purchases still awaiting reconciliation
+             * @example 0
+             */
+            unresolvedPurchaseCount: number;
+        };
+        OpsRevenueCouponRowDto: {
+            /**
+             * @description Coupon code
+             * @example SAWAA10
+             */
+            code: string;
+            /**
+             * @description Total discount granted in integer halalas
+             * @example 15000
+             */
+            discountAmount: number;
+            /**
+             * @description Whether the coupon is still active and unexpired at report time
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Redemptions in the period
+             * @example 3
+             */
+            uses: number;
+        };
+        OpsRevenueDayRowDto: {
+            /**
+             * @description Collected amount that day in integer halalas
+             * @example 60000
+             */
+            amount: number;
+            /**
+             * @description Payment count that day
+             * @example 2
+             */
+            count: number;
+            /**
+             * @description Collection day (yyyy-MM-dd)
+             * @example 2026-01-15
+             */
+            date: string;
+        };
+        OpsRevenueMethodRowDto: {
+            /**
+             * @description Collected amount in integer halalas
+             * @example 150000
+             */
+            amount: number;
+            /**
+             * @description Payment count for this method
+             * @example 4
+             */
+            count: number;
+            /**
+             * @description Payment method as stored
+             * @example CASH
+             */
+            method: string;
+        };
+        OpsRevenueRecentPaymentDto: {
+            /**
+             * @description Payment amount in integer halalas
+             * @example 30000
+             */
+            amount: number;
+            /**
+             * @description Client display name, empty string when unknown
+             * @example عميل تجريبي
+             */
+            clientName: string;
+            /**
+             * Format: date-time
+             * @description Collection date as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            date: string;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Payment method as stored
+             * @example CASH
+             */
+            method: string;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null when not processed
+             * @example null
+             */
+            processedAt?: string | null;
+            /**
+             * @description Reason recorded with the receipt entry, or null
+             * @example null
+             */
+            receiptEntryReason?: string | null;
+            /**
+             * @description Receipt evidence reference, or null
+             * @example null
+             */
+            receiptEvidenceRef?: string | null;
+            /**
+             * @description Staff user UUID that recorded the receipt, or null
+             * @example null
+             */
+            receiptRecordedBy?: string | null;
+            /**
+             * Format: date-time
+             * @description Row creation instant as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            recordedAt?: string;
+            /**
+             * @description Arabic service name, empty string when unknown
+             * @example جلسة إرشاد أسري
+             */
+            serviceName: string;
+            /**
+             * @description Payment status
+             * @example COMPLETED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+        };
+        OpsRevenueReportDto: {
+            /**
+             * @description Total revenue ÷ total bookings in integer halalas
+             * @example 20833
+             */
+            averagePerBooking: number;
+            /** @description Revenue by collection day */
+            byDay: components["schemas"]["OpsRevenueDayRowDto"][];
+            /** @description Revenue by payment method */
+            byMethod: components["schemas"]["OpsRevenueMethodRowDto"][];
+            /** @description Revenue by payment status */
+            byStatus: components["schemas"]["OpsRevenueStatusRowDto"][];
+            /** @description Coupons used, by redemption count */
+            couponsUsed: components["schemas"]["OpsRevenueCouponRowDto"][];
+            /**
+             * @description Revenue net of refunds in integer halalas
+             * @example 235000
+             */
+            netRevenue: number;
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsRevenueReportDto"];
+            /** @description The ten most recent payments in the period */
+            recentPayments: components["schemas"]["OpsRevenueRecentPaymentDto"][];
+            /**
+             * @description Refunded amount in integer halalas
+             * @example 15000
+             */
+            refundsTotal: number;
+            /**
+             * @description Bookings summarised in the period
+             * @example 12
+             */
+            totalBookings: number;
+            /**
+             * @description Total collected revenue in integer halalas
+             * @example 250000
+             */
+            totalRevenue: number;
+        };
+        OpsRevenueStatusRowDto: {
+            /**
+             * @description Amount in this status in integer halalas
+             * @example 150000
+             */
+            amount: number;
+            /**
+             * @description Payment count in this status
+             * @example 4
+             */
+            count: number;
+            /**
+             * @description Payment status
+             * @example COMPLETED
+             * @enum {string}
+             */
+            status: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+        };
+        OpsServicesReportDto: {
+            /** @description Same-length previous period, present only when compareWithPrevious requested it */
+            previous?: components["schemas"]["OpsServicesReportDto"];
+            /** @description One row per service with bookings in the period */
+            rows: components["schemas"]["OpsServicesRowDto"][];
+        };
+        OpsServicesRowDto: {
+            /**
+             * @description Mean rating for this service, 0 when unrated
+             * @example 4.6
+             */
+            averageRating: number;
+            /**
+             * @description Bookings on this service
+             * @example 5
+             */
+            bookings: number;
+            /**
+             * @description Cancellation rate as a fraction (0–1)
+             * @example 0.2
+             */
+            cancelRate: number;
+            /**
+             * @description Completed bookings on this service
+             * @example 4
+             */
+            completedBookings: number;
+            /**
+             * @description Arabic service name
+             * @example جلسة إرشاد أسري
+             */
+            nameAr: string;
+            /**
+             * @description English service name, or null when unset
+             * @example null
+             */
+            nameEn: string | null;
+            /**
+             * @description Revenue from this service in integer halalas
+             * @example 120000
+             */
+            revenue: number;
+            /**
+             * Format: uuid
+             * @description Service UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            serviceId: string;
+        };
         OrganizationHoursRecordDto: {
             /**
              * @description Branch UUID the schedule belongs to
@@ -19295,6 +20647,75 @@ export interface components {
              */
             next: "PhoneEntryUnavailableDto";
         };
+        PlatformIntegrationListItemResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Whether encrypted provider configuration is stored (the config itself is never returned)
+             * @example true
+             */
+            hasConfig: boolean;
+            /**
+             * Format: uuid
+             * @description Integration row identifier
+             * @example 00000000-0000-4000-a000-0000000000d1
+             */
+            id: string;
+            /**
+             * @description Whether the integration is currently active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Integration provider identifier
+             * @example MOYASAR
+             */
+            provider: string;
+            /**
+             * Format: date-time
+             * @description Last update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PlatformIntegrationResponseDto: {
+            /** @description Stored provider configuration as a free-form JSON value. This route persists the encrypted blob (`{ ciphertext }`) and echoes the row, so plaintext provider secrets are never returned. */
+            config: string | number | boolean | unknown[] | ({
+                [key: string]: unknown;
+            } | null);
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Integration row identifier
+             * @example 00000000-0000-4000-a000-0000000000d1
+             */
+            id: string;
+            /**
+             * @description Whether the integration is currently active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Integration provider identifier
+             * @example MOYASAR
+             */
+            provider: string;
+            /**
+             * Format: date-time
+             * @description Last update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
         PreviewEmailTemplateDto: {
             /**
              * @description Template variable values for the preview render
@@ -19304,6 +20725,65 @@ export interface components {
              *     }
              */
             context?: Record<string, never>;
+        };
+        ProblemReportListResponseDto: {
+            /** @description Problem reports on the requested page, newest first */
+            items: components["schemas"]["ProblemReportResponseDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        ProblemReportResponseDto: {
+            /**
+             * Format: date-time
+             * @description Creation time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Detailed description of the problem
+             * @example Clicking confirm throws a 500 error.
+             */
+            description: string;
+            /**
+             * Format: uuid
+             * @description Problem report identifier
+             * @example 00000000-0000-4000-a000-0000000000d1
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description UUID of the user who submitted the report
+             * @example 00000000-0000-4000-a000-0000000000d2
+             */
+            reporterId: string;
+            /**
+             * @description Resolution note, or null while the report is unresolved
+             * @example null
+             */
+            resolution: string | null;
+            /**
+             * @description Current triage status
+             * @example OPEN
+             * @enum {string}
+             */
+            status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+            /**
+             * @description Short descriptive title
+             * @example Booking page crashes on submit
+             */
+            title: string;
+            /**
+             * @description Problem category
+             * @example BUG
+             * @enum {string}
+             */
+            type: "BUG" | "FEATURE_REQUEST" | "OTHER";
+            /**
+             * Format: date-time
+             * @description Last update time as an ISO 8601 UTC timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
         };
         ProcessPaymentDto: {
             /**
@@ -23351,7 +24831,7 @@ export interface components {
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
             /**
              * Format: int64
-             * @description Monotonic message sequence (Prisma BigInt)
+             * @description Monotonic message sequence (Prisma BigInt, serialized as a number; a decimal string only past the safe-integer range)
              * @example 42
              */
             sequence: number;
@@ -25081,6 +26561,30 @@ export interface components {
              * @example 123456
              */
             code: string;
+        };
+        ZoomConfigResponseDto: {
+            /**
+             * @description Whether Zoom credentials are stored
+             * @example true
+             */
+            configured: boolean;
+            /**
+             * @description Whether the stored Zoom integration is active
+             * @example true
+             */
+            isActive: boolean;
+        };
+        ZoomTestResultDto: {
+            /**
+             * @description Failure reason when the probe failed (provider error message)
+             * @example Invalid client credentials
+             */
+            error?: string;
+            /**
+             * @description Whether the credentials were exchanged for an access token
+             * @example true
+             */
+            ok: boolean;
         };
     };
     responses: never;
@@ -36755,10 +38259,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        configured?: boolean;
-                        isActive?: boolean;
-                    };
+                    "application/json": components["schemas"]["ZoomConfigResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36818,10 +38319,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        configured?: boolean;
-                        isActive?: boolean;
-                    };
+                    "application/json": components["schemas"]["ZoomConfigResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -36881,10 +38379,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        error?: string | null;
-                        ok?: boolean;
-                    };
+                    "application/json": components["schemas"]["ZoomTestResultDto"];
                 };
             };
             /** @description Validation failed */
@@ -37488,6 +38983,10 @@ export interface operations {
                 from?: string;
                 /** @description End of date range (ISO 8601) */
                 to?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -37501,39 +39000,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items?: {
-                            action?: string;
-                            /** Format: date-time */
-                            createdAt?: string;
-                            description?: string | null;
-                            /** Format: uuid */
-                            id?: string;
-                            ipAddress?: string | null;
-                            module?: string;
-                            /** Format: uuid */
-                            resourceId?: string | null;
-                            user?: {
-                                email?: string;
-                                firstName?: string | null;
-                                /** Format: uuid */
-                                id?: string;
-                                lastName?: string | null;
-                            } | null;
-                            userAgent?: string | null;
-                            userEmail?: string | null;
-                            /** Format: uuid */
-                            userId?: string | null;
-                        }[];
-                        meta?: {
-                            hasNextPage?: boolean;
-                            hasPreviousPage?: boolean;
-                            limit?: number;
-                            page?: number;
-                            total?: number;
-                            totalPages?: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["OpsActivityLogListResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -37586,25 +39053,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Event reset to PENDING with attemptCount 0; the next outbox tick will publish it */
+            /** @description Event reset for publishing (status PENDING, or PENDING_V2 when the row is on the durable v2 lane) with attemptCount 0; the next outbox tick will publish it */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        attemptCount?: number;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        eventType?: string;
-                        /** Format: date-time */
-                        failedAt?: string | null;
-                        failureReason?: string | null;
-                        /** Format: uuid */
-                        id?: string;
-                        /** @enum {string} */
-                        status?: "PENDING";
-                    };
+                    "application/json": components["schemas"]["OpsOutboxRetryResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -37679,19 +39134,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items?: {
-                            attemptCount?: number;
-                            /** Format: date-time */
-                            createdAt?: string;
-                            eventType?: string;
-                            /** Format: date-time */
-                            failedAt?: string | null;
-                            failureReason?: string | null;
-                            /** Format: uuid */
-                            id?: string;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["OpsOutboxFailedEventListResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -37751,7 +39194,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["OpsOverviewReportDto"] | components["schemas"]["OpsRevenueReportDto"] | components["schemas"]["OpsBookingsReportDto"] | components["schemas"]["OpsClientsReportDto"] | components["schemas"]["OpsPractitionersReportDto"] | components["schemas"]["OpsPractitionerDetailReportDto"] | components["schemas"]["OpsServicesReportDto"] | components["schemas"]["OpsRatingsReportDto"] | components["schemas"]["OpsActivityReportDto"];
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
                 };
             };
@@ -37814,7 +39257,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OpsPackageSalesReportDto"] | components["schemas"]["OpsPackageOutstandingCreditReportDto"] | components["schemas"]["OpsPackageConsumptionReportDto"] | components["schemas"]["OpsRefundedPackagesEventsReportDto"] | components["schemas"]["OpsRefundedPackagesLegacyReportDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -44727,7 +46172,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PlatformIntegrationListItemResponseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -44785,7 +46232,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PlatformIntegrationResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -44830,6 +46279,10 @@ export interface operations {
             query?: {
                 /** @description Filter by report status */
                 status?: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -44842,7 +46295,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProblemReportListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -44900,7 +46355,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProblemReportResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -44961,7 +46418,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProblemReportResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {

@@ -3,7 +3,7 @@ import {
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation,
+  ApiTags, ApiBearerAuth, ApiOperation, ApiExtraModels,
   ApiOkResponse, ApiQuery, ApiParam, ApiNotFoundResponse, ApiConflictResponse,
 } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -20,22 +20,51 @@ import { ListActivityDto } from '../../modules/ops/log-activity/list-activity.dt
 import { ListTerminalFailedOutboxHandler } from '../../modules/ops/outbox/list-terminal-failed-outbox.handler';
 import { ListFailedOutboxDto } from '../../modules/ops/outbox/list-failed-outbox.dto';
 import { RetryFailedOutboxEventHandler } from '../../modules/ops/outbox/retry-failed-outbox-event.handler';
-
-const FAILED_OUTBOX_ITEM_SCHEMA = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    eventType: { type: 'string' },
-    attemptCount: { type: 'number' },
-    createdAt: { type: 'string', format: 'date-time' },
-    failedAt: { type: 'string', format: 'date-time', nullable: true },
-    failureReason: { type: 'string', nullable: true },
-  },
-} as const;
+import {
+  OPS_GENERATED_REPORT_SCHEMA,
+  OPS_PACKAGE_REPORT_SCHEMA,
+  OpsActivityReportDto,
+  OpsActivityLogListResponseDto,
+  OpsBookingsReportDto,
+  OpsClientsReportDto,
+  OpsOverviewReportDto,
+  OpsOutboxFailedEventListResponseDto,
+  OpsOutboxRetryResponseDto,
+  OpsPackageConsumptionReportDto,
+  OpsPackageOutstandingCreditReportDto,
+  OpsPackageSalesReportDto,
+  OpsPractitionerDetailReportDto,
+  OpsPractitionersReportDto,
+  OpsRatingsReportDto,
+  OpsRefundedPackagesEventsReportDto,
+  OpsRefundedPackagesLegacyReportDto,
+  OpsRefundedUndatedHistoryDto,
+  OpsRevenueReportDto,
+  OpsServicesReportDto,
+  type OpsGeneratedReportResponseDto,
+  type OpsPackageReportResponseDto,
+} from './dto/ops-response.dto';
 
 @ApiTags('Dashboard / Ops')
 @ApiBearerAuth()
 @ApiStandardResponses()
+@ApiExtraModels(
+  OpsOverviewReportDto,
+  OpsRevenueReportDto,
+  OpsBookingsReportDto,
+  OpsClientsReportDto,
+  OpsPractitionersReportDto,
+  OpsPractitionerDetailReportDto,
+  OpsServicesReportDto,
+  OpsRatingsReportDto,
+  OpsActivityReportDto,
+  OpsPackageSalesReportDto,
+  OpsPackageOutstandingCreditReportDto,
+  OpsPackageConsumptionReportDto,
+  OpsRefundedPackagesEventsReportDto,
+  OpsRefundedPackagesLegacyReportDto,
+  OpsRefundedUndatedHistoryDto,
+)
 @Controller('dashboard/ops')
 @UseGuards(JwtGuard, CaslGuard)
 export class DashboardOpsController {
@@ -55,7 +84,7 @@ export class DashboardOpsController {
       'JSON report object, or an xlsx binary when format is EXCEL ' +
       '(Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)',
     content: {
-      'application/json': { schema: { type: 'object' } },
+      'application/json': { schema: OPS_GENERATED_REPORT_SCHEMA },
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
         schema: { type: 'string', format: 'binary' },
       },
@@ -65,7 +94,7 @@ export class DashboardOpsController {
   async generateReportEndpoint(
     @Body() body: GenerateReportDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<OpsGeneratedReportResponseDto | void> {
     const result = await this.generateReport.execute(body);
 
     if (result.format === ReportFormat.EXCEL && result.excelBuffer) {
@@ -75,7 +104,9 @@ export class DashboardOpsController {
       return;
     }
 
-    return result.data;
+    // The handler keeps `data` as `unknown` (it dispatches to nine builders);
+    // the OpenAPI union below documents what each builder actually produces.
+    return result.data as OpsGeneratedReportResponseDto;
   }
 
   @Get('reports/packages')
@@ -95,13 +126,14 @@ export class DashboardOpsController {
   @ApiOkResponse({
     description:
       'JSON report object by report type. REFUNDED uses historyMode EVENTS with individual refund events and separate undatedHistorical records after reconciliation; otherwise historyMode LEGACY preserves the previous report with an incomplete historyReconciliation indicator.',
+    schema: OPS_PACKAGE_REPORT_SCHEMA,
   })
-  packageReportEndpoint(@Query() query: PackageReportQueryDto) {
+  packageReportEndpoint(@Query() query: PackageReportQueryDto): Promise<OpsPackageReportResponseDto> {
     return this.packageReports.execute({
       report: query.report,
       from: query.from,
       to: query.to,
-    });
+    }) as Promise<OpsPackageReportResponseDto>;
   }
 
   @Get('activity')
@@ -109,59 +141,17 @@ export class DashboardOpsController {
   @ApiOperation({ summary: 'List activity log entries' })
   @ApiOkResponse({
     description: 'Paginated list of activity log entries',
-    schema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              userId: { type: 'string', format: 'uuid', nullable: true },
-              action: { type: 'string' },
-              module: { type: 'string' },
-              resourceId: { type: 'string', format: 'uuid', nullable: true },
-              description: { type: 'string', nullable: true },
-              ipAddress: { type: 'string', nullable: true },
-              userAgent: { type: 'string', nullable: true },
-              createdAt: { type: 'string', format: 'date-time' },
-              userEmail: { type: 'string', nullable: true },
-              user: {
-                type: 'object',
-                nullable: true,
-                properties: {
-                  id: { type: 'string', format: 'uuid' },
-                  firstName: { type: 'string', nullable: true },
-                  lastName: { type: 'string', nullable: true },
-                  email: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-        meta: {
-          type: 'object',
-          properties: {
-            total: { type: 'number' },
-            page: { type: 'number' },
-            limit: { type: 'number' },
-            totalPages: { type: 'number' },
-            hasNextPage: { type: 'boolean' },
-            hasPreviousPage: { type: 'boolean' },
-          },
-        },
-      },
-    },
+    type: OpsActivityLogListResponseDto,
   })
-  @CheckPermissions({ action: 'read', subject: 'Report' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1, schema: { type: 'integer', minimum: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 50, schema: { type: 'integer', minimum: 1, maximum: 200 } })
   @ApiQuery({ name: 'userId', required: false, description: 'Filter by staff user UUID' })
   @ApiQuery({ name: 'entity', required: false, description: 'Filter by entity type (e.g. Booking, Client)' })
   @ApiQuery({ name: 'entityId', required: false, description: 'Filter by entity UUID' })
   @ApiQuery({ name: 'action', required: false, description: 'Filter by action type (ActivityAction enum)' })
   @ApiQuery({ name: 'from', required: false, description: 'Start of date range (ISO 8601)' })
   @ApiQuery({ name: 'to', required: false, description: 'End of date range (ISO 8601)' })
-  listActivityEndpoint(@Query() query: ListActivityDto) {
+  listActivityEndpoint(@Query() query: ListActivityDto): Promise<OpsActivityLogListResponseDto> {
     return this.listActivity.execute({ ...query });
   }
 
@@ -171,15 +161,7 @@ export class DashboardOpsController {
   @ApiOkResponse({
     description:
       'Failed outbox event metadata only — the event payload is never returned',
-    schema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: FAILED_OUTBOX_ITEM_SCHEMA,
-        },
-      },
-    },
+    type: OpsOutboxFailedEventListResponseDto,
   })
   @ApiQuery({
     name: 'limit',
@@ -193,7 +175,7 @@ export class DashboardOpsController {
     description: 'Filter by exact outbox event type',
     example: 'bookings.booking.created',
   })
-  listFailedOutboxEndpoint(@Query() query: ListFailedOutboxDto) {
+  listFailedOutboxEndpoint(@Query() query: ListFailedOutboxDto): Promise<OpsOutboxFailedEventListResponseDto> {
     return this.listFailedOutbox.execute({
       limit: query.limit,
       eventType: query.eventType,
@@ -211,18 +193,12 @@ export class DashboardOpsController {
   })
   @ApiOkResponse({
     description:
-      'Event reset to PENDING with attemptCount 0; the next outbox tick will publish it',
-    schema: {
-      ...FAILED_OUTBOX_ITEM_SCHEMA,
-      properties: {
-        ...FAILED_OUTBOX_ITEM_SCHEMA.properties,
-        status: { type: 'string', enum: ['PENDING'] },
-      },
-    },
+      'Event reset for publishing (status PENDING, or PENDING_V2 when the row is on the durable v2 lane) with attemptCount 0; the next outbox tick will publish it',
+    type: OpsOutboxRetryResponseDto,
   })
   @ApiNotFoundResponse({ description: 'Outbox event not found' })
   @ApiConflictResponse({ description: 'Outbox event is not in FAILED state' })
-  retryFailedOutboxEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  retryFailedOutboxEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<OpsOutboxRetryResponseDto> {
     return this.retryFailedOutbox.execute({ id });
   }
 }
