@@ -64,7 +64,11 @@ export class MailchimpCredentialsDto {
 }
 
 export class UpsertOrgEmailConfigDto {
-  @ApiProperty({ enum: ['NONE', 'SMTP', 'RESEND', 'SENDGRID', 'MAILCHIMP'] })
+  @ApiProperty({
+    enum: ['NONE', 'SMTP', 'RESEND', 'SENDGRID', 'MAILCHIMP'],
+    description: 'Email provider to configure; NONE disables sending and clears stored credentials',
+    example: 'RESEND',
+  })
   @IsEnum(['NONE', 'SMTP', 'RESEND', 'SENDGRID', 'MAILCHIMP'])
   provider!: 'NONE' | 'SMTP' | 'RESEND' | 'SENDGRID' | 'MAILCHIMP';
 
@@ -83,25 +87,41 @@ export class UpsertOrgEmailConfigDto {
   @NoCRLF()
   senderEmail?: string;
 
-  @ApiPropertyOptional({ type: SmtpCredentialsDto })
+  @ApiPropertyOptional({
+    type: SmtpCredentialsDto,
+    description: 'SMTP credentials; required when switching to SMTP, optional to keep the stored ones',
+    example: { host: 'smtp.example.com', port: 587, user: 'example-user', pass: 'example-password', secure: false },
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => SmtpCredentialsDto)
   smtp?: SmtpCredentialsDto;
 
-  @ApiPropertyOptional({ type: ResendCredentialsDto })
+  @ApiPropertyOptional({
+    type: ResendCredentialsDto,
+    description: 'Resend credentials; required when switching to RESEND, optional to keep the stored ones',
+    example: { apiKey: 'example-resend-api-key' },
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => ResendCredentialsDto)
   resend?: ResendCredentialsDto;
 
-  @ApiPropertyOptional({ type: SendGridCredentialsDto })
+  @ApiPropertyOptional({
+    type: SendGridCredentialsDto,
+    description: 'SendGrid credentials; required when switching to SENDGRID, optional to keep the stored ones',
+    example: { apiKey: 'example-sendgrid-api-key' },
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => SendGridCredentialsDto)
   sendgrid?: SendGridCredentialsDto;
 
-  @ApiPropertyOptional({ type: MailchimpCredentialsDto })
+  @ApiPropertyOptional({
+    type: MailchimpCredentialsDto,
+    description: 'Mailchimp (Transactional) credentials; required when switching to MAILCHIMP, optional to keep the stored ones',
+    example: { apiKey: 'example-mailchimp-api-key' },
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => MailchimpCredentialsDto)

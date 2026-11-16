@@ -6583,6 +6583,25 @@
         ],
         "type": "object"
       },
+      "CommsBilingualErrorDto": {
+        "properties": {
+          "ar": {
+            "description": "Arabic error message",
+            "example": "فشل إرسال رسالة الاختبار: timeout",
+            "type": "string"
+          },
+          "en": {
+            "description": "English error message",
+            "example": "Failed to send test email: timeout",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ar",
+          "en"
+        ],
+        "type": "object"
+      },
       "CompleteBookingDto": {
         "properties": {
           "completionNotes": {
@@ -10242,6 +10261,210 @@
         },
         "required": [
           "next"
+        ],
+        "type": "object"
+      },
+      "EmailSettingsResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "credentialsConfigured": {
+            "description": "Whether encrypted provider credentials are stored (credentials themselves are never returned)",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Email configuration row identifier",
+            "example": "00000000-0000-4000-a000-0000000000c1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastTestAt": {
+            "description": "Last test send time as an ISO 8601 UTC timestamp, or null when never tested",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastTestOk": {
+            "description": "Whether the last test send succeeded, or null when never tested",
+            "example": null,
+            "nullable": true,
+            "type": "boolean"
+          },
+          "provider": {
+            "description": "Configured email provider",
+            "enum": [
+              "NONE",
+              "SMTP",
+              "RESEND",
+              "SENDGRID",
+              "MAILCHIMP"
+            ],
+            "example": "RESEND",
+            "type": "string"
+          },
+          "senderEmail": {
+            "description": "Sender email address, or null when unset",
+            "example": "noreply@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "senderName": {
+            "description": "Sender display name, or null when unset",
+            "example": "عيادة سواء",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "senderName",
+          "senderEmail",
+          "credentialsConfigured",
+          "lastTestAt",
+          "lastTestOk",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "EmailSettingsTestResultDto": {
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommsBilingualErrorDto"
+              }
+            ],
+            "description": "Bilingual failure reason when the send failed"
+          },
+          "messageId": {
+            "description": "Provider-assigned message identifier when the send succeeded",
+            "example": "provider-message-example",
+            "type": "string"
+          },
+          "ok": {
+            "description": "Whether the provider accepted the test message",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "EmailTemplatePreviewResponseDto": {
+        "properties": {
+          "body": {
+            "description": "Rendered HTML body with context values escaped",
+            "example": "<p>Hello Fatima</p>",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Rendered subject line (plain text, variables interpolated)",
+            "example": "تم تأكيد حجزك",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "body"
+        ],
+        "type": "object"
+      },
+      "EmailTemplateResponseDto": {
+        "properties": {
+          "blocks": {
+            "description": "Block-builder source of truth (free-form JSON column). Null for legacy raw-HTML templates; otherwise the block array the builder wrote.",
+            "example": null,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "htmlBody": {
+            "description": "Rendered HTML body; when `blocks` is present this is derived from it",
+            "example": "<p>Hello {{name}}</p>",
+            "type": "string"
+          },
+          "id": {
+            "description": "Template UUID",
+            "example": "00000000-0000-4000-a000-0000000000e1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the template is active",
+            "example": true,
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Display name shown to staff",
+            "example": "تأكيد الحجز",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Unique slug the sender code looks the template up by",
+            "example": "booking-confirmed",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Email subject line (Handlebars variables allowed)",
+            "example": "تم تأكيد حجزك",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "subject",
+          "htmlBody",
+          "blocks",
+          "isActive",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -18489,6 +18712,30 @@
         ],
         "type": "object"
       },
+      "PaginatedEmailTemplatesResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Templates on the requested page, oldest first",
+            "items": {
+              "$ref": "#/components/schemas/EmailTemplateResponseDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListMetaDto"
+              }
+            ],
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ],
+        "type": "object"
+      },
       "PaginatedEmployeesDto": {
         "properties": {
           "items": {
@@ -22831,6 +23078,195 @@
         ],
         "type": "object"
       },
+      "SmsDeliveryListResponseDto": {
+        "properties": {
+          "items": {
+            "description": "The 50 most recent SMS deliveries, newest first",
+            "items": {
+              "$ref": "#/components/schemas/SmsDeliveryResponseDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "SmsDeliveryResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "deliveredAt": {
+            "description": "Delivery confirmation time as an ISO 8601 UTC timestamp, or null until delivered",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorMessage": {
+            "description": "Provider error text, or null when the message succeeded",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Delivery row identifier",
+            "example": "00000000-0000-4000-a000-0000000000c1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "provider": {
+            "description": "Provider that handled the message",
+            "enum": [
+              "NONE",
+              "UNIFONIC",
+              "TAQNYAT"
+            ],
+            "example": "TAQNYAT",
+            "type": "string"
+          },
+          "providerMessageId": {
+            "description": "Provider-assigned message identifier, or null before acceptance",
+            "example": "provider-message-example",
+            "nullable": true,
+            "type": "string"
+          },
+          "sentAt": {
+            "description": "Send time as an ISO 8601 UTC timestamp, or null while queued",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current delivery status from the provider callback",
+            "enum": [
+              "QUEUED",
+              "SENT",
+              "DELIVERED",
+              "FAILED",
+              "UNKNOWN"
+            ],
+            "example": "DELIVERED",
+            "type": "string"
+          },
+          "toPhone": {
+            "description": "Recipient phone number as stored",
+            "example": "+966500000000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "toPhone",
+          "status",
+          "providerMessageId",
+          "errorMessage",
+          "sentAt",
+          "deliveredAt",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "SmsSettingsResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "credentialsConfigured": {
+            "description": "Whether encrypted provider credentials are stored (credentials themselves are never returned)",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "SMS configuration row identifier",
+            "example": "00000000-0000-4000-a000-0000000000c1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastTestAt": {
+            "description": "Last test send time as an ISO 8601 UTC timestamp, or null when never tested",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastTestOk": {
+            "description": "Whether the last test send succeeded, or null when never tested",
+            "example": null,
+            "nullable": true,
+            "type": "boolean"
+          },
+          "provider": {
+            "description": "Configured SMS provider",
+            "enum": [
+              "NONE",
+              "UNIFONIC",
+              "TAQNYAT"
+            ],
+            "example": "TAQNYAT",
+            "type": "string"
+          },
+          "senderId": {
+            "description": "Registered sender ID shown to recipients, or null when unset",
+            "example": "Sawaa",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update time as an ISO 8601 UTC timestamp",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "senderId",
+          "credentialsConfigured",
+          "lastTestAt",
+          "lastTestOk",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "SmsSettingsTestResultDto": {
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommsBilingualErrorDto"
+              }
+            ],
+            "description": "Bilingual failure reason when the send failed"
+          },
+          "ok": {
+            "description": "Whether the provider accepted the test message",
+            "example": true,
+            "type": "boolean"
+          },
+          "providerMessageId": {
+            "description": "Provider-assigned message identifier when the send succeeded",
+            "example": "provider-message-example",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
       "SmtpCredentialsDto": {
         "properties": {
           "host": {
@@ -24687,9 +25123,18 @@
       "UpsertOrgEmailConfigDto": {
         "properties": {
           "mailchimp": {
-            "$ref": "#/components/schemas/MailchimpCredentialsDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MailchimpCredentialsDto"
+              }
+            ],
+            "description": "Mailchimp (Transactional) credentials; required when switching to MAILCHIMP, optional to keep the stored ones",
+            "example": {
+              "apiKey": "example-mailchimp-api-key"
+            }
           },
           "provider": {
+            "description": "Email provider to configure; NONE disables sending and clears stored credentials",
             "enum": [
               "NONE",
               "SMTP",
@@ -24697,10 +25142,19 @@
               "SENDGRID",
               "MAILCHIMP"
             ],
+            "example": "RESEND",
             "type": "string"
           },
           "resend": {
-            "$ref": "#/components/schemas/ResendCredentialsDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResendCredentialsDto"
+              }
+            ],
+            "description": "Resend credentials; required when switching to RESEND, optional to keep the stored ones",
+            "example": {
+              "apiKey": "example-resend-api-key"
+            }
           },
           "senderEmail": {
             "description": "Sender email address",
@@ -24713,10 +25167,30 @@
             "type": "string"
           },
           "sendgrid": {
-            "$ref": "#/components/schemas/SendGridCredentialsDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SendGridCredentialsDto"
+              }
+            ],
+            "description": "SendGrid credentials; required when switching to SENDGRID, optional to keep the stored ones",
+            "example": {
+              "apiKey": "example-sendgrid-api-key"
+            }
           },
           "smtp": {
-            "$ref": "#/components/schemas/SmtpCredentialsDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SmtpCredentialsDto"
+              }
+            ],
+            "description": "SMTP credentials; required when switching to SMTP, optional to keep the stored ones",
+            "example": {
+              "host": "smtp.example.com",
+              "pass": "example-password",
+              "port": 587,
+              "secure": false,
+              "user": "example-user"
+            }
           }
         },
         "required": [
@@ -24968,11 +25442,13 @@
       "UpsertOrgSmsConfigDto": {
         "properties": {
           "provider": {
+            "description": "SMS provider to configure; NONE disables sending and clears stored credentials",
             "enum": [
               "NONE",
               "UNIFONIC",
               "TAQNYAT"
             ],
+            "example": "TAQNYAT",
             "type": "string"
           },
           "senderId": {
@@ -24980,10 +25456,27 @@
             "type": "string"
           },
           "taqnyat": {
-            "$ref": "#/components/schemas/TaqnyatCredentialsDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaqnyatCredentialsDto"
+              }
+            ],
+            "description": "Taqnyat credentials; required when switching to TAQNYAT, optional to keep the stored ones",
+            "example": {
+              "apiToken": "example-api-token"
+            }
           },
           "unifonic": {
-            "$ref": "#/components/schemas/UnifonicCredentialsDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UnifonicCredentialsDto"
+              }
+            ],
+            "description": "Unifonic credentials; required when switching to UNIFONIC, optional to keep the stored ones",
+            "example": {
+              "apiKey": "example-api-key",
+              "appSid": "example-app-sid"
+            }
           }
         },
         "required": [
@@ -34853,9 +35346,40 @@
     "/api/v1/dashboard/comms/email-templates": {
       "get": {
         "operationId": "DashboardCommsEmailTemplatesController_listEmailTemplatesEndpoint_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Results per page (1–200, default: 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (1-based, default: 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedEmailTemplatesResponseDto"
+                }
+              }
+            },
             "description": "Paginated email template list"
           },
           "400": {
@@ -34924,6 +35448,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateResponseDto"
+                }
+              }
+            },
             "description": "Email template created"
           },
           "400": {
@@ -34955,6 +35486,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "409": {
+            "description": "A template with this slug already exists"
           },
           "500": {
             "content": {
@@ -34995,7 +35529,19 @@
         ],
         "responses": {
           "200": {
-            "description": "Email template details"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/EmailTemplateResponseDto"
+                    }
+                  ],
+                  "nullable": true
+                }
+              }
+            },
+            "description": "Email template details; the handler returns null (empty 200 body) when no row matches the id"
           },
           "400": {
             "content": {
@@ -35074,6 +35620,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateResponseDto"
+                }
+              }
+            },
             "description": "Updated email template"
           },
           "400": {
@@ -35105,6 +35658,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Email template not found"
           },
           "500": {
             "content": {
@@ -35155,6 +35711,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplatePreviewResponseDto"
+                }
+              }
+            },
             "description": "Rendered HTML preview"
           },
           "400": {
@@ -35186,6 +35749,9 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Email template not found"
           },
           "500": {
             "content": {
@@ -35453,6 +36019,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailSettingsResponseDto"
+                }
+              }
+            },
             "description": "OrganizationEmailConfig view (no secrets)"
           },
           "400": {
@@ -35521,7 +36094,14 @@
         },
         "responses": {
           "200": {
-            "description": "Updated OrganizationEmailConfig view"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailSettingsResponseDto"
+                }
+              }
+            },
+            "description": "Updated OrganizationEmailConfig view (no secrets)"
           },
           "400": {
             "content": {
@@ -35591,6 +36171,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailSettingsTestResultDto"
+                }
+              }
+            },
             "description": "Test result"
           },
           "400": {
@@ -35651,6 +36238,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsSettingsResponseDto"
+                }
+              }
+            },
             "description": "OrganizationSmsConfig view (no secrets)"
           },
           "400": {
@@ -35719,7 +36313,14 @@
         },
         "responses": {
           "200": {
-            "description": "Updated OrganizationSmsConfig view"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsSettingsResponseDto"
+                }
+              }
+            },
+            "description": "Updated OrganizationSmsConfig view (no secrets)"
           },
           "400": {
             "content": {
@@ -35779,6 +36380,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsDeliveryListResponseDto"
+                }
+              }
+            },
             "description": "Recent SmsDelivery rows (owner-scoped)"
           },
           "400": {
@@ -35849,6 +36457,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsSettingsTestResultDto"
+                }
+              }
+            },
             "description": "Test result"
           },
           "400": {

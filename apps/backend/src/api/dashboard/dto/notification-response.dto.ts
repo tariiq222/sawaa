@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { NotificationType, RecipientType } from '@prisma/client';
+import { NotificationType, Prisma, RecipientType } from '@prisma/client';
 
 export class NotificationResponseDto {
   @ApiProperty({ description: 'Notification UUID' })
@@ -30,7 +30,7 @@ export class NotificationResponseDto {
       { type: 'object', additionalProperties: true, nullable: true },
     ],
   })
-  metadata!: unknown | null;
+  metadata!: Prisma.JsonValue | null;
 
   @ApiProperty({ description: 'Whether the notification has been read' })
   isRead!: boolean;

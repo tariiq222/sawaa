@@ -14,6 +14,13 @@ import { UpsertOrgEmailConfigDto } from '../../modules/comms/org-email-config/up
 import { TestEmailConfigHandler } from '../../modules/comms/org-email-config/test-email-config.handler';
 import { TestEmailConfigDto } from '../../modules/comms/org-email-config/test-email-config.dto';
 import { ListSmsDeliveriesHandler } from '../../modules/comms/list-sms-deliveries/list-sms-deliveries.handler';
+import {
+  EmailSettingsResponseDto,
+  EmailSettingsTestResultDto,
+  SmsDeliveryListResponseDto,
+  SmsSettingsResponseDto,
+  SmsSettingsTestResultDto,
+} from './dto/comms-settings-response.dto';
 
 @ApiTags('Dashboard / Comms')
 @ApiBearerAuth()
@@ -32,62 +39,62 @@ export class DashboardCommsController {
   ) {}
 
   @ApiOperation({ summary: 'Get SMS provider configuration (owner-scoped)' })
-  @ApiOkResponse({ description: 'OrganizationSmsConfig view (no secrets)' })
+  @ApiOkResponse({ description: 'OrganizationSmsConfig view (no secrets)', type: SmsSettingsResponseDto })
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Get('settings/sms')
-  getSmsConfigEndpoint() {
+  getSmsConfigEndpoint(): Promise<SmsSettingsResponseDto> {
     return this.getOrgSmsConfig.execute();
   }
 
   @ApiOperation({ summary: 'Upsert SMS provider configuration' })
-  @ApiOkResponse({ description: 'Updated OrganizationSmsConfig view' })
+  @ApiOkResponse({ description: 'Updated OrganizationSmsConfig view (no secrets)', type: SmsSettingsResponseDto })
   @HttpCode(HttpStatus.OK)
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/sms')
-  upsertSmsConfigEndpoint(@Body() dto: UpsertOrgSmsConfigDto) {
+  upsertSmsConfigEndpoint(@Body() dto: UpsertOrgSmsConfigDto): Promise<SmsSettingsResponseDto> {
     return this.upsertOrgSmsConfig.execute(dto);
   }
 
   @ApiOperation({ summary: 'Send a test SMS via the configured provider' })
-  @ApiOkResponse({ description: 'Test result' })
+  @ApiOkResponse({ description: 'Test result', type: SmsSettingsTestResultDto })
   @HttpCode(HttpStatus.OK)
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/sms/test')
-  testSmsConfigEndpoint(@Body() dto: TestSmsConfigDto) {
+  testSmsConfigEndpoint(@Body() dto: TestSmsConfigDto): Promise<SmsSettingsTestResultDto> {
     return this.testSmsConfig.execute(dto);
   }
 
   @ApiOperation({ summary: 'Get email provider configuration (owner-scoped)' })
-  @ApiOkResponse({ description: 'OrganizationEmailConfig view (no secrets)' })
+  @ApiOkResponse({ description: 'OrganizationEmailConfig view (no secrets)', type: EmailSettingsResponseDto })
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Get('settings/email')
-  getEmailConfigEndpoint() {
+  getEmailConfigEndpoint(): Promise<EmailSettingsResponseDto> {
     return this.getOrgEmailConfig.execute();
   }
 
   @ApiOperation({ summary: 'Upsert email provider configuration' })
-  @ApiOkResponse({ description: 'Updated OrganizationEmailConfig view' })
+  @ApiOkResponse({ description: 'Updated OrganizationEmailConfig view (no secrets)', type: EmailSettingsResponseDto })
   @HttpCode(HttpStatus.OK)
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/email')
-  upsertEmailConfigEndpoint(@Body() dto: UpsertOrgEmailConfigDto) {
+  upsertEmailConfigEndpoint(@Body() dto: UpsertOrgEmailConfigDto): Promise<EmailSettingsResponseDto> {
     return this.upsertOrgEmailConfig.execute(dto);
   }
 
   @ApiOperation({ summary: 'Send a test email via the configured provider' })
-  @ApiOkResponse({ description: 'Test result' })
+  @ApiOkResponse({ description: 'Test result', type: EmailSettingsTestResultDto })
   @HttpCode(HttpStatus.OK)
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @Post('settings/email/test')
-  testEmailConfigEndpoint(@Body() dto: TestEmailConfigDto) {
+  testEmailConfigEndpoint(@Body() dto: TestEmailConfigDto): Promise<EmailSettingsTestResultDto> {
     return this.testEmailConfig.execute(dto);
   }
 
   @ApiOperation({ summary: 'List the 50 most recent SMS deliveries' })
-  @ApiOkResponse({ description: 'Recent SmsDelivery rows (owner-scoped)' })
+  @ApiOkResponse({ description: 'Recent SmsDelivery rows (owner-scoped)', type: SmsDeliveryListResponseDto })
   @CheckPermissions({ action: 'read', subject: 'PersonalData' })
   @Get('settings/sms/deliveries')
-  listSmsDeliveriesEndpoint() {
+  listSmsDeliveriesEndpoint(): Promise<SmsDeliveryListResponseDto> {
     return this.listSmsDeliveries.execute();
   }
 }

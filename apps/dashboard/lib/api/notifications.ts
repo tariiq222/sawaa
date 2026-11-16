@@ -1,31 +1,31 @@
 /**
  * Notifications API — Sawaa Dashboard
+ *
+ * Reads go through the typed helper; the mark-read body is the documented
+ * `MarkReadDto`. Response types come from the committed OpenAPI snapshot.
  */
 
 import {
   openApi,
   type OpenApiRequestBody,
-  type OpenApiResponse,
 } from "@/lib/api/openapi"
-import type { PaginatedResponse } from "@/lib/types/common"
 import type {
-  Notification,
+  NotificationList,
   NotificationListQuery,
   UnreadCount,
 } from "@/lib/types/notification"
 
-type NotificationsPath = "/api/v1/dashboard/comms/notifications"
+const NOTIFICATIONS_PATH = "/api/v1/dashboard/comms/notifications"
 const MARK_READ_PATH = "/api/v1/dashboard/comms/notifications/mark-read" as const
 type MarkReadPath = typeof MARK_READ_PATH
 type MarkReadBody = OpenApiRequestBody<MarkReadPath, "patch">
-type NotificationsResponse = OpenApiResponse<NotificationsPath, "get">
 
 /* ─── Queries ─── */
 
 export async function fetchNotifications(
   query: NotificationListQuery = {},
-): Promise<PaginatedResponse<Notification>> {
-  const response: NotificationsResponse = await openApi.get("/api/v1/dashboard/comms/notifications", {
+): Promise<NotificationList> {
+  const response: NotificationList = await openApi.get(NOTIFICATIONS_PATH, {
     query: {
       page: query.page,
       limit: query.limit,
