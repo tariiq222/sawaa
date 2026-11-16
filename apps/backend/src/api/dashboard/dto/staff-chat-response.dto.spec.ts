@@ -64,7 +64,9 @@ export type SendStaffMessageMatches = Expect<
 /**
  * The two raw-record DTOs mirror the Prisma models, including the `BigInt`
  * sequence and the free-form Json columns. These pin that they are not narrower
- * than the rows Prisma really returns.
+ * than the rows Prisma really returns. `sequence` is converted at the HTTP
+ * boundary by `bigintJsonReplacer` (`main.ts`), covered separately in
+ * `common/helpers/json-bigint.http.spec.ts`.
  */
 export type MessageRecordMatchesPrisma = Expect<Equal<StaffChatMessageRecordDto, CommsChatMessage>>;
 export type ConversationRecordMatchesPrisma = Expect<Equal<StaffChatConversationRecordDto, ChatConversation>>;

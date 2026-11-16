@@ -22279,7 +22279,7 @@ export interface components {
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
             /**
              * Format: int64
-             * @description Monotonic message sequence (Prisma BigInt)
+             * @description Monotonic message sequence (Prisma BigInt, serialized as a number; a decimal string only past the safe-integer range)
              * @example 42
              */
             sequence: number;

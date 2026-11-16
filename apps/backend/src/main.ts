@@ -17,6 +17,7 @@ import { PrismaService } from './infrastructure/database';
 import { AppMetricsService } from './infrastructure/telemetry/app-metrics.service';
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
+import { bigintJsonReplacer } from './common/helpers/json-bigint.helper';
 import { csrfMiddleware } from './common/middleware/csrf.middleware';
 import { legacyClientPrefixMiddleware } from './common/middleware/legacy-client-prefix.middleware';
 import { shouldBypassCsrf } from './common/middleware/csrf-policy';
@@ -31,6 +32,12 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   // Honor X-Forwarded-For from the upstream Nginx so req.ip is the real client IP (throttler + audit logs depend on this).
   app.set('trust proxy', 1);
+
+  // Prisma `BigInt` columns (e.g. `CommsChatMessage.sequence`) cannot be
+  // serialized by a bare `JSON.stringify`, so any endpoint returning a raw row
+  // would answer 500. Encoding them here fixes every route at once; values that
+  // are not bigint pass through untouched.
+  app.set('json replacer', bigintJsonReplacer);
 
   app.use(helmet());
   app.use(cookieParser());

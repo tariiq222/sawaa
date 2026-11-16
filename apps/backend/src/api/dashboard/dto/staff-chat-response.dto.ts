@@ -208,7 +208,16 @@ export class StaffChatMessageRecordDto {
   @ApiProperty({ type: String, nullable: true, description: 'Message this row answers, or null', example: null })
   responseForMessageId!: string | null;
 
-  @ApiProperty({ type: 'integer', format: 'int64', description: 'Monotonic message sequence (Prisma BigInt)', example: 42 })
+  // Stored as a Prisma BigInt. `app.set('json replacer', bigintJsonReplacer)`
+  // serializes it as a JSON number while it fits the safe integer range and as a
+  // decimal string beyond it (JSON numbers cannot carry a larger value exactly).
+  @ApiProperty({
+    type: 'integer',
+    format: 'int64',
+    description:
+      'Monotonic message sequence (Prisma BigInt, serialized as a number; a decimal string only past the safe-integer range)',
+    example: 42,
+  })
   sequence!: bigint;
 
   @ApiProperty({ type: String, nullable: true, description: 'AI model that produced the message, or null', example: null })
