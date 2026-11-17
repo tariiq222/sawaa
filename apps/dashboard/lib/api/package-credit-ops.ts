@@ -6,15 +6,15 @@
  *   POST /dashboard/bookings/credits/:creditId/transfer
  *   POST /dashboard/finance/package-purchases/:purchaseId/refund
  *
- * Mirrors the conventions of `lib/api/credit-bookings.ts` and
- * `lib/api/package-purchases.ts` — uses the shared `api` instance so
- * cookie-bearing refresh + envelope-unwrap are inherited for free.
- * Both endpoints expect integer halalas for any money payload; the
- * refund modal converts SAR → halalas at the form layer (see
- * `sarToHalalas` in lib/money) before calling this client.
+ * Response/payload types are derived from the committed OpenAPI snapshot
+ * (`lib/types/credit-ops.ts`). Both calls go through the typed helper in
+ * `lib/api/openapi.ts`; URLs, bodies and returned objects are unchanged. Both
+ * endpoints expect integer halalas for any money payload; the refund modal
+ * converts SAR → halalas at the form layer (see `sarToHalalas` in lib/money)
+ * before calling this client.
  */
 
-import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
 import type {
   RefundPackagePurchasePayload,
   RefundPackagePurchaseResult,
@@ -32,10 +32,10 @@ export async function transferCredit(
   creditId: string,
   payload: TransferCreditPayload,
 ): Promise<TransferCreditResult> {
-  return api.post<TransferCreditResult>(
-    `/dashboard/bookings/credits/${creditId}/transfer`,
-    payload,
-  )
+  return openApi.post("/api/v1/dashboard/bookings/credits/{creditId}/transfer", {
+    path: { creditId },
+    body: payload,
+  })
 }
 
 /**
@@ -49,8 +49,8 @@ export async function refundPackagePurchase(
   purchaseId: string,
   payload: RefundPackagePurchasePayload,
 ): Promise<RefundPackagePurchaseResult> {
-  return api.post<RefundPackagePurchaseResult>(
-    `/dashboard/finance/package-purchases/${purchaseId}/refund`,
-    payload,
-  )
+  return openApi.post("/api/v1/dashboard/finance/package-purchases/{purchaseId}/refund", {
+    path: { purchaseId },
+    body: payload,
+  })
 }

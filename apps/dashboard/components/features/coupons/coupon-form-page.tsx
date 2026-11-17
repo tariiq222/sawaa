@@ -96,10 +96,12 @@ export function CouponFormPage(props: Props) {
       descriptionAr: coupon.descriptionAr ?? "",
       discountType: coupon.discountType as "PERCENTAGE" | "FIXED",
       discountValue: toDisplayValue(
-        coupon.discountValue,
+        coupon.discountValue as unknown as number,
         coupon.discountType as "PERCENTAGE" | "FIXED"
       ),
-      minOrderAmt: toDisplayMinOrderAmt(coupon.minOrderAmt),
+      minOrderAmt: toDisplayMinOrderAmt(
+        coupon.minOrderAmt as unknown as number | null
+      ),
       maxUses: coupon.maxUses ?? "",
       maxUsesPerUser: coupon.maxUsesPerUser ?? "",
       expiresAt: riyadhDateTimeValue(coupon.expiresAt),

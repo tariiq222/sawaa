@@ -1,14 +1,17 @@
 /**
  * Coupons API — Sawaa Dashboard
  *
- * Dashboard types mirror the backend (PERCENTAGE/FIXED + minOrderAmt),
- * so this module is a thin pass-through to the network layer.
+ * Response/payload types are derived from the committed OpenAPI snapshot
+ * (`lib/types/coupon.ts`). The list call keeps the plain `api.get(path, params)`
+ * transport so the request bytes are unchanged; the parameter-less calls use
+ * the typed helper (`openApi`), which builds the same URL.
  */
 
 import { api } from "@/lib/api"
-import type { PaginatedResponse } from "@/lib/types/common"
+import { openApi } from "@/lib/api/openapi"
 import type {
   Coupon,
+  CouponListPage,
   CouponListQuery,
   CreateCouponPayload,
   UpdateCouponPayload,
@@ -18,8 +21,8 @@ import type {
 
 export async function fetchCoupons(
   query: CouponListQuery = {},
-): Promise<PaginatedResponse<Coupon>> {
-  return api.get<PaginatedResponse<Coupon>>("/dashboard/finance/coupons", {
+): Promise<CouponListPage> {
+  return api.get<CouponListPage>("/dashboard/finance/coupons", {
     page: query.page,
     limit: query.limit,
     search: query.search,
@@ -30,13 +33,13 @@ export async function fetchCoupons(
 /* ─── Detail ─── */
 
 export async function fetchCoupon(id: string): Promise<Coupon> {
-  return api.get<Coupon>(`/dashboard/finance/coupons/${id}`)
+  return openApi.get("/api/v1/dashboard/finance/coupons/{id}", { path: { id } })
 }
 
 /* ─── Create ─── */
 
 export async function createCoupon(payload: CreateCouponPayload): Promise<Coupon> {
-  return api.post<Coupon>("/dashboard/finance/coupons", payload)
+  return openApi.post("/api/v1/dashboard/finance/coupons", { body: payload })
 }
 
 /* ─── Update ─── */
@@ -45,11 +48,14 @@ export async function updateCoupon(
   id: string,
   payload: UpdateCouponPayload,
 ): Promise<Coupon> {
-  return api.patch<Coupon>(`/dashboard/finance/coupons/${id}`, payload)
+  return openApi.patch("/api/v1/dashboard/finance/coupons/{id}", {
+    path: { id },
+    body: payload,
+  })
 }
 
 /* ─── Delete ─── */
 
 export async function deleteCoupon(id: string): Promise<void> {
-  await api.delete(`/dashboard/finance/coupons/${id}`)
+  await openApi.delete("/api/v1/dashboard/finance/coupons/{id}", { path: { id } })
 }

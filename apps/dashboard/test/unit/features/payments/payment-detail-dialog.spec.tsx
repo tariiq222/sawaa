@@ -71,18 +71,28 @@ function makePayment(overrides: Partial<Payment> = {}): Payment {
   return {
     id: "pay-target",
     invoiceId: "inv-1",
-    amount: 10_000,
-    refundedAmount: 0,
+    amount: "10000",
+    refundedAmount: "0",
     currency: "SAR",
     method: "ONLINE_CARD" as Payment["method"],
     status: "COMPLETED" as Payment["status"],
     gatewayRef: "moy-1",
     idempotencyKey: null,
+    nativeConfigFingerprint: null,
     receiptUrl: null,
     failureReason: null,
+    refundProviderLeaseOwner: null,
+    refundProviderLeaseExpiresAt: null,
+    effectiveReceivedAt: null,
+    receiptRecordedBy: null,
+    receiptEvidenceRef: null,
+    receiptEntryReason: null,
     processedAt: "2026-04-17T10:00:00Z",
+    number: 1,
     createdAt: "2026-04-17T10:00:00Z",
     updatedAt: "2026-04-17T10:00:00Z",
+    invoice: null,
+    refundRequests: [],
     ...overrides,
   }
 }
@@ -162,7 +172,7 @@ describe("PaymentDetailDialog", () => {
     expect(screen.getByRole("button", { name: "refund.submit" })).toBeInTheDocument()
   })
   it("mounts pending refund requests in the selected payment detail", async () => {
-    fetchPaymentMock.mockResolvedValue(makePayment({ method: "BANK_TRANSFER", gatewayRef: "BANK-ADMIN-REF", refundRequests: [{ id: "req-1", amount: 2500, status: "PENDING_REVIEW", reason: "Cancellation", createdAt: "2026-10-03T00:00:00Z" }] }))
+    fetchPaymentMock.mockResolvedValue(makePayment({ method: "BANK_TRANSFER", gatewayRef: "BANK-ADMIN-REF", refundRequests: [{ id: "req-1", amount: "2500", status: "PENDING_REVIEW", reason: "Cancellation", createdAt: "2026-10-03T00:00:00Z" }] }))
     renderDialog()
     expect(await screen.findByRole("region", { name: "refund.review.title" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "refund.review.recordReturn" })).toBeDisabled()

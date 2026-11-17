@@ -61,8 +61,8 @@ function invalidatePaymentResult(
     kind,
     invoiceId,
     paymentId: variables.id ?? payment.id,
-    bookingId: variables.bookingId ?? cached?.invoice?.bookingId,
-    clientId: variables.clientId ?? cached?.invoice?.clientId,
+    bookingId: variables.bookingId ?? cached?.invoice?.bookingId as string | undefined,
+    clientId: variables.clientId ?? cached?.invoice?.clientId as string | undefined,
     employeeId: variables.employeeId,
   })
 }

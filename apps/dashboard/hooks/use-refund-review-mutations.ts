@@ -27,7 +27,7 @@ export function useRefundReviewMutation(payment: Payment) {
     },
     onSuccess: () => invalidateMutationImpact(queryClient, {
       kind: "payment-refunded", paymentId: payment.id, invoiceId: payment.invoiceId,
-      bookingId: payment.invoice?.bookingId, clientId: payment.invoice?.clientId,
+      bookingId: payment.invoice?.bookingId as string | undefined, clientId: payment.invoice?.clientId as string | undefined,
     }),
   })
 }

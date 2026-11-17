@@ -11166,6 +11166,138 @@ export interface components {
              */
             updatedAt: string;
         };
+        CouponListResponseDto: {
+            /** @description Coupons on the requested page, newest first */
+            items: components["schemas"]["CouponRecordDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        CouponRecordDto: {
+            /**
+             * @description Unique coupon code
+             * @example WELCOME10
+             */
+            code: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Arabic description, or null
+             * @example خصم الترحيب
+             */
+            descriptionAr: string | null;
+            /**
+             * @description English description, or null
+             * @example Welcome discount
+             */
+            descriptionEn: string | null;
+            /**
+             * @description Discount calculation type
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Discount value: percent for PERCENTAGE, halalas for FIXED (decimal string)
+             * @example 10
+             */
+            discountValue: string;
+            /**
+             * Format: date-time
+             * @description Expiry instant, or null for no expiry
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            expiresAt: string | null;
+            /**
+             * Format: uuid
+             * @description Coupon UUID
+             * @example 00000000-0000-4000-a000-0000000000c1
+             */
+            id: string;
+            /**
+             * @description Whether the coupon is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Total redemption limit, or null
+             * @example 100
+             */
+            maxUses: number | null;
+            /**
+             * @description Per-client redemption limit, or null
+             * @example 1
+             */
+            maxUsesPerUser: number | null;
+            /**
+             * @description Minimum order amount in halalas (decimal string), or null
+             * @example 5000
+             */
+            minOrderAmt: string | null;
+            /**
+             * @description Sequential coupon reference used in CPN-prefixed links
+             * @example 1024
+             */
+            ref: number;
+            /**
+             * @description Service UUIDs the coupon is restricted to (empty = unrestricted)
+             * @example [
+             *       "00000000-0000-4000-a000-0000000000c2"
+             *     ]
+             */
+            serviceIds: string[];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Redemptions recorded so far
+             * @example 3
+             */
+            usedCount: number;
+        };
+        CouponRedemptionRecordDto: {
+            /**
+             * Format: uuid
+             * @description Redeeming client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * Format: uuid
+             * @description Coupon UUID
+             * @example 00000000-0000-4000-a000-0000000000c1
+             */
+            couponId: string;
+            /**
+             * @description Discount actually subtracted in halalas (decimal string)
+             * @example 2000
+             */
+            discount: string;
+            /**
+             * Format: uuid
+             * @description Redemption UUID
+             * @example 00000000-0000-4000-a000-0000000000c3
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000c4
+             */
+            invoiceId: string;
+            /**
+             * Format: date-time
+             * @description Redemption instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            redeemedAt: string;
+        };
         CreateBookingDto: {
             /**
              * @description Booking type
@@ -15325,6 +15457,39 @@ export interface components {
              */
             clientId: string;
         };
+        EnsuredInvoiceDto: {
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Unpaid balance in integer halalas
+             * @example 20000
+             */
+            outstanding: number;
+            /**
+             * @description Invoice status at read time
+             * @example DRAFT
+             */
+            status: string;
+            /**
+             * @description Subtotal in integer halalas
+             * @example 20000
+             */
+            subtotal: number;
+            /**
+             * @description Invoice total in integer halalas
+             * @example 20000
+             */
+            total: number;
+            /**
+             * @description VAT rate as a fraction (0..1)
+             * @example 0
+             */
+            vatRate: number;
+        };
         GenerateReportDto: {
             /**
              * @description Restrict report to a specific branch UUID
@@ -15508,6 +15673,205 @@ export interface components {
              * @example National Day
              */
             nameEn: string | null;
+        };
+        IdentityPermissionCatalogEntryDto: {
+            /**
+             * @description CASL action from the shared catalog
+             * @example read
+             */
+            action: string;
+            /**
+             * @description Synthetic catalog id (`<Subject>:<action>`)
+             * @example Booking:read
+             */
+            id: string;
+            /**
+             * @description CASL subject from the shared catalog
+             * @example Booking
+             */
+            module: string;
+        };
+        IdentityRoleDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Role UUID
+             * @example 00000000-0000-4000-a000-0000000000f3
+             */
+            id: string;
+            /**
+             * @description Whether this is a built-in system role
+             * @example false
+             */
+            isSystem: boolean;
+            /**
+             * @description Role display name
+             * @example Program coordinator
+             */
+            name: string;
+            /** @description Permissions granted to the role */
+            permissions: components["schemas"]["IdentityRolePermissionDto"][];
+            /**
+             * @description Whether an admin has customized a system role's permissions
+             * @example false
+             */
+            permissionsCustomized: boolean;
+            /**
+             * @description Built-in role key for system roles, or null
+             * @example null
+             */
+            systemKey: components["schemas"]["UserRole"] | null;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        IdentityRolePermissionDto: {
+            /**
+             * @description CASL action
+             * @example read
+             */
+            action: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Owning custom-role UUID
+             * @example 00000000-0000-4000-a000-0000000000f3
+             */
+            customRoleId: string;
+            /**
+             * Format: uuid
+             * @description Permission row UUID
+             * @example 00000000-0000-4000-a000-0000000000f2
+             */
+            id: string;
+            /**
+             * @description CASL subject
+             * @example Booking
+             */
+            subject: string;
+        };
+        IdentityUserRecordDto: {
+            /**
+             * @description Avatar URL, or null
+             * @example null
+             */
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Assigned custom role UUID, or null
+             * @example null
+             */
+            customRoleId: string | null;
+            /**
+             * Format: email
+             * @description User email address
+             * @example coordinator@example.test
+             */
+            email: string;
+            /**
+             * Format: date-time
+             * @description Email-verification instant, or null
+             * @example null
+             */
+            emailVerifiedAt: string | null;
+            /**
+             * @description Failed login attempts since the last reset
+             * @example 0
+             */
+            failedLoginAttempts: number;
+            /**
+             * @description First name, or null
+             * @example Sara
+             */
+            firstName: string | null;
+            /**
+             * @description Gender, or null
+             * @example FEMALE
+             */
+            gender: components["schemas"]["UserGender"] | null;
+            /**
+             * Format: uuid
+             * @description User UUID
+             * @example 00000000-0000-4000-a000-0000000000f1
+             */
+            id: string;
+            /**
+             * @description Whether the account is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Whether this user is a super admin
+             * @example false
+             */
+            isSuperAdmin: boolean;
+            /**
+             * @description Last name, or null
+             * @example Al-Harbi
+             */
+            lastName: string | null;
+            /**
+             * Format: date-time
+             * @description Login lockout expiry, or null
+             * @example null
+             */
+            lockedUntil: string | null;
+            /**
+             * @description Display name
+             * @example Sara Al-Harbi
+             */
+            name: string;
+            /**
+             * @description Phone number, or null
+             * @example +966501234567
+             */
+            phone: string | null;
+            /**
+             * Format: date-time
+             * @description Phone-verification instant, or null
+             * @example null
+             */
+            phoneVerifiedAt: string | null;
+            /**
+             * @description Numeric user reference used in USR-prefixed links
+             * @example 42
+             */
+            ref: number;
+            /**
+             * @description Built-in role
+             * @example EMPLOYEE
+             */
+            role: components["schemas"]["UserRole"];
+            /**
+             * @description Token version used to invalidate outstanding JWTs
+             * @example 0
+             */
+            tokenVersion: number;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
         };
         InitClientPaymentDto: {
             /**
@@ -15854,6 +16218,449 @@ export interface components {
              * @description Response UUID
              */
             id: string;
+        };
+        InvoiceDetailResponseDto: {
+            /**
+             * @description Booking UUID, or null for package-purchase invoices
+             * @example null
+             */
+            bookingId: string | null;
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            branchId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Discount amount in halalas (decimal string)
+             * @example 0
+             */
+            discountAmt: string;
+            /**
+             * Format: date-time
+             * @description Manual-discount instant, or null
+             * @example null
+             */
+            discountAppliedAt: string | null;
+            /**
+             * @description Staff user UUID that applied the manual discount, or null
+             * @example null
+             */
+            discountAppliedBy: string | null;
+            /**
+             * @description Discount reason UUID, or null
+             * @example null
+             */
+            discountReasonId: string | null;
+            /**
+             * Format: date-time
+             * @description Payment due instant, or null
+             * @example null
+             */
+            dueAt: string | null;
+            /**
+             * Format: uuid
+             * @description Employee UUID recorded on the invoice
+             * @example 00000000-0000-4000-a000-000000000004
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Issuance instant, or null before the first payment
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            issuedAt: string | null;
+            /**
+             * @description Free-form invoice notes, or null
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Sequential invoice number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * @description Package-purchase UUID, or null for booking invoices
+             * @example null
+             */
+            packagePurchaseId: string | null;
+            /**
+             * Format: date-time
+             * @description Full-payment instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            paidAt: string | null;
+            /** @description Payments recorded against the invoice, newest first */
+            payments: components["schemas"]["PaymentRecordDto"][];
+            /**
+             * Format: date-time
+             * @description Legacy PDF generation instant, or null
+             * @example null
+             */
+            pdfGeneratedAt: string | null;
+            /**
+             * @description Legacy pre-payment PDF object key, or null
+             * @example null
+             */
+            pdfUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Paid-receipt issuance instant, or null
+             * @example null
+             */
+            receiptIssuedAt: string | null;
+            /**
+             * @description Payment UUID that triggered the receipt, or null
+             * @example null
+             */
+            receiptPaymentId: string | null;
+            /**
+             * @description Frozen paid-receipt object key, or null
+             * @example null
+             */
+            receiptPdfKey: string | null;
+            /**
+             * @description Refunded amount in halalas (decimal string)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * @description Refunded VAT in halalas (decimal string)
+             * @example 0
+             */
+            refundedVatAmt: string;
+            /**
+             * Format: date-time
+             * @description Instant the invoice was sent to the client, or null
+             * @example null
+             */
+            sentToClientAt: string | null;
+            /**
+             * @description Invoice status
+             * @example PAID
+             */
+            status: components["schemas"]["InvoiceStatus"];
+            /**
+             * @description Subtotal before discount and VAT, in halalas (decimal string)
+             * @example 20000
+             */
+            subtotal: string;
+            /**
+             * @description Invoice total in halalas (decimal string)
+             * @example 20000
+             */
+            total: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT amount in halalas (decimal string)
+             * @example 0
+             */
+            vatAmt: string;
+            /**
+             * @description VAT rate as a fraction (0..1), serialized as a decimal string
+             * @example 0
+             */
+            vatRate: string;
+        };
+        InvoiceListResponseDto: {
+            /** @description Invoices on the requested page, newest first */
+            items: components["schemas"]["InvoiceListRowDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        InvoiceListRowDto: {
+            /**
+             * @description Related booking UUID, or null
+             * @example null
+             */
+            bookingId: string | null;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * @description Resolved client display name, or null when the client row is gone
+             * @example Sara Al-Harbi
+             */
+            clientName: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Whether a paid receipt key or legacy pdfUrl is present on the invoice
+             * @example true
+             */
+            hasPdf: boolean;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Issuance instant, or null before the first payment
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            issuedAt: string | null;
+            /**
+             * @description Sequential invoice number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Full-payment instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            paidAt: string | null;
+            /**
+             * @description Refunded amount in halalas, serialized as a decimal string
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * Format: date-time
+             * @description Instant the invoice was sent to the client, or null
+             * @example null
+             */
+            sentToClientAt: string | null;
+            /**
+             * @description Invoice status
+             * @example PAID
+             */
+            status: components["schemas"]["InvoiceStatus"];
+            /**
+             * @description Subtotal in halalas, serialized as a decimal string
+             * @example 20000
+             */
+            subtotal: string;
+            /**
+             * @description Invoice total in halalas, serialized as a decimal string
+             * @example 20000
+             */
+            total: string;
+            /**
+             * @description VAT amount in halalas, serialized as a decimal string
+             * @example 0
+             */
+            vatAmt: string;
+        };
+        InvoicePdfUrlDto: {
+            /**
+             * @description Presigned URL valid for five minutes
+             * @example https://minio.example.test/finance-invoices/receipts/inv-1.pdf?X-Amz-Signature=…
+             */
+            url: string;
+        };
+        InvoiceRecordDto: {
+            /**
+             * @description Booking UUID, or null for package-purchase invoices
+             * @example null
+             */
+            bookingId: string | null;
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            branchId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Discount amount in halalas (decimal string)
+             * @example 0
+             */
+            discountAmt: string;
+            /**
+             * Format: date-time
+             * @description Manual-discount instant, or null
+             * @example null
+             */
+            discountAppliedAt: string | null;
+            /**
+             * @description Staff user UUID that applied the manual discount, or null
+             * @example null
+             */
+            discountAppliedBy: string | null;
+            /**
+             * @description Discount reason UUID, or null
+             * @example null
+             */
+            discountReasonId: string | null;
+            /**
+             * Format: date-time
+             * @description Payment due instant, or null
+             * @example null
+             */
+            dueAt: string | null;
+            /**
+             * Format: uuid
+             * @description Employee UUID recorded on the invoice
+             * @example 00000000-0000-4000-a000-000000000004
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Issuance instant, or null before the first payment
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            issuedAt: string | null;
+            /**
+             * @description Free-form invoice notes, or null
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Sequential invoice number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * @description Package-purchase UUID, or null for booking invoices
+             * @example null
+             */
+            packagePurchaseId: string | null;
+            /**
+             * Format: date-time
+             * @description Full-payment instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            paidAt: string | null;
+            /**
+             * Format: date-time
+             * @description Legacy PDF generation instant, or null
+             * @example null
+             */
+            pdfGeneratedAt: string | null;
+            /**
+             * @description Legacy pre-payment PDF object key, or null
+             * @example null
+             */
+            pdfUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Paid-receipt issuance instant, or null
+             * @example null
+             */
+            receiptIssuedAt: string | null;
+            /**
+             * @description Payment UUID that triggered the receipt, or null
+             * @example null
+             */
+            receiptPaymentId: string | null;
+            /**
+             * @description Frozen paid-receipt object key, or null
+             * @example null
+             */
+            receiptPdfKey: string | null;
+            /**
+             * @description Refunded amount in halalas (decimal string)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * @description Refunded VAT in halalas (decimal string)
+             * @example 0
+             */
+            refundedVatAmt: string;
+            /**
+             * Format: date-time
+             * @description Instant the invoice was sent to the client, or null
+             * @example null
+             */
+            sentToClientAt: string | null;
+            /**
+             * @description Invoice status
+             * @example PAID
+             */
+            status: components["schemas"]["InvoiceStatus"];
+            /**
+             * @description Subtotal before discount and VAT, in halalas (decimal string)
+             * @example 20000
+             */
+            subtotal: string;
+            /**
+             * @description Invoice total in halalas (decimal string)
+             * @example 20000
+             */
+            total: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description VAT amount in halalas (decimal string)
+             * @example 0
+             */
+            vatAmt: string;
+            /**
+             * @description VAT rate as a fraction (0..1), serialized as a decimal string
+             * @example 0
+             */
+            vatRate: string;
         };
         /** @enum {string} */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
@@ -16601,6 +17408,80 @@ export interface components {
              * @example true
              */
             pushEnabled?: boolean;
+        };
+        MoyasarConfigTestResponseDto: {
+            /**
+             * @description Whether the probe succeeded
+             * @example true
+             */
+            ok: boolean;
+            /**
+             * @description Probe status: OK, INVALID_KEY, NETWORK_ERROR or HTTP_<code>
+             * @example OK
+             */
+            status: string;
+        };
+        MoyasarConfigUpsertResponseDto: {
+            /**
+             * @description Whether the stored keys are live (production) keys
+             * @example false
+             */
+            isLive: boolean;
+            /**
+             * @description Fixed single-tenant organization id
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            organizationId: string;
+            /**
+             * @description Moyasar publishable key that was stored
+             * @example pk_test_12345678901234567890
+             */
+            publishableKey: string;
+            /**
+             * Format: date-time
+             * @description Config update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        MoyasarConfigViewDto: {
+            /**
+             * @description Whether an encrypted webhook signing secret is stored (the secret itself is never returned)
+             * @example true
+             */
+            hasWebhookSecret: boolean;
+            /**
+             * @description Whether the stored keys are live (production) keys
+             * @example false
+             */
+            isLive: boolean;
+            /**
+             * Format: date-time
+             * @description Last connectivity-test instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            lastVerifiedAt: string | null;
+            /**
+             * @description Last connectivity-test status, or null
+             * @example OK
+             */
+            lastVerifiedStatus: string | null;
+            /**
+             * @description Moyasar publishable key (pk_test_… / pk_live_…); not a secret
+             * @example pk_test_12345678901234567890
+             */
+            publishableKey: string;
+            /**
+             * @description Masked secret key: prefix + bullets + the last four publishable-key characters
+             * @example sk_test_•••••••7890
+             */
+            secretKeyMasked: string;
+            /**
+             * Format: date-time
+             * @description Last config update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
         };
         MoyasarWebhookDataDto: {
             /**
@@ -20380,6 +21261,409 @@ export interface components {
              */
             unitPrice: number;
         };
+        PackagePurchaseCreditAvailabilityDto: {
+            /**
+             * @description Whether the credit can be booked now
+             * @example true
+             */
+            bookable: boolean;
+            /**
+             * @description Machine-readable reason when not bookable, or null
+             * @example null
+             */
+            reason: string | null;
+        };
+        PackagePurchaseCreditConstraintDto: {
+            /**
+             * @description Eligibility dimension
+             * @example SERVICE
+             * @enum {string}
+             */
+            dimension: "SERVICE" | "PRACTITIONER" | "DURATION" | "DELIVERY_TYPE";
+            /**
+             * @description Rule mode
+             * @example INCLUDE
+             * @enum {string}
+             */
+            mode: "ANY" | "INCLUDE" | "EXCLUDE";
+            /**
+             * @description Target ids; empty for ANY
+             * @example [
+             *       "00000000-0000-4000-a000-0000000000d2"
+             *     ]
+             */
+            targetIds: string[];
+        };
+        PackagePurchaseCreditDto: {
+            /** @description Backend-computed availability */
+            availability: components["schemas"]["PackagePurchaseCreditAvailabilityDto"];
+            /**
+             * @description Category booking mode, or null
+             * @example SERVICES
+             * @enum {string|null}
+             */
+            categoryBookingMode: "DIRECT" | "SERVICES" | null;
+            /**
+             * @description Resolved category UUID, or null for flexible credits
+             * @example 00000000-0000-4000-a000-0000000000d5
+             */
+            categoryId: string | null;
+            /**
+             * @description Resolved Arabic category name (empty when unresolved)
+             * @example عيادة
+             */
+            categoryNameAr: string;
+            /**
+             * @description Resolved English category name, or null
+             * @example Clinic
+             */
+            categoryNameEn: string | null;
+            /** @description Eligibility rules frozen at purchase time */
+            constraints: components["schemas"]["PackagePurchaseCreditConstraintDto"][];
+            /**
+             * @description Frozen delivery channel (IN_PERSON or ONLINE), or null
+             * @example null
+             */
+            deliveryTypeSnapshot: string | null;
+            /**
+             * @description Resolved department UUID, or null
+             * @example 00000000-0000-4000-a000-0000000000d6
+             */
+            departmentId: string | null;
+            /**
+             * @description Resolved Arabic department name (empty when unresolved)
+             * @example قسم
+             */
+            departmentNameAr: string;
+            /**
+             * @description Resolved English department name, or null
+             * @example Department
+             */
+            departmentNameEn: string | null;
+            /**
+             * @description Group this session depends on, or null
+             * @example null
+             */
+            dependsOnGroupId: string | null;
+            /**
+             * @description Resolved Arabic duration label
+             * @example ٤٥ دقيقة
+             */
+            durationLabelAr: string;
+            /**
+             * @description Resolved English duration label, or null
+             * @example 45 min
+             */
+            durationLabelEn: string | null;
+            /**
+             * @description Resolved duration in minutes, or null
+             * @example 45
+             */
+            durationMins: number | null;
+            /**
+             * @description Frozen duration in minutes, or null
+             * @example null
+             */
+            durationMinsSnapshot: number | null;
+            /**
+             * @description Pinned duration-option UUID, or null on flexible credits
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Pinned employee UUID, or null on flexible credits
+             * @example null
+             */
+            employeeId: string | null;
+            /**
+             * @description Resolved Arabic practitioner name
+             * @example أحمد
+             */
+            employeeNameAr: string;
+            /**
+             * @description Resolved English practitioner name, or null
+             * @example Ahmed
+             */
+            employeeNameEn: string | null;
+            /**
+             * @description Frozen practitioner name, or null
+             * @example null
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * @description Group label, or null
+             * @example null
+             */
+            groupLabel: string | null;
+            /**
+             * Format: uuid
+             * @description Credit UUID
+             * @example 00000000-0000-4000-a000-0000000000d3
+             */
+            id: string;
+            /**
+             * @description Frozen list price in integer halalas, or null
+             * @example 20000
+             */
+            listPriceSnapshot: number | null;
+            /**
+             * @description Net amount paid for the credit in integer halalas, or null
+             * @example 9000
+             */
+            netValue: number | null;
+            /**
+             * @description Purchase group UUID (grouped purchases), or null
+             * @example null
+             */
+            purchaseGroupId: string | null;
+            /**
+             * @description totalQuantity − usedQuantity − reservedQuantity
+             * @example 3
+             */
+            remaining: number;
+            /**
+             * @description Sessions reserved by a future booking
+             * @example 0
+             */
+            reservedQuantity: number;
+            /**
+             * @description Group sequence mode, or null
+             * @example null
+             * @enum {string|null}
+             */
+            sequenceMode: "ORDERED" | "UNORDERED" | null;
+            /**
+             * @description Pinned service UUID, or null on flexible credits
+             * @example 00000000-0000-4000-a000-0000000000d4
+             */
+            serviceId: string | null;
+            /**
+             * @description True when the service is active and the practitioner still offers it
+             * @example true
+             */
+            serviceIsBookable: boolean;
+            /**
+             * @description Resolved Arabic service name (clinic name for hidden DIRECT services)
+             * @example استشارة أسرية
+             */
+            serviceNameAr: string;
+            /**
+             * @description Resolved English service name, or null
+             * @example Family consultation
+             */
+            serviceNameEn: string | null;
+            /**
+             * @description Frozen service name, or null
+             * @example null
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Session position inside its group, or null
+             * @example null
+             */
+            sessionPosition: number | null;
+            /**
+             * @description Sessions bought
+             * @example 4
+             */
+            totalQuantity: number;
+            /**
+             * @description Frozen unit price in integer halalas
+             * @example 10000
+             */
+            unitPriceSnapshot: number;
+            /**
+             * @description Sessions delivered
+             * @example 1
+             */
+            usedQuantity: number;
+        };
+        PackagePurchaseListRowDto: {
+            /**
+             * @description Net amount paid in integer halalas
+             * @example 120000
+             */
+            amountPaid: number;
+            /**
+             * Format: uuid
+             * @description Branch UUID; the handler interface declares it optional although the mapper always sets it
+             * @example 00000000-0000-4000-a000-0000000000d8
+             */
+            branchId?: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /** @description Purchased credit buckets */
+            credits: components["schemas"]["PackagePurchaseCreditDto"][];
+            /**
+             * @description Frozen discount in integer halalas
+             * @example 0
+             */
+            discountSnapshot: number;
+            /**
+             * @description Frozen family UUID, or null
+             * @example null
+             */
+            familyId: string | null;
+            /**
+             * @description Frozen family Arabic name, or null
+             * @example null
+             */
+            familyNameAr: string | null;
+            /**
+             * @description Frozen family English name, or null
+             * @example null
+             */
+            familyNameEn: string | null;
+            /**
+             * Format: uuid
+             * @description Package purchase UUID
+             * @example 00000000-0000-4000-a000-0000000000d1
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID, or null; the handler interface declares it optional although the mapper always sets it
+             * @example 00000000-0000-4000-a000-0000000000d7
+             */
+            invoiceId?: string | null;
+            /**
+             * @description Purchase model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /**
+             * @description Purchase notes, or null
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Frozen offer snapshot ({ familyId, familyNameAr, familyNameEn, optionNameAr, optionNameEn, sessionCount }), or null
+             * @example {
+             *       "familyId": "00000000-0000-4000-a000-0000000000da",
+             *       "familyNameAr": "باقة الأسرة",
+             *       "familyNameEn": "Family package",
+             *       "optionNameAr": "٦ جلسات",
+             *       "optionNameEn": "6 sessions",
+             *       "sessionCount": 6
+             *     }
+             */
+            offerSnapshot: {
+                /** Format: uuid */
+                familyId?: string;
+                familyNameAr?: string;
+                familyNameEn?: string | null;
+                optionNameAr?: string;
+                optionNameEn?: string | null;
+                sessionCount?: number;
+            } | null;
+            /**
+             * @description Frozen option Arabic name, or null
+             * @example null
+             */
+            optionNameAr: string | null;
+            /**
+             * @description Frozen option English name, or null
+             * @example null
+             */
+            optionNameEn: string | null;
+            /**
+             * Format: uuid
+             * @description Package family UUID, or null; the handler interface declares it optional although the mapper always sets it
+             * @example null
+             */
+            packageFamilyId?: string | null;
+            /**
+             * Format: uuid
+             * @description Session-package UUID
+             * @example 00000000-0000-4000-a000-0000000000d9
+             */
+            packageId: string;
+            /**
+             * @description Display Arabic package name (family name when offered from a family)
+             * @example باقة الأسرة
+             */
+            packageNameAr: string;
+            /**
+             * @description Display English package name, or null
+             * @example Family package
+             */
+            packageNameEn: string | null;
+            /**
+             * Format: date-time
+             * @description Purchase instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            paidAt: string;
+            /**
+             * @description Cumulative refunded amount in integer halalas
+             * @example 0
+             */
+            refundAmount: number;
+            /**
+             * Format: date-time
+             * @description Full-refund instant, or null
+             * @example null
+             */
+            refundedAt: string | null;
+            /**
+             * @description Frozen session count, or null
+             * @example null
+             */
+            sessionCount: number | null;
+            /** @example ACTIVE */
+            status: components["schemas"]["PackagePurchaseStatus"];
+            /**
+             * @description Frozen subtotal in integer halalas
+             * @example 120000
+             */
+            subtotalSnapshot: number;
+            /**
+             * @description Invoice total the client was charged, VAT-inclusive, in integer halalas
+             * @example 120000
+             */
+            totalCharged: number;
+            /**
+             * @description VAT on the purchase invoice in integer halalas (0 when VAT is off)
+             * @example 0
+             */
+            vatAmount: number;
+        };
+        PackagePurchaseRefundResponseDto: {
+            /**
+             * @description Whether this call completed a full refund
+             * @example true
+             */
+            isFullRefund: boolean;
+            /**
+             * Format: uuid
+             * @description Package purchase UUID
+             * @example 00000000-0000-4000-a000-0000000000d1
+             */
+            purchaseId: string;
+            /**
+             * @description Amount refunded by this call in integer halalas
+             * @example 50000
+             */
+            refundAmount: number;
+            /**
+             * Format: date-time
+             * @description Full-refund instant, or null for a partial refund
+             * @example 2026-10-11T09:00:00.000Z
+             */
+            refundedAt: string | null;
+            /** @example REFUNDED */
+            status: components["schemas"]["PackagePurchaseStatus"];
+            /**
+             * @description Cumulative refunded amount after this call in integer halalas
+             * @example 50000
+             */
+            totalRefunded: number;
+        };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
         PackageRawGroupRecordDto: {
@@ -20514,11 +21798,646 @@ export interface components {
             /** @description Pagination metadata for the full result set */
             meta: components["schemas"]["ListMetaDto"];
         };
+        PaymentCollectionPaymentDto: {
+            /**
+             * @description Collected amount in integer halalas
+             * @example 15000
+             */
+            amount: number;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000a1
+             */
+            id: string;
+            /**
+             * @description Payment method used
+             * @example CASH
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /** @example COMPLETED */
+            status: components["schemas"]["PaymentStatus"];
+        };
+        PaymentCollectionResponseDto: {
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             * @example 00000000-0000-4000-a000-0000000000a6
+             */
+            bookingId: string;
+            /** @description The ensured invoice (halalas, integer fields) */
+            invoice: components["schemas"]["EnsuredInvoiceDto"];
+            /** @description Recorded payment, or null when a 100% discount covered the invoice */
+            payment: components["schemas"]["PaymentCollectionPaymentDto"] | null;
+        };
+        PaymentDeferredEventDto: {
+            /**
+             * @description Event envelope ({ eventId, correlationId, source, version, occurredAt, payload })
+             * @example {
+             *       "correlationId": "00000000-0000-4000-a000-0000000000a5",
+             *       "eventId": "00000000-0000-4000-a000-0000000000a4",
+             *       "occurredAt": "2026-10-10T09:00:00.000Z",
+             *       "payload": {
+             *         "paymentId": "00000000-0000-4000-a000-0000000000a1"
+             *       },
+             *       "source": "finance",
+             *       "version": 1
+             *     }
+             */
+            envelope: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Domain event name
+             * @example finance.payment.completed
+             */
+            eventName: string;
+        };
+        PaymentDetailInvoiceSummaryDto: {
+            /**
+             * @description Booking UUID, or null for package-purchase invoices
+             * @example null
+             */
+            bookingId: string | null;
+            /** @description Resolved client, or null when the client row is gone */
+            client: components["schemas"]["PaymentInvoiceClientDto"] | null;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * @description Invoice number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * @description Invoice total in halalas (decimal string)
+             * @example 20000
+             */
+            total: string;
+        };
+        PaymentDetailResponseDto: {
+            /**
+             * @description Payment amount in halalas (decimal string)
+             * @example 20000
+             */
+            amount: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description Instant the money was actually received, or null
+             * @example null
+             */
+            effectiveReceivedAt: string | null;
+            /**
+             * @description Failure or refund reason, or null
+             * @example null
+             */
+            failureReason: string | null;
+            /**
+             * @description Provider transaction reference (Moyasar payment id), or null
+             * @example null
+             */
+            gatewayRef: string | null;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000a1
+             */
+            id: string;
+            /**
+             * @description Idempotency key stored on the row, or null
+             * @example null
+             */
+            idempotencyKey: string | null;
+            /** @description Invoice projection with the resolved client, or null */
+            invoice: components["schemas"]["PaymentDetailInvoiceSummaryDto"] | null;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000a2
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method used
+             * @example CASH
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * @description SHA-256 of the native checkout configuration, or null
+             * @example null
+             */
+            nativeConfigFingerprint: string | null;
+            /**
+             * @description Sequential payment number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            processedAt: string | null;
+            /**
+             * @description Reason recorded with the receipt entry, or null
+             * @example null
+             */
+            receiptEntryReason: string | null;
+            /**
+             * @description Receipt evidence reference, or null
+             * @example null
+             */
+            receiptEvidenceRef: string | null;
+            /**
+             * @description Staff user UUID that recorded the receipt, or null
+             * @example null
+             */
+            receiptRecordedBy: string | null;
+            /**
+             * @description MinIO receipt path, or null
+             * @example null
+             */
+            receiptUrl: string | null;
+            /**
+             * @description Refunded amount in halalas (decimal string)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * Format: date-time
+             * @description Provider-refund lease expiry, or null
+             * @example null
+             */
+            refundProviderLeaseExpiresAt: string | null;
+            /**
+             * @description Provider-refund lease owner, or null
+             * @example null
+             */
+            refundProviderLeaseOwner: string | null;
+            /** @description Refund requests for this payment, newest first */
+            refundRequests: components["schemas"]["PaymentRefundRequestRowDto"][];
+            /** @example COMPLETED */
+            status: components["schemas"]["PaymentStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PaymentHistoricalStatsDto: {
+            /**
+             * @description Collected amount in integer halalas
+             * @example 103353250
+             */
+            collectedAmount: number;
+            /**
+             * @description Collected appointment count
+             * @example 3427
+             */
+            collectedCount: number;
+            /**
+             * @description Amount awaiting review in integer halalas
+             * @example 1575000
+             */
+            reviewAmount: number;
+            /**
+             * @description Appointments awaiting review
+             * @example 109
+             */
+            reviewCount: number;
+        };
+        PaymentInvoiceClientDto: {
+            /**
+             * @description First name, or null
+             * @example Sara
+             */
+            firstName: string | null;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Last name, or null
+             * @example Al-Harbi
+             */
+            lastName: string | null;
+            /**
+             * @description Client display name
+             * @example Sara Al-Harbi
+             */
+            name: string;
+            /**
+             * @description Phone number, or null
+             * @example +966501234567
+             */
+            phone: string | null;
+        };
+        PaymentListInvoiceSummaryDto: {
+            /**
+             * @description Booking UUID, or null for package-purchase invoices
+             * @example null
+             */
+            bookingId: string | null;
+            /** @description Resolved client, or null when the client row is gone */
+            client: components["schemas"]["PaymentInvoiceClientDto"] | null;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * @description Invoice total in halalas (decimal string)
+             * @example 20000
+             */
+            total: string;
+        };
+        PaymentListResponseDto: {
+            /** @description Payments on the requested page, newest collection first */
+            items: components["schemas"]["PaymentListRowDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        PaymentListRowDto: {
+            /**
+             * @description Payment amount in halalas (decimal string)
+             * @example 20000
+             */
+            amount: string;
+            /**
+             * Format: date-time
+             * @description Collection date (effective received instant, else created instant) as an ISO timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            collectionDate: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description Instant the money was actually received, or null
+             * @example null
+             */
+            effectiveReceivedAt: string | null;
+            /**
+             * @description Failure or refund reason, or null
+             * @example null
+             */
+            failureReason: string | null;
+            /**
+             * @description Provider transaction reference (Moyasar payment id), or null
+             * @example null
+             */
+            gatewayRef: string | null;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000a1
+             */
+            id: string;
+            /**
+             * @description Idempotency key stored on the row, or null
+             * @example null
+             */
+            idempotencyKey: string | null;
+            /** @description Invoice projection, or null */
+            invoice: components["schemas"]["PaymentListInvoiceSummaryDto"] | null;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000a2
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method used
+             * @example CASH
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * @description SHA-256 of the native checkout configuration, or null
+             * @example null
+             */
+            nativeConfigFingerprint: string | null;
+            /**
+             * @description Sequential payment number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            processedAt: string | null;
+            /**
+             * @description Reason recorded with the receipt entry, or null
+             * @example null
+             */
+            receiptEntryReason: string | null;
+            /**
+             * @description Receipt evidence reference, or null
+             * @example null
+             */
+            receiptEvidenceRef: string | null;
+            /**
+             * @description Staff user UUID that recorded the receipt, or null
+             * @example null
+             */
+            receiptRecordedBy: string | null;
+            /**
+             * @description MinIO receipt path, or null
+             * @example null
+             */
+            receiptUrl: string | null;
+            /**
+             * @description Refunded amount in halalas (decimal string)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * Format: date-time
+             * @description Provider-refund lease expiry, or null
+             * @example null
+             */
+            refundProviderLeaseExpiresAt: string | null;
+            /**
+             * @description Provider-refund lease owner, or null
+             * @example null
+             */
+            refundProviderLeaseOwner: string | null;
+            /** @example COMPLETED */
+            status: components["schemas"]["PaymentStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
         /**
          * @description Payment method used
          * @enum {string}
          */
         PaymentMethod: "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON" | "MADA" | "TABBY";
+        PaymentProcessResponseDto: {
+            /**
+             * @description Payment amount in halalas: a number, or a Prisma Decimal (decimal string on the wire)
+             * @example 20000
+             */
+            amount: number | string;
+            /** @description Domain events staged in the write transaction */
+            deferredEvents?: components["schemas"]["PaymentDeferredEventDto"][];
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000a1
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000a2
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method used
+             * @example CASH
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * @description Payment status (Prisma PaymentStatus or its string value)
+             * @example COMPLETED
+             */
+            status: string;
+        };
+        PaymentRecordDto: {
+            /**
+             * @description Payment amount in halalas (decimal string)
+             * @example 20000
+             */
+            amount: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description Instant the money was actually received, or null
+             * @example null
+             */
+            effectiveReceivedAt: string | null;
+            /**
+             * @description Failure or refund reason, or null
+             * @example null
+             */
+            failureReason: string | null;
+            /**
+             * @description Provider transaction reference (Moyasar payment id), or null
+             * @example null
+             */
+            gatewayRef: string | null;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000a1
+             */
+            id: string;
+            /**
+             * @description Idempotency key stored on the row, or null
+             * @example null
+             */
+            idempotencyKey: string | null;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000a2
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method used
+             * @example CASH
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * @description SHA-256 of the native checkout configuration, or null
+             * @example null
+             */
+            nativeConfigFingerprint: string | null;
+            /**
+             * @description Sequential payment number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            processedAt: string | null;
+            /**
+             * @description Reason recorded with the receipt entry, or null
+             * @example null
+             */
+            receiptEntryReason: string | null;
+            /**
+             * @description Receipt evidence reference, or null
+             * @example null
+             */
+            receiptEvidenceRef: string | null;
+            /**
+             * @description Staff user UUID that recorded the receipt, or null
+             * @example null
+             */
+            receiptRecordedBy: string | null;
+            /**
+             * @description MinIO receipt path, or null
+             * @example null
+             */
+            receiptUrl: string | null;
+            /**
+             * @description Refunded amount in halalas (decimal string)
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * Format: date-time
+             * @description Provider-refund lease expiry, or null
+             * @example null
+             */
+            refundProviderLeaseExpiresAt: string | null;
+            /**
+             * @description Provider-refund lease owner, or null
+             * @example null
+             */
+            refundProviderLeaseOwner: string | null;
+            /** @example COMPLETED */
+            status: components["schemas"]["PaymentStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PaymentRefundRequestRowDto: {
+            /**
+             * @description Refund amount in halalas (decimal string)
+             * @example 5000
+             */
+            amount: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Refund request UUID
+             * @example 00000000-0000-4000-a000-0000000000a3
+             */
+            id: string;
+            /**
+             * @description Refund reason, or null
+             * @example Service not delivered
+             */
+            reason: string | null;
+            /**
+             * @description Refund request status
+             * @example PENDING_REVIEW
+             */
+            status: components["schemas"]["RefundStatus"];
+        };
+        PaymentStatsResponseDto: {
+            /**
+             * @description COMPLETED row count
+             * @example 20
+             */
+            completed: number;
+            /**
+             * @description COMPLETED amount in integer halalas
+             * @example 100000
+             */
+            completedAmount: number;
+            /**
+             * @description FAILED row count
+             * @example 3
+             */
+            failed: number;
+            /** @description Read-only legacy Booknetic summary */
+            historical: components["schemas"]["PaymentHistoricalStatsDto"];
+            /**
+             * @description PENDING row count
+             * @example 2
+             */
+            pending: number;
+            /**
+             * @description PENDING amount in integer halalas
+             * @example 10000
+             */
+            pendingAmount: number;
+            /**
+             * @description PENDING_VERIFICATION row count
+             * @example 1
+             */
+            pendingVerification: number;
+            /**
+             * @description PENDING_VERIFICATION amount in integer halalas
+             * @example 5000
+             */
+            pendingVerificationAmount: number;
+            /**
+             * @description REFUNDED row count
+             * @example 3
+             */
+            refunded: number;
+            /**
+             * @description REFUNDED amount in integer halalas
+             * @example 10000
+             */
+            refundedAmount: number;
+            /**
+             * @description Total payment rows
+             * @example 29
+             */
+            total: number;
+            /**
+             * @description Total amount in integer halalas
+             * @example 125000
+             */
+            totalAmount: number;
+        };
         /** @enum {string} */
         PaymentStatus: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
         PerformPasswordResetDto: {
@@ -22695,6 +24614,24 @@ export interface components {
              */
             refreshToken?: string;
         };
+        RefundApprovalResponseDto: {
+            /**
+             * @description Provider refund reference; present only when the request reached one
+             * @example refund_abc123
+             */
+            gatewayRef?: string | null;
+            /**
+             * Format: uuid
+             * @description Refund request UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Refund request status after the approval attempt
+             * @example COMPLETED
+             */
+            status: string;
+        };
         RefundPackagePurchaseDto: {
             /**
              * @description Client-generated idempotency key for this refund attempt; retries must reuse it
@@ -22724,6 +24661,196 @@ export interface components {
              */
             reason: string;
         };
+        /** @enum {string} */
+        RefundProviderState: "NOT_CALLED" | "BEFORE_CALL" | "CALL_UNKNOWN" | "CONFIRMED" | "FAILED" | "MANUAL_REVIEW";
+        RefundRequestListItemDto: {
+            /**
+             * @description Refund amount in integer halalas
+             * @example 5000
+             */
+            amount: number;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant as an ISO 8601 timestamp
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Denial reason, or null
+             * @example null
+             */
+            denialReason: string | null;
+            /**
+             * Format: uuid
+             * @description Refund request UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000e2
+             */
+            invoiceId: string;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000e3
+             */
+            paymentId: string;
+            /**
+             * Format: date-time
+             * @description Processing instant as an ISO 8601 timestamp, or null
+             * @example null
+             */
+            processedAt: string | null;
+            /**
+             * @description Refund reason, or null
+             * @example Service not delivered
+             */
+            reason: string | null;
+            /**
+             * @description Refund request status
+             * @example PENDING_REVIEW
+             */
+            status: string;
+        };
+        RefundRequestRecordDto: {
+            /**
+             * @description Refund amount in halalas (decimal string)
+             * @example 5000
+             */
+            amount: string;
+            /**
+             * @description Cumulative refunded baseline at call time (decimal string), or null
+             * @example null
+             */
+            baselineRefundedAmount: string | null;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Denial reason, or null
+             * @example Refund window has expired
+             */
+            denialReason: string | null;
+            /**
+             * @description Provider refund reference, or null
+             * @example null
+             */
+            gatewayRef: string | null;
+            /**
+             * Format: uuid
+             * @description Refund request UUID
+             * @example 00000000-0000-4000-a000-0000000000e1
+             */
+            id: string;
+            /**
+             * @description Stable refund identity across replays, or null
+             * @example null
+             */
+            idempotencyKey: string | null;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-0000000000e2
+             */
+            invoiceId: string;
+            /**
+             * Format: date-time
+             * @description Last provider attempt instant, or null
+             * @example null
+             */
+            lastProviderAttemptAt: string | null;
+            /**
+             * @description Last provider error, or null
+             * @example null
+             */
+            lastProviderError: string | null;
+            /**
+             * @description Observed cumulative refunded amount (decimal string), or null
+             * @example null
+             */
+            observedCumulativeRefundedAmount: string | null;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-0000000000e3
+             */
+            paymentId: string;
+            /**
+             * Format: date-time
+             * @description Processing instant, or null
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            processedAt: string | null;
+            /**
+             * @description Staff user UUID that processed the request, or null
+             * @example null
+             */
+            processedBy: string | null;
+            /**
+             * @description Provider attempt count
+             * @example 0
+             */
+            providerAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Provider lease expiry, or null
+             * @example null
+             */
+            providerLeaseExpiresAt: string | null;
+            /**
+             * @description Provider lease owner, or null
+             * @example null
+             */
+            providerLeaseOwner: string | null;
+            /** @example BEFORE_CALL */
+            providerState: components["schemas"]["RefundProviderState"];
+            /**
+             * @description Refund reason, or null
+             * @example Service not delivered
+             */
+            reason: string | null;
+            /**
+             * @description Cancellation event that created the request, or null
+             * @example null
+             */
+            sourceEventId: string | null;
+            /** @example DENIED */
+            status: components["schemas"]["RefundStatus"];
+            /**
+             * @description Target cumulative refunded amount (decimal string), or null
+             * @example null
+             */
+            targetCumulativeRefundedAmount: string | null;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        /**
+         * @description Refund request status
+         * @enum {string}
+         */
+        RefundStatus: "PENDING_REVIEW" | "APPROVED" | "DENIED" | "PROCESSING" | "COMPLETED" | "FAILED" | "MANUAL_REVIEW";
         /**
          * @description Refund type when free cancellation window is used
          * @enum {string}
@@ -25924,7 +28051,7 @@ export interface components {
              * @description Custom role UUID or null to clear
              * @example 00000000-0000-0000-0000-000000000000
              */
-            customRoleId?: Record<string, never> | null;
+            customRoleId?: string | null;
             /**
              * @description New built-in role
              * @example RECEPTIONIST
@@ -35398,7 +37525,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentCollectionResponseDto"];
+                };
             };
             /** @description Booking is historical, has no payable amount, has no client, method is ONLINE_CARD/COUPON, or invoice discount/payment tripwire */
             400: {
@@ -35464,7 +37593,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EnsuredInvoiceDto"];
+                };
             };
             /** @description Booking is historical, has no payable amount, or has no client */
             400: {
@@ -35533,7 +37664,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackagePurchaseListRowDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35582,7 +37715,7 @@ export interface operations {
                 status?: "active" | "inactive" | "expired";
                 /** @description Page number (1-based) */
                 page?: number;
-                /** @description Records per page (max 100) */
+                /** @description Results per page (max 100) */
                 limit?: number;
             };
             header?: never;
@@ -35596,7 +37729,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CouponListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35654,7 +37789,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CouponRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35711,7 +37848,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CouponRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35847,7 +37986,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CouponRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35914,7 +38055,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CouponRedemptionRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -35969,6 +38112,10 @@ export interface operations {
                 toDate?: string;
                 /** @description Search by invoice number or client name */
                 search?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -35981,7 +38128,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InvoiceListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36039,7 +38188,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InvoiceRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36096,7 +38247,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InvoiceDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36166,7 +38319,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InvoiceRecordDto"];
+                };
             };
             /** @description Invoice not eligible or invalid discount */
             400: {
@@ -36232,7 +38387,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InvoicePdfUrlDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36298,7 +38455,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InvoicePdfUrlDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36356,12 +38515,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Moyasar configuration or null if unconfigured */
+            /** @description Moyasar configuration or null if unconfigured (secret key is masked; ciphertext is never returned) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MoyasarConfigViewDto"] | null;
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36414,12 +38575,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Moyasar configuration saved (secrets encrypted at rest) */
+            /** @description Moyasar configuration saved (secrets encrypted at rest; never echoed back) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MoyasarConfigUpsertResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36473,7 +38636,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MoyasarConfigTestResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36601,7 +38766,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackagePurchaseRefundResponseDto"];
+                };
             };
             /** @description Already refunded or refundAmount outside [0, amount charged (invoice total)] */
             400: {
@@ -36667,6 +38834,10 @@ export interface operations {
                 toDate?: string;
                 /** @description Search by client name or invoice number */
                 search?: string;
+                /** @description Results per page */
+                limit?: number;
+                /** @description Page number (1-based) */
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -36679,7 +38850,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36737,7 +38910,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentProcessResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36794,7 +38969,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentDetailResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -36864,7 +39041,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentRecordDto"];
+                };
             };
             /** @description Payment is a card payment or amount exceeds balance */
             400: {
@@ -36934,7 +39113,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37004,7 +39185,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37088,7 +39271,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -37143,47 +39328,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example 20 */
-                        completed?: number;
-                        /** @example 100000 */
-                        completedAmount?: number;
-                        /** @example 3 */
-                        failed?: number;
-                        /** @description Booknetic collections kept separate from operational finance */
-                        historical?: {
-                            /**
-                             * @description Integer halalas
-                             * @example 103353250
-                             */
-                            collectedAmount?: number;
-                            /** @example 3427 */
-                            collectedCount?: number;
-                            /**
-                             * @description Integer halalas
-                             * @example 1575000
-                             */
-                            reviewAmount?: number;
-                            /** @example 109 */
-                            reviewCount?: number;
-                        };
-                        /** @example 2 */
-                        pending?: number;
-                        /** @example 10000 */
-                        pendingAmount?: number;
-                        /** @example 1 */
-                        pendingVerification?: number;
-                        /** @example 5000 */
-                        pendingVerificationAmount?: number;
-                        /** @example 3 */
-                        refunded?: number;
-                        /** @example 10000 */
-                        refundedAmount?: number;
-                        /** @example 29 */
-                        total?: number;
-                        /** @example 125000 */
-                        totalAmount?: number;
-                    };
+                    "application/json": components["schemas"]["PaymentStatsResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -37239,12 +39384,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example create */
-                        action?: string;
-                        /** @example Booking */
-                        subject?: string;
-                    }[];
+                    "application/json": components["schemas"]["IdentityPermissionCatalogEntryDto"][];
                 };
             };
             /** @description Validation failed */
@@ -37300,17 +39440,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        isSystem?: boolean;
-                        name?: string;
-                        permissions?: {
-                            action?: string;
-                            subject?: string;
-                        }[];
-                        systemKey?: string | null;
-                    }[];
+                    "application/json": components["schemas"]["IdentityRoleDto"][];
                 };
             };
             /** @description Validation failed */
@@ -37370,13 +39500,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        name?: string;
-                    };
+                    "application/json": components["schemas"]["IdentityRoleDto"];
                 };
             };
             /** @description Validation failed */
@@ -37637,17 +39761,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: email */
-                        email?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        isActive?: boolean;
-                        name?: string;
-                        role?: string;
-                    };
+                    "application/json": components["schemas"]["IdentityUserRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -37844,17 +39958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: email */
-                        email?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        isActive?: boolean;
-                        name?: string;
-                        role?: string;
-                        /** Format: date-time */
-                        updatedAt?: string;
-                    };
+                    "application/json": components["schemas"]["IdentityUserRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -38057,7 +40161,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["IdentityUserRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -47046,6 +49152,7 @@ export interface operations {
     RefundsController_listRefunds_v1: {
         parameters: {
             query?: {
+                /** @description Filter by refund-request status */
                 status?: string;
             };
             header?: never;
@@ -47054,15 +49161,49 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Refund requests, newest first (bounded to 100 rows) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data?: Record<string, never>[];
-                        total?: number;
-                    };
+                    "application/json": components["schemas"]["RefundRequestListItemDto"][];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
         };
@@ -47080,12 +49221,58 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Approved refund result */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RefundApprovalResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Refund request not found or not pending review */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
         };
@@ -47103,12 +49290,58 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Denied refund result */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RefundRequestRecordDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Refund request not found or not pending review */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
         };

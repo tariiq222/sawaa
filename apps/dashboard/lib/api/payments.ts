@@ -1,28 +1,53 @@
 /**
  * Payments API — Sawaa Dashboard
- * Controller: dashboard/finance/payments
+ *
+ * Every call goes through the typed helper in `lib/api/openapi.ts`, so a
+ * renamed route or a changed payload is a type error here. Response types come
+ * from the committed OpenAPI snapshot through `lib/types/payment.ts`.
+ * Request URLs, query names/order and bodies are unchanged.
+ *
+ * Note on `fetchPayment`: the handler returns the payment detail envelope and
+ * the dashboard has always typed the resolution as `Payment | null`. The route
+ * answers 404 instead of null; the `| null` is retained on the return type only
+ * (no fallback is added or removed).
  */
 
 import { api } from "@/lib/api"
-import type { PaginatedResponse } from "@/lib/types/common"
-import type { Payment, PaymentListQuery, PaymentStats } from "@/lib/types/payment"
+import { openApi } from "@/lib/api/openapi"
+import type {
+  CollectBookingPaymentResult,
+  CollectBookingPaymentPayload,
+  Payment,
+  PaymentListPage,
+  PaymentListQuery,
+  PaymentStats,
+} from "@/lib/types/payment"
+import type { EnsuredBookingInvoice } from "@/lib/types/invoice"
+
+const PAYMENTS_PATH = "/dashboard/finance/payments"
 
 export async function fetchPaymentStats(): Promise<PaymentStats> {
-  return api.get<PaymentStats>("/dashboard/finance/payments/stats")
+  return openApi.get("/api/v1/dashboard/finance/payments/stats")
 }
 
 export async function refundPayment(
   id: string,
   payload: { reason: string; amount?: number },
 ): Promise<Payment> {
-  return api.patch<Payment>(`/dashboard/finance/payments/${id}/refund`, payload)
+  return openApi.patch("/api/v1/dashboard/finance/payments/{id}/refund", {
+    path: { id },
+    body: payload,
+  })
 }
 
 export async function verifyPayment(
   id: string,
   payload: { action: 'approve' | 'reject'; transferRef?: string },
 ): Promise<Payment> {
-  return api.patch<Payment>(`/dashboard/finance/payments/${id}/verify`, payload)
+  return openApi.patch("/api/v1/dashboard/finance/payments/{id}/verify", {
+    path: { id },
+    body: payload,
+  })
 }
 
 /**
@@ -36,13 +61,20 @@ export async function manualRefundPayment(
   id: string,
   payload: { reason: string; amount?: number; refundRequestId?: string; idempotencyKey?: string },
 ): Promise<Payment> {
-  return api.patch<Payment>(`/dashboard/finance/payments/${id}/manual-refund`, payload)
+  return openApi.patch("/api/v1/dashboard/finance/payments/{id}/manual-refund", {
+    path: { id },
+    body: payload,
+  })
 }
 
 export async function fetchPayments(
   query: PaymentListQuery = {},
-): Promise<PaginatedResponse<Payment>> {
-  return api.get<PaginatedResponse<Payment>>("/dashboard/finance/payments", {
+): Promise<PaymentListPage> {
+  // Transport stays on the plain client with the params object: the legacy call
+  // dropped undefined/"" values but kept their order, and `buildQuery` is the
+  // same helper the typed path uses. Keeping this call makes the request
+  // byte-identical (verified input-by-input for this function).
+  return api.get<PaymentListPage>(PAYMENTS_PATH, {
     page: query.page,
     limit: query.limit,
     search: query.search,
@@ -57,23 +89,24 @@ export async function fetchPayment(id: string): Promise<Payment | null> {
   return api.get<Payment>(`/dashboard/finance/payments/${id}`)
 }
 
-/** Record a manual payment against an invoice. amount in integer halalas. */
+/**
+ * Record a manual payment against an invoice. amount in integer halalas.
+ *
+ * The handler returns the persisted payment row; its INFERRED type (and so the
+ * documented `PaymentProcessResponseDto`) is the `ProcessPaymentRecord` subset
+ * the handler declares. The wire object is the full Prisma row — the dashboard
+ * has always typed it as `Payment` and feeds it straight to
+ * `invalidatePaymentResult`. The cast documents that known gap; it adds no
+ * runtime behaviour.
+ */
 export async function recordPayment(payload: {
   invoiceId: string
   amount: number
   method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY"
 }): Promise<Payment> {
-  return api.post<Payment>("/dashboard/finance/payments", payload)
-}
-
-/** Invoice shape returned when ensuring a booking has a (DRAFT) invoice. All amounts in halalas. */
-export interface EnsuredBookingInvoice {
-  id: string
-  subtotal: number
-  vatRate: number
-  total: number
-  outstanding: number
-  status: string
+  return openApi.post("/api/v1/dashboard/finance/payments", {
+    body: payload,
+  }) as Promise<Payment>
 }
 
 /**
@@ -81,7 +114,13 @@ export interface EnsuredBookingInvoice {
  * pay-at-clinic bookings) and return it. Idempotent.
  */
 export async function ensureBookingInvoice(bookingId: string): Promise<EnsuredBookingInvoice> {
-  return api.post<EnsuredBookingInvoice>(`/dashboard/finance/bookings/${bookingId}/invoice`, {})
+  // Transport stays on the plain client: the typed helper has no request body
+  // for this route, while the existing call sends an explicit `{}` and the
+  // request must stay byte-identical.
+  return api.post<EnsuredBookingInvoice>(
+    `/dashboard/finance/bookings/${bookingId}/invoice`,
+    {},
+  )
 }
 
 /** Apply or clear a manual discount on an unpaid invoice. discountAmt in integer halalas (0 clears). */
@@ -89,36 +128,14 @@ export async function applyInvoiceDiscount(
   invoiceId: string,
   payload: { discountAmt: number; discountReasonId?: string; note?: string },
 ): Promise<unknown> {
-  return api.patch(`/dashboard/finance/invoices/${invoiceId}/discount`, payload)
+  return openApi.patch("/api/v1/dashboard/finance/invoices/{id}/discount", {
+    path: { id: invoiceId },
+    body: payload,
+  })
 }
 
-/**
- * Body for the unified booking collection endpoint. Staff methods are
- * statistical labels only — the backend never calls Moyasar here.
- */
-export interface CollectBookingPaymentPayload {
-  method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY"
-  /** Integer halalas. Omit to let the server default to the invoice's full outstanding. */
-  amount?: number
-  /** Optional discount applied on top of the payment (integer halalas). */
-  discountAmt?: number
-  /** Required when discountAmt > 0 (server enforces). */
-  discountReasonId?: string
-  /** Free-text note attached to the payment or the discount. */
-  note?: string
-  /** Client-supplied idempotency key — same key returns the same result. */
-  idempotencyKey?: string
-}
-
-/**
- * Response for the unified booking collection endpoint. `payment` is null when
- * the call only adjusted the discount (no money moved).
- */
-export interface CollectBookingPaymentResult {
-  bookingId: string
-  invoice: EnsuredBookingInvoice
-  payment: { id: string; amount: number; method: string; status: string } | null
-}
+/** Re-exported so callers keep importing the payload type from this module. */
+export type { CollectBookingPaymentPayload }
 
 /**
  * Unified booking collection — single round trip that ensures the booking has
@@ -130,6 +147,10 @@ export async function collectBookingPayment(
   bookingId: string,
   payload: CollectBookingPaymentPayload,
 ): Promise<CollectBookingPaymentResult> {
+  // Transport stays on the plain client with a literal path: this is the
+  // canonical reception collection call, and the literal `api.post(path, body)`
+  // form keeps the request bytes (and the drift check's literal detection)
+  // exactly as before.
   return api.post<CollectBookingPaymentResult>(
     `/dashboard/finance/bookings/${bookingId}/collect`,
     payload,

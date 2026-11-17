@@ -3,18 +3,16 @@
  *
  * App-local thin client for the Phase 3 session-packages consumption
  * endpoints (POST /dashboard/bookings/from-credit,
- * GET /dashboard/bookings/matching-credits). Mirrors the conventions
- * of `lib/api/packages.ts` and `lib/api/bookings.ts` — uses the shared
- * `api` instance so cookie-bearing refresh + envelope-unwrap are
- * inherited for free.
+ * GET /dashboard/bookings/matching-credits). These routes belong to the
+ * bookings controller; their wire shapes are documented there and derived
+ * here from the committed OpenAPI snapshot.
  *
- * The body for `bookFromCredit` matches the backend DTO verbatim:
- * `scheduledAt` is sent as ISO 8601; the controller converts it to a
- * Date. Duration is fixed by the chosen credit, so the caller never
- * sends a duration.
+ * Calls go through the typed helper in `lib/api/openapi.ts`; query names,
+ * order and the returned objects are unchanged.
  */
 
 import { api } from "@/lib/api"
+import { openApi } from "@/lib/api/openapi"
 import type {
   BookFromCreditPayload,
   MatchingCredit,
@@ -32,6 +30,10 @@ import type {
 export async function fetchMatchingCredits(
   query: MatchingCreditsQuery,
 ): Promise<MatchingCredit[]> {
+  // Transport stays on the plain client: the legacy call dropped `deliveryType`
+  // when absent and kept the other three in order, and `buildQuery` is the same
+  // helper the typed path uses. Keeping this call makes the request
+  // byte-identical (verified input-by-input for this function).
   return api.get<MatchingCredit[]>(
     "/dashboard/bookings/matching-credits",
     {
@@ -50,13 +52,12 @@ export async function fetchMatchingCredits(
  * (serviceId, employeeId, durationOptionId) so the backend FIFO-selects
  * the oldest matching credit.
  *
- * Returns the freshly-created booking row.
+ * Returns the freshly-created booking row; the dashboard only reads a few
+ * identity fields through `readBookingContext`, so the result stays `unknown`
+ * exactly as before.
  */
 export async function bookFromCredit(
   payload: BookFromCreditPayload,
 ): Promise<unknown> {
-  return api.post<unknown>(
-    "/dashboard/bookings/from-credit",
-    payload,
-  )
+  return openApi.post("/api/v1/dashboard/bookings/from-credit", { body: payload })
 }

@@ -4,9 +4,9 @@ import {
   UseInterceptors, UploadedFile, BadRequestException, NotFoundException,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
+  ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
   ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
-  ApiConsumes, ApiBody,
+  ApiConsumes, ApiBody, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtGuard } from '../../common/guards/jwt.guard';
@@ -68,6 +68,35 @@ import {
   extractInvoicePdfKey,
   resolveReceiptPdfKey,
 } from '../../modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
+import {
+  EnsuredInvoiceDto,
+  InvoiceDetailResponseDto,
+  InvoiceListResponseDto,
+  InvoicePdfUrlDto,
+  InvoiceRecordDto,
+} from './dto/finance-invoice-response.dto';
+import {
+  PaymentCollectionResponseDto,
+  PaymentDetailResponseDto,
+  PaymentListResponseDto,
+  PaymentProcessResponseDto,
+  PaymentStatsResponseDto,
+} from './dto/finance-payment-response.dto';
+import { PaymentRecordDto } from './dto/finance-payment-record-response.dto';
+import {
+  CouponListResponseDto,
+  CouponRecordDto,
+  CouponRedemptionRecordDto,
+} from './dto/finance-coupon-response.dto';
+import {
+  MoyasarConfigTestResponseDto,
+  MoyasarConfigUpsertResponseDto,
+  MoyasarConfigViewDto,
+} from './dto/finance-moyasar-response.dto';
+import {
+  PackagePurchaseListRowDto,
+  PackagePurchaseRefundResponseDto,
+} from './dto/finance-package-purchase-response.dto';
 
 // Short-lived presigned download window for dashboard PDF links (5 minutes).
 const INVOICE_PDF_URL_EXPIRY_SECONDS = 300;
@@ -75,6 +104,7 @@ const INVOICE_PDF_URL_EXPIRY_SECONDS = 300;
 @ApiTags('Dashboard / Finance')
 @ApiBearerAuth()
 @ApiStandardResponses()
+@ApiExtraModels(MoyasarConfigViewDto)
 @UseGuards(JwtGuard, CaslGuard)
 @Controller('dashboard/finance')
 export class DashboardFinanceController {
@@ -114,8 +144,10 @@ export class DashboardFinanceController {
   @Get('invoices')
   @CheckPermissions({ action: 'read', subject: 'Invoice' })
   @ApiOperation({ summary: 'List invoices with optional filters' })
-  @ApiOkResponse({ description: 'Paginated invoice list' })
-  listInvoicesEndpoint(@Query() query: ListInvoicesDto) {
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1, schema: { type: 'integer', minimum: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20, schema: { type: 'integer', minimum: 1, maximum: 200 } })
+  @ApiOkResponse({ description: 'Paginated invoice list', type: InvoiceListResponseDto })
+  listInvoicesEndpoint(@Query() query: ListInvoicesDto): Promise<InvoiceListResponseDto> {
     return this.listInvoices.execute({
       page: query.page,
       limit: query.limit,
@@ -131,8 +163,8 @@ export class DashboardFinanceController {
   @Post('invoices')
   @CheckPermissions({ action: 'manage', subject: 'Invoice' })
   @ApiOperation({ summary: 'Create an invoice' })
-  @ApiCreatedResponse({ description: 'Invoice created' })
-  createInv(@Body() body: CreateInvoiceDto) {
+  @ApiCreatedResponse({ description: 'Invoice created', type: InvoiceRecordDto })
+  createInv(@Body() body: CreateInvoiceDto): Promise<InvoiceRecordDto> {
     return this.createInvoice.execute({
       ...body,
       dueAt: body.dueAt ? new Date(body.dueAt) : undefined,
@@ -143,9 +175,9 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'read', subject: 'Invoice' })
   @ApiOperation({ summary: 'Get an invoice by id' })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Invoice found' })
+  @ApiOkResponse({ description: 'Invoice found', type: InvoiceDetailResponseDto })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
-  getInv(@Param('id', ParseUUIDPipe) id: string) {
+  getInv(@Param('id', ParseUUIDPipe) id: string): Promise<InvoiceDetailResponseDto> {
     return this.getInvoice.execute({ invoiceId: id });
   }
 
@@ -156,9 +188,9 @@ export class DashboardFinanceController {
     description: 'Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.',
   })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF' })
+  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF', type: InvoicePdfUrlDto })
   @ApiResponse({ status: 404, description: 'Invoice not found, or no receipt has been issued for it', type: ApiErrorDto })
-  async getInvoicePdf(@Param('id', ParseUUIDPipe) id: string) {
+  async getInvoicePdf(@Param('id', ParseUUIDPipe) id: string): Promise<InvoicePdfUrlDto> {
     const invoice = await this.getInvoice.execute({ invoiceId: id });
     // Only an issued receipt is downloadable here (`receiptPdfKey`, or a legacy
     // `pdfUrl` that qualifies as a receipt). Mint a short-lived presigned URL,
@@ -182,10 +214,10 @@ export class DashboardFinanceController {
     description: 'Returns the paid receipt when one has been issued; otherwise renders a fresh statement of the invoice. A statement is never stored on the invoice.',
   })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt if issued, otherwise of a freshly rendered statement' })
+  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt if issued, otherwise of a freshly rendered statement', type: InvoicePdfUrlDto })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
   @HttpCode(HttpStatus.OK)
-  async generateInvoicePdfEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  async generateInvoicePdfEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<InvoicePdfUrlDto> {
     // Returns the frozen receipt key when one exists, otherwise renders a
     // statement (never stored on the invoice). We presign here, matching the GET.
     const storedKey = await this.generateInvoicePdf.execute({ invoiceId: id });
@@ -204,42 +236,17 @@ export class DashboardFinanceController {
   @ApiOperation({ summary: 'Get payment statistics summary' })
   @ApiOkResponse({
     description: 'Operational payment statistics plus a separate read-only legacy summary',
-    schema: {
-      type: 'object',
-      properties: {
-        total: { type: 'number', example: 29 },
-        totalAmount: { type: 'number', example: 125000 },
-        completed: { type: 'number', example: 20 },
-        completedAmount: { type: 'number', example: 100000 },
-        pending: { type: 'number', example: 2 },
-        pendingAmount: { type: 'number', example: 10000 },
-        pendingVerification: { type: 'number', example: 1 },
-        pendingVerificationAmount: { type: 'number', example: 5000 },
-        refunded: { type: 'number', example: 3 },
-        refundedAmount: { type: 'number', example: 10000 },
-        failed: { type: 'number', example: 3 },
-        historical: {
-          type: 'object',
-          description: 'Booknetic collections kept separate from operational finance',
-          properties: {
-            collectedCount: { type: 'number', example: 3427 },
-            collectedAmount: { type: 'number', example: 103353250, description: 'Integer halalas' },
-            reviewCount: { type: 'number', example: 109 },
-            reviewAmount: { type: 'number', example: 1575000, description: 'Integer halalas' },
-          },
-        },
-      },
-    },
+    type: PaymentStatsResponseDto,
   })
-  getPaymentStatsEndpoint() {
+  getPaymentStatsEndpoint(): Promise<PaymentStatsResponseDto> {
     return this.getPaymentStats.execute();
   }
 
   @Post('payments')
   @CheckPermissions({ action: 'manage', subject: 'Payment' })
   @ApiOperation({ summary: 'Process a payment for an invoice' })
-  @ApiCreatedResponse({ description: 'Payment processed' })
-  processPaymentEndpoint(@Body() body: ProcessPaymentDto) {
+  @ApiCreatedResponse({ description: 'Payment processed', type: PaymentProcessResponseDto })
+  processPaymentEndpoint(@Body() body: ProcessPaymentDto): Promise<PaymentProcessResponseDto> {
     return this.processPayment.execute({ ...body });
   }
 
@@ -253,10 +260,10 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'create', subject: 'Invoice' })
   @ApiOperation({ summary: 'Ensure a (DRAFT) invoice exists for a booking and return it' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({ description: 'Invoice ensured' })
+  @ApiCreatedResponse({ description: 'Invoice ensured', type: EnsuredInvoiceDto })
   @ApiResponse({ status: 400, description: 'Booking is historical, has no payable amount, or has no client', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  ensureBookingInvoiceEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
+  ensureBookingInvoiceEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string): Promise<EnsuredInvoiceDto> {
     return this.ensureBookingInvoice.execute({ bookingId });
   }
 
@@ -295,14 +302,14 @@ export class DashboardFinanceController {
       'by CaslGuard via `required.every(...)`.',
   })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({ description: 'Invoice ensured, optional discount applied, manual payment recorded (or payment:null when 100% discounted)' })
+  @ApiCreatedResponse({ description: 'Invoice ensured, optional discount applied, manual payment recorded (or payment:null when 100% discounted)', type: PaymentCollectionResponseDto })
   @ApiResponse({ status: 400, description: 'Booking is historical, has no payable amount, has no client, method is ONLINE_CARD/COUPON, or invoice discount/payment tripwire', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   collectBookingPaymentEndpoint(
     @Param('bookingId', ParseUUIDPipe) bookingId: string,
     @UserId() userId: string,
     @Body() body: CollectBookingPaymentDto,
-  ) {
+  ): Promise<PaymentCollectionResponseDto> {
     return this.collectBookingPayment.execute({
       bookingId,
       appliedBy: userId,
@@ -314,14 +321,14 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Invoice' })
   @ApiOperation({ summary: 'Apply or clear a manual discount on an unpaid invoice' })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Discount applied; invoice totals recomputed' })
+  @ApiOkResponse({ description: 'Discount applied; invoice totals recomputed', type: InvoiceRecordDto })
   @ApiResponse({ status: 400, description: 'Invoice not eligible or invalid discount', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
   applyInvoiceDiscountEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @UserId() userId: string,
     @Body() body: ApplyInvoiceDiscountDto,
-  ) {
+  ): Promise<InvoiceRecordDto> {
     return this.applyInvoiceDiscount.execute({ invoiceId: id, appliedBy: userId, ...body });
   }
 
@@ -357,11 +364,11 @@ export class DashboardFinanceController {
       },
     },
   })
-  @ApiCreatedResponse({ description: 'Bank transfer receipt uploaded' })
+  @ApiCreatedResponse({ description: 'Bank transfer receipt uploaded', type: PaymentRecordDto })
   bankTransferEndpoint(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: BankTransferUploadDto,
-  ) {
+  ): Promise<PaymentRecordDto> {
     if (!file) throw new BadRequestException('receipt file is required');
     return this.bankTransferUpload.execute({
       ...body,
@@ -374,8 +381,10 @@ export class DashboardFinanceController {
   @Get('payments')
   @CheckPermissions({ action: 'read', subject: 'Payment' })
   @ApiOperation({ summary: 'List payments with optional filters' })
-  @ApiOkResponse({ description: 'Paginated payment list' })
-  listPaymentsEndpoint(@Query() query: ListPaymentsDto) {
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1, schema: { type: 'integer', minimum: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20, schema: { type: 'integer', minimum: 1, maximum: 200 } })
+  @ApiOkResponse({ description: 'Paginated payment list', type: PaymentListResponseDto })
+  listPaymentsEndpoint(@Query() query: ListPaymentsDto): Promise<PaymentListResponseDto> {
     return this.listPayments.execute({
       page: query.page,
       limit: query.limit,
@@ -393,9 +402,9 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'read', subject: 'Payment' })
   @ApiOperation({ summary: 'Get a single payment by id' })
   @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Payment found' })
+  @ApiOkResponse({ description: 'Payment found', type: PaymentDetailResponseDto })
   @ApiResponse({ status: 404, description: 'Payment not found', type: ApiErrorDto })
-  getPaymentEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  getPaymentEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<PaymentDetailResponseDto> {
     return this.getPayment.execute({ paymentId: id });
   }
 
@@ -406,12 +415,12 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Refund' })
   @ApiOperation({ summary: 'Refund a payment' })
   @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Payment refunded' })
+  @ApiOkResponse({ description: 'Payment refunded', type: PaymentRecordDto })
   @ApiResponse({ status: 404, description: 'Payment not found', type: ApiErrorDto })
   refundPaymentEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RefundPaymentDto,
-  ) {
+  ): Promise<PaymentRecordDto> {
     return this.refundPayment.execute({ paymentId: id, ...body });
   }
 
@@ -422,14 +431,14 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'update', subject: 'Payment' })
   @ApiOperation({ summary: 'Manually refund a cash/bank-transfer payment (off-gateway)' })
   @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Payment refunded' })
+  @ApiOkResponse({ description: 'Payment refunded', type: PaymentRecordDto })
   @ApiResponse({ status: 400, description: 'Payment is a card payment or amount exceeds balance', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Payment not found', type: ApiErrorDto })
   manualRefundPaymentEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @UserId() userId: string,
     @Body() body: ManualRefundPaymentDto,
-  ) {
+  ): Promise<PaymentRecordDto> {
     return this.manualRefundPayment.execute({ paymentId: id, performedBy: userId, ...body });
   }
 
@@ -437,12 +446,12 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Payment' })
   @ApiOperation({ summary: 'Approve or reject a pending bank transfer payment' })
   @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Payment verification result' })
+  @ApiOkResponse({ description: 'Payment verification result', type: PaymentRecordDto })
   @ApiResponse({ status: 404, description: 'Payment not found', type: ApiErrorDto })
   verifyPaymentEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: VerifyPaymentDto,
-  ) {
+  ): Promise<PaymentRecordDto> {
     return this.verifyPayment.execute({ paymentId: id, ...body });
   }
 
@@ -452,8 +461,8 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Coupon' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Apply a coupon code to an invoice' })
-  @ApiOkResponse({ description: 'Coupon applied; returns updated discount amount' })
-  applyCouponEndpoint(@Body() body: ApplyCouponDto) {
+  @ApiOkResponse({ description: 'Coupon applied; returns updated discount amount', type: CouponRedemptionRecordDto })
+  applyCouponEndpoint(@Body() body: ApplyCouponDto): Promise<CouponRedemptionRecordDto> {
     return this.applyCoupon.execute({ ...body });
   }
 
@@ -462,8 +471,10 @@ export class DashboardFinanceController {
   @Get('coupons')
   @CheckPermissions({ action: 'read', subject: 'Coupon' })
   @ApiOperation({ summary: 'List coupons' })
-  @ApiOkResponse({ description: 'Paginated coupon list' })
-  listCouponsEndpoint(@Query() query: ListCouponsDto) {
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1, schema: { type: 'integer', minimum: 1 } })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page (max 100)', example: 20, schema: { type: 'integer', minimum: 1, maximum: 100 } })
+  @ApiOkResponse({ description: 'Paginated coupon list', type: CouponListResponseDto })
+  listCouponsEndpoint(@Query() query: ListCouponsDto): Promise<CouponListResponseDto> {
     return this.listCoupons.execute({ ...query });
   }
 
@@ -471,9 +482,9 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'read', subject: 'Coupon' })
   @ApiOperation({ summary: 'Get a coupon by id' })
   @ApiParam({ name: 'id', description: 'Coupon UUID or reference (e.g. CPN-1024)', example: 'CPN-1024' })
-  @ApiOkResponse({ description: 'Coupon found' })
+  @ApiOkResponse({ description: 'Coupon found', type: CouponRecordDto })
   @ApiResponse({ status: 404, description: 'Coupon not found', type: ApiErrorDto })
-  getCouponEndpoint(@Param('id') id: string) {
+  getCouponEndpoint(@Param('id') id: string): Promise<CouponRecordDto> {
     return this.getCoupon.execute({ couponId: id });
   }
 
@@ -481,8 +492,8 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Coupon' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a coupon' })
-  @ApiCreatedResponse({ description: 'Coupon created' })
-  createCouponEndpoint(@Body() body: CreateCouponDto) {
+  @ApiCreatedResponse({ description: 'Coupon created', type: CouponRecordDto })
+  createCouponEndpoint(@Body() body: CreateCouponDto): Promise<CouponRecordDto> {
     return this.createCoupon.execute({ ...body });
   }
 
@@ -490,12 +501,12 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Coupon' })
   @ApiOperation({ summary: 'Update a coupon' })
   @ApiParam({ name: 'id', description: 'Coupon UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Coupon updated' })
+  @ApiOkResponse({ description: 'Coupon updated', type: CouponRecordDto })
   @ApiResponse({ status: 404, description: 'Coupon not found', type: ApiErrorDto })
   updateCouponEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateCouponDto,
-  ) {
+  ): Promise<CouponRecordDto> {
     return this.updateCoupon.execute({ couponId: id, ...body });
   }
 
@@ -506,8 +517,8 @@ export class DashboardFinanceController {
   @ApiParam({ name: 'id', description: 'Coupon UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'Coupon deleted' })
   @ApiResponse({ status: 404, description: 'Coupon not found', type: ApiErrorDto })
-  deleteCouponEndpoint(@Param('id', ParseUUIDPipe) id: string) {
-    return this.deleteCoupon.execute({ couponId: id });
+  async deleteCouponEndpoint(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.deleteCoupon.execute({ couponId: id });
   }
 
   // ── Moyasar Credentials ───────────────────────────────────────────────────
@@ -515,16 +526,19 @@ export class DashboardFinanceController {
   @Get('moyasar/config')
   @CheckPermissions({ action: 'read', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Get the Moyasar configuration (secret key masked)' })
-  @ApiOkResponse({ description: 'Moyasar configuration or null if unconfigured' })
-  getMoyasarConfigEndpoint() {
+  @ApiOkResponse({
+    description: 'Moyasar configuration or null if unconfigured (secret key is masked; ciphertext is never returned)',
+    schema: { allOf: [{ $ref: getSchemaPath(MoyasarConfigViewDto) }], nullable: true },
+  })
+  getMoyasarConfigEndpoint(): Promise<MoyasarConfigViewDto | null> {
     return this.getMoyasarConfig.execute();
   }
 
   @Patch('moyasar/config')
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @ApiOperation({ summary: 'Create or update the Moyasar configuration' })
-  @ApiOkResponse({ description: 'Moyasar configuration saved (secrets encrypted at rest)' })
-  upsertMoyasarConfigEndpoint(@Body() body: UpsertMoyasarConfigDto) {
+  @ApiOkResponse({ description: 'Moyasar configuration saved (secrets encrypted at rest; never echoed back)', type: MoyasarConfigUpsertResponseDto })
+  upsertMoyasarConfigEndpoint(@Body() body: UpsertMoyasarConfigDto): Promise<MoyasarConfigUpsertResponseDto> {
     return this.upsertMoyasarConfig.execute(body);
   }
 
@@ -532,8 +546,8 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'ProviderConfig' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Probe Moyasar with the stored credentials and persist verification status' })
-  @ApiOkResponse({ description: 'Connectivity test result' })
-  testMoyasarConfigEndpoint() {
+  @ApiOkResponse({ description: 'Connectivity test result', type: MoyasarConfigTestResponseDto })
+  testMoyasarConfigEndpoint(): Promise<MoyasarConfigTestResponseDto> {
     return this.testMoyasarConfig.execute();
   }
 
@@ -559,7 +573,7 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'manage', subject: 'Refund' })
   @ApiOperation({ summary: 'Manually refund a session-package purchase (marks REFUNDED, voids credits, records the refund)' })
   @ApiParam({ name: 'purchaseId', description: 'Package purchase UUID', example: '00000000-0000-4000-a000-000000000007' })
-  @ApiOkResponse({ description: 'Purchase marked REFUNDED, credits voided, refund recorded' })
+  @ApiOkResponse({ description: 'Purchase marked REFUNDED, credits voided, refund recorded', type: PackagePurchaseRefundResponseDto })
   @ApiResponse({ status: 400, description: 'Already refunded or refundAmount outside [0, amount charged (invoice total)]', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Package purchase not found', type: ApiErrorDto })
   @HttpCode(HttpStatus.OK)
@@ -567,7 +581,7 @@ export class DashboardFinanceController {
     @UserId() userId: string,
     @Param('purchaseId', ParseUUIDPipe) purchaseId: string,
     @Body() body: RefundPackagePurchaseDto,
-  ) {
+  ): Promise<PackagePurchaseRefundResponseDto> {
     return this.refundPackagePurchase.execute({
       purchaseId,
       refundAmount: body.refundAmount,
@@ -586,11 +600,11 @@ export class DashboardFinanceController {
   @CheckPermissions({ action: 'read', subject: 'Invoice' })
   @ApiOperation({ summary: 'List a client\'s package purchases with their remaining credit balances' })
   @ApiParam({ name: 'clientId', description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Client package purchases with credits' })
+  @ApiOkResponse({ description: 'Client package purchases with credits', type: [PackagePurchaseListRowDto] })
   listClientPackagePurchasesEndpoint(
     @Param('clientId', ParseUUIDPipe) clientId: string,
     @Query() query: ListClientPackagePurchasesQueryDto,
-  ) {
+  ): Promise<PackagePurchaseListRowDto[]> {
     return this.listClientPackagePurchases.execute({
       clientId,
       status: query.status,

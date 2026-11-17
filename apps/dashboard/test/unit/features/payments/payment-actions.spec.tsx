@@ -29,13 +29,13 @@ function makePayment(overrides: Partial<Payment> = {}): Payment {
   return {
     id: "pay-1",
     invoiceId: "inv-1",
-    amount: 100,
+    amount: "100",
     method: "ONLINE_CARD" as Payment["method"],
     status: "COMPLETED" as Payment["status"],
     gatewayRef: "moy-1",
     idempotencyKey: null,
     failureReason: null,
-    refundedAmount: 0,
+    refundedAmount: "0",
     createdAt: "2026-04-17T10:00:00Z",
     updatedAt: "2026-04-17T10:00:00Z",
     ...overrides,
@@ -143,7 +143,7 @@ it("allows refunding the remaining off-gateway balance", () => {
       payment={makePayment({
         method: "BANK_TRANSFER",
         status: "PARTIALLY_REFUNDED",
-        refundedAmount: 40,
+        refundedAmount: "40",
         gatewayRef: "bank-ref",
       })}
       onAction={() => {}}
@@ -157,7 +157,7 @@ it("does not offer a second unsupported Moyasar refund", () => {
     <PaymentActions
       payment={makePayment({
         status: "PARTIALLY_REFUNDED",
-        refundedAmount: 40,
+        refundedAmount: "40",
       })}
       onAction={() => {}}
       onRefund={() => {}}
@@ -169,7 +169,7 @@ it("does not offer a second unsupported Moyasar refund", () => {
 it("explains the gateway restriction even if a refunded card row still has COMPLETED status", () => {
   render(
     <PaymentActions
-      payment={makePayment({ status: "COMPLETED", refundedAmount: 40 })}
+      payment={makePayment({ status: "COMPLETED", refundedAmount: "40" })}
       onAction={() => {}}
       onRefund={() => {}}
     />

@@ -29,7 +29,7 @@ export function UserRoleEditor({ user, roles, loading }: { user: User; roles: Ro
   }
   const customRoles = roles.filter((role) => !role.isSystem)
   if (user.customRole && !customRoles.some((role) => role.id === user.customRole!.id)) {
-    customRoles.push({ ...user.customRole, isSystem: false, systemKey: null, permissions: [] })
+    customRoles.push({ ...user.customRole, isSystem: false, systemKey: null, permissions: [] } as unknown as Role)
   }
   return (
     <FormSection title={t("users.section.role")}>

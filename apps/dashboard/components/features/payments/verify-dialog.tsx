@@ -69,8 +69,8 @@ export function VerifyDialog({
         action: data.action,
         transferRef: data.transferRef || undefined,
         invoiceId: payment?.invoiceId,
-        bookingId: payment?.invoice?.bookingId,
-        clientId: payment?.invoice?.clientId,
+        bookingId: payment?.invoice?.bookingId as string | undefined,
+        clientId: payment?.invoice?.clientId as string | undefined,
       })
       if (data.action === "approve" && payment?.invoice?.bookingId) {
         startBookingPaymentPolling(payment.invoice.bookingId)

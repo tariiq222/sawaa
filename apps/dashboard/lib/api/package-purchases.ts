@@ -5,10 +5,13 @@
  *   POST /dashboard/finance/package-purchases
  *   GET  /dashboard/finance/clients/:clientId/package-purchases
  *
- * Mirrors the conventions of `lib/api/packages.ts` (Phase 1) — uses the
- * shared `api` instance so cookie-bearing refresh + envelope-unwrap are
- * inherited for free. The body for the create call matches the backend
- * DTO verbatim (`method`, not `paymentMethod`).
+ * Response/payload types are derived from the committed OpenAPI snapshot
+ * (`lib/types/package-purchase.ts`). The list call keeps the plain
+ * `api.get(path, params)` transport so the request bytes are unchanged; the
+ * create call uses the typed helper (`openApi`) with the same JSON body.
+ *
+ * `CreatePackagePurchaseResult` is a documented DEFERRAL: the handler returns an
+ * untyped union, so that response shape is not in the snapshot yet.
  */
 
 import { api } from "@/lib/api"
@@ -27,6 +30,8 @@ import type {
 export async function createPackagePurchase(
   payload: CreatePackagePurchasePayload,
 ): Promise<CreatePackagePurchaseResult> {
+  // Transport stays on the plain client: the response of this route is not yet
+  // in the snapshot (deferred), so the typed helper would resolve `void`.
   return api.post<CreatePackagePurchaseResult>(
     "/dashboard/finance/package-purchases",
     payload,
