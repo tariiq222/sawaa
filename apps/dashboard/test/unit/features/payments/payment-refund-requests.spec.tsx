@@ -14,7 +14,11 @@ vi.mock("@sawaa/ui", () => ({
   Label: (props: React.LabelHTMLAttributes<HTMLLabelElement>) => <label {...props} />,
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }))
-const request = { id: "req-1", amount: 2500, status: "PENDING_REVIEW" as const, reason: "Cancellation", createdAt: "2026-10-03T09:00:00Z" }
+// Wire shape: `GET /dashboard/finance/payments/:id` selects `RefundRequest.amount`
+// raw from Prisma (`Decimal @db.Decimal(12,2)`), so it arrives as a decimal
+// STRING. The component forwards it unchanged — see the note in the settle
+// assertion below.
+const request = { id: "req-1", amount: "2500", status: "PENDING_REVIEW" as const, reason: "Cancellation", createdAt: "2026-10-03T09:00:00Z" }
 const payment = { id: "pay-1", invoiceId: "inv-1", invoice: { bookingId: "booking-1", clientId: "client-1" }, method: "CASH", gatewayRef: null, refundRequests: [request] } as Payment
 function setup(value = payment) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: 3 } } })
@@ -35,7 +39,11 @@ describe("payment refund requests", () => {
     expect(submit).toBeDisabled()
     fireEvent.click(screen.getByRole("checkbox", { name: "refund.review.returnedConfirmation" }))
     fireEvent.click(submit)
-    await waitFor(() => expect(patch).toHaveBeenCalledWith("/dashboard/finance/payments/pay-1/manual-refund", { reason: "Money returned at reception", refundRequestId: "req-1", amount: 2500 }))
+    // Pass-through is deliberate: this unit only documents the current wire
+    // behaviour (a decimal string). The backend DTO declares `amount?: number`
+    // and production disables implicit conversion, so this is a pre-existing
+    // payments-domain defect reported to the owner, not fixed here.
+    await waitFor(() => expect(patch).toHaveBeenCalledWith("/dashboard/finance/payments/pay-1/manual-refund", { reason: "Money returned at reception", refundRequestId: "req-1", amount: "2500" }))
     expect(await screen.findByText("refund.review.status.COMPLETED")).toBeInTheDocument()
     expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["payments", "detail", "pay-1"] }))
     expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["bookings", "detail", "booking-1"] }))
@@ -89,7 +97,7 @@ describe("payment refund requests", () => {
           {
             reason: "Money returned at reception",
             refundRequestId: "req-1",
-            amount: 2500,
+            amount: "2500",
           }
         )
       )

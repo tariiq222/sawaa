@@ -63,7 +63,7 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
     const nextPermissions = buildNextPermissions(role.permissions, {
       subject: module,
       action,
-    }, checked)
+    } as RolePermissionPayload, checked)
 
     setPermsMut.mutate(
       { roleId: role.id, permissions: nextPermissions },
@@ -183,7 +183,7 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
   )
 }
 
-function permissionResource(permission: Pick<Permission, "module" | "subject">): string {
+function permissionResource(permission: { module?: string; subject?: string }): string {
   return permission.subject ?? permission.module ?? ""
 }
 
@@ -199,7 +199,7 @@ function buildNextPermissions(
     byKey.set(`${subject}:${permission.action}`, {
       subject,
       action: permission.action,
-    })
+    } as RolePermissionPayload)
   }
 
   const key = `${target.subject}:${target.action}`

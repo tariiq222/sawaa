@@ -18,6 +18,7 @@ import {
 import { WizardCard } from "@/components/features/bookings/wizard-card"
 import type { PaymentSettings } from "@/lib/api/organization-settings"
 import type { PackageCredit, PackagePurchase } from "@/lib/types/package-purchase"
+import type { DeliveryType } from "@/lib/types/credit-ops"
 import type { SessionPackage } from "@/lib/types/package"
 import {
   creditAvailabilityReason,
@@ -102,7 +103,7 @@ export function buildCreditTarget(
     employeeName: credit.employeeNameAr,
     durationOptionId: credit.durationOptionId,
     creditId: credit.id,
-    deliveryType: credit.deliveryTypeSnapshot ?? undefined,
+    deliveryType: (credit.deliveryTypeSnapshot as DeliveryType | null) ?? undefined,
   }
 }
 

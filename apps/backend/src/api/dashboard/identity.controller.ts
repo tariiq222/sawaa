@@ -32,6 +32,11 @@ import { IsEmail, IsEnum, IsOptional, IsString, IsBoolean, IsInt, IsUUID, Max, M
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserGender, UserRole } from '@prisma/client';
+import {
+  IdentityPermissionCatalogEntryDto,
+  IdentityRoleDto,
+  IdentityUserRecordDto,
+} from './dto/identity-response.dto';
 
 class ListUsersQueryDto {
   @ApiPropertyOptional({ description: 'Search by name or email', example: 'sara' })
@@ -73,7 +78,7 @@ class UpdateUserRoleDto {
   @ApiPropertyOptional({ description: 'New built-in role', enum: UserRole, enumName: 'UserRole', example: UserRole.RECEPTIONIST })
   @IsOptional() @IsEnum(UserRole) role?: UserRole;
 
-  @ApiPropertyOptional({ description: 'Custom role UUID or null to clear', example: '00000000-0000-0000-0000-000000000000', nullable: true })
+  @ApiPropertyOptional({ type: String, description: 'Custom role UUID or null to clear', example: '00000000-0000-0000-0000-000000000000', nullable: true })
   @IsOptional() @IsUUID() customRoleId?: string | null;
 }
 
@@ -137,24 +142,11 @@ export class DashboardIdentityController {
   @Post('users')
   @CheckPermissions({ action: 'manage', subject: 'User' })
   @ApiOperation({ summary: 'Create a user' })
-  @ApiCreatedResponse({
-    description: 'User created',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        name: { type: 'string' },
-        email: { type: 'string', format: 'email' },
-        role: { type: 'string' },
-        isActive: { type: 'boolean' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
+  @ApiCreatedResponse({ description: 'User created', type: IdentityUserRecordDto })
   async createUserEndpoint(
     @Body() body: CreateUserDto,
     @Request() req: { user?: { id?: string } },
-  ) {
+  ): Promise<IdentityUserRecordDto> {
     const actorUserId = req.user?.id;
     if (!actorUserId) throw new ForbiddenException('Missing actor');
     return this.createUserHandler.execute({ ...body, actorUserId });
@@ -164,27 +156,14 @@ export class DashboardIdentityController {
   @CheckPermissions({ action: 'update', subject: 'User' })
   @ApiOperation({ summary: 'Update a user' })
   @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({
-    description: 'User updated',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        name: { type: 'string' },
-        email: { type: 'string', format: 'email' },
-        role: { type: 'string' },
-        isActive: { type: 'boolean' },
-        updatedAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
+  @ApiOkResponse({ description: 'User updated', type: IdentityUserRecordDto })
   @ApiResponse({ status: 403, description: 'Cannot modify a user at or above your rank', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
   async updateUserEndpoint(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() body: UpdateUserDto,
     @Request() req: { user?: { id?: string } },
-  ) {
+  ): Promise<IdentityUserRecordDto> {
     const actorUserId = req.user?.id;
     if (!actorUserId) throw new ForbiddenException('Missing actor');
     return this.updateUserHandler.execute({ ...body, userId, actorUserId });
@@ -194,14 +173,14 @@ export class DashboardIdentityController {
   @CheckPermissions({ action: 'manage', subject: 'Role' })
   @ApiOperation({ summary: "Change a user's role or custom-role (rank-checked)" })
   @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Role updated' })
+  @ApiOkResponse({ description: 'Role updated', type: IdentityUserRecordDto })
   @ApiResponse({ status: 403, description: 'Insufficient rank', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'User or custom role not found', type: ApiErrorDto })
   async updateUserRoleEndpoint(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() body: UpdateUserRoleDto,
     @Request() req: { user?: { id?: string } },
-  ) {
+  ): Promise<IdentityUserRecordDto> {
     const actorUserId = req.user?.id;
     if (!actorUserId) throw new ForbiddenException('Missing actor');
     return this.updateUserRoleHandler.execute({
@@ -301,41 +280,16 @@ export class DashboardIdentityController {
   @Get('roles')
   @CheckPermissions({ action: 'read', subject: 'Role' })
   @ApiOperation({ summary: 'List custom roles' })
-  @ApiOkResponse({
-    description: 'List of roles (system and custom)',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          name: { type: 'string' },
-          isSystem: { type: 'boolean' },
-          systemKey: { type: 'string', nullable: true },
-          permissions: { type: 'array', items: { type: 'object', properties: { action: { type: 'string' }, subject: { type: 'string' } } } },
-        },
-      },
-    },
-  })
-  async listRoles() {
+  @ApiOkResponse({ description: 'List of roles (system and custom)', type: IdentityRoleDto, isArray: true })
+  async listRoles(): Promise<IdentityRoleDto[]> {
     return this.listRolesHandler.execute();
   }
 
   @Post('roles')
   @CheckPermissions({ action: 'manage', subject: 'Role' })
   @ApiOperation({ summary: 'Create a custom role' })
-  @ApiCreatedResponse({
-    description: 'Role created',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        name: { type: 'string' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
-  async createRoleEndpoint(@Body() body: CreateRoleDto) {
+  @ApiCreatedResponse({ description: 'Role created', type: IdentityRoleDto })
+  async createRoleEndpoint(@Body() body: CreateRoleDto): Promise<IdentityRoleDto> {
     return this.createRoleHandler.execute(body);
   }
 
@@ -356,20 +310,8 @@ export class DashboardIdentityController {
   @Get('permissions')
   @CheckPermissions({ action: 'read', subject: 'Role' })
   @ApiOperation({ summary: 'List available permissions' })
-  @ApiOkResponse({
-    description: 'All available CASL permissions',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          action: { type: 'string', example: 'create' },
-          subject: { type: 'string', example: 'Booking' },
-        },
-      },
-    },
-  })
-  async listPermissions() {
+  @ApiOkResponse({ description: 'All available CASL permissions', type: IdentityPermissionCatalogEntryDto, isArray: true })
+  async listPermissions(): Promise<IdentityPermissionCatalogEntryDto[]> {
     return this.listPermissionsHandler.execute();
   }
 

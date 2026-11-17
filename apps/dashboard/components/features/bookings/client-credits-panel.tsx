@@ -11,6 +11,7 @@ import {
   isJumpableCredit,
 } from "@/lib/package-credit-usability"
 import type { PackageCredit } from "@/lib/types/package-purchase"
+import type { DeliveryType } from "@/lib/types/credit-ops"
 import type { CreditTarget } from "./use-booking-form-state"
 
 interface Props {
@@ -173,7 +174,7 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
                       employeeName: credit.employeeNameAr,
                       durationOptionId: credit.durationOptionId,
                       creditId: credit.id,
-                      deliveryType: credit.deliveryTypeSnapshot ?? undefined,
+                      deliveryType: (credit.deliveryTypeSnapshot as DeliveryType | null) ?? undefined,
                     },
                     purchaseId,
                   )

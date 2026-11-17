@@ -6,66 +6,54 @@
  *   - POST /dashboard/finance/package-purchases/:purchaseId/refund
  *
  * Both endpoints are operator-only:
- *   - transfer  → gated by `manage:Booking` (OWNER/ADMIN/MANAGER) per the
- *                 bookings.controller.ts `transferCredit` handler.
- *   - refund    → gated by `manage:Setting` (OWNER/ADMIN, NOT ACCOUNTANT) per
- *                 finance.controller.ts `refundPackagePurchaseEndpoint`.
+ *   - transfer  → gated by `manage:Booking` (OWNER/ADMIN/MANAGER)
+ *   - refund    → gated by `manage:Refund` (OWNER/ADMIN)
  *
- * Money is integer halalas end-to-end. The refund modal accepts a
- * SAR-major amount from the operator and converts to halalas before
- * posting (see `sarToHalalas` in lib/money).
+ * Response/body shapes are DERIVED from the committed OpenAPI snapshot
+ * (documented by the bookings and finance controllers respectively). Money is
+ * integer halalas end-to-end; the refund modal converts SAR at the form layer
+ * (see `sarToHalalas` in lib/money).
  */
 
+import type { components } from "@/lib/types/api.generated"
 import type { PackageCredit } from "./package-purchase"
+
+type Schemas = components["schemas"]
+
+/* ─── Vocabulary ─── */
+
+/** Delivery channel, as the snapshot documents it. */
+export type DeliveryType = NonNullable<Schemas["BookFromCreditDto"]["deliveryType"]>
 
 /* ─── Transfer credit ─── */
 
 /**
- * Body of `POST /dashboard/bookings/credits/:creditId/transfer`. The
- * creditId travels in the URL; the body carries only the target
- * practitioner. The backend re-validates that the target offers the
- * SAME service+duration option, so a mismatch returns 400.
+ * Body of `POST /dashboard/bookings/credits/:creditId/transfer`
+ * (`TransferCreditDto`). The creditId travels in the URL; the body carries
+ * only the target practitioner. The backend re-validates that the target
+ * offers the SAME service+duration option, so a mismatch returns 400.
  */
-export interface TransferCreditPayload {
-  toEmployeeId: string
-  /** Required for grouped V2 credits; optional for legacy credits. */
-  reason?: string
-  /** Needed when the target uses a different duration-option id for the same frozen offering. */
-  targetDurationOptionId?: string
-}
+export type TransferCreditPayload = Schemas["TransferCreditDto"]
 
 /**
- * Server response from the transfer endpoint. The backend returns the
- * freshly-updated credit row (id + new employeeId) — the dashboard
- * only needs these two fields to refresh the balances panel.
+ * Server response from the transfer endpoint (`PackageCreditRecordDto`). The
+ * backend returns the freshly-updated credit row (id + new employeeId) — the
+ * dashboard only needs these two fields to refresh the balances panel.
  */
-export interface TransferCreditResult {
-  id: string
-  employeeId: string
-}
+export type TransferCreditResult = Schemas["PackageCreditRecordDto"]
 
 /* ─── Refund package purchase ─── */
 
 /**
- * Body of `POST /dashboard/finance/package-purchases/:purchaseId/refund`.
- * `refundAmount` is integer halalas; `notes` is optional (≤1000 chars).
- * Setting `refundAmount` to 0 records a no-money cancellation: the
- * purchase is still marked REFUNDED and the credits are still voided.
+ * Body of `POST /dashboard/finance/package-purchases/:purchaseId/refund`
+ * (`RefundPackagePurchaseDto`). `refundAmount` is integer halalas; `notes` is
+ * optional (≤1000 chars). Setting `refundAmount` to 0 records a no-money
+ * cancellation: the purchase is still marked REFUNDED and the credits voided.
  */
-export interface RefundPackagePurchasePayload {
-  refundAmount: number
-  notes?: string
-}
+export type RefundPackagePurchasePayload = Schemas["RefundPackagePurchaseDto"]
 
-/**
- * Server response from the refund endpoint.
- */
-export interface RefundPackagePurchaseResult {
-  purchaseId: string
-  status: "REFUNDED"
-  refundAmount: number
-  refundedAt: string
-}
+/** Server response from the refund endpoint (`PackagePurchaseRefundResponseDto`). */
+export type RefundPackagePurchaseResult = Schemas["PackagePurchaseRefundResponseDto"]
 
 /* ─── Employee picker shape ─── */
 
@@ -82,7 +70,7 @@ export interface ServiceEmployeeOption {
   /** Raw row re-exposed so callers can read any extra fields they want. */
   raw: unknown
   effectiveDurations?: Array<{
-    deliveryType: "IN_PERSON" | "ONLINE"
+    deliveryType: DeliveryType
     durations: Array<{ id: string; durationMins: number; labelAr: string; label: string }>
   }>
 }

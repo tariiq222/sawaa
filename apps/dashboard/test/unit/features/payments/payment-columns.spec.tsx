@@ -11,8 +11,8 @@ function makePayment(overrides: Partial<Payment> = {}): Payment {
   return {
     id: "abcdef1234567890",
     invoiceId: "inv-1",
-    amount: 100,
-    refundedAmount: 0,
+    amount: "100",
+    refundedAmount: "0",
     currency: "SAR",
     method: "ONLINE_CARD" as Payment["method"],
     status: "COMPLETED" as Payment["status"],
@@ -104,7 +104,7 @@ describe("column cells render correctly", () => {
 
   it("amount cell shows amount with 2 decimals", () => {
     const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "amount")!
-    expect(cellContainer(col, makePayment({ amount: 12345 })).textContent).toBe("123.45")
+    expect(cellContainer(col, makePayment({ amount: "12345" })).textContent).toBe("123.45")
   })
 
   it("method cell passes known methods through the i18n map", () => {

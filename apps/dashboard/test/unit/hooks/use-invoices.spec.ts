@@ -55,7 +55,7 @@ describe("toInvoiceListItem", () => {
   })
 
   it("coerces Decimal-as-string monetary fields to numbers", () => {
-    const row = toInvoiceListItem(buildRow({ total: 23000, vatAmt: 3000 }))
+    const row = toInvoiceListItem(buildRow({ total: "23000", vatAmt: "3000" }))
     expect(row.totalAmount).toBe(23000)
     expect(row.taxAmount).toBe(3000)
   })
@@ -73,8 +73,8 @@ describe("useInvoices cache refresh", () => {
       React.createElement(QueryClientProvider, { client }, children)
     )
     fetchInvoices
-      .mockResolvedValueOnce({ items: [buildRow({ status: "ISSUED", total: 11500 })], meta: { total: 1 } })
-      .mockResolvedValueOnce({ items: [buildRow({ status: "PAID", total: 12500 })], meta: { total: 1 } })
+      .mockResolvedValueOnce({ items: [buildRow({ status: "ISSUED", total: "11500" })], meta: { total: 1 } })
+      .mockResolvedValueOnce({ items: [buildRow({ status: "PAID", total: "12500" })], meta: { total: 1 } })
 
     const query = renderHook(() => useInvoices(), { wrapper })
     await waitFor(() => expect(query.result.current.isLoading).toBe(false))
@@ -89,7 +89,7 @@ describe("useInvoices cache refresh", () => {
     const updated = client.getQueryData<{ items: InvoiceListRow[] }>(
       ["invoices", "list", { page: 1, search: "" }],
     )
-    expect(updated?.items[0]).toMatchObject({ status: "PAID", total: 12500 })
+    expect(updated?.items[0]).toMatchObject({ status: "PAID", total: "12500" })
 
     const mountedAgain = renderHook(() => useInvoices(), { wrapper })
     await waitFor(() => expect(mountedAgain.result.current.invoices[0]).toMatchObject({
