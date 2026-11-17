@@ -40,6 +40,11 @@ import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/sub
 import { CreateZoomMeetingHandler } from '../../../modules/bookings/create-zoom-meeting/create-zoom-meeting.handler';
 import { IsBoolean, Max, MaxLength } from 'class-validator';
 import { GetClientBookingForActionHandler } from '../../../modules/bookings/client/get-client-booking-for-action.handler';
+import {
+  MobileClientBookingJoinDto,
+  MobileClientRatingResponseDto,
+  MobileClientRescheduleResponseDto,
+} from './dto/mobile-client-bookings-response.dto';
 export class MobileRateBookingDto {
   @ApiProperty({ description: 'Rating score from 1 to 5', example: 5 })
   @IsInt() @Min(1) @Max(5) score!: number;
@@ -238,12 +243,12 @@ export class MobileClientBookingsController {
   @Get(':id/join')
   @ApiOperation({ summary: 'Get (or lazily create) the Zoom join URL for an ONLINE booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Zoom join URL', schema: { type: 'object' } })
+  @ApiOkResponse({ type: MobileClientBookingJoinDto, description: 'Zoom join URL' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   async joinBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<MobileClientBookingJoinDto> {
     const booking = await this.bookingAction.executeForJoin(id, user.id);
     if (booking.zoomJoinUrl) {
       return { joinUrl: booking.zoomJoinUrl, scheduledAt: booking.scheduledAt };
@@ -256,13 +261,13 @@ export class MobileClientBookingsController {
   @Post(':id/rate')
   @ApiOperation({ summary: 'Submit a rating for a completed booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiCreatedResponse({ description: 'Rating submitted', schema: { type: 'object' } })
+  @ApiCreatedResponse({ type: MobileClientRatingResponseDto, description: 'Rating submitted' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   async rateBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MobileRateBookingDto,
-  ) {
+  ): Promise<MobileClientRatingResponseDto> {
     const booking = await this.bookingAction.executeForRate(id, user.id);
     return this.rate.execute({
       bookingId: id,
@@ -278,7 +283,10 @@ export class MobileClientBookingsController {
   @Patch(':id/reschedule')
   @ApiOperation({ summary: 'Reschedule a booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking rescheduled', schema: { type: 'object' } })
+  // The body is a controller-composed projection
+  // (`projectClientBookingMutation` returns `Partial<Booking>`), so the return
+  // type stays inferred and the documented DTO is the wire contract.
+  @ApiOkResponse({ type: MobileClientRescheduleResponseDto, description: 'Booking rescheduled' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   async rescheduleBooking(
     @ClientSession() user: ClientSession,

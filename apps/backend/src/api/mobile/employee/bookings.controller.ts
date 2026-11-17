@@ -39,6 +39,16 @@ import { RequestCancelBookingHandler } from '../../../modules/bookings/request-c
 import { GetEmployeeMeetingStartHandler } from '../../../modules/bookings/get-employee-meeting-start/get-employee-meeting-start.handler';
 import { CreateEmployeeBookingHandler } from '../../../modules/bookings/create-employee-booking/create-employee-booking.handler';
 import { CreateEmployeeBookingDto } from '../../../modules/bookings/create-employee-booking/create-employee-booking.dto';
+import {
+  MobileBookingRecordDto,
+  MobileCancelledBookingRecordDto,
+  MobileCreatedBookingRecordDto,
+} from '../dto/mobile-record-response.dto';
+import {
+  MobileEmployeeBookingListResponseDto,
+  MobileEmployeeBookingRowDto,
+  MobileEmployeeMeetingStartDto,
+} from './dto/mobile-employee-bookings-response.dto';
 
 export class EmployeeCancelBookingDto {
   @ApiPropertyOptional({
@@ -99,11 +109,11 @@ export class MobileEmployeeBookingsController {
   @HttpCode(HttpStatus.CREATED)
   @CheckPermissions({ action: 'create', subject: 'Booking' })
   @ApiOperation({ summary: 'Create a new booking on the authenticated employee calendar' })
-  @ApiCreatedResponse({ description: 'Booking created', schema: { type: 'object' } })
+  @ApiCreatedResponse({ type: MobileCreatedBookingRecordDto, description: 'Booking created' })
   async createMyBooking(
     @CurrentUser() user: JwtUser,
     @Body() dto: CreateEmployeeBookingDto,
-  ) {
+  ): Promise<MobileCreatedBookingRecordDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,
@@ -117,8 +127,8 @@ export class MobileEmployeeBookingsController {
   @Get()
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'List bookings assigned to the authenticated employee' })
-  @ApiOkResponse({ description: 'Paginated list of bookings', schema: { type: 'object' } })
-  async listMyBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto) {
+  @ApiOkResponse({ type: MobileEmployeeBookingListResponseDto, description: 'Paginated list of bookings' })
+  async listMyBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto): Promise<MobileEmployeeBookingListResponseDto> {
     const { page, limit, fromDate, toDate, ...rest } = q;
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
@@ -138,11 +148,11 @@ export class MobileEmployeeBookingsController {
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Get a booking assigned to the authenticated employee' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking detail', schema: { type: 'object' } })
+  @ApiOkResponse({ type: MobileEmployeeBookingRowDto, description: 'Booking detail' })
   async getBooking(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<MobileEmployeeBookingRowDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,
@@ -156,22 +166,13 @@ export class MobileEmployeeBookingsController {
   @ApiOperation({ summary: 'Get the Zoom host link and timing for an assigned online booking' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({
+    type: MobileEmployeeMeetingStartDto,
     description: 'Meeting start details; startUrl is null until the meeting has been created',
-    schema: {
-      type: 'object',
-      properties: {
-        bookingId: { type: 'string', format: 'uuid' },
-        scheduledAt: { type: 'string', format: 'date-time' },
-        durationMins: { type: 'integer' },
-        meetingStatus: { type: 'string', nullable: true, enum: ['PENDING', 'CREATED', 'FAILED', 'CANCELLED'] },
-        startUrl: { type: 'string', nullable: true },
-      },
-    },
   })
   async startMeeting(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<MobileEmployeeMeetingStartDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,
@@ -185,11 +186,11 @@ export class MobileEmployeeBookingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Start the session for an assigned booking (check-in)' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking marked as started', schema: { type: 'object' } })
+  @ApiOkResponse({ type: MobileBookingRecordDto, description: 'Booking marked as started' })
   async start(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<MobileBookingRecordDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,
@@ -203,12 +204,12 @@ export class MobileEmployeeBookingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark an assigned booking as complete' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking marked complete', schema: { type: 'object' } })
+  @ApiOkResponse({ type: MobileBookingRecordDto, description: 'Booking marked complete' })
   async complete(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CompleteBookingDto,
-  ) {
+  ): Promise<MobileBookingRecordDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,
@@ -226,12 +227,12 @@ export class MobileEmployeeBookingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel an assigned booking (employee-initiated, immediate)' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Booking cancelled', schema: { type: 'object' } })
+  @ApiOkResponse({ type: MobileCancelledBookingRecordDto, description: 'Booking cancelled' })
   async employeeCancel(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeCancelBookingDto,
-  ) {
+  ): Promise<MobileCancelledBookingRecordDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,
@@ -251,12 +252,12 @@ export class MobileEmployeeBookingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request cancellation for an assigned booking (requires admin approval)' })
   @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Cancellation request submitted', schema: { type: 'object' } })
+  @ApiOkResponse({ type: MobileBookingRecordDto, description: 'Cancellation request submitted' })
   async cancelRequest(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeCancelRequestDto,
-  ) {
+  ): Promise<MobileBookingRecordDto> {
     const employeeId = await this.resolveEmployeeId.execute({
       userId: user.sub,
       employeeId: user.employeeId,

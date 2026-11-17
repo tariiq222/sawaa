@@ -17276,6 +17276,359 @@ export interface components {
              */
             usedQuantity: number;
         };
+        MobileAuthEmailVerificationSentDto: {
+            /**
+             * @description True when the verification email was enqueued (also true when the email was already verified).
+             * @example true
+             */
+            success: boolean;
+        };
+        MobileAuthLoginOtpSentDto: {
+            /**
+             * @description Identifier masked for display; a generic value is returned even when no code was sent.
+             * @example p***@example.test
+             */
+            maskedIdentifier: string;
+        };
+        MobileAuthRegisteredUserDto: {
+            /**
+             * @description Phone number masked for display; the full number never echoes back.
+             * @example +966***78
+             */
+            maskedPhone: string;
+            /**
+             * Format: uuid
+             * @description User id of the pending self-signup that must verify its phone OTP.
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            userId: string;
+        };
+        MobileAuthTokenPairDto: {
+            /**
+             * @description Native access token (JWT). Never logged or persisted outside the device secure store.
+             * @example synthetic-access-token
+             */
+            accessToken: string;
+            /**
+             * @description Rotated native refresh token; the presented token is revoked on success.
+             * @example synthetic-refresh-token
+             */
+            refreshToken: string;
+        };
+        MobileBookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
+        };
         MobileCancelBookingDto: {
             /**
              * @description Explicit acceptance of the displayed current cancellation and refund terms
@@ -17299,6 +17652,1185 @@ export interface components {
              * @description Stable UUID for retrying the same cancellation
              */
             sourceActionId?: string;
+        };
+        MobileCancelledBookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * @description Refund decision applied by the cancellation policy
+             * @example FULL
+             * @enum {string}
+             */
+            refundType: "FULL" | "PARTIAL" | "NONE";
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
+        };
+        MobileClientBookingJoinDto: {
+            /**
+             * @description Zoom attendee join URL; null when the meeting has not been created yet (the listing is re-read after the create attempt).
+             * @example https://zoom.us/j/123456789
+             */
+            joinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Scheduled session start (ISO 8601 UTC)
+             * @example 2026-05-20T07:00:00.000Z
+             */
+            scheduledAt: string;
+        };
+        MobileClientBookingMutationDto: {
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape (Prisma enum)
+             * @example INDIVIDUAL
+             */
+            bookingType: string;
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant, or null
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Cancellation reason (Prisma enum), or null
+             * @example null
+             */
+            cancelReason: string | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant, or null
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * Format: date-time
+             * @description Completion instant, or null
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant, or null
+             * @example 2026-05-19T09:00:00.000Z
+             */
+            confirmedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T06:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel (Prisma enum)
+             * @example IN_PERSON
+             */
+            deliveryType: string;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration captured at booking time, or null
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-05-20T08:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description No-show instant, or null
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Client pays at the center
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Booked price in halalas, serialized as a decimal string
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price captured at booking time, decimal string, or null
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-05-20T07:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-4000-a000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Booking status (Prisma enum)
+             * @example CONFIRMED
+             */
+            status: string;
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-20T06:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Zoom attendee join URL, or null
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * @description Zoom meeting creation state, or null
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+        };
+        MobileClientInvoiceDto: {
+            /**
+             * @description Booking UUID, or null
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            bookingId: string | null;
+            /**
+             * Format: uuid
+             * @description Branch UUID
+             * @example 00000000-0000-4000-a000-00000000000c
+             */
+            branchId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Discount amount in halalas
+             * @example 0
+             */
+            discountAmt: number;
+            /**
+             * Format: date-time
+             * @description Due instant, or null
+             * @example null
+             */
+            dueAt: string | null;
+            /**
+             * Format: uuid
+             * @description Employee UUID
+             * @example 00000000-0000-4000-a000-000000000004
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Issue instant, or null
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            issuedAt: string | null;
+            /**
+             * @description Sequential invoice number
+             * @example 1024
+             */
+            number: number;
+            /**
+             * @description Package purchase UUID, or null
+             * @example null
+             */
+            packagePurchaseId: string | null;
+            /**
+             * Format: date-time
+             * @description Paid instant, or null
+             * @example 2026-05-20T09:05:00.000Z
+             */
+            paidAt: string | null;
+            /** @description Client-safe payments on this invoice */
+            payments: components["schemas"]["MobileClientInvoicePaymentDto"][];
+            /**
+             * @description Frozen paid-receipt object key, or null when no receipt exists. Callers exchange it for a short-lived presigned URL.
+             * @example null
+             */
+            pdfUrl: string | null;
+            /**
+             * @description Refunded amount in halalas
+             * @example 0
+             */
+            refundedAmount: number;
+            /**
+             * @description Refunded VAT amount in halalas
+             * @example 0
+             */
+            refundedVatAmt: number;
+            /**
+             * @description Seller name shown on the invoice
+             * @example مركز سواء
+             */
+            sellerName: string;
+            /**
+             * @description Invoice status (Prisma enum)
+             * @example PAID
+             */
+            status: string;
+            /**
+             * @description Net amount before VAT and discount, in halalas
+             * @example 20000
+             */
+            subtotal: number;
+            /**
+             * @description Invoice total in halalas
+             * @example 20000
+             */
+            total: number;
+            /**
+             * @description VAT amount in halalas
+             * @example 0
+             */
+            vatAmt: number;
+            /**
+             * @description VAT rate as a fraction of 1 (0 when VAT is off)
+             * @example 0
+             */
+            vatRate: number;
+        };
+        MobileClientInvoicePaymentDto: {
+            /**
+             * @description Amount in halalas
+             * @example 20000
+             */
+            amount: number;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Payment method (Prisma enum)
+             * @example ONLINE_CARD
+             */
+            method: string;
+            /**
+             * @description Sequential payment number
+             * @example 42
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null
+             * @example null
+             */
+            processedAt: string | null;
+            /**
+             * @description Refunded amount in halalas
+             * @example 0
+             */
+            refundedAmount: number;
+            /**
+             * @description Payment status (Prisma enum)
+             * @example COMPLETED
+             */
+            status: string;
+        };
+        MobileClientPackageCreditAvailabilityDto: {
+            /**
+             * @description Whether the credit can be booked right now
+             * @example true
+             */
+            bookable: boolean;
+            /**
+             * @description Machine reason when not bookable, or null
+             * @example null
+             */
+            reason: string | null;
+        };
+        MobileClientPackageCreditConstraintDto: {
+            /**
+             * @description Constraint dimension
+             * @example SERVICE
+             * @enum {string}
+             */
+            dimension: "SERVICE" | "PRACTITIONER" | "DURATION" | "DELIVERY_TYPE";
+            /**
+             * @description Constraint mode
+             * @example INCLUDE
+             * @enum {string}
+             */
+            mode: "ANY" | "INCLUDE" | "EXCLUDE";
+            /**
+             * @description Flattened target ids for the constraint; empty for ANY
+             * @example [
+             *       "00000000-0000-4000-a000-000000000010"
+             *     ]
+             */
+            targetIds: string[];
+        };
+        MobileClientPackageCreditDto: {
+            /** @description Live bookability of the bucket */
+            availability: components["schemas"]["MobileClientPackageCreditAvailabilityDto"];
+            /**
+             * @description Category booking mode, or null
+             * @example SERVICES
+             * @enum {string|null}
+             */
+            categoryBookingMode: "DIRECT" | "SERVICES" | null;
+            /**
+             * @description Service category UUID, or null
+             * @example 00000000-0000-4000-a000-000000000020
+             */
+            categoryId: string | null;
+            /**
+             * @description Service category name (Arabic)
+             * @example الإرشاد الأسري
+             */
+            categoryNameAr: string;
+            /**
+             * @description Service category name (English), or null
+             * @example Family counseling
+             */
+            categoryNameEn: string | null;
+            /** @description Snapshot eligibility rules */
+            constraints: components["schemas"]["MobileClientPackageCreditConstraintDto"][];
+            /**
+             * @description Frozen delivery channel, or null
+             * @example IN_PERSON
+             */
+            deliveryTypeSnapshot: string | null;
+            /**
+             * @description Department UUID, or null
+             * @example null
+             */
+            departmentId: string | null;
+            /**
+             * @description Department name (Arabic)
+             * @example الإرشاد
+             */
+            departmentNameAr: string;
+            /**
+             * @description Department name (English), or null
+             * @example Counseling
+             */
+            departmentNameEn: string | null;
+            /**
+             * @description Group UUID this bucket depends on, or null
+             * @example null
+             */
+            dependsOnGroupId: string | null;
+            /**
+             * @description Duration label (Arabic)
+             * @example ٦٠ دقيقة
+             */
+            durationLabelAr: string;
+            /**
+             * @description Duration label (English), or null
+             * @example 60 minutes
+             */
+            durationLabelEn: string | null;
+            /**
+             * @description Duration in minutes, or null
+             * @example 60
+             */
+            durationMins: number | null;
+            /**
+             * @description Frozen duration in minutes, or null
+             * @example 60
+             */
+            durationMinsSnapshot: number | null;
+            /**
+             * @description Pinned duration option UUID, or null
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Pinned employee UUID, or null
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            employeeId: string | null;
+            /**
+             * @description Employee name (Arabic)
+             * @example أحمد الغامدي
+             */
+            employeeNameAr: string;
+            /**
+             * @description Employee name (English), or null
+             * @example Ahmed Al-Ghamdi
+             */
+            employeeNameEn: string | null;
+            /**
+             * @description Frozen employee name, or null
+             * @example Ahmed Al-Ghamdi
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * @description Purchase group label, or null
+             * @example null
+             */
+            groupLabel: string | null;
+            /**
+             * Format: uuid
+             * @description Credit bucket UUID
+             * @example 00000000-0000-4000-a000-000000000011
+             */
+            id: string;
+            /**
+             * @description Frozen list price in halalas, or null
+             * @example 20000
+             */
+            listPriceSnapshot: number | null;
+            /**
+             * @description Net paid value for this credit in halalas, or null
+             * @example 18000
+             */
+            netValue: number | null;
+            /**
+             * @description Purchase group UUID, or null
+             * @example null
+             */
+            purchaseGroupId: string | null;
+            /**
+             * @description Remaining sessions: total − used − reserved
+             * @example 3
+             */
+            remaining: number;
+            /**
+             * @description Reserved (booked, not delivered) sessions
+             * @example 1
+             */
+            reservedQuantity: number;
+            /**
+             * @description Sequence mode of the group, or null
+             * @example null
+             * @enum {string|null}
+             */
+            sequenceMode: "ORDERED" | "UNORDERED" | null;
+            /**
+             * @description Pinned service UUID, or null for flexible credits
+             * @example 00000000-0000-4000-a000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Whether the service/employee are still active and linked
+             * @example true
+             */
+            serviceIsBookable: boolean;
+            /**
+             * @description Service name (Arabic)
+             * @example استشارة أسرية
+             */
+            serviceNameAr: string;
+            /**
+             * @description Service name (English), or null
+             * @example Family consultation
+             */
+            serviceNameEn: string | null;
+            /**
+             * @description Frozen service name, or null
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Position within the purchase group, or null
+             * @example null
+             */
+            sessionPosition: number | null;
+            /**
+             * @description Total sessions in this bucket
+             * @example 5
+             */
+            totalQuantity: number;
+            /**
+             * @description Unit price snapshot in halalas
+             * @example 20000
+             */
+            unitPriceSnapshot: number;
+            /**
+             * @description Consumed sessions
+             * @example 1
+             */
+            usedQuantity: number;
+        };
+        MobileClientPackageOfferSnapshotDto: {
+            /**
+             * @description Package family UUID
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            familyId: string;
+            /**
+             * @description Family name (Arabic)
+             * @example باقة أسرة
+             */
+            familyNameAr: string;
+            /**
+             * @description Family name (English), or null
+             * @example Family package
+             */
+            familyNameEn: string | null;
+            /**
+             * @description Option name (Arabic)
+             * @example خمس جلسات
+             */
+            optionNameAr: string;
+            /**
+             * @description Option name (English), or null
+             * @example Five sessions
+             */
+            optionNameEn: string | null;
+            /**
+             * @description Session count at purchase time
+             * @example 5
+             */
+            sessionCount: number;
+        };
+        MobileClientPackagePurchaseDto: {
+            /**
+             * @description Net amount paid in halalas
+             * @example 80000
+             */
+            amountPaid: number;
+            /**
+             * @description Branch UUID, or null (declared optional on the handler row type)
+             * @example 00000000-0000-4000-a000-00000000000c
+             */
+            branchId?: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /** @description Credit buckets of this purchase */
+            credits: components["schemas"]["MobileClientPackageCreditDto"][];
+            /**
+             * @description Discount snapshot in halalas
+             * @example 0
+             */
+            discountSnapshot: number;
+            /**
+             * @description Package family UUID, or null
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            familyId: string | null;
+            /**
+             * @description Family name (Arabic), or null
+             * @example باقة أسرة
+             */
+            familyNameAr: string | null;
+            /**
+             * @description Family name (English), or null
+             * @example Family package
+             */
+            familyNameEn: string | null;
+            /**
+             * Format: uuid
+             * @description Package purchase UUID
+             * @example 00000000-0000-4000-a000-000000000040
+             */
+            id: string;
+            /**
+             * @description Purchase invoice UUID, or null (declared optional on the handler row type)
+             * @example 00000000-0000-4000-a000-000000000008
+             */
+            invoiceId?: string | null;
+            /**
+             * @description Credit model version
+             * @example LEGACY
+             * @enum {string}
+             */
+            modelVersion: "LEGACY" | "GROUPED_V2";
+            /** @description Frozen offer identity, or null for legacy purchases */
+            offerSnapshot: components["schemas"]["MobileClientPackageOfferSnapshotDto"] | null;
+            /**
+             * @description Option name (Arabic), or null
+             * @example خمس جلسات
+             */
+            optionNameAr: string | null;
+            /**
+             * @description Option name (English), or null
+             * @example Five sessions
+             */
+            optionNameEn: string | null;
+            /**
+             * @description Package family UUID from the offer snapshot, or null (declared optional on the handler row type)
+             * @example 00000000-0000-4000-a000-000000000030
+             */
+            packageFamilyId?: string | null;
+            /**
+             * Format: uuid
+             * @description Session package UUID
+             * @example 00000000-0000-4000-a000-000000000031
+             */
+            packageId: string;
+            /**
+             * @description Package name (Arabic)
+             * @example باقة خمس جلسات
+             */
+            packageNameAr: string;
+            /**
+             * @description Package name (English), or null
+             * @example Five-session package
+             */
+            packageNameEn: string | null;
+            /**
+             * Format: date-time
+             * @description Paid instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            paidAt: string;
+            /**
+             * @description Refunded amount in halalas
+             * @example 0
+             */
+            refundAmount: number;
+            /**
+             * Format: date-time
+             * @description Refunded instant, or null
+             * @example null
+             */
+            refundedAt: string | null;
+            /**
+             * @description Session count from the offer snapshot, or null
+             * @example 5
+             */
+            sessionCount: number | null;
+            /**
+             * @description Purchase status
+             * @example ACTIVE
+             */
+            status: components["schemas"]["PackagePurchaseStatus"];
+            /**
+             * @description Subtotal snapshot in halalas
+             * @example 80000
+             */
+            subtotalSnapshot: number;
+            /**
+             * @description VAT-inclusive amount charged in halalas
+             * @example 80000
+             */
+            totalCharged: number;
+            /**
+             * @description VAT on the purchase invoice in halalas; 0 when VAT is off
+             * @example 0
+             */
+            vatAmount: number;
+        };
+        MobileClientPaymentDto: {
+            /**
+             * @description Amount in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            amount: string;
+            /**
+             * Format: date-time
+             * @description Effective collection instant (received or created)
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            collectionDate: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /** @description Embedded invoice summary, or null */
+            invoice: components["schemas"]["MobileClientPaymentInvoiceSummaryDto"] | null;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method (Prisma enum)
+             * @example ONLINE_CARD
+             */
+            method: string;
+            /**
+             * @description Sequential payment number
+             * @example 42
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null
+             * @example null
+             */
+            processedAt: string | null;
+            /**
+             * @description Payment status (Prisma enum)
+             * @example COMPLETED
+             */
+            status: string;
+        };
+        MobileClientPaymentInvoiceSummaryDto: {
+            /**
+             * @description Booking UUID linked to the invoice, or null
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            bookingId: string | null;
+            /**
+             * @description Invoice total in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            total: string;
+        };
+        MobileClientPaymentListResponseDto: {
+            /** @description Payments on the requested page */
+            items: components["schemas"]["MobileClientPaymentDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        MobileClientRatingResponseDto: {
+            /**
+             * Format: uuid
+             * @description Rated booking UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            bookingId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID derived from the booking
+             * @example 00000000-0000-4000-a000-000000000003
+             */
+            clientId: string;
+            /**
+             * @description Optional client comment, or null
+             * @example Great session
+             */
+            comment: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Employee UUID derived from the booking
+             * @example 00000000-0000-4000-a000-000000000004
+             */
+            employeeId: string;
+            /**
+             * Format: uuid
+             * @description Rating UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the rating is publicly visible. Always false on creation: client-supplied visibility is ignored.
+             * @example false
+             */
+            isPublic: boolean;
+            /**
+             * @description Rating score from 1 to 5
+             * @example 5
+             */
+            score: number;
+        };
+        MobileClientRescheduleResponseDto: {
+            /** @description The rescheduled booking, client-safe projection */
+            booking: components["schemas"]["MobileClientBookingMutationDto"];
         };
         MobileCreateBookingDto: {
             /**
@@ -17342,6 +18874,651 @@ export interface components {
              */
             serviceId: string;
         };
+        MobileCreatedBookingRecordDto: {
+            /**
+             * Format: date-time
+             * @description Instant until which automatic no-show is suppressed after a restore
+             * @example null
+             */
+            autoNoShowSuppressedAt: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Appointment shape
+             * @example INDIVIDUAL
+             */
+            bookingType: components["schemas"]["BookingType"];
+            /**
+             * @description Branch UUID
+             * @example 00000000-0000-0000-0000-00000000000c
+             */
+            branchId: string;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Free-text cancellation notes
+             * @example null
+             */
+            cancelNotes: string | null;
+            /**
+             * @description Cancellation reason
+             * @example null
+             * @enum {string|null}
+             */
+            cancelReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER" | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example null
+             */
+            checkedInAt: string | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example null
+             */
+            confirmedAt: string | null;
+            /**
+             * @description Applied coupon code
+             * @example null
+             */
+            couponCode: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Client-supplied idempotency key for creation
+             * @example null
+             */
+            creationIdempotencyKey: string | null;
+            /**
+             * @description Canonical hash of the creation request paired with the idempotency key
+             * @example null
+             */
+            creationRequestHash: string | null;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Department name captured at booking time
+             * @example Counseling
+             */
+            departmentNameSnapshot: string | null;
+            /**
+             * @description Discounted price in halalas, decimal string
+             * @example null
+             */
+            discountedPrice: string | null;
+            /**
+             * @description Duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /**
+             * @description Service duration option UUID
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Employee name captured at booking time
+             * @example Ahmed Al-Qahtani
+             */
+            employeeNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description End instant (UTC)
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description Hold expiry instant for unconfirmed bookings
+             * @example null
+             */
+            expiresAt: string | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description Invoice UUID created with the booking; null when none exists
+             * @example 00000000-0000-0000-0000-000000000008
+             */
+            invoiceId: string | null;
+            /**
+             * @description True for rows imported from the legacy system
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example null
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example null
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text notes
+             * @example null
+             */
+            notes: string | null;
+            /**
+             * @description Package credit UUID when the booking consumes package credit
+             * @example null
+             */
+            packageCreditId: string | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example false
+             */
+            payAtClinic: boolean;
+            /**
+             * @description Price in halalas, serialized as a decimal string (Prisma Decimal)
+             * @example 20000
+             */
+            price: string;
+            /**
+             * @description Price in halalas captured at booking time, decimal string
+             * @example 20000
+             */
+            priceSnapshot: string | null;
+            /**
+             * @description Program UUID for group bookings
+             * @example null
+             */
+            programId: string | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC)
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Service name captured at booking time
+             * @example Family consultation
+             */
+            serviceNameSnapshot: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Booking status
+             * @example CONFIRMED
+             */
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Number of Zoom creation attempts
+             * @example 0
+             */
+            zoomCreateAttemptCount: number;
+            /**
+             * Format: date-time
+             * @description Zoom creation lease expiry
+             * @example null
+             */
+            zoomCreateLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom creation lease
+             * @example null
+             */
+            zoomCreateLeaseOwner: string | null;
+            /**
+             * @description Durable Zoom creation phase
+             * @example BEFORE_CALL
+             */
+            zoomCreatePhase: string;
+            /**
+             * @description Zoom host URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL
+             * @example null
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the Zoom meeting was created
+             * @example null
+             */
+            zoomMeetingCreatedAt: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting id
+             * @example null
+             */
+            zoomMeetingId: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example null
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Zoom start URL (present on write responses because the row is returned unmapped)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+            /**
+             * Format: date-time
+             * @description Zoom sync lease expiry
+             * @example null
+             */
+            zoomSyncLeaseExpiresAt: string | null;
+            /**
+             * @description Worker that holds the Zoom sync lease
+             * @example null
+             */
+            zoomSyncLeaseOwner: string | null;
+            /**
+             * @description Zoom sync revision counter
+             * @example 0
+             */
+            zoomSyncRevision: number;
+        };
+        MobileEmployeeBookingListResponseDto: {
+            /** @description Bookings on the requested page */
+            items: components["schemas"]["BookingRowDto"][];
+            /** @description Pagination metadata */
+            meta: components["schemas"]["ListMetaDto"];
+        };
+        MobileEmployeeBookingRowDto: {
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            adminNotes: string | null;
+            /**
+             * @description Human-friendly sequential booking number
+             * @example 1024
+             */
+            bookingNumber: number;
+            /**
+             * @description Branch name captured at booking time
+             * @example Riyadh
+             */
+            branchNameSnapshot: string | null;
+            /**
+             * @description Cancellation reason (for late entries the free-text notes win over the enum)
+             * @example CLIENT_REQUESTED
+             */
+            cancellationReason: string | null;
+            /**
+             * Format: date-time
+             * @description Cancellation instant
+             * @example null
+             */
+            cancelledAt: string | null;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            cancelledBy: string | null;
+            /**
+             * @description Category name captured at booking time
+             * @example Family counseling
+             */
+            categoryNameSnapshot: string | null;
+            /**
+             * Format: date-time
+             * @description Check-in instant
+             * @example 2026-06-01T08:55:00.000Z
+             */
+            checkedInAt: string | null;
+            /** @description Client summary; null when the client row is missing */
+            client: components["schemas"]["BookingRowClientDto"] | null;
+            /**
+             * @description Client UUID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Completion instant
+             * @example null
+             */
+            completedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Confirmation instant
+             * @example 2026-05-30T09:00:00.000Z
+             */
+            confirmedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Business-timezone calendar date (YYYY-MM-DD)
+             * @example 2026-06-01
+             */
+            date: string | null;
+            /**
+             * @description Delivery channel, lower-case
+             * @example in_person
+             * @enum {string|null}
+             */
+            deliveryType: "in_person" | "online" | null;
+            /**
+             * @description Duration in minutes captured at booking time
+             * @example 60
+             */
+            durationMinutesSnapshot: number | null;
+            /** @description Employee summary; null when the employee row is missing */
+            employee: components["schemas"]["BookingRowEmployeeDto"] | null;
+            /**
+             * @description Employee UUID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            employeeId: string;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            employeeService: Record<string, never> | null;
+            /**
+             * @description Always an empty string (legacy field kept for compatibility)
+             * @example
+             */
+            employeeServiceId: string;
+            /**
+             * Format: date-time
+             * @description End instant (UTC ISO); null only for a malformed legacy row
+             * @example 2026-06-01T10:00:00.000Z
+             */
+            endsAt: string | null;
+            /**
+             * @description Business-timezone end time (HH:mm)
+             * @example 13:00
+             */
+            endTime: string | null;
+            /** @description Imported payment projection; only for historical imports */
+            historicalPayment: components["schemas"]["BookingRowHistoricalPaymentDto"] | null;
+            /**
+             * @description Booking UUID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            id: string;
+            /**
+             * @description Always false today (reserved)
+             * @example false
+             */
+            intakeFormAlreadySubmitted: boolean;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            intakeFormId: string | null;
+            /** @description Invoice summary; null when no invoice exists */
+            invoice: components["schemas"]["BookingRowInvoiceDto"] | null;
+            /**
+             * @description True for rows imported from the legacy system (read-only)
+             * @example false
+             */
+            isHistoricalImport: boolean;
+            /**
+             * @description True when the session was recorded after the fact (late entry)
+             * @example false
+             */
+            isLateEntry: boolean;
+            /**
+             * Format: date-time
+             * @description When the late entry was recorded
+             * @example 2026-06-02T09:00:00.000Z
+             */
+            lateEntryRecordedAt: string | null;
+            /**
+             * @description User id who recorded the late entry
+             * @example 00000000-0000-0000-0000-000000000007
+             */
+            lateEntryRecordedBy: string | null;
+            /**
+             * Format: date-time
+             * @description No-show instant
+             * @example null
+             */
+            noShowAt: string | null;
+            /**
+             * @description Free-text booking notes
+             * @example Prefers morning sessions
+             */
+            notes: string | null;
+            /** @description Package-credit funding details; null when not funded by a package */
+            packageFunding: components["schemas"]["BookingRowPackageFundingDto"] | null;
+            /**
+             * @description Client selected payment at the center; independent of financial payment status
+             * @example true
+             */
+            payAtClinic: boolean;
+            /** @description Latest payment on the booking invoice; null when none */
+            payment: components["schemas"]["BookingRowPaymentDto"] | null;
+            /**
+             * @description Price in halalas captured at booking time
+             * @example 20000
+             */
+            priceSnapshot: number | null;
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            rescheduledFrom: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description Start instant (UTC ISO); null only for a malformed legacy row
+             * @example 2026-06-01T09:00:00.000Z
+             */
+            scheduledAt: string | null;
+            /** @description Service summary; null for group-program bookings or a missing service */
+            service: components["schemas"]["BookingRowServiceDto"] | null;
+            /**
+             * @description Service UUID; null for group-program bookings
+             * @example 00000000-0000-0000-0000-000000000005
+             */
+            serviceId: string | null;
+            /**
+             * @description Where the booking was created
+             * @example RECEPTION
+             */
+            source: components["schemas"]["BookingSource"];
+            /**
+             * @description Business-timezone start time (HH:mm)
+             * @example 12:00
+             */
+            startTime: string | null;
+            /**
+             * @description Booking status, lower-case
+             * @example confirmed
+             * @enum {string}
+             */
+            status: "pending" | "pending_group_fill" | "awaiting_payment" | "confirmed" | "cancelled" | "completed" | "no_show" | "expired" | "cancel_requested" | "deposit_paid";
+            /**
+             * @description Always null today (reserved)
+             * @example null
+             */
+            suggestedRefundType: string | null;
+            /**
+             * @description Booking type, lower-case; INDIVIDUAL is reported as in_person
+             * @example in_person
+             * @enum {string}
+             */
+            type: "in_person" | "walk_in" | "group";
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-30T08:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Always null on dashboard reads: host URLs are stripped (P0-6)
+             * @example null
+             */
+            zoomHostUrl: string | null;
+            /**
+             * @description Zoom join URL for the client
+             * @example https://zoom.us/j/123
+             */
+            zoomJoinUrl: string | null;
+            /**
+             * @description Last Zoom creation error
+             * @example null
+             */
+            zoomMeetingError: string | null;
+            /**
+             * @description Zoom meeting creation state
+             * @example CREATED
+             * @enum {string|null}
+             */
+            zoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
+            /**
+             * @description Always null on dashboard reads: start URLs are stripped (P0-6)
+             * @example null
+             */
+            zoomStartUrl: string | null;
+        };
+        MobileEmployeeMeetingStartDto: {
+            /**
+             * Format: uuid
+             * @description Booking UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            bookingId: string;
+            /**
+             * @description Session duration in minutes
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Zoom meeting status, or null when no meeting exists yet
+             * @example CREATED
+             */
+            meetingStatus: components["schemas"]["ZoomMeetingStatus"] | null;
+            /**
+             * Format: date-time
+             * @description Scheduled session start (ISO 8601 UTC)
+             * @example 2026-05-20T07:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Host start URL; null until the meeting is created (only the assigned employee can receive it)
+             * @example null
+             */
+            startUrl: string | null;
+        };
+        MobileFcmTokenRecordDto: {
+            /**
+             * Format: uuid
+             * @description Client UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            clientId: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Registration UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Last time this device registered
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            lastSeenAt: string;
+            /**
+             * @description Device platform
+             * @example ios
+             */
+            platform: string;
+            /**
+             * @description FCM registration token
+             * @example fcm-token-placeholder
+             */
+            token: string;
+        };
         MobilePasswordLoginDto: {
             /**
              * @description Client email address (provide either email or phone, not both)
@@ -17358,6 +19535,125 @@ export interface components {
              * @example +966501234567
              */
             phone?: string;
+        };
+        MobilePaymentRecordDto: {
+            /**
+             * @description Amount in halalas, serialized as a decimal string
+             * @example 10000
+             */
+            amount: string;
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description When the money was actually received, or null
+             * @example null
+             */
+            effectiveReceivedAt: string | null;
+            /**
+             * @description Provider failure reason, or null
+             * @example null
+             */
+            failureReason: string | null;
+            /**
+             * @description Provider gateway reference, or null
+             * @example null
+             */
+            gatewayRef: string | null;
+            /**
+             * Format: uuid
+             * @description Payment UUID
+             * @example 00000000-0000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Idempotency key, or null
+             * @example null
+             */
+            idempotencyKey: string | null;
+            /**
+             * Format: uuid
+             * @description Invoice UUID
+             * @example 00000000-0000-4000-a000-000000000002
+             */
+            invoiceId: string;
+            /**
+             * @description Payment method
+             * @example BANK_TRANSFER
+             */
+            method: components["schemas"]["PaymentMethod"];
+            /**
+             * @description Native checkout configuration fingerprint, or null
+             * @example null
+             */
+            nativeConfigFingerprint: string | null;
+            /**
+             * @description Sequential payment number
+             * @example 42
+             */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Provider processing instant, or null
+             * @example null
+             */
+            processedAt: string | null;
+            /**
+             * @description Reason given for a late receipt entry, or null
+             * @example null
+             */
+            receiptEntryReason: string | null;
+            /**
+             * @description Manual receipt evidence reference, or null
+             * @example null
+             */
+            receiptEvidenceRef: string | null;
+            /**
+             * @description User who recorded a manual receipt, or null
+             * @example null
+             */
+            receiptRecordedBy: string | null;
+            /**
+             * @description Uploaded receipt object key, or null
+             * @example invoices/00000000-0000-4000-a000-000000000002/receipt.png
+             */
+            receiptUrl: string | null;
+            /**
+             * @description Refunded amount in halalas, serialized as a decimal string
+             * @example 0
+             */
+            refundedAmount: string;
+            /**
+             * Format: date-time
+             * @description Refund lease expiry, or null
+             * @example null
+             */
+            refundProviderLeaseExpiresAt: string | null;
+            /**
+             * @description Refund lease owner, or null
+             * @example null
+             */
+            refundProviderLeaseOwner: string | null;
+            /**
+             * @description Payment status
+             * @example PENDING_VERIFICATION
+             */
+            status: components["schemas"]["PaymentStatus"];
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-05-20T09:00:00.000Z
+             */
+            updatedAt: string;
         };
         MobileRateBookingDto: {
             /**
@@ -28701,6 +30997,11 @@ export interface components {
              */
             isActive: boolean;
         };
+        /**
+         * @description Zoom meeting status, or null when no meeting exists yet
+         * @enum {string}
+         */
+        ZoomMeetingStatus: "PENDING" | "CREATED" | "FAILED" | "CANCELLED";
         ZoomTestResultDto: {
             /**
              * @description Failure reason when the probe failed (provider error message)
@@ -50222,7 +52523,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileAuthTokenPairDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50280,7 +52583,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileAuthRegisteredUserDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50334,7 +52639,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileAuthEmailVerificationSentDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50392,7 +52699,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileAuthLoginOtpSentDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -50931,7 +53240,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileClientBookingJoinDto"];
                 };
             };
             /** @description Validation failed */
@@ -51003,7 +53312,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileClientRatingResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -51075,7 +53384,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileClientRescheduleResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -51146,7 +53455,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedNotificationsResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51204,7 +53515,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileFcmTokenRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51373,7 +53686,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UnreadNotificationCountResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51431,7 +53746,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileBookingRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51487,7 +53804,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileClientPackagePurchaseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51544,7 +53863,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileClientPackagePurchaseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51603,7 +53924,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileClientPaymentListResponseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51675,7 +53998,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobilePaymentRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -51862,7 +54187,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileClientInvoiceDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -53063,7 +55390,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileEmployeeBookingListResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -53123,7 +55450,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileCreatedBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -53182,7 +55509,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileEmployeeBookingRowDto"];
                 };
             };
             /** @description Validation failed */
@@ -53245,7 +55572,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -53308,7 +55635,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -53371,7 +55698,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileCancelledBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -53430,7 +55757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["MobileBookingRecordDto"];
                 };
             };
             /** @description Validation failed */
@@ -53489,16 +55816,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        bookingId?: string;
-                        durationMins?: number;
-                        /** @enum {string|null} */
-                        meetingStatus?: "PENDING" | "CREATED" | "FAILED" | "CANCELLED" | null;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        startUrl?: string | null;
-                    };
+                    "application/json": components["schemas"]["MobileEmployeeMeetingStartDto"];
                 };
             };
             /** @description Validation failed */
@@ -57012,7 +59330,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileBookingRecordDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -57068,7 +59388,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileClientPackagePurchaseDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -57125,7 +59447,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MobileClientPackagePurchaseDto"];
+                };
             };
             /** @description Validation failed */
             400: {
