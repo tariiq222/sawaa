@@ -16,6 +16,12 @@ import { NativeRefreshHandler } from '../../../modules/identity/native-session/n
 import { MobilePasswordLoginDto } from '../../../modules/identity/mobile-password-login/mobile-password-login.dto';
 import { MobilePasswordLoginHandler } from '../../../modules/identity/mobile-password-login/mobile-password-login.handler';
 import { NativeLogoutHandler } from '../../../modules/identity/native-session/native-logout.handler';
+import {
+  MobileAuthEmailVerificationSentDto,
+  MobileAuthLoginOtpSentDto,
+  MobileAuthRegisteredUserDto,
+  MobileAuthTokenPairDto,
+} from '../mobile-auth-response.dto';
 
 @ApiTags('Mobile Client / Identity')
 @Controller('mobile/auth')
@@ -35,9 +41,9 @@ export class MobileClientAuthController {
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @ApiOperation({ summary: 'Register a new mobile user (creates user + sends SMS OTP)' })
-  @ApiOkResponse({ description: 'User registered, OTP sent' })
+  @ApiOkResponse({ type: MobileAuthRegisteredUserDto, description: 'User registered, OTP sent' })
   @ApiStandardResponses()
-  async registerUser(@Body() dto: RegisterMobileUserDto) {
+  async registerUser(@Body() dto: RegisterMobileUserDto): Promise<MobileAuthRegisteredUserDto> {
     return this.register.execute(dto);
   }
 
@@ -70,9 +76,9 @@ export class MobileClientAuthController {
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @ApiOperation({ summary: 'Request a login OTP via phone or verified email' })
-  @ApiOkResponse({ description: 'Login OTP sent' })
+  @ApiOkResponse({ type: MobileAuthLoginOtpSentDto, description: 'Login OTP sent' })
   @ApiStandardResponses()
-  async requestLoginOtp(@Body() dto: RequestMobileLoginOtpDto) {
+  async requestLoginOtp(@Body() dto: RequestMobileLoginOtpDto): Promise<MobileAuthLoginOtpSentDto> {
     return this.requestLogin.execute(dto);
   }
 
@@ -100,9 +106,9 @@ export class MobileClientAuthController {
   @HttpCode(200)
   @UseGuards(JwtGuard)
   @ApiOperation({ summary: 'Send email verification link to the authenticated user' })
-  @ApiOkResponse({ description: 'Verification email sent' })
+  @ApiOkResponse({ type: MobileAuthEmailVerificationSentDto, description: 'Verification email sent' })
   @ApiStandardResponses()
-  async requestEmail(@UserId() userId: string) {
+  async requestEmail(@UserId() userId: string): Promise<MobileAuthEmailVerificationSentDto> {
     return this.requestEmailVerification.execute({ userId });
   }
 
@@ -111,9 +117,9 @@ export class MobileClientAuthController {
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: 'Rotate a native mobile refresh token' })
-  @ApiOkResponse({ description: 'Native access and refresh tokens issued' })
+  @ApiOkResponse({ type: MobileAuthTokenPairDto, description: 'Native access and refresh tokens issued' })
   @ApiStandardResponses()
-  async refresh(@Body() dto: NativeSessionDto) {
+  async refresh(@Body() dto: NativeSessionDto): Promise<MobileAuthTokenPairDto> {
     return this.nativeRefresh.execute(dto.refreshToken);
   }
 

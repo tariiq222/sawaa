@@ -358,7 +358,10 @@ export const clientBookingsService = {
   },
 
   async getJoinUrl(id: string) {
-    const response = await api.get<{ joinUrl: string; scheduledAt: string }>(
+    // `joinUrl` is nullable: the handler re-reads the booking after the create
+    // attempt, and a not-yet-created Zoom meeting yields null. Runtime request
+    // and return are unchanged; only the declared type matches the snapshot.
+    const response = await api.get<{ joinUrl: string | null; scheduledAt: string }>(
       `/client/bookings/${id}/join`,
     );
     return response.data;
