@@ -42,6 +42,11 @@ import { InitPackagePurchaseHandler } from '../../../modules/finance/package-pur
 import { InitPackagePurchaseDto } from '../../../modules/finance/package-purchases/init-package-purchase/init-package-purchase.dto';
 import { ClientRoute } from '../../../common/auth/client-route.decorator';
 import { GetClientBankTransferSettingsHandler } from '../../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
+import { MobilePaymentRecordDto } from '../dto/mobile-record-response.dto';
+import {
+  MobileClientInvoiceDto,
+  MobileClientPaymentListResponseDto,
+} from './dto/mobile-client-payments-response.dto';
 
 export class MobileListPaymentsQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -111,11 +116,11 @@ export class MobileClientPaymentsController {
 
   @Get()
   @ApiOperation({ summary: 'List the authenticated client\'s payments' })
-  @ApiOkResponse({ description: 'Paginated payment list for the current client' })
+  @ApiOkResponse({ type: MobileClientPaymentListResponseDto, description: 'Paginated payment list for the current client' })
   async listMyPayments(
     @ClientSession() user: ClientSession,
     @Query() q: MobileListPaymentsQuery,
-  ) {
+  ): Promise<MobileClientPaymentListResponseDto> {
     const result = await this.listPayments.execute({
       clientId: user.id,
       page: q.page ?? 1,
@@ -175,12 +180,12 @@ export class MobileClientPaymentsController {
   @Get('invoices/:id')
   @ApiOperation({ summary: 'Get an invoice by id (client-scoped)' })
   @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Invoice found' })
+  @ApiOkResponse({ type: MobileClientInvoiceDto, description: 'Invoice found' })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
   getInvoiceEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() user: ClientSession,
-  ) {
+  ): Promise<MobileClientInvoiceDto> {
     // Ownership is part of the query: a foreign id is a 404, never a 403.
     return this.getInvoice.execute(id, user.id);
   }
@@ -271,7 +276,7 @@ export class MobileClientPaymentsController {
       },
     },
   })
-  @ApiCreatedResponse({ description: 'Receipt uploaded, payment recorded as PENDING_VERIFICATION' })
+  @ApiCreatedResponse({ type: MobilePaymentRecordDto, description: 'Receipt uploaded, payment recorded as PENDING_VERIFICATION' })
   uploadBankTransferEndpoint(
     @ClientSession() user: ClientSession,
     @UploadedFile() file: Express.Multer.File | undefined,

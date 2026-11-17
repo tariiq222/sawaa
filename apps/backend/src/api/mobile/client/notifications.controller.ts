@@ -16,6 +16,11 @@ import { RegisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/regis
 import { UnregisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/unregister-fcm-token.handler';
 import { RegisterFcmTokenDto } from '../../../modules/comms/fcm-tokens/register-fcm-token.dto';
 import { ClientRoute } from '../../../common/auth/client-route.decorator';
+import {
+  PaginatedNotificationsResponseDto,
+  UnreadNotificationCountResponseDto,
+} from '../../dashboard/dto/notification-response.dto';
+import { MobileFcmTokenRecordDto } from '../dto/mobile-record-response.dto';
 
 export class MobileListNotificationsQuery {
   @ApiPropertyOptional({ description: 'Return only unread notifications', example: true })
@@ -48,12 +53,12 @@ export class MobileClientNotificationsController {
   ) {}
 
   @ApiOperation({ summary: 'List notifications for the current client' })
-  @ApiOkResponse({ description: 'Paginated notification list' })
+  @ApiOkResponse({ type: PaginatedNotificationsResponseDto, description: 'Paginated notification list' })
   @Get()
   listNotificationsEndpoint(
     @ClientSession() user: ClientSession,
     @Query() q: MobileListNotificationsQuery,
-  ) {
+  ): Promise<PaginatedNotificationsResponseDto> {
     return this.listNotifications.execute({
       recipientId: user.id,
       unreadOnly: q.unreadOnly,
@@ -63,9 +68,9 @@ export class MobileClientNotificationsController {
   }
 
   @ApiOperation({ summary: 'Get unread notification count for the current client' })
-  @ApiOkResponse({ description: 'Unread count value' })
+  @ApiOkResponse({ type: UnreadNotificationCountResponseDto, description: 'Unread count value' })
   @Get('unread-count')
-  getUnreadCountEndpoint(@ClientSession() user: ClientSession) {
+  getUnreadCountEndpoint(@ClientSession() user: ClientSession): Promise<UnreadNotificationCountResponseDto> {
     return this.getUnreadCount.execute({
       recipientId: user.id,
     });
@@ -89,13 +94,13 @@ export class MobileClientNotificationsController {
   }
 
   @ApiOperation({ summary: 'Register an FCM registration token for the current client' })
-  @ApiCreatedResponse({ description: 'Token stored' })
+  @ApiCreatedResponse({ type: MobileFcmTokenRecordDto, description: 'Token stored' })
   @Post('fcm-token')
   @HttpCode(201)
   registerFcmEndpoint(
     @ClientSession() user: ClientSession,
     @Body() body: RegisterFcmTokenDto,
-  ) {
+  ): Promise<MobileFcmTokenRecordDto> {
     return this.registerFcm.execute({ clientId: user.id, ...body });
   }
 
