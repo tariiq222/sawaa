@@ -30085,6 +30085,39 @@
         ],
         "type": "object"
       },
+      "PublicContactMessageDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Created contact message identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Initial triage status (always NEW on creation)",
+            "enum": [
+              "NEW",
+              "READ",
+              "REPLIED",
+              "ARCHIVED"
+            ],
+            "example": "NEW",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "status"
+        ],
+        "type": "object"
+      },
       "PublicEmployeeProfileDto": {
         "properties": {
           "availableDaysOfWeek": {
@@ -30469,6 +30502,491 @@
         ],
         "type": "object"
       },
+      "PublicGuestChatAssistantRecoveryMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "ASSISTANT_RECOVERY"
+            ],
+            "example": "ASSISTANT_RECOVERY",
+            "type": "string"
+          },
+          "canRetry": {
+            "description": "Whether the guest may retry the assistant reply",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "canRetry"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatConversationDto": {
+        "properties": {
+          "clientId": {
+            "description": "Always null for an unclaimed guest conversation",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Conversation creation instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Practitioner the conversation is tied to, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Conversation identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "description": "Whether the administrative assistant handles the conversation",
+            "example": true,
+            "type": "boolean"
+          },
+          "language": {
+            "description": "Conversation language code",
+            "example": "ar",
+            "type": "string"
+          },
+          "status": {
+            "description": "Conversation lifecycle status",
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "example": "AI_ACTIVE",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "employeeId",
+          "isAiChat",
+          "status",
+          "language",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatHandoffMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "OFFER_HANDOFF"
+            ],
+            "example": "OFFER_HANDOFF",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why the assistant offered a hand-off",
+            "enum": [
+              "OUT_OF_SCOPE",
+              "USER_REQUESTED",
+              "LIMIT_REACHED"
+            ],
+            "example": "USER_REQUESTED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatMessageCursorMetaDto": {
+        "properties": {
+          "hasMore": {
+            "description": "Whether another page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Page size applied to the response",
+            "example": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "nextCursor": {
+            "description": "Cursor for the next page, or null when exhausted",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "nextCursor",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatMessageDto": {
+        "properties": {
+          "body": {
+            "description": "Message body",
+            "example": "مرحباً، أحتاج إلى مساعدة.",
+            "type": "string"
+          },
+          "clientMessageId": {
+            "description": "Client-generated idempotency identifier, or null",
+            "example": "00000000-4000-4000-a000-000000000005",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "conversationId": {
+            "description": "Conversation the message belongs to",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Message creation instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message identifier",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Message kind",
+            "enum": [
+              "TEXT",
+              "ACTION_CARD",
+              "OPERATION_RESULT",
+              "SYSTEM_EVENT"
+            ],
+            "example": "TEXT",
+            "type": "string"
+          },
+          "metadata": {
+            "description": "Public metadata variant; omitted when the mapper has nothing safe to expose",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublicGuestChatHandoffMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/PublicGuestChatAssistantRecoveryMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/PublicGuestChatOperationCardMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/PublicGuestChatOperationResultMetadataDto"
+              }
+            ]
+          },
+          "senderType": {
+            "description": "Sender category",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE",
+              "VISITOR",
+              "AI",
+              "STAFF",
+              "SYSTEM"
+            ],
+            "example": "VISITOR",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "body",
+          "kind",
+          "clientMessageId",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatMessagePageDto": {
+        "properties": {
+          "data": {
+            "description": "Messages on the requested page (newest first)",
+            "items": {
+              "$ref": "#/components/schemas/PublicGuestChatMessageDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicGuestChatMessageCursorMetaDto"
+              }
+            ],
+            "description": "Keyset pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatOperationCardMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "CHAT_OPERATION"
+            ],
+            "example": "CHAT_OPERATION",
+            "type": "string"
+          },
+          "operation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicGuestChatOperationDto"
+              }
+            ],
+            "description": "Sanitized operation the card renders"
+          }
+        },
+        "required": [
+          "action",
+          "operation"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatOperationDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking created or affected by the operation, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmationCount": {
+            "description": "Confirmations collected so far",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "errorCode": {
+            "description": "Machine-readable failure code, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "Operation expiry instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Operation identifier",
+            "example": "9f1c2f34-4a5b-4c6d-8e7f-001122334455",
+            "type": "string"
+          },
+          "requiredConfirmations": {
+            "description": "Confirmations required before execution",
+            "example": 1,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Operation lifecycle status",
+            "enum": [
+              "AWAITING_AUTH",
+              "AWAITING_EXISTING_BOOKING_ACK",
+              "AWAITING_CONFIRMATION",
+              "EXECUTING",
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED",
+              "EXPIRED"
+            ],
+            "example": "AWAITING_CONFIRMATION",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "description": "Whitelisted display summary (arbitrary JSON values, size-limited by the mapper)",
+            "example": {
+              "action": "CREATE_BOOKING",
+              "serviceName": "جلسة استشارة فردية"
+            },
+            "type": "object"
+          },
+          "type": {
+            "description": "Operation type",
+            "enum": [
+              "LIST_OWN_APPOINTMENTS",
+              "CREATE_BOOKING",
+              "RESCHEDULE_BOOKING",
+              "CANCEL_BOOKING"
+            ],
+            "example": "CREATE_BOOKING",
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic concurrency version",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "version",
+          "requiredConfirmations",
+          "confirmationCount",
+          "expiresAt",
+          "bookingId",
+          "errorCode",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "PublicGuestChatOperationResultMetadataDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking created or affected by the operation, or null",
+            "example": "00000000-4000-4000-a000-000000000009",
+            "nullable": true,
+            "type": "string"
+          },
+          "operationId": {
+            "description": "Executed operation identifier",
+            "example": "9f1c2f34-4a5b-4c6d-8e7f-001122334455",
+            "type": "string"
+          },
+          "outcome": {
+            "description": "Operation outcome forwarded by the mapper",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_RESCHEDULED",
+              "BOOKING_CANCELLED",
+              "CANCELLATION_REQUESTED",
+              "OPERATION_FAILED",
+              "APPOINTMENTS_LISTED"
+            ],
+            "example": "BOOKING_CREATED",
+            "type": "string"
+          },
+          "status": {
+            "description": "Terminal operation status",
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED"
+            ],
+            "example": "SUCCEEDED",
+            "type": "string"
+          },
+          "syncPending": {
+            "description": "Present and true only when booking synchronisation is still pending",
+            "example": true,
+            "type": "boolean"
+          },
+          "type": {
+            "description": "Operation type",
+            "enum": [
+              "LIST_OWN_APPOINTMENTS",
+              "CREATE_BOOKING",
+              "RESCHEDULE_BOOKING",
+              "CANCEL_BOOKING"
+            ],
+            "example": "CREATE_BOOKING",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operationId",
+          "type",
+          "status"
+        ],
+        "type": "object"
+      },
+      "PublicIntakeResponseDto": {
+        "properties": {
+          "answers": {
+            "additionalProperties": true,
+            "description": "Stored answers JSON keyed by intake field id",
+            "example": {
+              "11111111-1111-1111-1111-111111111111": "نعم"
+            },
+            "type": "object"
+          },
+          "bookingId": {
+            "description": "Booking the answers belong to",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client derived from the booking, or null",
+            "example": "00000000-4000-4000-a000-000000000004",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant of the stored row",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "formId": {
+            "description": "Answered intake form",
+            "example": "00000000-4000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Intake response identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "formId",
+          "clientId",
+          "answers"
+        ],
+        "type": "object"
+      },
       "PublicMobileHomeCardDto": {
         "properties": {
           "descriptionAr": {
@@ -30532,6 +31050,19 @@
           "imageAltAr",
           "imageAltEn",
           "destination"
+        ],
+        "type": "object"
+      },
+      "PublicOtpVerifyResponseDto": {
+        "properties": {
+          "sessionToken": {
+            "description": "Short-lived OTP session token, exchanged for password reset or client sign-in",
+            "example": "otp-session-token-placeholder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sessionToken"
         ],
         "type": "object"
       },
@@ -31329,6 +31860,19 @@
           "letter",
           "rating",
           "date"
+        ],
+        "type": "object"
+      },
+      "PublicVerifyEmailResponseDto": {
+        "properties": {
+          "success": {
+            "description": "Always true on a successful verification",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
         ],
         "type": "object"
       },
@@ -73155,6 +73699,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicAvailabilitySlotDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Array of available time slots"
           },
           "400": {
@@ -73294,12 +73848,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Persisted intake response",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicIntakeResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Persisted intake response"
           },
           "400": {
             "description": "Validation failed (missing required field, unknown field, or invalid option)"
@@ -73607,6 +74160,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGuestChatConversationDto"
+                }
+              }
+            },
             "description": "Guest conversation created; access token is delivered only as an HttpOnly cookie"
           },
           "400": {
@@ -73663,7 +74223,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGuestChatConversationDto"
+                }
+              }
+            },
+            "description": "Conversation after the reception handoff request"
           },
           "400": {
             "content": {
@@ -73731,7 +74298,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGuestChatMessagePageDto"
+                }
+              }
+            },
+            "description": "Latest page of guest messages, newest first"
           },
           "400": {
             "content": {
@@ -73785,7 +74359,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGuestChatMessageDto"
+                }
+              }
+            },
+            "description": "The persisted guest message"
           },
           "400": {
             "content": {
@@ -73893,6 +74474,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGuestChatConversationDto"
+                }
+              }
+            },
             "description": "Current conversation for the supplied guest cookie"
           },
           "400": {
@@ -73938,6 +74526,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicContactMessageDto"
+                }
+              }
+            },
             "description": "Message accepted"
           },
           "400": {
@@ -74351,7 +74946,24 @@
         ],
         "responses": {
           "302": {
-            "description": "Redirect to a freshly signed private image URL"
+            "description": "Redirect to a freshly signed private image URL; the image itself is served from that URL, never from this API",
+            "headers": {
+              "Cache-Control": {
+                "description": "Always `no-store, max-age=0`",
+                "schema": {
+                  "example": "no-store, max-age=0",
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "description": "Freshly signed private image URL (short-lived)",
+                "example": "https://media.example.com/employees/portrait.jpg?sig=abc",
+                "schema": {
+                  "format": "uri",
+                  "type": "string"
+                }
+              }
+            }
           },
           "400": {
             "content": {
@@ -74364,6 +74976,13 @@
             "description": "Validation failed"
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
             "description": "Public employee or selected image not found"
           },
           "500": {
@@ -76742,12 +77361,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Auth tokens on successful OTP verification",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicOtpVerifyResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Short-lived OTP session token on successful verification"
           },
           "400": {
             "content": {
@@ -77693,6 +78311,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicVerifyEmailResponseDto"
+                }
+              }
+            },
+            "description": "The token was valid, unexpired and unused"
+          },
           "400": {
             "content": {
               "application/json": {

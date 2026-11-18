@@ -8,6 +8,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { GetPublicAvailabilityHandler } from '../../modules/bookings/availability/public/get-public-availability.handler';
 import { ApiPublicResponses } from '../../common/swagger';
+import { PublicAvailabilitySlotDto } from './availability-response.dto';
 
 export class PublicSlotsQuery {
   @ApiProperty({ description: 'Employee UUID to check availability for', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
@@ -45,8 +46,8 @@ export class PublicSlotsController {
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @Get()
   @ApiOperation({ summary: 'Get available booking slots for an employee on a given date' })
-  @ApiOkResponse({ description: 'Array of available time slots' })
-  async getSlots(@Query() q: PublicSlotsQuery) {
+  @ApiOkResponse({ type: [PublicAvailabilitySlotDto], description: 'Array of available time slots' })
+  async getSlots(@Query() q: PublicSlotsQuery): Promise<PublicAvailabilitySlotDto[]> {
     return this.getPublicAvailability.execute({
       employeeId: q.employeeId,
       branchId: q.branchId,
