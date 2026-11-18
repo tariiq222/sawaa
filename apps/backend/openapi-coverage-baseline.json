@@ -1,5 +1,4 @@
 [
-  "GET /api/v1/public/employees/{key}/image — no success response documented",
   "GET /api/v1/public/invoices/{id} — success response has no detailed schema",
   "GET /api/v1/public/invoices/{id}/pdf — success response has no detailed schema",
   "GET /api/v1/public/me/bookings/{id}/invoice — success response has no detailed schema",
