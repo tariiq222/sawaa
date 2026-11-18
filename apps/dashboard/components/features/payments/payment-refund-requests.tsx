@@ -8,6 +8,21 @@ import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useRefundReviewMutation } from "@/hooks/use-refund-review-mutations"
 import type { Payment, PaymentRefundRequest } from "@/lib/types/payment"
 
+/**
+ * `GET /dashboard/finance/payments/:id` returns `RefundRequest.amount` straight
+ * from Prisma as a `Decimal`, which serializes as a decimal STRING (e.g.
+ * `"2500"`). The manual-refund DTO declares `amount?: number` with `@IsInt()`,
+ * and production disables implicit conversion, so forwarding the raw string was
+ * rejected with 400 before any money moved. Convert once, at the boundary.
+ *
+ * The column stores integer halalas (`RefundRequest.amount @db.Decimal(12,2)`),
+ * so this only normalises the representation, never rescales the value.
+ */
+function refundAmountHalalas(amount: PaymentRefundRequest["amount"]): number {
+  const value = Math.round(Number(amount))
+  return Number.isFinite(value) ? value : 0
+}
+
 export function PaymentRefundRequests({ payment }: { payment: Payment }) {
   const { t } = useLocale()
   const { canDo } = useAuth()
@@ -39,7 +54,7 @@ function RefundRequestRow({ payment, request, canReview }: { payment: Payment; r
     setError(false)
     try {
       const response = await mutation.mutateAsync(action === "settle"
-        ? { action, refundRequestId: request.id, reason: reason.trim(), amount: request.amount as unknown as number }
+        ? { action, refundRequestId: request.id, reason: reason.trim(), amount: refundAmountHalalas(request.amount) }
         : action === "deny" ? { action, refundRequestId: request.id, reason: reason.trim() }
         : { action, refundRequestId: request.id })
       setResult(response.status)
@@ -50,7 +65,7 @@ function RefundRequestRow({ payment, request, canReview }: { payment: Payment; r
 
   return <div className="flex flex-col gap-3 rounded-lg border p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <FormattedCurrency amount={request.amount as unknown as number} locale={locale} decimals={2} />
+      <FormattedCurrency amount={refundAmountHalalas(request.amount)} locale={locale} decimals={2} />
       <p role="status" className="text-sm">{t(`refund.review.status.${knownStatus ? status : "UNKNOWN"}`)}</p>
     </div>
     {request.reason && <p className="text-sm text-muted-foreground">{request.reason}</p>}
