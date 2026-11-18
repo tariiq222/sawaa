@@ -6627,30 +6627,100 @@ export interface components {
             sourcesUsed: number;
         };
         AiProviderConfigResponseDto: {
+            /**
+             * @description Derived connection state: NOT_CONFIGURED, CONNECTED, FAILED, or RETEST_REQUIRED after a provider or model change.
+             * @example NOT_CONFIGURED
+             */
             connectionStatus: string;
+            /**
+             * @description Whether an encrypted credential is stored. The credential itself is never returned.
+             * @example true
+             */
             hasCredential: boolean;
+            /**
+             * @description Whether the assistant may call the provider for this center.
+             * @example false
+             */
             isEnabled: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When the stored credential was last tested, or null if it never was.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             lastTestedAt: string | null;
+            /**
+             * @description Machine-readable code from the last failed credential test, or null when it succeeded or never ran.
+             * @example PROVIDER_TIMEOUT
+             */
             lastTestErrorCode: string | null;
+            /**
+             * @description Result of the last credential test, or null if no test has run.
+             * @example true
+             */
             lastTestOk: boolean | null;
+            /**
+             * @description Maximum completion tokens currently configured for the provider, as a whole number.
+             * @example 800
+             */
             maxTokens: number;
+            /**
+             * @description Pinned provider model identifier used for assistant completions.
+             * @example deepseek/deepseek-v4-flash-0731
+             */
             model: string;
-            /** @enum {string} */
+            /**
+             * @description Configured AI provider identifier.
+             * @example OPENROUTER
+             * @enum {string}
+             */
             provider: "OPENROUTER";
+            /**
+             * @description Sampling temperature currently configured for the provider, from 0 to 2.
+             * @example 0.4
+             */
             temperature: number;
         };
         AiProviderModelSuggestionDto: {
+            /**
+             * @description Whether clients may send a model identifier outside the curated list.
+             * @example false
+             */
             allowCustom: boolean;
+            /**
+             * @description Curated model identifiers allowed for this provider.
+             * @example [
+             *       "deepseek/deepseek-v4-flash-0731"
+             *     ]
+             */
             models: string[];
-            /** @enum {string} */
+            /**
+             * @description AI provider these suggestions apply to.
+             * @example OPENROUTER
+             * @enum {string}
+             */
             provider: "OPENROUTER";
         };
         AiProviderTestResponseDto: {
+            /**
+             * @description Machine-readable failure code when ok is false, otherwise null.
+             * @example PROVIDER_RATE_LIMIT
+             */
             errorCode: string | null;
+            /**
+             * @description Whether the candidate credential completed a bounded provider call.
+             * @example true
+             */
             ok: boolean;
+            /**
+             * @description Whether the candidate was saved, which only happens after a successful test with saveCredential set to true.
+             * @example false
+             */
             persisted: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When this candidate test ran.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             testedAt: string | null;
         };
         ApiErrorDto: {
@@ -9808,21 +9878,56 @@ export interface components {
          */
         ChatMessageKind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
         ChatMessageResponseDto: {
+            /**
+             * @description Message text as stored for the conversation.
+             * @example أريد حجز موعد
+             */
             body: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Client idempotency id echoed back, or null when the client sent none.
+             * @example 00000000-0000-4000-a000-000000000021
+             */
             clientMessageId?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Conversation UUID the message belongs to.
+             * @example 00000000-0000-4000-a000-000000000001
+             */
             conversationId: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Creation instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             createdAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Message UUID.
+             * @example 00000000-0000-4000-a000-000000000020
+             */
             id: string;
-            /** @enum {string} */
+            /**
+             * @description Message kind: plain text, action card, operation result, or system event.
+             * @example TEXT
+             * @enum {string}
+             */
             kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
+            /**
+             * @description Sanitized free-form public metadata; present only when it matches an allow-listed variant.
+             * @example {
+             *       "action": "OFFER_HANDOFF",
+             *       "reason": "USER_REQUESTED"
+             *     }
+             */
             metadata?: {
                 [key: string]: unknown;
             };
-            /** @enum {string} */
+            /**
+             * @description Who sent the message.
+             * @example CLIENT
+             * @enum {string}
+             */
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
         /**
@@ -9837,22 +9942,58 @@ export interface components {
         ChatOperationType: "LIST_OWN_APPOINTMENTS" | "CREATE_BOOKING" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING";
         ClaimGuestConversationDto: Record<string, never>;
         ClaimGuestConversationResponseDto: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Owning client UUID, or null for a guest conversation.
+             * @example 00000000-0000-4000-a000-000000000002
+             */
             clientId?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Creation instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             createdAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Assigned employee UUID, or null.
+             * @example null
+             */
             employeeId?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Conversation UUID.
+             * @example 00000000-0000-4000-a000-000000000001
+             */
             id: string;
+            /**
+             * @description Whether the assistant answers this conversation.
+             * @example true
+             */
             isAiChat: boolean;
+            /**
+             * @description Conversation language code.
+             * @example ar
+             */
             language: string;
+            /**
+             * @description Chat operations re-linked to the authenticated client by the claim, each a public-safe operation projection. Empty when nothing was pending.
+             * @example []
+             */
             resumedOperations: {
                 [key: string]: unknown;
             }[];
-            /** @enum {string} */
+            /**
+             * @description Conversation status.
+             * @example AI_ACTIVE
+             * @enum {string}
+             */
             status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last update instant.
+             * @example 2026-03-01T10:05:00.000Z
+             */
             updatedAt: string;
         };
         /**
@@ -10846,21 +10987,57 @@ export interface components {
             canRetry: boolean;
         };
         ClientChatConversationCursorMetaDto: {
+            /**
+             * @description Whether more conversations exist after this page.
+             * @example false
+             */
             hasMore: boolean;
+            /**
+             * @description Page size actually applied to this read, after clamping to 1-100.
+             * @example 20
+             */
             limit: number;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Conversation UUID to send as `cursor` for the next page, or null when this page is the last.
+             * @example 00000000-0000-4000-a000-000000000001
+             */
             nextCursor: string | null;
         };
         ClientChatConversationDetailDto: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Creation instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             createdAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Conversation UUID.
+             * @example 00000000-0000-4000-a000-000000000001
+             */
             id: string;
+            /**
+             * @description Whether the assistant answers this conversation.
+             * @example true
+             */
             isAiChat: boolean;
+            /**
+             * @description Conversation language code.
+             * @example ar
+             */
             language: string;
-            /** @enum {string} */
+            /**
+             * @description Conversation status.
+             * @example AI_ACTIVE
+             * @enum {string}
+             */
             status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last update instant.
+             * @example 2026-03-01T10:05:00.000Z
+             */
             updatedAt: string;
         };
         ClientChatConversationDto: {
@@ -10911,16 +11088,44 @@ export interface components {
             updatedAt: string;
         };
         ClientChatConversationSummaryDto: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Creation instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             createdAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Conversation UUID.
+             * @example 00000000-0000-4000-a000-000000000001
+             */
             id: string;
+            /**
+             * @description Preview of the newest message, or null when the conversation has none.
+             * @example {
+             *       "kind": "TEXT",
+             *       "preview": "أريد حجز موعد",
+             *       "senderType": "CLIENT"
+             *     }
+             */
             lastMessage: components["schemas"]["ClientChatLastMessageDto"] | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When the newest message was sent, or null when the conversation has none.
+             * @example 2026-03-01T10:05:00.000Z
+             */
             lastMessageAt: string | null;
-            /** @enum {string} */
+            /**
+             * @description Conversation status.
+             * @example AI_ACTIVE
+             * @enum {string}
+             */
             status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last update instant.
+             * @example 2026-03-01T10:05:00.000Z
+             */
             updatedAt: string;
         };
         ClientChatHandoffMetadataDto: {
@@ -10938,11 +11143,19 @@ export interface components {
             reason: "OUT_OF_SCOPE" | "USER_REQUESTED" | "LIMIT_REACHED";
         };
         ClientChatLastMessageDto: {
-            /** @enum {string} */
+            /**
+             * @description Kind of the last message.
+             * @example TEXT
+             * @enum {string}
+             */
             kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
             /** @description Whitespace-normalized safe message preview */
             preview: string;
-            /** @enum {string} */
+            /**
+             * @description Who sent the last message.
+             * @example CLIENT
+             * @enum {string}
+             */
             senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
         };
         ClientChatMessageDto: {
@@ -18586,38 +18799,112 @@ export interface components {
         /** @enum {string} */
         InvoiceStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" | "PARTIALLY_REFUNDED" | "VOID" | "REFUNDED";
         KnowledgeDocumentDetailResponseDto: {
+            /**
+             * @description Indexed chunks of the current content, ordered by chunkIndex.
+             * @example [
+             *       {
+             *         "chunkIndex": 0,
+             *         "id": "00000000-0000-4000-a000-000000000051",
+             *         "tokenCount": 128
+             *       }
+             *     ]
+             */
             chunks: {
                 chunkIndex?: number;
                 /** Format: uuid */
                 id?: string;
                 tokenCount?: number;
             }[];
+            /**
+             * @description Plain-text document body, or null when the document holds no stored text.
+             * @example Clinic opening hours are Sunday to Thursday, 09:00 to 17:00.
+             */
             content: Record<string, never> | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Creation instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             createdAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Document UUID.
+             * @example 00000000-0000-4000-a000-000000000050
+             */
             id: string;
+            /**
+             * @description Whether the document is available to the assistant.
+             * @example false
+             */
             isPublished: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When indexing last completed successfully, or null if the current content was never indexed.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             lastIndexedAt: Record<string, never> | null;
+            /**
+             * @description Machine-readable code from the last failed indexing attempt, or null.
+             * @example CONTENT_MISSING
+             */
             lastIndexErrorCode: Record<string, never> | null;
+            /**
+             * @description Free-form JSON metadata supplied with the document.
+             * @example {
+             *       "source": "admin"
+             *     }
+             */
             metadata: Record<string, never> | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Publication instant, or null while the document is unpublished.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             publishedAt: Record<string, never> | null;
+            /**
+             * @description Document source reference: an HTTPS URL for `url` entries, otherwise null.
+             * @example https://example.com/faq
+             */
             sourceRef: Record<string, never> | null;
-            /** @enum {string} */
+            /**
+             * @description Document source: manually authored text, or a page fetched from sourceRef.
+             * @example manual
+             * @enum {string}
+             */
             sourceType: "manual" | "url";
             /**
+             * @description Indexing status; reset to PENDING whenever content or source changes.
              * @example PENDING
              * @enum {string}
              */
             status: "PENDING" | "EMBEDDED" | "FAILED";
+            /**
+             * @description Document title.
+             * @example Clinic FAQ
+             */
             title: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last update instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             updatedAt: string;
         };
         KnowledgeDocumentPageResponseDto: {
+            /**
+             * @description Documents on this page, newest first.
+             * @example []
+             */
             data: components["schemas"]["KnowledgeDocumentSummaryResponseDto"][];
+            /**
+             * @description Pagination metadata for the full result set.
+             * @example {
+             *       "limit": 20,
+             *       "page": 1,
+             *       "total": 1,
+             *       "totalPages": 1
+             *     }
+             */
             meta?: {
                 limit: number;
                 page: number;
@@ -18626,34 +18913,93 @@ export interface components {
             };
         };
         KnowledgeDocumentSummaryResponseDto: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Creation instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             createdAt: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Document UUID.
+             * @example 00000000-0000-4000-a000-000000000050
+             */
             id: string;
+            /**
+             * @description Whether the document is available to the assistant.
+             * @example false
+             */
             isPublished: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When indexing last completed successfully, or null if the current content was never indexed.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             lastIndexedAt: Record<string, never> | null;
+            /**
+             * @description Machine-readable code from the last failed indexing attempt, or null.
+             * @example CONTENT_MISSING
+             */
             lastIndexErrorCode: Record<string, never> | null;
+            /**
+             * @description Free-form JSON metadata supplied with the document.
+             * @example {
+             *       "source": "admin"
+             *     }
+             */
             metadata: Record<string, never> | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Publication instant, or null while the document is unpublished.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             publishedAt: Record<string, never> | null;
+            /**
+             * @description Document source reference: an HTTPS URL for `url` entries, otherwise null.
+             * @example https://example.com/faq
+             */
             sourceRef: Record<string, never> | null;
-            /** @enum {string} */
+            /**
+             * @description Document source: manually authored text, or a page fetched from sourceRef.
+             * @example manual
+             * @enum {string}
+             */
             sourceType: "manual" | "url";
             /**
+             * @description Indexing status; reset to PENDING whenever content or source changes.
              * @example PENDING
              * @enum {string}
              */
             status: "PENDING" | "EMBEDDED" | "FAILED";
+            /**
+             * @description Document title.
+             * @example Clinic FAQ
+             */
             title: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Last update instant.
+             * @example 2026-03-01T10:00:00.000Z
+             */
             updatedAt: string;
         };
         KnowledgeReindexResponseDto: {
+            /**
+             * @description SHA-256 hex digest of the document content being indexed.
+             * @example 0000000000000000000000000000000000000000000000000000000000000000
+             */
             contentHash: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Document UUID queued for reindexing.
+             * @example 00000000-0000-4000-a000-000000000050
+             */
             documentId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Outbox event UUID for the reindex request, or null when no new event was created.
+             * @example 00000000-0000-4000-a000-000000000052
+             */
             eventId: Record<string, never> | null;
             /**
              * @example PENDING
@@ -18989,7 +19335,19 @@ export interface components {
             payment: components["schemas"]["LateEntryPaymentDto"] | null;
         };
         ListClientChatConversationsResponseDto: {
+            /**
+             * @description Conversations owned by the authenticated client, most recent activity first.
+             * @example []
+             */
             data: components["schemas"]["ClientChatConversationSummaryDto"][];
+            /**
+             * @description Cursor pagination metadata.
+             * @example {
+             *       "hasMore": false,
+             *       "limit": 20,
+             *       "nextCursor": null
+             *     }
+             */
             meta: components["schemas"]["ClientChatConversationCursorMetaDto"];
         };
         ListMetaDto: {
@@ -32201,19 +32559,36 @@ export interface components {
         TestAiProviderConfigDto: {
             /** @description Write-only candidate API key. Never returned or persisted unless saveCredential is true. */
             candidateApiKey: string;
+            /**
+             * @description Enable the assistant. Enabling requires a stored credential whose successful test matches the current provider and model.
+             * @example false
+             */
             isEnabled?: boolean;
-            /** @default 800 */
+            /**
+             * @description Maximum completion tokens from 1 to 32000, as a whole number. Omitted keeps the stored value; a new configuration defaults to 800.
+             * @default 800
+             * @example 800
+             */
             maxTokens: number;
             /**
+             * @description Pinned model identifier; only the single supported OpenRouter model is accepted.
              * @example deepseek/deepseek-v4-flash-0731
              * @enum {string}
              */
             model: "deepseek/deepseek-v4-flash-0731";
-            /** @enum {string} */
+            /**
+             * @description AI provider to configure.
+             * @example OPENROUTER
+             * @enum {string}
+             */
             provider: "OPENROUTER";
             /** @description Persist the candidate only after the bounded test succeeds. */
             saveCredential?: boolean;
-            /** @default 0.4 */
+            /**
+             * @description Sampling temperature from 0 to 2. Omitted keeps the stored value; a new configuration defaults to 0.4.
+             * @default 0.4
+             * @example 0.4
+             */
             temperature: number;
         };
         TestEmailConfigDto: {
@@ -32658,7 +33033,11 @@ export interface components {
             metadata?: Record<string, never>;
             /** @description HTTPS source URL */
             sourceRef?: string | null;
-            /** @enum {string|null} */
+            /**
+             * @description Document source: `manual` for a plain-text body, `url` for an external page referenced by sourceRef.
+             * @example manual
+             * @enum {string|null}
+             */
             sourceType?: "manual" | "url" | null;
             /**
              * @description Document title
@@ -33241,17 +33620,34 @@ export interface components {
             url: string;
         };
         UpsertAiProviderConfigDto: {
+            /**
+             * @description Enable the assistant. Enabling requires a stored credential whose successful test matches the current provider and model.
+             * @example false
+             */
             isEnabled?: boolean;
-            /** @default 800 */
+            /**
+             * @description Maximum completion tokens from 1 to 32000, as a whole number. Omitted keeps the stored value; a new configuration defaults to 800.
+             * @default 800
+             * @example 800
+             */
             maxTokens: number;
             /**
+             * @description Pinned model identifier; only the single supported OpenRouter model is accepted.
              * @example deepseek/deepseek-v4-flash-0731
              * @enum {string}
              */
             model: "deepseek/deepseek-v4-flash-0731";
-            /** @enum {string} */
+            /**
+             * @description AI provider to configure.
+             * @example OPENROUTER
+             * @enum {string}
+             */
             provider: "OPENROUTER";
-            /** @default 0.4 */
+            /**
+             * @description Sampling temperature from 0 to 2. Omitted keeps the stored value; a new configuration defaults to 0.4.
+             * @default 0.4
+             * @example 0.4
+             */
             temperature: number;
         };
         UpsertBookingSettingsDto: {

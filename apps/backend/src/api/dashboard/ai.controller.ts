@@ -30,34 +30,40 @@ import { AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../modules/ai/provider-
 import { AiChatCompletionResponseDto } from './dto/ai-response.dto';
 
 class KnowledgeDocumentSummaryResponseDto {
-  @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty() title!: string;
-  @ApiProperty({ enum: ['manual', 'url'] }) sourceType!: string;
-  @ApiProperty({ nullable: true }) sourceRef!: string | null;
-  @ApiProperty({ enum: DocumentStatus, example: DocumentStatus.PENDING }) status!: DocumentStatus;
-  @ApiProperty() isPublished!: boolean;
-  @ApiProperty({ nullable: true, format: 'date-time' }) publishedAt!: string | null;
-  @ApiProperty({ nullable: true, format: 'date-time' }) lastIndexedAt!: string | null;
-  @ApiProperty({ nullable: true }) lastIndexErrorCode!: string | null;
-  @ApiProperty({ nullable: true }) metadata!: Record<string, unknown> | null;
-  @ApiProperty({ format: 'date-time' }) createdAt!: string;
-  @ApiProperty({ format: 'date-time' }) updatedAt!: string;
+  @ApiProperty({ format: 'uuid', description: 'Document UUID.', example: '00000000-0000-4000-a000-000000000050' }) id!: string;
+  @ApiProperty({ description: 'Document title.', example: 'Clinic FAQ' }) title!: string;
+  @ApiProperty({ enum: ['manual', 'url'], description: 'Document source: manually authored text, or a page fetched from sourceRef.', example: 'manual' }) sourceType!: string;
+  @ApiProperty({ nullable: true, description: 'Document source reference: an HTTPS URL for `url` entries, otherwise null.', example: 'https://example.com/faq' }) sourceRef!: string | null;
+  @ApiProperty({ enum: DocumentStatus, example: DocumentStatus.PENDING, description: 'Indexing status; reset to PENDING whenever content or source changes.' }) status!: DocumentStatus;
+  @ApiProperty({ description: 'Whether the document is available to the assistant.', example: false }) isPublished!: boolean;
+  @ApiProperty({ nullable: true, format: 'date-time', description: 'Publication instant, or null while the document is unpublished.', example: '2026-03-01T10:00:00.000Z' }) publishedAt!: string | null;
+  @ApiProperty({ nullable: true, format: 'date-time', description: 'When indexing last completed successfully, or null if the current content was never indexed.', example: '2026-03-01T10:00:00.000Z' }) lastIndexedAt!: string | null;
+  @ApiProperty({ nullable: true, description: 'Machine-readable code from the last failed indexing attempt, or null.', example: 'CONTENT_MISSING' }) lastIndexErrorCode!: string | null;
+  @ApiProperty({ nullable: true, description: 'Free-form JSON metadata supplied with the document.', example: { source: 'admin' } }) metadata!: Record<string, unknown> | null;
+  @ApiProperty({ format: 'date-time', description: 'Creation instant.', example: '2026-03-01T10:00:00.000Z' }) createdAt!: string;
+  @ApiProperty({ format: 'date-time', description: 'Last update instant.', example: '2026-03-01T10:00:00.000Z' }) updatedAt!: string;
 }
 
 class KnowledgeDocumentDetailResponseDto extends KnowledgeDocumentSummaryResponseDto {
-  @ApiProperty({ nullable: true, maxLength: 50_000 }) content!: string | null;
-  @ApiProperty({ type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, chunkIndex: { type: 'number' }, tokenCount: { type: 'number' } } } }) chunks!: Array<{ id: string; chunkIndex: number; tokenCount: number }>;
+  @ApiProperty({ nullable: true, maxLength: 50_000, description: 'Plain-text document body, or null when the document holds no stored text.', example: 'Clinic opening hours are Sunday to Thursday, 09:00 to 17:00.' }) content!: string | null;
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, chunkIndex: { type: 'number' }, tokenCount: { type: 'number' } } },
+    description: 'Indexed chunks of the current content, ordered by chunkIndex.',
+    example: [{ id: '00000000-0000-4000-a000-000000000051', chunkIndex: 0, tokenCount: 128 }],
+  })
+  chunks!: Array<{ id: string; chunkIndex: number; tokenCount: number }>;
 }
 
 class KnowledgeDocumentPageResponseDto {
-  @ApiProperty({ type: KnowledgeDocumentSummaryResponseDto, isArray: true }) data!: KnowledgeDocumentSummaryResponseDto[];
-  @ApiProperty({ type: 'object', properties: { total: { type: 'number' }, page: { type: 'number' }, limit: { type: 'number' }, totalPages: { type: 'number' } }, required: ['total', 'page', 'limit', 'totalPages'] }) meta!: { total: number; page: number; limit: number; totalPages: number };
+  @ApiProperty({ type: KnowledgeDocumentSummaryResponseDto, isArray: true, description: 'Documents on this page, newest first.', example: [] }) data!: KnowledgeDocumentSummaryResponseDto[];
+  @ApiProperty({ type: 'object', properties: { total: { type: 'number' }, page: { type: 'number' }, limit: { type: 'number' }, totalPages: { type: 'number' } }, required: ['total', 'page', 'limit', 'totalPages'], description: 'Pagination metadata for the full result set.', example: { total: 1, page: 1, limit: 20, totalPages: 1 } }) meta!: { total: number; page: number; limit: number; totalPages: number };
 }
 
 class KnowledgeReindexResponseDto {
-  @ApiProperty({ format: 'uuid' }) documentId!: string;
-  @ApiProperty() contentHash!: string;
-  @ApiProperty({ nullable: true, format: 'uuid' }) eventId!: string | null;
+  @ApiProperty({ format: 'uuid', description: 'Document UUID queued for reindexing.', example: '00000000-0000-4000-a000-000000000050' }) documentId!: string;
+  @ApiProperty({ description: 'SHA-256 hex digest of the document content being indexed.', example: '0000000000000000000000000000000000000000000000000000000000000000' }) contentHash!: string;
+  @ApiProperty({ nullable: true, format: 'uuid', description: 'Outbox event UUID for the reindex request, or null when no new event was created.', example: '00000000-0000-4000-a000-000000000052' }) eventId!: string | null;
   @ApiProperty({ enum: ['PENDING'], example: 'PENDING' }) status!: 'PENDING';
 }
 
