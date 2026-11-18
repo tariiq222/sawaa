@@ -37,4 +37,13 @@ const result = spawnSync(
 );
 
 if (result.error) throw result.error;
-process.exit(result.status ?? 1);
+if ((result.status ?? 1) !== 0) process.exit(result.status ?? 1);
+
+// Keep `default`-bearing optional properties optional (see the script's header).
+const post = spawnSync(
+  process.execPath,
+  [resolve(packageRoot, 'scripts/fix-optional-defaults.mjs'), specPath, outPath],
+  { stdio: 'inherit', cwd: repoRoot },
+);
+if (post.error) throw post.error;
+process.exit(post.status ?? 1);

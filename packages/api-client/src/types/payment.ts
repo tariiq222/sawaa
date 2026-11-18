@@ -1,21 +1,26 @@
+import type { components } from './generated/openapi'
 import type { PaginatedResponse, PaginationParams } from './api'
 
-// Aligned with backend Prisma enum `PaymentMethod` in finance.prisma (UPPER_CASE).
-export type PaymentMethod =
-  | 'ONLINE_CARD'
-  | 'BANK_TRANSFER'
-  | 'CASH'
-  | 'COUPON'
-  | 'MADA'
-  | 'TABBY'
+type Schemas = components['schemas']
 
-export type PaymentStatus =
-  | 'PENDING'
-  | 'PENDING_VERIFICATION'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'REFUNDED'
+/** Aligned with the snapshot's `PaymentMethod` enum (UPPER_CASE). */
+export type PaymentMethod = Schemas['PaymentMethod']
 
+/**
+ * Payment status. Derived from the snapshot's `PaymentStatus` enum and
+ * projected to the five values this client historically exposed; the snapshot
+ * also carries `PARTIALLY_REFUNDED`, which this legacy union never included.
+ */
+export type PaymentStatus = Extract<
+  Schemas['PaymentStatus'],
+  'PENDING' | 'PENDING_VERIFICATION' | 'COMPLETED' | 'FAILED' | 'REFUNDED'
+>
+
+/**
+ * NOT derived: no documented schema exposes this nested booking-client
+ * projection (`PaymentListRowDto` is flat and carries `invoice.client`). Kept
+ * hand-written as the legacy nested shape.
+ */
 export interface PaymentBookingClient {
   id: string
   firstName: string
@@ -23,6 +28,7 @@ export interface PaymentBookingClient {
   phone: string | null
 }
 
+/** NOT derived: the documented list/detail rows are flat; this is a legacy nested projection. */
 export interface PaymentBooking {
   id: string
   date: string
@@ -31,6 +37,7 @@ export interface PaymentBooking {
   service: { id: string; nameAr: string; nameEn: string } | null
 }
 
+/** NOT derived: `PaymentListInvoiceSummaryDto` is `{bookingId, client, clientId, total}`; this legacy shape has no equivalent. */
 export interface PaymentInvoice {
   id: string
   invoiceNumber: string
@@ -39,6 +46,14 @@ export interface PaymentInvoice {
   vatRate: number
 }
 
+/**
+ * NOT derived: `GET /dashboard/finance/payments` documents `PaymentListRowDto`
+ * (flat, decimal-string money, `number`, nested `invoice` summary), which is a
+ * different contract from this legacy nested shape (`vatAmount`,
+ * `totalAmount`, `moyasarPaymentId`, `transactionRef`, `booking`, `invoice`).
+ * The enum fields are derived from the snapshot below so the union vocabulary
+ * still tracks the backend.
+ */
 export interface PaymentListItem {
   id: string
   bookingId: string | null
@@ -66,27 +81,15 @@ export interface PaymentListItem {
   invoice?: PaymentInvoice | null
 }
 
-// Mirrors backend GetPaymentStatsHandler return shape.
-export interface PaymentStats {
-  total: number
-  totalAmount: number
-  completed: number
-  completedAmount: number
-  pending: number
-  pendingAmount: number
-  pendingVerification: number
-  pendingVerificationAmount: number
-  refunded: number
-  refundedAmount: number
-  failed: number
-  historical: {
-    collectedCount: number
-    collectedAmount: number
-    reviewCount: number
-    reviewAmount: number
-  }
-}
+/** 200 body of `GET /dashboard/finance/payments/stats` (`PaymentStatsResponseDto`). */
+export type PaymentStats = Schemas['PaymentStatsResponseDto']
 
+/**
+ * NOT derived: the documented list operation takes `fromDate`/`toDate`, while
+ * this legacy query (and the module's request builder) uses `dateFrom`/
+ * `dateTo`. The mismatch is existing runtime behaviour, so the type keeps the
+ * old names. `search`/`status`/`method` match the documented operation.
+ */
 export interface PaymentListQuery extends PaginationParams {
   search?: string
   status?: PaymentStatus
@@ -97,25 +100,11 @@ export interface PaymentListQuery extends PaginationParams {
 
 export type PaymentListResponse = PaginatedResponse<PaymentListItem>
 
-// Mirrors the invoice shape returned by POST /dashboard/finance/bookings/:bookingId/collect
-// (and the standalone ensure-invoice endpoint). All amounts are integer halalas.
-export interface EnsuredBookingInvoice {
-  id: string
-  subtotal: number
-  vatRate: number
-  total: number
-  outstanding: number
-  status: string
-}
+/** `POST /dashboard/finance/bookings/{bookingId}/invoice` / collect → `EnsuredInvoiceDto`. */
+export type EnsuredBookingInvoice = Schemas['EnsuredInvoiceDto']
 
 /**
- * Response of the unified booking collection endpoint
- * (POST /dashboard/finance/bookings/:bookingId/collect). `payment` is null when
- * the call only adjusted the discount without moving money. All amounts are
- * integer halalas.
+ * `POST /dashboard/finance/bookings/{bookingId}/collect` (`PaymentCollectionResponseDto`).
+ * `payment` is null when the call only adjusted the discount.
  */
-export interface CollectBookingPaymentResult {
-  bookingId: string
-  invoice: EnsuredBookingInvoice
-  payment: { id: string; amount: number; method: string; status: string } | null
-}
+export type CollectBookingPaymentResult = Schemas['PaymentCollectionResponseDto']

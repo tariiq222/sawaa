@@ -1,79 +1,73 @@
-export interface PublicBranch {
-  id: string
-  nameAr: string
-  nameEn: string | null
-  city: string | null
-  addressAr: string | null
-  isMain: boolean
-}
+import type { components } from './generated/openapi'
+
+type Schemas = components['schemas']
+
+/** `GET /api/v1/public/branches` row (`PublicBranchListItemDto`). */
+export type PublicBranch = Schemas['PublicBranchListItemDto']
+
+/** `GET /api/v1/public/employees(/ {key})` user projection (`PublicEmployeeSyntheticUserDto`). */
+export type PublicEmployeeSyntheticUser = Schemas['PublicEmployeeSyntheticUserDto']
 
 /**
- * `GET /public/employees` and `GET /public/employees/:key`.
+ * `GET /api/v1/public/employees` and `GET /api/v1/public/employees/{key}`
+ * (`PublicEmployeeProfileDto`).
  *
- * Mirrors the documented `PublicEmployeeProfileDto` in the committed OpenAPI
- * snapshot (the base `PublicEmployeeResponseDto` plus the three fields the
- * handler has always emitted). This package is hand-written, so the shape is
- * mirrored deliberately — it is never regenerated from the snapshot.
+ * Derived from the documented profile, with one deliberate deviation: the
+ * snapshot documents the scalar display fields (`slug`, `nameAr`, `gender`,
+ * `ratingAverage`, `minServicePrice`, …) as `Record<string, never> | null`
+ * because the DTO decorators omit their `type`. The handler emits real
+ * strings/numbers/enums, so those keys are re-typed locally below. The
+ * `public-directory.test.ts` key-set guard still covers the shape.
  */
-export interface PublicEmployeeSyntheticUser {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string | null
-  avatarUrl: string | null
-}
-
-export interface PublicEmployee {
-  id: string
+export type PublicEmployee = Omit<
+  Schemas['PublicEmployeeProfileDto'],
+  | 'slug'
+  | 'nameAr'
+  | 'nameEn'
+  | 'title'
+  | 'specialty'
+  | 'specialtyAr'
+  | 'publicBioAr'
+  | 'publicBioEn'
+  | 'publicImageUrl'
+  | 'gender'
+  | 'ratingAverage'
+  | 'minServicePrice'
+> & {
+  /** Documented as untyped; the handler emits a string slug. */
   slug: string | null
+  /** Documented as untyped; the handler emits an Arabic name. */
   nameAr: string | null
+  /** Documented as untyped; the handler emits an English name. */
   nameEn: string | null
+  /** Documented as untyped; the handler emits a job title. */
   title: string | null
+  /** Documented as untyped; the handler emits a specialty. */
   specialty: string | null
+  /** Documented as untyped; the handler emits an Arabic specialty. */
   specialtyAr: string | null
+  /** Documented as untyped; the handler emits an Arabic bio. */
   publicBioAr: string | null
+  /** Documented as untyped; the handler emits an English bio. */
   publicBioEn: string | null
-  experience: number
-  languages: string[]
+  /** Documented as untyped; the handler emits an image URL. */
   publicImageUrl: string | null
+  /** Documented as untyped; free string so fixtures may pass any value. */
   gender: string | null
-  employmentType: string
+  /** Documented as untyped; the handler emits an average rating. */
   ratingAverage: number | null
-  ratingCount: number
+  /** Documented as untyped; the handler emits a minimum price. */
   minServicePrice: number | null
-  isAvailableToday: boolean
-  serviceIds: string[]
-  branchIds: string[]
-  isBookable: boolean
-  availableDaysOfWeek: number[]
-  /** Synthetic user shape kept for legacy consumers (names + avatar). */
-  user: PublicEmployeeSyntheticUser
-  /** Legacy alias of `ratingAverage`; 0 when there are no public ratings. */
-  rating: number
-  /** Legacy alias of `ratingCount`. */
-  reviewCount: number
 }
 
-export type ContactMessageStatus = 'NEW' | 'READ' | 'REPLIED' | 'ARCHIVED'
+/** `ContactMessageResponseDto['status']` enum. */
+export type ContactMessageStatus = Schemas['ContactMessageResponseDto']['status']
 
-export interface ContactMessage {
-  id: string
-  name: string
-  phone: string | null
-  email: string | null
-  subject: string | null
-  body: string
-  status: ContactMessageStatus
-  createdAt: string
-  readAt: string | null
-  archivedAt: string | null
-}
+/**
+ * `GET /api/v1/dashboard/comms/contact-messages` row, as documented by
+ * `ContactMessageResponseDto` (full message entity).
+ */
+export type ContactMessage = Schemas['ContactMessageResponseDto']
 
-export interface CreateContactMessagePayload {
-  name: string
-  phone?: string
-  email?: string
-  subject?: string
-  body: string
-}
+/** Request body of `POST /api/v1/public/contact-messages` (`CreateContactMessageDto`). */
+export type CreateContactMessagePayload = Schemas['CreateContactMessageDto']

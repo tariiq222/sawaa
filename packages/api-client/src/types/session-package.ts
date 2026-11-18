@@ -1,3 +1,4 @@
+import type { paths } from './generated/openapi'
 import type { PaginatedResponse, PaginationParams } from './api'
 import type {
   SessionPackage,
@@ -16,6 +17,7 @@ import type {
   GroupSequenceMode,
   GlobalDiscount,
 } from '@sawaa/shared'
+
 
 // Re-export shared types so callers can `import { SessionPackage } from '@sawaa/api-client/types'`
 // without having to take a second dependency on @sawaa/shared.
@@ -38,19 +40,33 @@ export type {
 }
 
 /**
- * Filters for `GET /dashboard/organization/packages`. Matches
- * `ListSessionPackagesDto` in the backend — `isActive` / `isPublic` come
- * in as query strings, and the handler transforms them to booleans.
+ * Filters for `GET /dashboard/organization/packages` (query parameters of
+ * `DashboardOrganizationPackagesController_listSessionPackagesEndpoint_v1`),
+ * plus the shared paging controls. `isActive`/`isPublic` arrive as query
+ * strings and the handler transforms them to booleans.
  */
-export interface SessionPackageListQuery extends PaginationParams {
-  isActive?: boolean
-  isPublic?: boolean
-  search?: string
-}
+export type SessionPackageListQuery = PaginationParams &
+  Pick<
+    NonNullable<
+      paths['/api/v1/dashboard/organization/packages']['get']['parameters']['query']
+    >,
+    'isActive' | 'isPublic'
+  >
 
+/**
+ * NOT derived: the list returns `PaginatedPackagesDto` (`PackageListRowDto`
+ * rows with integer-halala prices), a different contract from the shared
+ * `SessionPackage` this package re-exports. Kept as the shared-typed page.
+ */
 export type SessionPackageListResponse = PaginatedResponse<SessionPackage>
 
-/** Item shape used in create / update payloads (no id, no timestamps). */
+/**
+ * Item shape used in create / update payloads (no id, no timestamps).
+ * NOT derived: `CreateSessionPackageItemDto` marks `freeQuantity` (default 0)
+ * and `discountValue` as required, but the API accepts requests that omit both
+ * — the module test and every caller omit `freeQuantity`. The snapshot is
+ * therefore wrong for this request, so the type stays hand-written.
+ */
 export interface SessionPackageItemInput {
   serviceId: string
   employeeId: string
@@ -60,6 +76,11 @@ export interface SessionPackageItemInput {
   sortOrder?: number
 }
 
+/**
+ * Local metadata slice of the create payload. NOT derived on its own: it is
+ * folded into `CreateSessionPackagePayload`, whose documented body is a single
+ * `CreateSessionPackageDto`.
+ */
 export interface SessionPackageMetadataInput {
   nameAr: string
   nameEn?: string
@@ -73,6 +94,11 @@ export interface SessionPackageMetadataInput {
   sortOrder?: number
 }
 
+/**
+ * Local legacy-variant slice. NOT a standalone documented body: the documented
+ * `CreateSessionPackageDto` merges legacy and grouped fields via
+ * `modelVersion`, so this remains a client-side variant aggregate.
+ */
 export interface LegacySessionPackageInput {
   modelVersion?: 'LEGACY'
   /** Null denotes a general legacy package. */
@@ -88,20 +114,29 @@ export interface LegacySessionPackageInput {
   items: SessionPackageItemInput[]
 }
 
+/**
+ * Request body of `POST /dashboard/organization/packages`, expressed as the
+ * two documented variants (`LEGACY` items vs `GROUPED_V2` groups). Kept as a
+ * local union over the shared grouped input because the single documented
+ * `CreateSessionPackageDto` flattens both variants.
+ */
 export type CreateSessionPackagePayload = SessionPackageMetadataInput & (
   | LegacySessionPackageInput
   | (GroupedPackageInput & { ownerEmployeeId?: never; items?: never; discountType?: never; discountValue?: never })
 )
 
 /**
- * Update payload — every field optional. When `items` is provided it is
- * a full replacement set (delete-and-create semantics in the handler).
+ * Request body of `PATCH /dashboard/organization/packages/{packageId}` — the
+ * documented `UpdateSessionPackageDto` makes every field optional, so this is
+ * the deep-partial of the create union.
  */
 export type UpdateSessionPackagePayload = Partial<CreateSessionPackagePayload>
 
 /**
- * Single package enriched with the canonical computed price. Mirrors the
- * `GetSessionPackageHandler.execute()` return shape.
+ * Single package enriched with the canonical computed price. NOT derived: it
+ * extends the shared `SessionPackage` (the contract this package re-exports)
+ * with the shared `PackagePriceBreakdown`; the documented
+ * `PackageDetailResponseDto` uses decimal-string discount fields instead.
  */
 export interface SessionPackageDetail extends SessionPackage {
   price: PackagePriceBreakdown

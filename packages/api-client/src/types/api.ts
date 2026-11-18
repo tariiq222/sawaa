@@ -1,17 +1,30 @@
-export interface PaginationMeta {
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-}
+import type { components } from './generated/openapi'
 
+type Schemas = components['schemas']
+
+/**
+ * Pagination envelope. Derived from the documented `ListMetaDto` — every
+ * paginated dashboard response embeds this exact object as `meta`.
+ */
+export type PaginationMeta = Schemas['ListMetaDto']
+
+/**
+ * Generic page envelope. The snapshot documents each concrete page separately
+ * (`PaginatedBranchesDto`, `InvoiceListResponseDto`, …) but they all share
+ * this exact `{ items, meta }` shape, so the generic is expressed with the
+ * derived meta instead of re-declaring its fields.
+ */
 export interface PaginatedResponse<T> {
   items: T[]
   meta: PaginationMeta
 }
 
+/**
+ * Shared query-string paging controls. Kept local: the snapshot documents
+ * paging as inline per-operation parameters, not as a reusable DTO, and only
+ * `PaginationParams` consumers (`*ListQuery`) combine them with per-route
+ * filters.
+ */
 export interface PaginationParams {
   page?: number
   limit?: number

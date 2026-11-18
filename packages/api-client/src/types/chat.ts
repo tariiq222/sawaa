@@ -1,82 +1,60 @@
-export type ChatConversationStatus =
-  | 'OPEN'
-  | 'AI_ACTIVE'
-  | 'WAITING_FOR_STAFF'
-  | 'STAFF_ACTIVE'
-  | 'CLOSED'
+import type { components, paths } from './generated/openapi'
 
-export type ChatSenderType =
-  | 'CLIENT'
-  | 'EMPLOYEE'
-  | 'VISITOR'
-  | 'AI'
-  | 'STAFF'
-  | 'SYSTEM'
+type Schemas = components['schemas']
+type GuestConversation = Schemas['PublicGuestChatConversationDto']
+type ChatMessagesQuery = NonNullable<
+  paths['/api/v1/public/chat/conversations/{conversationId}/messages']['get']['parameters']['query']
+>
 
-export type ChatMessageKind =
-  | 'TEXT'
-  | 'ACTION_CARD'
-  | 'OPERATION_RESULT'
-  | 'SYSTEM_EVENT'
+/** Conversation lifecycle (`ConversationStatus`). */
+export type ChatConversationStatus = Schemas['ConversationStatus']
 
-export type ChatOperationType =
-  | 'LIST_OWN_APPOINTMENTS'
-  | 'CREATE_BOOKING'
-  | 'RESCHEDULE_BOOKING'
-  | 'CANCEL_BOOKING'
+/** Who sent a message (`MessageSenderType`). */
+export type ChatSenderType = Schemas['MessageSenderType']
 
-export type ChatOperationStatus =
-  | 'AWAITING_AUTH'
-  | 'AWAITING_EXISTING_BOOKING_ACK'
-  | 'AWAITING_CONFIRMATION'
-  | 'EXECUTING'
-  | 'SUCCEEDED'
-  | 'FAILED'
-  | 'DECLINED'
-  | 'EXPIRED'
+/** Message kind discriminator (`ChatMessageKind`). */
+export type ChatMessageKind = Schemas['ChatMessageKind']
 
-export interface ChatConversationSummary {
-  id: string
-  status: ChatConversationStatus
-  language: string
-  createdAt: string
-  updatedAt: string
-}
+/** Chat operation verb (`ChatOperationType`). */
+export type ChatOperationType = Schemas['ChatOperationType']
 
-export interface ChatConversationDetail extends ChatConversationSummary {
-  employeeId: string | null
-  isAiChat: boolean
-}
+/** Chat operation lifecycle (`ChatOperationStatus`). */
+export type ChatOperationStatus = Schemas['ChatOperationStatus']
 
-/** Safe detail returned only for an authenticated owner's selected conversation. */
-export interface ClientChatConversationDetail extends ChatConversationSummary {
-  isAiChat: boolean
-}
+/**
+ * Guest conversation summary (`PublicGuestChatConversationDto`), projected to
+ * the keys this client exposes (drops `clientId`).
+ */
+export type ChatConversationSummary = Pick<
+  GuestConversation,
+  'id' | 'status' | 'language' | 'createdAt' | 'updatedAt'
+>
 
-/** A safe, client-owned conversation history item. It deliberately omits identities and internal metadata. */
-export interface ClientChatConversationSummary {
-  id: string
-  status: ChatConversationStatus
-  createdAt: string
-  updatedAt: string
-  lastMessageAt: string | null
-  lastMessage: {
-    preview: string
-    senderType: ChatSenderType
-    kind: ChatMessageKind
-  } | null
-}
+/** Guest conversation detail = documented conversation + the two detail keys. */
+export type ChatConversationDetail = ChatConversationSummary &
+  Pick<GuestConversation, 'employeeId' | 'isAiChat'>
 
-export interface ListClientChatConversationsQuery {
-  cursor?: string
-  limit?: number
-}
+/** Safe detail of `GET /client/chat/conversations/{id}` (`ClientChatConversationDetailDto`). */
+export type ClientChatConversationDetail = Schemas['ClientChatConversationDetailDto']
 
-export interface ClientChatConversationPage {
-  data: ClientChatConversationSummary[]
-  meta: ChatCursorMeta
-}
+/** `GET /client/chat/conversations` row (`ClientChatConversationSummaryDto`). */
+export type ClientChatConversationSummary = Schemas['ClientChatConversationSummaryDto']
 
+/** Query of `GET /client/chat/conversations` (cursor + limit). */
+export type ListClientChatConversationsQuery = Pick<
+  NonNullable<paths['/api/v1/client/chat/conversations']['get']['parameters']['query']>,
+  'cursor' | 'limit'
+>
+
+/** `GET /client/chat/conversations` page (`ListClientChatConversationsResponseDto`). */
+export type ClientChatConversationPage = Schemas['ListClientChatConversationsResponseDto']
+
+/**
+ * Booking summary inside an operation. NOT derived: the documented
+ * `ClientChatOperationDto.summary` is documented only as
+ * `{[key: string]: unknown}`; the backend builds these keys dynamically, so
+ * this projection stays hand-written.
+ */
 export interface ChatOperationBookingSummary {
   action?: ChatOperationType | 'LOGIN_REQUIRED'
   scheduledAt?: string
@@ -94,6 +72,7 @@ export interface ChatOperationBookingSummary {
   status?: string
 }
 
+/** Local shaping of the opaque documented `summary` (see above). */
 export interface ChatOperationSummary extends ChatOperationBookingSummary {
   action?: ChatOperationType | 'LOGIN_REQUIRED'
   intent?: ChatOperationType
@@ -101,75 +80,65 @@ export interface ChatOperationSummary extends ChatOperationBookingSummary {
   proposedBooking?: ChatOperationBookingSummary
 }
 
-export interface ChatOperation {
-  id: string
-  type: ChatOperationType
-  status: ChatOperationStatus
-  version: number
-  requiredConfirmations: number
-  confirmationCount: number
-  expiresAt: string
-  bookingId: string | null
-  errorCode: string | null
+/**
+ * Chat operation (`ClientChatOperationDto`), with the opaque documented
+ * `summary` re-typed to the local projection above.
+ */
+export type ChatOperation = Omit<Schemas['ClientChatOperationDto'], 'summary'> & {
   summary: ChatOperationSummary
 }
 
-export interface ChatOperationCardMetadata {
-  action: 'CHAT_OPERATION'
-  operation: ChatOperation
-}
+/** Action-card metadata (`ClientChatOperationCardMetadataDto`), `operation` re-typed. */
+export type ChatOperationCardMetadata = Omit<
+  Schemas['ClientChatOperationCardMetadataDto'],
+  'operation'
+> & { operation: ChatOperation }
 
-export interface ChatHandoffOfferMetadata {
-  action: 'OFFER_HANDOFF'
-  reason: 'OUT_OF_SCOPE' | 'USER_REQUESTED' | 'LIMIT_REACHED'
-}
+/** Handoff metadata (`ClientChatHandoffMetadataDto`). */
+export type ChatHandoffOfferMetadata = Schemas['ClientChatHandoffMetadataDto']
 
-export interface ChatAssistantRecoveryMetadata {
-  action: 'ASSISTANT_RECOVERY'
-  canRetry: boolean
-}
+/** Assistant recovery metadata (`ClientChatAssistantRecoveryMetadataDto`). */
+export type ChatAssistantRecoveryMetadata = Schemas['ClientChatAssistantRecoveryMetadataDto']
 
-export interface ChatOperationResultMetadata {
-  operationId: string
-  type: ChatOperationType
-  status: Extract<ChatOperationStatus, 'SUCCEEDED' | 'FAILED' | 'DECLINED'>
-  bookingId?: string | null
-  outcome?:
-    | 'BOOKING_CREATED'
-    | 'BOOKING_RESCHEDULED'
-    | 'BOOKING_CANCELLED'
-    | 'CANCELLATION_REQUESTED'
-    | 'OPERATION_FAILED'
-    | 'APPOINTMENTS_LISTED'
-  syncPending?: true
-}
+/**
+ * Operation-result metadata (`ClientChatOperationResultMetadataDto`).
+ * `syncPending` is deliberately narrowed to `true`: the documented boolean is
+ * only ever set to `true` by the mapper (absent otherwise), and the old
+ * exported contract pinned that.
+ */
+export type ChatOperationResultMetadata = Omit<
+  Schemas['ClientChatOperationResultMetadataDto'],
+  'syncPending'
+> & { syncPending?: true }
+
+type ChatMessageRow = Schemas['ClientChatMessageDto']
 
 interface ChatMessageBase {
-  id: string
-  conversationId: string
-  senderType: ChatSenderType
-  body: string
-  clientMessageId: string | null
-  createdAt: string
+  id: ChatMessageRow['id']
+  conversationId: ChatMessageRow['conversationId']
+  senderType: ChatMessageRow['senderType']
+  body: ChatMessageRow['body']
+  clientMessageId: ChatMessageRow['clientMessageId']
+  createdAt: ChatMessageRow['createdAt']
 }
 
 export interface ChatTextMessage extends ChatMessageBase {
-  kind: 'TEXT'
+  kind: Extract<ChatMessageKind, 'TEXT'>
   metadata?: ChatHandoffOfferMetadata | ChatAssistantRecoveryMetadata
 }
 
 export interface ChatActionCardMessage extends ChatMessageBase {
-  kind: 'ACTION_CARD'
+  kind: Extract<ChatMessageKind, 'ACTION_CARD'>
   metadata?: ChatOperationCardMetadata
 }
 
 export interface ChatOperationResultMessage extends ChatMessageBase {
-  kind: 'OPERATION_RESULT'
+  kind: Extract<ChatMessageKind, 'OPERATION_RESULT'>
   metadata?: ChatOperationResultMetadata
 }
 
 export interface ChatSystemEventMessage extends ChatMessageBase {
-  kind: 'SYSTEM_EVENT'
+  kind: Extract<ChatMessageKind, 'SYSTEM_EVENT'>
 }
 
 export type ChatMessage =
@@ -178,38 +147,39 @@ export type ChatMessage =
   | ChatOperationResultMessage
   | ChatSystemEventMessage
 
-export interface ChatCursorMeta {
-  limit: number
-  nextCursor: string | null
-  hasMore: boolean
-}
+/** Cursor meta (`ClientChatMessagePageMetaDto`). */
+export type ChatCursorMeta = Schemas['ClientChatMessagePageMetaDto']
 
-export interface ChatMessagePage {
+/** Message page (`ClientChatMessagePageDto`), `data` re-typed to the discriminated union. */
+export type ChatMessagePage = Omit<Schemas['ClientChatMessagePageDto'], 'data'> & {
   data: ChatMessage[]
-  meta: ChatCursorMeta
 }
 
-export interface CreateGuestChatConversationRequest {
-  guestName?: string
-  guestPhone?: string
-  language?: 'ar' | 'en'
-}
+/** Request body of `POST /public/chat/conversations` (`CreateGuestConversationDto`). */
+export type CreateGuestChatConversationRequest = Schemas['CreateGuestConversationDto']
 
-export interface SendChatMessageRequest {
-  body: string
-  clientMessageId: string
-}
+/** Request body of `POST …/messages` (`SendChatMessageDto`). */
+export type SendChatMessageRequest = Schemas['SendChatMessageDto']
 
-export interface ListChatMessagesQuery {
-  cursor?: string
-  limit?: number
-}
+/** Query of `GET …/messages` (cursor + limit). */
+export type ListChatMessagesQuery = Pick<ChatMessagesQuery, 'cursor' | 'limit'>
 
-export interface GuestChatHandoffRequest {
-  guestName: string
-  guestPhone: string
-}
+/** Request body of `POST /public/chat/conversations/{id}/handoff` (`GuestRequestHandoffDto`). */
+export type GuestChatHandoffRequest = Schemas['GuestRequestHandoffDto']
 
-export interface ClaimedChatConversation extends ChatConversationDetail {
+/**
+ * 201 body of `POST /client/chat/conversations/{id}/claim`
+ * (`ClaimGuestConversationResponseDto`), with `resumedOperations` re-typed.
+ */
+export type ClaimedChatConversation = Omit<
+  Schemas['ClaimGuestConversationResponseDto'],
+  'resumedOperations' | 'employeeId' | 'clientId'
+> & {
+  /**
+   * Documented as optional (`ClaimGuestConversationResponseDto`), but a claim
+   * is only issued for an existing conversation, so it is always present.
+   * Kept required to preserve the legacy `ChatConversationDetail` shape.
+   */
+  employeeId: GuestConversation['employeeId']
   resumedOperations: ChatOperation[]
 }

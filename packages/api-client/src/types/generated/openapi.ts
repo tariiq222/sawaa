@@ -10934,7 +10934,7 @@ export interface components {
              * @description Structured cancellation reason; defaults to CLIENT_REQUESTED
              * @default CLIENT_REQUESTED
              */
-            reason: components["schemas"]["CancellationReason"];
+            reason?: components["schemas"]["CancellationReason"];
             /**
              * Format: uuid
              * @description Stable UUID for retrying the same cancellation
@@ -14276,7 +14276,7 @@ export interface components {
              * @default false
              * @example false
              */
-            isPublished: boolean;
+            isPublished?: boolean;
             /**
              * @description Arbitrary JSON metadata
              * @example {
@@ -14447,7 +14447,7 @@ export interface components {
              * @description When true, only start-of-day onwards is blocked on startDate (partial first day).
              * @default false
              */
-            isStartTimeOnly: boolean;
+            isStartTimeOnly?: boolean;
             /**
              * @description Reason for the exception (e.g. annual leave)
              * @example Annual vacation
@@ -14588,12 +14588,12 @@ export interface components {
              * @description Whether the card is published for mobile clients.
              * @default false
              */
-            isPublished: boolean;
+            isPublished?: boolean;
             /**
              * @description Card display order; lower values appear first.
              * @default 0
              */
-            sortOrder: number;
+            sortOrder?: number;
             /**
              * @description Card title in Arabic.
              * @example مواعيد مرنة تناسب يومك
@@ -14613,12 +14613,12 @@ export interface components {
              * @description Whether the family is active
              * @default true
              */
-            isActive: boolean;
+            isActive?: boolean;
             /**
              * @description Whether the family is public
              * @default false
              */
-            isPublic: boolean;
+            isPublic?: boolean;
             /**
              * @description Arabic family name
              * @example باقة الاستشارة
@@ -14635,7 +14635,7 @@ export interface components {
              * @description Catalog ordering
              * @default 0
              */
-            sortOrder: number;
+            sortOrder?: number;
         };
         CreatePackagePurchaseDto: {
             /**
@@ -14711,7 +14711,7 @@ export interface components {
              * @default SAR
              * @example SAR
              */
-            currency: string;
+            currency?: string;
             /**
              * @description Number of program days
              * @example 3
@@ -14733,7 +14733,7 @@ export interface components {
              * @default false
              * @example true
              */
-            depositEnabled: boolean;
+            depositEnabled?: boolean;
             /**
              * @description Arabic staff-facing description
              * @example برنامج لتنمية مهارات التواصل الأسري
@@ -14754,7 +14754,7 @@ export interface components {
              * @default false
              * @example true
              */
-            isPublic: boolean;
+            isPublic?: boolean;
             /**
              * @description Maximum number of enrolled participants
              * @default 30
@@ -14851,7 +14851,7 @@ export interface components {
              * @default 0
              * @example 10
              */
-            bufferMinutes: number;
+            bufferMinutes?: number;
             /**
              * Format: uuid
              * @description Category UUID
@@ -14862,7 +14862,7 @@ export interface components {
              * @default SAR
              * @example SAR
              */
-            currency: string;
+            currency?: string;
             /** @description Fixed deposit amount in integer halalas — must not exceed price */
             depositAmount?: number;
             /**
@@ -14870,7 +14870,7 @@ export interface components {
              * @default false
              * @example false
              */
-            depositEnabled: boolean;
+            depositEnabled?: boolean;
             /** @description Service description in Arabic */
             descriptionAr?: string;
             /** @description Service description in English */
@@ -14885,13 +14885,13 @@ export interface components {
              * @default false
              * @example false
              */
-            hideDurationOnBooking: boolean;
+            hideDurationOnBooking?: boolean;
             /**
              * @description Hide the price from the booking UI
              * @default false
              * @example false
              */
-            hidePriceOnBooking: boolean;
+            hidePriceOnBooking?: boolean;
             /** @example #F0F4FF */
             iconBgColor?: string;
             /** @example scissors-01 */
@@ -14906,13 +14906,13 @@ export interface components {
              * @default true
              * @example true
              */
-            isActive: boolean;
+            isActive?: boolean;
             /**
              * @description Hide the service from public listings
              * @default false
              * @example false
              */
-            isHidden: boolean;
+            isHidden?: boolean;
             /**
              * @description Maximum number of days in advance the service can be booked
              * @example 30
@@ -14975,13 +14975,13 @@ export interface components {
              * @default true
              * @example true
              */
-            isActive: boolean;
+            isActive?: boolean;
             /**
              * @description Whether the package is visible to clients on the public catalog
              * @default false
              * @example true
              */
-            isPublic: boolean;
+            isPublic?: boolean;
             /** @description Legacy package items (min 1). Required unless modelVersion is GROUPED_V2. */
             items?: components["schemas"]["CreateSessionPackageItemDto"][];
             /**
@@ -15011,7 +15011,7 @@ export interface components {
              * @default 0
              * @example 0
              */
-            sortOrder: number;
+            sortOrder?: number;
         };
         CreateSessionPackageItemDto: {
             /** @description Eligibility constraints (multi-dimensional). Preferred over the legacy triple. */
@@ -15027,7 +15027,7 @@ export interface components {
              * @default 0
              * @example 10
              */
-            discountValue: number;
+            discountValue?: number;
             /**
              * Format: uuid
              * @description Legacy single ServiceDurationOption UUID. Omit for flexible items (use constraints).
@@ -15045,7 +15045,7 @@ export interface components {
              * @default 0
              * @example 1
              */
-            freeQuantity: number;
+            freeQuantity?: number;
             /**
              * @description Optional display label for the item
              * @example استشارة فردية — أي معالج
@@ -22762,7 +22762,7 @@ export interface components {
              * @default false
              * @example false
              */
-            isPublic: boolean;
+            isPublic?: boolean;
             /**
              * @description Full name in Arabic
              * @example خالد العتيبي
@@ -24953,12 +24953,12 @@ export interface components {
              * @description Whether the option can be purchased
              * @default true
              */
-            isActive: boolean;
+            isActive?: boolean;
             /**
              * @description Whether the option is shown publicly
              * @default false
              */
-            isPublic: boolean;
+            isPublic?: boolean;
             /**
              * @description Arabic option name
              * @example 5 جلسات
@@ -32626,7 +32626,7 @@ export interface components {
              * @default 800
              * @example 800
              */
-            maxTokens: number;
+            maxTokens?: number;
             /**
              * @description Pinned model identifier; only the single supported OpenRouter model is accepted.
              * @example deepseek/deepseek-v4-flash-0731
@@ -32646,7 +32646,7 @@ export interface components {
              * @default 0.4
              * @example 0.4
              */
-            temperature: number;
+            temperature?: number;
         };
         TestEmailConfigDto: {
             /**
@@ -33313,12 +33313,12 @@ export interface components {
              * @description Whether the family is active
              * @default true
              */
-            isActive: boolean;
+            isActive?: boolean;
             /**
              * @description Whether the family is public
              * @default false
              */
-            isPublic: boolean;
+            isPublic?: boolean;
             /**
              * @description Arabic family name
              * @example باقة الاستشارة
@@ -33335,7 +33335,7 @@ export interface components {
              * @description Catalog ordering
              * @default 0
              */
-            sortOrder: number;
+            sortOrder?: number;
         };
         UpdateProblemReportStatusDto: {
             /**
@@ -33687,7 +33687,7 @@ export interface components {
              * @default 800
              * @example 800
              */
-            maxTokens: number;
+            maxTokens?: number;
             /**
              * @description Pinned model identifier; only the single supported OpenRouter model is accepted.
              * @example deepseek/deepseek-v4-flash-0731
@@ -33705,7 +33705,7 @@ export interface components {
              * @default 0.4
              * @example 0.4
              */
-            temperature: number;
+            temperature?: number;
         };
         UpsertBookingSettingsDto: {
             /**
@@ -33843,7 +33843,7 @@ export interface components {
              * @description true if these are live (production) keys, false for test mode.
              * @default false
              */
-            isLive: boolean;
+            isLive?: boolean;
             /**
              * @description Tenant Moyasar publishable key (pk_test_… or pk_live_…)
              * @example pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx

@@ -2,90 +2,38 @@
  * Response types for the authenticated `/client` surface routes that
  * `packages/api-client` already calls.
  *
- * HAND-WRITTEN, like every other file in `src/types/`. They mirror the
- * documented OpenAPI schemas of the same names; `client-surface.test.ts`
- * reads `apps/backend/openapi.json` and fails when a key set drifts.
- * Only `type` positions changed — no request URL, option or body is affected.
+ * DERIVED from the generated OpenAPI snapshot (`./generated/openapi`), one
+ * type per operation. Only `type` positions are affected — no request URL,
+ * option or body changes.
  */
+import type { components } from './generated/openapi'
+
+type Schemas = components['schemas']
 
 /** `POST /client/bookings/:id/rate` → `ClientBookingRatingResponseDto`. */
-export interface ClientBookingRating {
-  id: string;
-  bookingId: string;
-  clientId: string;
-  employeeId: string;
-  /** 1–5 */
-  score: number;
-  comment: string | null;
-  isPublic: boolean;
-  createdAt: string;
-}
+export type ClientBookingRating = Schemas['ClientBookingRatingResponseDto']
 
 /** `GET /client/bookings/:id/join` → `ClientBookingJoinResponseDto`. */
-export interface ClientBookingJoinLink {
-  joinUrl: string | null;
-  scheduledAt: string;
-}
+export type ClientBookingJoinLink = Schemas['ClientBookingJoinResponseDto']
 
 /**
- * `reschedule` returns the controller-composed projection
- * (`ClientBookingMutationDto`). The projection is `Partial<Booking>` at the
- * source, so every field is typed as present but only the documented keys
- * are listed. Money fields (`price`, `priceSnapshot`) are Decimal strings.
+ * `PATCH /client/bookings/:id/reschedule` body projection
+ * (`ClientBookingMutationDto`). Money fields (`price`, `priceSnapshot`) are
+ * Decimal strings; `durationMins` is the documented duration.
  */
-export interface ClientBookingMutation {
-  id: string;
-  bookingNumber: number;
-  serviceId: string | null;
-  employeeId: string;
-  branchId: string;
-  status: string;
-  bookingType: string;
-  deliveryType: string;
-  scheduledAt: string;
-  endsAt: string;
-  durationMins: number;
-  durationMinutesSnapshot: number | null;
-  price: string;
-  priceSnapshot: string | null;
-  currency: string;
-  payAtClinic: boolean;
-  serviceNameSnapshot: string | null;
-  employeeNameSnapshot: string | null;
-  branchNameSnapshot: string | null;
-  categoryNameSnapshot: string | null;
-  zoomJoinUrl: string | null;
-  zoomMeetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
-  createdAt: string;
-  updatedAt: string;
-  checkedInAt: string | null;
-  confirmedAt: string | null;
-  completedAt: string | null;
-  noShowAt: string | null;
-  cancelledAt: string | null;
-  cancelReason: string | null;
-}
+export type ClientBookingMutation = Schemas['ClientBookingMutationDto']
 
 /** `PATCH /client/bookings/:id/reschedule` → `ClientBookingRescheduleResponseDto`. */
-export interface ClientBookingRescheduleResult {
-  booking: ClientBookingMutation;
-}
+export type ClientBookingRescheduleResult = Schemas['ClientBookingRescheduleResponseDto']
 
 /** `POST /client/refunds/request` → `ClientRefundRequestResponseDto`. Amount in integer halalas. */
-export interface ClientRefundRequestResult {
-  id: string;
-  status: string;
-  amount: number;
-  createdAt: string;
-}
+export type ClientRefundRequestResult = Schemas['ClientRefundRequestResponseDto']
 
 /**
  * `POST /client/packages/book` → `ClientBookingRecordDto` (the raw `Booking`
- * row). Only the fields consumers read are declared; the schema itself carries
- * every Prisma column.
+ * row). Projected to the three fields consumers read.
  */
-export interface ClientPackageBookingResult {
-  id: string;
-  status: string;
-  packageCreditId: string | null;
-}
+export type ClientPackageBookingResult = Pick<
+  Schemas['ClientBookingRecordDto'],
+  'id' | 'status' | 'packageCreditId'
+>
