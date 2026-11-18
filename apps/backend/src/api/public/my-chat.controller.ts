@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Logger, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiExtraModels, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
 import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
@@ -30,11 +30,27 @@ import { ClientChatConversationDetailDto, ListClientChatConversationsDto, ListCl
 import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
 import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
 import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
+import {
+  PublicClientChatAssistantRecoveryMetadataDto,
+  PublicClientChatConversationDto,
+  PublicClientChatHandoffMetadataDto,
+  PublicClientChatMessageDto,
+  PublicClientChatMessagePageDto,
+  PublicClientChatOperationCardMetadataDto,
+  PublicClientChatOperationDto,
+  PublicClientChatOperationResultMetadataDto,
+} from './public-client-chat-response.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
 @ApiTags('Public / Chat')
 @ApiStandardResponses()
+@ApiExtraModels(
+  PublicClientChatHandoffMetadataDto,
+  PublicClientChatAssistantRecoveryMetadataDto,
+  PublicClientChatOperationCardMetadataDto,
+  PublicClientChatOperationResultMetadataDto,
+)
 @ClientRoute()
 @UseGuards(WebChatEnabledGuard)
 @Controller('public/me/chat')
@@ -73,8 +89,8 @@ export class MyChatController {
 
   @Get('conversations/current')
   @ApiOperation({ summary: 'Get the authenticated client chat conversation' })
-  @ApiOkResponse({ description: 'Current conversation for the authenticated client' })
-  current(@ClientSession() session: { id: string }) {
+  @ApiOkResponse({ type: PublicClientChatConversationDto, description: 'Current conversation for the authenticated client' })
+  current(@ClientSession() session: { id: string }): Promise<PublicClientChatConversationDto> {
     return this.getCurrentConversation.execute({ clientId: session.id });
   }
 
@@ -133,12 +149,14 @@ export class MyChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a message as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiCreatedResponse({ type: PublicClientChatMessageDto, description: 'The persisted message, public-safe projection' })
+  @ApiResponse({ status: 404, description: 'Conversation not owned by the authenticated client or not found', type: ApiErrorDto })
   async sendMessageForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendChatMessageDto,
     @ClientSession() session: { id: string },
     @Ip() ipAddress: string,
-  ) {
+  ): Promise<PublicClientChatMessageDto> {
     const message = await this.sendMessage.execute({
       audience: 'client',
       conversationId,
@@ -171,11 +189,13 @@ export class MyChatController {
   @Header('Cache-Control', 'no-store, max-age=0')
   @ApiOperation({ summary: 'List messages as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiOkResponse({ type: PublicClientChatMessagePageDto, description: 'Messages on the requested page (newest first)' })
+  @ApiResponse({ status: 404, description: 'Conversation not owned by the authenticated client or not found', type: ApiErrorDto })
   listMessagesForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Query() dto: ListChatMessagesDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<PublicClientChatMessagePageDto> {
     return this.listMessages.execute({
       audience: 'client',
       conversationId,
@@ -190,11 +210,14 @@ export class MyChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request reception handoff as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiCreatedResponse({ type: PublicClientChatConversationDto, description: 'The conversation after the reception handoff request' })
+  @ApiResponse({ status: 404, description: 'Conversation not owned by the authenticated client or not found', type: ApiErrorDto })
+  @ApiResponse({ status: 409, description: 'Conversation cannot request reception in its current state', type: ApiErrorDto })
   async requestReceptionForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() _dto: ClientRequestHandoffDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<PublicClientChatConversationDto> {
     return toChatConversationResponse(await this.requestHandoff.execute({
       audience: 'client',
       conversationId,
@@ -207,11 +230,13 @@ export class MyChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Acknowledge an additional appointment before confirmation' })
   @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  @ApiOkResponse({ type: PublicClientChatOperationDto, description: 'The operation after this transition, public-safe projection' })
+  @ApiResponse({ status: 404, description: 'Operation not owned by the authenticated client or not found', type: ApiErrorDto })
   async acknowledgeAdditionalBooking(
     @Param('operationId', ParseUUIDPipe) operationId: string,
     @Body() dto: OperationVersionDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<PublicClientChatOperationDto> {
     return toPublicChatOperation(await this.acknowledgeOperation.execute({
       operationId,
       clientId: session.id,
@@ -224,11 +249,13 @@ export class MyChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm and execute a prepared chat operation' })
   @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  @ApiOkResponse({ type: PublicClientChatOperationDto, description: 'The operation after this transition, public-safe projection' })
+  @ApiResponse({ status: 404, description: 'Operation not owned by the authenticated client or not found', type: ApiErrorDto })
   async confirmPreparedOperation(
     @Param('operationId', ParseUUIDPipe) operationId: string,
     @Body() dto: OperationVersionDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<PublicClientChatOperationDto> {
     return toPublicChatOperation(await this.confirmOperation.execute({
       operationId,
       clientId: session.id,
@@ -241,11 +268,13 @@ export class MyChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Decline a prepared chat operation without executing it' })
   @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  @ApiOkResponse({ type: PublicClientChatOperationDto, description: 'The operation after this transition, public-safe projection' })
+  @ApiResponse({ status: 404, description: 'Operation not owned by the authenticated client or not found', type: ApiErrorDto })
   async declinePreparedOperation(
     @Param('operationId', ParseUUIDPipe) operationId: string,
     @Body() dto: OperationVersionDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<PublicClientChatOperationDto> {
     return toPublicChatOperation(await this.declineOperation.execute({
       operationId,
       clientId: session.id,

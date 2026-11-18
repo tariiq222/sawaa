@@ -3,7 +3,7 @@ import { ClientThrottle } from '../../common/throttle/client-throttle';
 import { ClientCancellationPreviewDto, CancellationRefundSummaryDto, PersistedCancellationRefundDto } from '../../modules/bookings/client/client-cancellation-preview.dto';
 import { Controller, Get, Patch, Query, Param, Body, ParseUUIDPipe, ParseEnumPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiOkResponse, ApiResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
-import { ApiStandardResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler';
 import { UpdateClientProfileHandler } from '../../modules/identity/client-auth/update-client-profile.handler';
@@ -20,6 +20,8 @@ import { ClientBookingDto } from '../../modules/bookings/client/client-booking.d
 import { projectClientBookingMutation } from '../../modules/bookings/client/client-booking-mutation.projection';
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
+import { PublicBookingInvoiceResponseDto } from './public-invoice-response.dto';
+import { PublicBookingRescheduleResponseDto } from './public-booking-response.dto';
 
 @ApiExtraModels(CancellationRefundSummaryDto, PersistedCancellationRefundDto, ClientBookingDto)
 @ApiTags('Public / Me')
@@ -157,12 +159,15 @@ export class PublicMeController {
   @Get('bookings/:id/invoice')
   @ApiOperation({ summary: 'Get invoice for a booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Invoice details' } })
-  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @ApiOkResponse({
+    type: PublicBookingInvoiceResponseDto,
+    description: 'Booking-scoped invoice. `pdfUrl` is the frozen receipt object key, never a presigned URL.',
+  })
+  @ApiResponse({ status: 404, description: 'Booking not found or has no invoice', type: ApiErrorDto })
   async bookingInvoiceEndpoint(
     @ClientSession() session: { id: string },
     @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  ): Promise<PublicBookingInvoiceResponseDto> {
     return this.getBookingInvoice.execute(id, session.id);
   }
 
@@ -170,7 +175,9 @@ export class PublicMeController {
   @Patch('bookings/:id/reschedule')
   @ApiOperation({ summary: 'Reschedule a client booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Updated booking' } })
+  @ApiOkResponse({ type: PublicBookingRescheduleResponseDto, description: 'Booking rescheduled; returns the client-safe booking projection' })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  @ApiResponse({ status: 409, description: 'Slot or client schedule conflict', type: ApiErrorDto })
   async rescheduleBookingEndpoint(
     @ClientSession() session: { id: string },
     @Param('id', ParseUUIDPipe) id: string,

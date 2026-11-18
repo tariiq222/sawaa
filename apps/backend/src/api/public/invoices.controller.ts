@@ -1,15 +1,19 @@
 import { Controller, Get, Param, UseGuards, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { Public } from '../../common/guards/jwt.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
-import { ApiPublicResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiPublicResponses } from '../../common/swagger';
 import { GetPublicInvoiceHandler } from '../../modules/finance/get-invoice/get-public-invoice.handler';
 import { MinioService } from '../../infrastructure/storage/minio.service';
 import {
   FINANCE_INVOICES_BUCKET_NAME,
   extractInvoicePdfKey,
 } from '../../modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
+import {
+  PublicInvoicePdfUrlDto,
+  PublicInvoiceResponseDto,
+} from './public-invoice-response.dto';
 
 // Short-lived presigned download window for client-facing PDF links (5 minutes).
 const INVOICE_PDF_URL_EXPIRY_SECONDS = 300;
@@ -30,10 +34,17 @@ export class PublicInvoicesController {
   @UseGuards(ClientSessionGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get invoice details (requires client auth)' })
+  @ApiParam({ name: 'id', description: 'Invoice UUID', format: 'uuid' })
+  @ApiOkResponse({
+    type: PublicInvoiceResponseDto,
+    description: 'Client-owned invoice with its payments. `pdfUrl` is the frozen receipt object key, never a presigned URL.',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid client session', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Invoice not found for this client', type: ApiErrorDto })
   async getInvoice(
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() client: { id: string },
-  ) {
+  ): Promise<PublicInvoiceResponseDto> {
     return this.getPublicInvoice.execute(id, client.id);
   }
 
@@ -43,12 +54,13 @@ export class PublicInvoicesController {
     summary: 'Get a URL to download the paid receipt PDF (client-owned only)',
     description: 'Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.',
   })
-  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF' })
-  @ApiResponse({ status: 404, description: 'No receipt has been issued for this invoice' })
+  @ApiOkResponse({ type: PublicInvoicePdfUrlDto, description: 'Short-lived URL of the paid receipt PDF' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid client session', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'No receipt has been issued for this invoice', type: ApiErrorDto })
   async getPdf(
     @Param('id', ParseUUIDPipe) id: string,
     @ClientSession() client: { id: string },
-  ) {
+  ): Promise<PublicInvoicePdfUrlDto> {
     const invoice = await this.getPublicInvoice.execute(id, client.id);
     if (!invoice.pdfUrl) {
       throw new NotFoundException('No paid receipt has been issued for this invoice');
