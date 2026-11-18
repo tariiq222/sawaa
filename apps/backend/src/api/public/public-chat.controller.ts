@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Ip, Param, ParseUUIDPipe, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiExtraModels, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { ClientThrottle } from '../../common/throttle/client-throttle';
@@ -21,11 +21,26 @@ import { RetryAdministrativeMessageHandler } from '../../modules/comms/chat/assi
 import { RetryAdministrativeMessageDto } from '../../modules/comms/chat/assistant/retry-administrative-message.dto';
 import { ChatMessageResponseDto } from '../../modules/comms/chat/messages/public-chat-response.dto';
 import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
+import {
+  PublicGuestChatAssistantRecoveryMetadataDto,
+  PublicGuestChatConversationDto,
+  PublicGuestChatHandoffMetadataDto,
+  PublicGuestChatMessageDto,
+  PublicGuestChatMessagePageDto,
+  PublicGuestChatOperationCardMetadataDto,
+  PublicGuestChatOperationResultMetadataDto,
+} from './guest-chat-response.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
 @ApiTags('Public / Chat')
 @ApiPublicResponses()
+@ApiExtraModels(
+  PublicGuestChatHandoffMetadataDto,
+  PublicGuestChatAssistantRecoveryMetadataDto,
+  PublicGuestChatOperationCardMetadataDto,
+  PublicGuestChatOperationResultMetadataDto,
+)
 @UseGuards(WebChatEnabledGuard)
 @Controller('public/chat')
 export class PublicChatController {
@@ -44,11 +59,14 @@ export class PublicChatController {
   @Post('conversations')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a guest chat conversation' })
-  @ApiCreatedResponse({ description: 'Guest conversation created; access token is delivered only as an HttpOnly cookie' })
+  @ApiCreatedResponse({
+    type: PublicGuestChatConversationDto,
+    description: 'Guest conversation created; access token is delivered only as an HttpOnly cookie',
+  })
   async create(
     @Body() dto: CreateGuestConversationDto,
     @Res({ passthrough: true }) response: Response,
-  ) {
+  ): Promise<PublicGuestChatConversationDto> {
     const { conversation, guestToken } = await this.createConversation.execute(dto);
     response.cookie(CHAT_GUEST_COOKIE_NAME, guestToken, this.tokens.setCookieOptions());
     return toChatConversationResponse(conversation);
@@ -58,8 +76,8 @@ export class PublicChatController {
   @ClientThrottle('read')
   @Get('conversations/current')
   @ApiOperation({ summary: 'Get the current guest chat conversation' })
-  @ApiOkResponse({ description: 'Current conversation for the supplied guest cookie' })
-  current(@Req() request: CookieRequest) {
+  @ApiOkResponse({ type: PublicGuestChatConversationDto, description: 'Current conversation for the supplied guest cookie' })
+  current(@Req() request: CookieRequest): Promise<PublicGuestChatConversationDto> {
     const guestToken = request.cookies?.[CHAT_GUEST_COOKIE_NAME];
     if (typeof guestToken !== 'string' || guestToken.length === 0) {
       throw new UnauthorizedException('Guest chat cookie is required');
@@ -73,12 +91,13 @@ export class PublicChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a message as a guest chat owner' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
+  @ApiCreatedResponse({ type: PublicGuestChatMessageDto, description: 'The persisted guest message' })
   async sendMessageForGuest(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendChatMessageDto,
     @Req() request: CookieRequest,
     @Ip() ipAddress: string,
-  ) {
+  ): Promise<PublicGuestChatMessageDto> {
     const guestToken = this.requireGuestToken(request);
     const message = await this.sendMessage.execute({
       audience: 'guest',
@@ -116,11 +135,12 @@ export class PublicChatController {
   @Header('Cache-Control', 'no-store, max-age=0')
   @ApiOperation({ summary: 'List messages as a guest chat owner' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
+  @ApiOkResponse({ type: PublicGuestChatMessagePageDto, description: 'Latest page of guest messages, newest first' })
   listMessagesForGuest(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Query() dto: ListChatMessagesDto,
     @Req() request: CookieRequest,
-  ) {
+  ): Promise<PublicGuestChatMessagePageDto> {
     const guestToken = this.requireGuestToken(request);
     return this.listMessages.execute({
       audience: 'guest',
@@ -137,11 +157,12 @@ export class PublicChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request reception handoff as a guest chat owner' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Guest conversation UUID' })
+  @ApiCreatedResponse({ type: PublicGuestChatConversationDto, description: 'Conversation after the reception handoff request' })
   async requestReceptionForGuest(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: GuestRequestHandoffDto,
     @Req() request: CookieRequest,
-  ) {
+  ): Promise<PublicGuestChatConversationDto> {
     const guestToken = this.requireGuestToken(request);
     return toChatConversationResponse(await this.requestHandoff.execute({
       audience: 'guest',

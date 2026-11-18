@@ -3,7 +3,7 @@ import { Controller, Get, Param, Query, Header, Redirect } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse, ApiQuery, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
-import { ApiPublicResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiPublicResponses } from '../../common/swagger';
 import { PublicEmployeeResponseDto } from '../dashboard/dto/people-response.dto';
 import { PublicEmployeeProfileDto } from './employee-response.dto';
 import { ListPublicEmployeesHandler } from '../../modules/people/employees/public/list-public-employees.handler';
@@ -30,8 +30,22 @@ export class PublicEmployeesController {
   @Redirect('', 302)
   @ApiOperation({ summary: 'Read the selected portrait of an active public employee' })
   @ApiParam({ name: 'key', description: 'Public slug or employee UUID' })
-  @ApiResponse({ status: 302, description: 'Redirect to a freshly signed private image URL' })
-  @ApiNotFoundResponse({ description: 'Public employee or selected image not found' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect to a freshly signed private image URL; the image itself is served from that URL, never from this API',
+    headers: {
+      Location: {
+        description: 'Freshly signed private image URL (short-lived)',
+        schema: { type: 'string', format: 'uri' },
+        example: 'https://media.example.com/employees/portrait.jpg?sig=abc',
+      },
+      'Cache-Control': {
+        description: 'Always `no-store, max-age=0`',
+        schema: { type: 'string', example: 'no-store, max-age=0' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'Public employee or selected image not found' })
   async image(@Param('key') key: string) {
     return { url: await this.getImage.execute(key) };
   }

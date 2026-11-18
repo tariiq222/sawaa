@@ -25,3 +25,31 @@ vulnerabilities:
       expo-router only call query-string stringify. Remove when query-string
       no longer needs the CommonJS 0.2.x export or a fixed CommonJS release is
       installed; do not extend this exception without owner approval.
+
+  # Owner approved 2026-11-18. Published that day; at approval time the most
+  # recent release (4.0.7) is still affected and no fixed version exists, so the
+  # scan cannot be satisfied by upgrading. Reachability: picomatch is pulled only
+  # by build/test tooling — jest-util@29.7.0 (via @jest/*, ts-jest), micromatch@
+  # 4.0.8 (via fast-glob and eslint-plugin-boundaries) and anymatch@3.1.3 (via
+  # jest-haste-map). No application source imports picomatch, micromatch,
+  # anymatch or chokidar (rg over apps/*/src and packages/*/src: no hits), and the
+  # production runners copy the build stage's node_modules but execute only the
+  # compiled NestJS/Next output. The advisory is a ReDoS (denial of service) on
+  # attacker-controlled glob patterns; no request path builds a glob from user
+  # input. Remove this entry as soon as an upstream fix ships, and do not extend
+  # it without a fresh owner decision.
+  - id: CVE-2026-112366
+    paths:
+      - pnpm-lock.yaml
+      - apps/mobile/pnpm-lock.yaml
+    purls:
+      - pkg:npm/picomatch@2.3.2
+      - pkg:npm/picomatch@4.0.7
+    expired_at: 2027-02-28
+    statement: >-
+      No upstream fix exists yet (4.0.7 is the latest and is still affected).
+      picomatch is reachable only from build and test tooling (jest-util,
+      micromatch, anymatch); no application source imports it and the production
+      runner executes compiled output only. The advisory is a ReDoS on
+      attacker-supplied glob patterns, and no HTTP path builds a glob from user
+      input. Re-check every release; do not extend without owner approval.

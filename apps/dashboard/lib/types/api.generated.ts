@@ -27858,6 +27858,26 @@ export interface components {
              */
             vatRate: number;
         };
+        PublicContactMessageDto: {
+            /**
+             * Format: date-time
+             * @description Creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Created contact message identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Initial triage status (always NEW on creation)
+             * @example NEW
+             * @enum {string}
+             */
+            status: "NEW" | "READ" | "REPLIED" | "ARCHIVED";
+        };
         PublicEmployeeProfileDto: {
             /**
              * @description Days of week (0=Sun..6=Sat) the employee has at least one active availability rule on
@@ -28122,6 +28142,296 @@ export interface components {
              */
             phone: string | null;
         };
+        PublicGuestChatAssistantRecoveryMetadataDto: {
+            /**
+             * @description Metadata discriminator
+             * @example ASSISTANT_RECOVERY
+             * @enum {string}
+             */
+            action: "ASSISTANT_RECOVERY";
+            /**
+             * @description Whether the guest may retry the assistant reply
+             * @example true
+             */
+            canRetry: boolean;
+        };
+        PublicGuestChatConversationDto: {
+            /**
+             * Format: uuid
+             * @description Always null for an unclaimed guest conversation
+             * @example null
+             */
+            clientId: string | null;
+            /**
+             * Format: date-time
+             * @description Conversation creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Practitioner the conversation is tied to, or null
+             * @example null
+             */
+            employeeId: string | null;
+            /**
+             * Format: uuid
+             * @description Conversation identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+            /**
+             * @description Whether the administrative assistant handles the conversation
+             * @example true
+             */
+            isAiChat: boolean;
+            /**
+             * @description Conversation language code
+             * @example ar
+             */
+            language: string;
+            /**
+             * @description Conversation lifecycle status
+             * @example AI_ACTIVE
+             * @enum {string}
+             */
+            status: "OPEN" | "AI_ACTIVE" | "WAITING_FOR_STAFF" | "STAFF_ACTIVE" | "CLOSED";
+            /**
+             * Format: date-time
+             * @description Last update instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            updatedAt: string;
+        };
+        PublicGuestChatHandoffMetadataDto: {
+            /**
+             * @description Metadata discriminator
+             * @example OFFER_HANDOFF
+             * @enum {string}
+             */
+            action: "OFFER_HANDOFF";
+            /**
+             * @description Why the assistant offered a hand-off
+             * @example USER_REQUESTED
+             * @enum {string}
+             */
+            reason: "OUT_OF_SCOPE" | "USER_REQUESTED" | "LIMIT_REACHED";
+        };
+        PublicGuestChatMessageCursorMetaDto: {
+            /**
+             * @description Whether another page exists
+             * @example false
+             */
+            hasMore: boolean;
+            /**
+             * @description Page size applied to the response
+             * @example 20
+             */
+            limit: number;
+            /**
+             * Format: uuid
+             * @description Cursor for the next page, or null when exhausted
+             * @example 00000000-4000-4000-a000-000000000002
+             */
+            nextCursor: string | null;
+        };
+        PublicGuestChatMessageDto: {
+            /**
+             * @description Message body
+             * @example مرحباً، أحتاج إلى مساعدة.
+             */
+            body: string;
+            /**
+             * Format: uuid
+             * @description Client-generated idempotency identifier, or null
+             * @example 00000000-4000-4000-a000-000000000005
+             */
+            clientMessageId: string | null;
+            /**
+             * Format: uuid
+             * @description Conversation the message belongs to
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            conversationId: string;
+            /**
+             * Format: date-time
+             * @description Message creation instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description Message identifier
+             * @example 00000000-4000-4000-a000-000000000002
+             */
+            id: string;
+            /**
+             * @description Message kind
+             * @example TEXT
+             * @enum {string}
+             */
+            kind: "TEXT" | "ACTION_CARD" | "OPERATION_RESULT" | "SYSTEM_EVENT";
+            /** @description Public metadata variant; omitted when the mapper has nothing safe to expose */
+            metadata?: components["schemas"]["PublicGuestChatHandoffMetadataDto"] | components["schemas"]["PublicGuestChatAssistantRecoveryMetadataDto"] | components["schemas"]["PublicGuestChatOperationCardMetadataDto"] | components["schemas"]["PublicGuestChatOperationResultMetadataDto"];
+            /**
+             * @description Sender category
+             * @example VISITOR
+             * @enum {string}
+             */
+            senderType: "CLIENT" | "EMPLOYEE" | "VISITOR" | "AI" | "STAFF" | "SYSTEM";
+        };
+        PublicGuestChatMessagePageDto: {
+            /** @description Messages on the requested page (newest first) */
+            data: components["schemas"]["PublicGuestChatMessageDto"][];
+            /** @description Keyset pagination metadata */
+            meta: components["schemas"]["PublicGuestChatMessageCursorMetaDto"];
+        };
+        PublicGuestChatOperationCardMetadataDto: {
+            /**
+             * @description Metadata discriminator
+             * @example CHAT_OPERATION
+             * @enum {string}
+             */
+            action: "CHAT_OPERATION";
+            /** @description Sanitized operation the card renders */
+            operation: components["schemas"]["PublicGuestChatOperationDto"];
+        };
+        PublicGuestChatOperationDto: {
+            /**
+             * @description Booking created or affected by the operation, or null
+             * @example null
+             */
+            bookingId: string | null;
+            /**
+             * @description Confirmations collected so far
+             * @example 0
+             */
+            confirmationCount: number;
+            /**
+             * @description Machine-readable failure code, or null
+             * @example null
+             */
+            errorCode: string | null;
+            /**
+             * Format: date-time
+             * @description Operation expiry instant
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            expiresAt: string;
+            /**
+             * @description Operation identifier
+             * @example 9f1c2f34-4a5b-4c6d-8e7f-001122334455
+             */
+            id: string;
+            /**
+             * @description Confirmations required before execution
+             * @example 1
+             */
+            requiredConfirmations: number;
+            /**
+             * @description Operation lifecycle status
+             * @example AWAITING_CONFIRMATION
+             * @enum {string}
+             */
+            status: "AWAITING_AUTH" | "AWAITING_EXISTING_BOOKING_ACK" | "AWAITING_CONFIRMATION" | "EXECUTING" | "SUCCEEDED" | "FAILED" | "DECLINED" | "EXPIRED";
+            /**
+             * @description Whitelisted display summary (arbitrary JSON values, size-limited by the mapper)
+             * @example {
+             *       "action": "CREATE_BOOKING",
+             *       "serviceName": "جلسة استشارة فردية"
+             *     }
+             */
+            summary: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Operation type
+             * @example CREATE_BOOKING
+             * @enum {string}
+             */
+            type: "LIST_OWN_APPOINTMENTS" | "CREATE_BOOKING" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING";
+            /**
+             * @description Optimistic concurrency version
+             * @example 0
+             */
+            version: number;
+        };
+        PublicGuestChatOperationResultMetadataDto: {
+            /**
+             * @description Booking created or affected by the operation, or null
+             * @example 00000000-4000-4000-a000-000000000009
+             */
+            bookingId?: string | null;
+            /**
+             * @description Executed operation identifier
+             * @example 9f1c2f34-4a5b-4c6d-8e7f-001122334455
+             */
+            operationId: string;
+            /**
+             * @description Operation outcome forwarded by the mapper
+             * @example BOOKING_CREATED
+             * @enum {string}
+             */
+            outcome?: "BOOKING_CREATED" | "BOOKING_RESCHEDULED" | "BOOKING_CANCELLED" | "CANCELLATION_REQUESTED" | "OPERATION_FAILED" | "APPOINTMENTS_LISTED";
+            /**
+             * @description Terminal operation status
+             * @example SUCCEEDED
+             * @enum {string}
+             */
+            status: "SUCCEEDED" | "FAILED" | "DECLINED";
+            /**
+             * @description Present and true only when booking synchronisation is still pending
+             * @example true
+             */
+            syncPending?: boolean;
+            /**
+             * @description Operation type
+             * @example CREATE_BOOKING
+             * @enum {string}
+             */
+            type: "LIST_OWN_APPOINTMENTS" | "CREATE_BOOKING" | "RESCHEDULE_BOOKING" | "CANCEL_BOOKING";
+        };
+        PublicIntakeResponseDto: {
+            /**
+             * @description Stored answers JSON keyed by intake field id
+             * @example {
+             *       "11111111-1111-1111-1111-111111111111": "نعم"
+             *     }
+             */
+            answers: {
+                [key: string]: unknown;
+            };
+            /**
+             * Format: uuid
+             * @description Booking the answers belong to
+             * @example 00000000-4000-4000-a000-000000000002
+             */
+            bookingId: string;
+            /**
+             * Format: uuid
+             * @description Client derived from the booking, or null
+             * @example 00000000-4000-4000-a000-000000000004
+             */
+            clientId: string | null;
+            /**
+             * Format: date-time
+             * @description Creation instant of the stored row
+             * @example 2026-10-10T09:00:00.000Z
+             */
+            createdAt?: string;
+            /**
+             * Format: uuid
+             * @description Answered intake form
+             * @example 00000000-4000-4000-a000-000000000003
+             */
+            formId: string;
+            /**
+             * Format: uuid
+             * @description Intake response identifier
+             * @example 00000000-4000-4000-a000-000000000001
+             */
+            id: string;
+        };
         PublicMobileHomeCardDto: {
             /** @description Card description in Arabic. */
             descriptionAr: string | null;
@@ -28144,6 +28454,13 @@ export interface components {
             titleAr: string;
             /** @description Card title in English. */
             titleEn: string | null;
+        };
+        PublicOtpVerifyResponseDto: {
+            /**
+             * @description Short-lived OTP session token, exchanged for password reset or client sign-in
+             * @example otp-session-token-placeholder
+             */
+            sessionToken: string;
         };
         PublicPackageFamilyWithVatResponseDto: {
             /**
@@ -28689,6 +29006,13 @@ export interface components {
              * @example تجربة مريحة ومهنية
              */
             text: string;
+        };
+        PublicVerifyEmailResponseDto: {
+            /**
+             * @description Always true on a successful verification
+             * @example true
+             */
+            success: boolean;
         };
         RatingClientResponseDto: {
             /**
@@ -58981,7 +59305,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicAvailabilitySlotDto"][];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59076,12 +59402,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Persisted intake response */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["PublicIntakeResponseDto"];
                 };
             };
             /** @description Validation failed (missing required field, unknown field, or invalid option) */
@@ -59335,7 +59662,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicGuestChatConversationDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59373,11 +59702,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Conversation after the reception handoff request */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicGuestChatConversationDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59416,11 +59748,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Latest page of guest messages, newest first */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicGuestChatMessagePageDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59458,11 +59793,14 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The persisted guest message */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicGuestChatMessageDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59545,7 +59883,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicGuestChatConversationDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59585,7 +59925,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicContactMessageDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -59823,9 +60165,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Redirect to a freshly signed private image URL */
+            /** @description Redirect to a freshly signed private image URL; the image itself is served from that URL, never from this API */
             302: {
                 headers: {
+                    /** @description Always `no-store, max-age=0` */
+                    "Cache-Control"?: string;
+                    /**
+                     * @description Freshly signed private image URL (short-lived)
+                     * @example https://media.example.com/employees/portrait.jpg?sig=abc
+                     */
+                    Location?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -59844,7 +60193,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
             /** @description Unhandled server error */
             500: {
@@ -61556,12 +61907,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Short-lived OTP session token on successful verification */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["PublicOtpVerifyResponseDto"];
                 };
             };
             /** @description Validation failed */
@@ -62277,6 +62629,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description The token was valid, unexpired and unused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicVerifyEmailResponseDto"];
+                };
+            };
             /** @description Validation failed */
             400: {
                 headers: {

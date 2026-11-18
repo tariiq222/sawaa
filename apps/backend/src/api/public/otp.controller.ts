@@ -7,6 +7,7 @@ import { RequestOtpHandler } from '../../modules/identity/otp/request-otp.handle
 import { VerifyOtpHandler } from '../../modules/identity/otp/verify-otp.handler';
 import { RequestOtpDto } from '../../modules/identity/otp/request-otp.dto';
 import { VerifyOtpDto } from '../../modules/identity/otp/verify-otp.dto';
+import { PublicOtpVerifyResponseDto } from './otp-response.dto';
 
 @ApiTags('Public / OTP')
 @ApiPublicResponses()
@@ -32,8 +33,8 @@ export class PublicOtpController {
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify OTP and obtain session tokens' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Auth tokens on successful OTP verification' } })
-  async verify(@Body() dto: VerifyOtpDto) {
+  @ApiOkResponse({ type: PublicOtpVerifyResponseDto, description: 'Short-lived OTP session token on successful verification' })
+  async verify(@Body() dto: VerifyOtpDto): Promise<PublicOtpVerifyResponseDto> {
     return this.verifyHandler.execute(dto);
   }
 }
