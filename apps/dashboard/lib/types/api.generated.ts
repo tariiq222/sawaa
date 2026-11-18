@@ -26244,6 +26244,63 @@ export interface components {
              */
             totalRefunded: number;
         };
+        PackagePurchaseSaleCreditDto: {
+            /**
+             * @description Pinned duration-option UUID, or null on flexible credits
+             * @example null
+             */
+            durationOptionId: string | null;
+            /**
+             * @description Pinned employee UUID, or null on flexible credits
+             * @example null
+             */
+            employeeId: string | null;
+            /**
+             * @description Sessions reserved by pending bookings; 0 immediately after a sale
+             * @example 0
+             */
+            reservedQuantity: number;
+            /**
+             * @description Pinned service UUID, or null on flexible credits
+             * @example 00000000-0000-4000-a000-0000000000d4
+             */
+            serviceId: string | null;
+            /**
+             * @description Total sessions granted (paid + free)
+             * @example 8
+             */
+            totalQuantity: number;
+            /**
+             * @description Frozen unit price for this credit in halalas
+             * @example 25000
+             */
+            unitPriceSnapshot: number;
+            /**
+             * @description Sessions already consumed; 0 immediately after a sale
+             * @example 0
+             */
+            usedQuantity: number;
+        };
+        PackagePurchaseSaleResponseDto: {
+            /** @description Credit buckets created (or replayed) for this sale */
+            credits: components["schemas"]["PackagePurchaseSaleCreditDto"][];
+            /**
+             * Format: uuid
+             * @description Invoice issued for this sale
+             * @example 00000000-0000-4000-a000-0000000000d7
+             */
+            invoiceId: string;
+            /**
+             * Format: uuid
+             * @description Recorded payment UUID, or null for a free sale
+             * @example 00000000-0000-4000-a000-0000000000d8
+             */
+            paymentId: string | null;
+            /** @description The persisted package-purchase row as stored (raw Prisma record, no computed price fields) */
+            purchase: {
+                [key: string]: unknown;
+            };
+        };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
         PackageRawGroupRecordDto: {
@@ -44307,7 +44364,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PackagePurchaseSaleResponseDto"];
+                };
             };
             /** @description Invalid package state, client missing, or ONLINE_CARD method */
             400: {
@@ -44338,6 +44397,15 @@ export interface operations {
             };
             /** @description Package or client not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Idempotent replay found a corrupted or incomplete purchase */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

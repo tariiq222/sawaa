@@ -96,6 +96,7 @@ import {
 import {
   PackagePurchaseListRowDto,
   PackagePurchaseRefundResponseDto,
+  PackagePurchaseSaleResponseDto,
 } from './dto/finance-package-purchase-response.dto';
 
 // Short-lived presigned download window for dashboard PDF links (5 minutes).
@@ -560,10 +561,11 @@ export class DashboardFinanceController {
   // still passes since CASL `manage` is a superset of every action.
   @CheckPermissions({ action: 'create', subject: 'Invoice' })
   @ApiOperation({ summary: 'Sell a SessionPackage to a client at the desk (manual payment)' })
-  @ApiCreatedResponse({ description: 'Package purchase created, invoice issued, payment recorded, credits activated' })
+  @ApiCreatedResponse({ description: 'Package purchase created, invoice issued, payment recorded, credits activated', type: PackagePurchaseSaleResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid package state, client missing, or ONLINE_CARD method', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'Package or client not found', type: ApiErrorDto })
-  createPackagePurchaseEndpoint(@Body() body: CreatePackagePurchaseDto) {
+  @ApiResponse({ status: 409, description: 'Idempotent replay found a corrupted or incomplete purchase', type: ApiErrorDto })
+  createPackagePurchaseEndpoint(@Body() body: CreatePackagePurchaseDto): Promise<PackagePurchaseSaleResponseDto> {
     return this.createPackagePurchase.execute({ ...body });
   }
 

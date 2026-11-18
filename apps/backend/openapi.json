@@ -29833,6 +29833,94 @@
         ],
         "type": "object"
       },
+      "PackagePurchaseSaleCreditDto": {
+        "properties": {
+          "durationOptionId": {
+            "description": "Pinned duration-option UUID, or null on flexible credits",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Pinned employee UUID, or null on flexible credits",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "reservedQuantity": {
+            "description": "Sessions reserved by pending bookings; 0 immediately after a sale",
+            "example": 0,
+            "type": "number"
+          },
+          "serviceId": {
+            "description": "Pinned service UUID, or null on flexible credits",
+            "example": "00000000-0000-4000-a000-0000000000d4",
+            "nullable": true,
+            "type": "string"
+          },
+          "totalQuantity": {
+            "description": "Total sessions granted (paid + free)",
+            "example": 8,
+            "type": "number"
+          },
+          "unitPriceSnapshot": {
+            "description": "Frozen unit price for this credit in halalas",
+            "example": 25000,
+            "type": "number"
+          },
+          "usedQuantity": {
+            "description": "Sessions already consumed; 0 immediately after a sale",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "serviceId",
+          "employeeId",
+          "durationOptionId",
+          "unitPriceSnapshot",
+          "totalQuantity",
+          "usedQuantity",
+          "reservedQuantity"
+        ],
+        "type": "object"
+      },
+      "PackagePurchaseSaleResponseDto": {
+        "properties": {
+          "credits": {
+            "description": "Credit buckets created (or replayed) for this sale",
+            "items": {
+              "$ref": "#/components/schemas/PackagePurchaseSaleCreditDto"
+            },
+            "type": "array"
+          },
+          "invoiceId": {
+            "description": "Invoice issued for this sale",
+            "example": "00000000-0000-4000-a000-0000000000d7",
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "description": "Recorded payment UUID, or null for a free sale",
+            "example": "00000000-0000-4000-a000-0000000000d8",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "purchase": {
+            "additionalProperties": true,
+            "description": "The persisted package-purchase row as stored (raw Prisma record, no computed price fields)",
+            "type": "object"
+          }
+        },
+        "required": [
+          "purchase",
+          "invoiceId",
+          "paymentId",
+          "credits"
+        ],
+        "type": "object"
+      },
       "PackagePurchaseStatus": {
         "enum": [
           "PENDING",
@@ -55996,6 +56084,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackagePurchaseSaleResponseDto"
+                }
+              }
+            },
             "description": "Package purchase created, invoice issued, payment recorded, credits activated"
           },
           "400": {
@@ -56037,6 +56132,16 @@
               }
             },
             "description": "Package or client not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Idempotent replay found a corrupted or incomplete purchase"
           },
           "500": {
             "content": {
