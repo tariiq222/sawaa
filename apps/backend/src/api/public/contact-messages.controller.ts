@@ -5,6 +5,7 @@ import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { CreateContactMessageHandler } from '../../modules/comms/contact-messages/create-contact-message.handler';
 import { CreateContactMessageDto } from '../../modules/comms/contact-messages/create-contact-message.dto';
+import { PublicContactMessageDto } from './contact-message-response.dto';
 
 @ApiTags('Public / Contact')
 @ApiPublicResponses()
@@ -17,8 +18,8 @@ export class PublicContactMessagesController {
   @Post()
   @HttpCode(201)
   @ApiOperation({ summary: 'Submit contact message' })
-  @ApiCreatedResponse({ description: 'Message accepted' })
-  submit(@Body() dto: CreateContactMessageDto) {
+  @ApiCreatedResponse({ type: PublicContactMessageDto, description: 'Message accepted' })
+  submit(@Body() dto: CreateContactMessageDto): Promise<PublicContactMessageDto> {
     return this.handler.execute(dto);
   }
 }

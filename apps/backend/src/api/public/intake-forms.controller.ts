@@ -9,6 +9,7 @@ import { ResolveApplicableIntakeFormsHandler } from '../../modules/org-experienc
 import { ResolveApplicableIntakeFormsDto } from '../../modules/org-experience/resolve-applicable-intake-forms/resolve-applicable-intake-forms.dto';
 import { SubmitIntakeResponseHandler } from '../../modules/org-experience/submit-intake-response/submit-intake-response.handler';
 import { SubmitIntakeResponseDto } from '../../modules/org-experience/submit-intake-response/submit-intake-response.dto';
+import { PublicIntakeResponseDto } from './intake-response.dto';
 
 @ApiTags('Public / Org Experience')
 @ApiPublicResponses()
@@ -34,14 +35,14 @@ export class PublicIntakeFormsController {
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('bookings/:bookingId/intake-responses')
   @ApiOperation({ summary: 'Submit intake form answers for one of your bookings (requires client auth)' })
-  @ApiCreatedResponse({ schema: { type: 'object', description: 'Persisted intake response' } })
+  @ApiCreatedResponse({ type: PublicIntakeResponseDto, description: 'Persisted intake response' })
   @ApiResponse({ status: 400, description: 'Validation failed (missing required field, unknown field, or invalid option)' })
   @ApiResponse({ status: 404, description: 'Booking or form not found' })
   async submit(
     @Param('bookingId', ParseUUIDPipe) bookingId: string,
     @Body() body: SubmitIntakeResponseDto,
     @ClientSession() client: { id: string },
-  ) {
+  ): Promise<PublicIntakeResponseDto> {
     return this.submitResponse.execute({
       bookingId,
       formId: body.formId,
