@@ -125,6 +125,33 @@
         ],
         "type": "object"
       },
+      "AiChatCompletionResponseDto": {
+        "properties": {
+          "reply": {
+            "description": "Assistant reply text",
+            "example": "نعمل من الأحد إلى الخميس، من ٩ صباحًا حتى ٥ مساءً.",
+            "type": "string"
+          },
+          "sessionId": {
+            "description": "Chat session UUID holding the conversation history (created on the first message)",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourcesUsed": {
+            "description": "Number of knowledge-base chunks used to ground the reply",
+            "example": 3,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sessionId",
+          "reply",
+          "sourcesUsed"
+        ],
+        "type": "object"
+      },
       "AiProviderConfigResponseDto": {
         "properties": {
           "connectionStatus": {
@@ -29806,6 +29833,94 @@
         ],
         "type": "object"
       },
+      "PackagePurchaseSaleCreditDto": {
+        "properties": {
+          "durationOptionId": {
+            "description": "Pinned duration-option UUID, or null on flexible credits",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Pinned employee UUID, or null on flexible credits",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "reservedQuantity": {
+            "description": "Sessions reserved by pending bookings; 0 immediately after a sale",
+            "example": 0,
+            "type": "number"
+          },
+          "serviceId": {
+            "description": "Pinned service UUID, or null on flexible credits",
+            "example": "00000000-0000-4000-a000-0000000000d4",
+            "nullable": true,
+            "type": "string"
+          },
+          "totalQuantity": {
+            "description": "Total sessions granted (paid + free)",
+            "example": 8,
+            "type": "number"
+          },
+          "unitPriceSnapshot": {
+            "description": "Frozen unit price for this credit in halalas",
+            "example": 25000,
+            "type": "number"
+          },
+          "usedQuantity": {
+            "description": "Sessions already consumed; 0 immediately after a sale",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "serviceId",
+          "employeeId",
+          "durationOptionId",
+          "unitPriceSnapshot",
+          "totalQuantity",
+          "usedQuantity",
+          "reservedQuantity"
+        ],
+        "type": "object"
+      },
+      "PackagePurchaseSaleResponseDto": {
+        "properties": {
+          "credits": {
+            "description": "Credit buckets created (or replayed) for this sale",
+            "items": {
+              "$ref": "#/components/schemas/PackagePurchaseSaleCreditDto"
+            },
+            "type": "array"
+          },
+          "invoiceId": {
+            "description": "Invoice issued for this sale",
+            "example": "00000000-0000-4000-a000-0000000000d7",
+            "format": "uuid",
+            "type": "string"
+          },
+          "paymentId": {
+            "description": "Recorded payment UUID, or null for a free sale",
+            "example": "00000000-0000-4000-a000-0000000000d8",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "purchase": {
+            "additionalProperties": true,
+            "description": "The persisted package-purchase row as stored (raw Prisma record, no computed price fields)",
+            "type": "object"
+          }
+        },
+        "required": [
+          "purchase",
+          "invoiceId",
+          "paymentId",
+          "credits"
+        ],
+        "type": "object"
+      },
       "PackagePurchaseStatus": {
         "enum": [
           "PENDING",
@@ -32263,6 +32378,55 @@
         ],
         "type": "object"
       },
+      "ProgramEnrollmentCreatedResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking created for the enrollment",
+            "example": "44444444-4444-4444-8444-444444444444",
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoiceId": {
+            "description": "Invoice issued for the enrollment, or null when no payment is due",
+            "example": "00000000-0000-4000-a000-000000000042",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Lifecycle status of the created booking",
+            "enum": [
+              "PENDING",
+              "PENDING_GROUP_FILL",
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "CANCELLED",
+              "COMPLETED",
+              "NO_SHOW",
+              "EXPIRED",
+              "CANCEL_REQUESTED",
+              "DEPOSIT_PAID"
+            ],
+            "example": "PENDING_GROUP_FILL",
+            "type": "string"
+          },
+          "type": {
+            "description": "Result discriminator: the client was enrolled",
+            "enum": [
+              "ENROLLED"
+            ],
+            "example": "ENROLLED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "bookingId",
+          "status",
+          "invoiceId"
+        ],
+        "type": "object"
+      },
       "ProgramEnrollmentResponseDto": {
         "properties": {
           "booking": {
@@ -32639,6 +32803,20 @@
         ],
         "type": "object"
       },
+      "PublicAuthClientSessionResponseDto": {
+        "properties": {
+          "clientId": {
+            "description": "Authenticated (or newly created) client UUID. Session credentials are set as the httpOnly cookies `client_access_token` and `client_refresh_token`; no token value is ever returned in the body.",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
       "PublicAvailabilityDayDto": {
         "properties": {
           "date": {
@@ -32676,6 +32854,169 @@
         "required": [
           "startTime",
           "endTime"
+        ],
+        "type": "object"
+      },
+      "PublicBookingInvoiceResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000005",
+            "nullable": true,
+            "type": "string"
+          },
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-00000000000c",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Owning client UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant (ISO 8601 UTC)",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "discountAmt": {
+            "description": "Discount amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "dueAt": {
+            "description": "Due instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID on the invoice",
+            "example": "00000000-0000-4000-a000-000000000004",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Invoice UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "issuedAt": {
+            "description": "Issue instant, or null",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "packagePurchaseId": {
+            "description": "Package purchase UUID, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "paidAt": {
+            "description": "Paid instant, or null",
+            "example": "2026-05-20T09:05:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "pdfUrl": {
+            "description": "Frozen paid-receipt object key, or null. Not a URL: request a short-lived link from `GET /public/invoices/{id}/pdf`.",
+            "example": "invoices/00000000-0000-4000-a000-000000000002/1700000000000.pdf",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "refundedVatAmt": {
+            "description": "Refunded VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "sellerName": {
+            "description": "Seller name shown on the invoice",
+            "example": "مركز سواء",
+            "type": "string"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum value)",
+            "example": "PAID",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Net amount before discount and VAT, in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "total": {
+            "description": "Invoice total in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "vatAmt": {
+            "description": "VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "vatRate": {
+            "description": "VAT rate as a fraction of 1 (0 when VAT is off)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "sellerName",
+          "branchId",
+          "clientId",
+          "employeeId",
+          "bookingId",
+          "packagePurchaseId",
+          "subtotal",
+          "discountAmt",
+          "vatRate",
+          "vatAmt",
+          "total",
+          "refundedAmount",
+          "refundedVatAmt",
+          "currency",
+          "status",
+          "issuedAt",
+          "dueAt",
+          "paidAt",
+          "createdAt",
+          "pdfUrl"
+        ],
+        "type": "object"
+      },
+      "PublicBookingRescheduleResponseDto": {
+        "properties": {
+          "booking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingMutationDto"
+              }
+            ],
+            "description": "The rescheduled booking, client-safe projection (no staff notes, provider diagnostics or Zoom host capabilities)."
+          }
+        },
+        "required": [
+          "booking"
         ],
         "type": "object"
       },
@@ -33083,6 +33424,440 @@
           "categories",
           "services",
           "vatRate"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatAssistantRecoveryMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "ASSISTANT_RECOVERY"
+            ],
+            "example": "ASSISTANT_RECOVERY",
+            "type": "string"
+          },
+          "canRetry": {
+            "description": "Whether the client may retry the assistant reply",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "canRetry"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatConversationDto": {
+        "properties": {
+          "clientId": {
+            "description": "Owning client UUID (always the authenticated client here), or null",
+            "example": "00000000-4000-4000-a000-000000000003",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Conversation creation instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Assigned employee UUID, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Conversation identifier",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "description": "Whether the administrative assistant handles the conversation",
+            "example": true,
+            "type": "boolean"
+          },
+          "language": {
+            "description": "Conversation language code",
+            "example": "ar",
+            "type": "string"
+          },
+          "status": {
+            "description": "Conversation lifecycle status",
+            "enum": [
+              "OPEN",
+              "AI_ACTIVE",
+              "WAITING_FOR_STAFF",
+              "STAFF_ACTIVE",
+              "CLOSED"
+            ],
+            "example": "AI_ACTIVE",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "employeeId",
+          "isAiChat",
+          "status",
+          "language",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatHandoffMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "OFFER_HANDOFF"
+            ],
+            "example": "OFFER_HANDOFF",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why the assistant offered a hand-off",
+            "enum": [
+              "OUT_OF_SCOPE",
+              "USER_REQUESTED",
+              "LIMIT_REACHED"
+            ],
+            "example": "USER_REQUESTED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatMessageCursorMetaDto": {
+        "properties": {
+          "hasMore": {
+            "description": "Whether another page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Page size applied to the response",
+            "example": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "nextCursor": {
+            "description": "Cursor for the next page, or null when exhausted",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "nextCursor",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatMessageDto": {
+        "properties": {
+          "body": {
+            "description": "Message body",
+            "example": "أرغب في تأكيد الموعد.",
+            "type": "string"
+          },
+          "clientMessageId": {
+            "description": "Client-generated idempotency identifier, or null",
+            "example": "00000000-4000-4000-a000-000000000005",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "conversationId": {
+            "description": "Conversation the message belongs to",
+            "example": "00000000-4000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Message creation instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message identifier",
+            "example": "00000000-4000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Message kind",
+            "enum": [
+              "TEXT",
+              "ACTION_CARD",
+              "OPERATION_RESULT",
+              "SYSTEM_EVENT"
+            ],
+            "example": "TEXT",
+            "type": "string"
+          },
+          "metadata": {
+            "description": "Public metadata variant; omitted when the mapper has nothing safe to expose",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublicClientChatHandoffMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/PublicClientChatAssistantRecoveryMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/PublicClientChatOperationCardMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/PublicClientChatOperationResultMetadataDto"
+              }
+            ]
+          },
+          "senderType": {
+            "description": "Sender category",
+            "enum": [
+              "CLIENT",
+              "EMPLOYEE",
+              "VISITOR",
+              "AI",
+              "STAFF",
+              "SYSTEM"
+            ],
+            "example": "CLIENT",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "body",
+          "kind",
+          "clientMessageId",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatMessagePageDto": {
+        "properties": {
+          "data": {
+            "description": "Messages on the requested page (newest first)",
+            "items": {
+              "$ref": "#/components/schemas/PublicClientChatMessageDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicClientChatMessageCursorMetaDto"
+              }
+            ],
+            "description": "Keyset pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatOperationCardMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminator",
+            "enum": [
+              "CHAT_OPERATION"
+            ],
+            "example": "CHAT_OPERATION",
+            "type": "string"
+          },
+          "operation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicClientChatOperationDto"
+              }
+            ],
+            "description": "Sanitized operation the card renders"
+          }
+        },
+        "required": [
+          "action",
+          "operation"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatOperationDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking created or affected by the operation, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmationCount": {
+            "description": "Confirmations collected so far",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "errorCode": {
+            "description": "Machine-readable failure code, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "Operation expiry instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Operation identifier",
+            "example": "9f1c2f34-4a5b-4c6d-8e7f-001122334455",
+            "type": "string"
+          },
+          "requiredConfirmations": {
+            "description": "Confirmations required before execution",
+            "example": 1,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Operation lifecycle status",
+            "enum": [
+              "AWAITING_AUTH",
+              "AWAITING_EXISTING_BOOKING_ACK",
+              "AWAITING_CONFIRMATION",
+              "EXECUTING",
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED",
+              "EXPIRED"
+            ],
+            "example": "AWAITING_CONFIRMATION",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "description": "Whitelisted display summary (arbitrary JSON values, size-limited by the mapper)",
+            "example": {
+              "action": "CREATE_BOOKING",
+              "serviceName": "جلسة استشارة فردية"
+            },
+            "type": "object"
+          },
+          "type": {
+            "description": "Operation type",
+            "enum": [
+              "LIST_OWN_APPOINTMENTS",
+              "CREATE_BOOKING",
+              "RESCHEDULE_BOOKING",
+              "CANCEL_BOOKING"
+            ],
+            "example": "CREATE_BOOKING",
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic concurrency version",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "version",
+          "requiredConfirmations",
+          "confirmationCount",
+          "expiresAt",
+          "bookingId",
+          "errorCode",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "PublicClientChatOperationResultMetadataDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking created or affected by the operation, or null",
+            "example": "00000000-4000-4000-a000-000000000009",
+            "nullable": true,
+            "type": "string"
+          },
+          "operationId": {
+            "description": "Executed operation identifier",
+            "example": "9f1c2f34-4a5b-4c6d-8e7f-001122334455",
+            "type": "string"
+          },
+          "outcome": {
+            "description": "Operation outcome forwarded by the mapper",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_RESCHEDULED",
+              "BOOKING_CANCELLED",
+              "CANCELLATION_REQUESTED",
+              "OPERATION_FAILED",
+              "APPOINTMENTS_LISTED"
+            ],
+            "example": "BOOKING_CREATED",
+            "type": "string"
+          },
+          "status": {
+            "description": "Terminal operation status",
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED"
+            ],
+            "example": "SUCCEEDED",
+            "type": "string"
+          },
+          "syncPending": {
+            "description": "Present and true only when booking synchronisation is still pending",
+            "example": true,
+            "type": "boolean"
+          },
+          "type": {
+            "description": "Operation type",
+            "enum": [
+              "LIST_OWN_APPOINTMENTS",
+              "CREATE_BOOKING",
+              "RESCHEDULE_BOOKING",
+              "CANCEL_BOOKING"
+            ],
+            "example": "CREATE_BOOKING",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operationId",
+          "type",
+          "status"
         ],
         "type": "object"
       },
@@ -33988,6 +34763,245 @@
         ],
         "type": "object"
       },
+      "PublicInvoicePaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Payment amount in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "createdAt": {
+            "description": "Creation instant (ISO 8601 UTC)",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "id": {
+            "description": "Payment UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "description": "Payment method (Prisma enum value)",
+            "example": "ONLINE_CARD",
+            "type": "string"
+          },
+          "number": {
+            "description": "Sequential payment number",
+            "example": 42,
+            "type": "integer"
+          },
+          "processedAt": {
+            "description": "Provider processing instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Payment status (Prisma enum value)",
+            "example": "COMPLETED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "amount",
+          "refundedAmount",
+          "currency",
+          "method",
+          "status",
+          "createdAt",
+          "processedAt"
+        ],
+        "type": "object"
+      },
+      "PublicInvoicePdfUrlDto": {
+        "properties": {
+          "url": {
+            "description": "Short-lived (5 minute) presigned download URL for the paid receipt PDF",
+            "example": "https://minio.local/finance-invoices/receipts/00000000-0000-4000-a000-000000000002.pdf?X-Amz-Expires=300",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "PublicInvoiceResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking UUID, or null for package-purchase invoices",
+            "example": "00000000-0000-4000-a000-000000000005",
+            "nullable": true,
+            "type": "string"
+          },
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-00000000000c",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Owning client UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant (ISO 8601 UTC)",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "discountAmt": {
+            "description": "Discount amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "dueAt": {
+            "description": "Due instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID on the invoice",
+            "example": "00000000-0000-4000-a000-000000000004",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Invoice UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "issuedAt": {
+            "description": "Issue instant, or null",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "number": {
+            "description": "Sequential invoice number",
+            "example": 1024,
+            "type": "integer"
+          },
+          "packagePurchaseId": {
+            "description": "Package purchase UUID, or null for booking invoices",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "paidAt": {
+            "description": "Paid instant, or null",
+            "example": "2026-05-20T09:05:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "payments": {
+            "description": "Client-safe payments on this invoice, newest first",
+            "items": {
+              "$ref": "#/components/schemas/PublicInvoicePaymentDto"
+            },
+            "type": "array"
+          },
+          "pdfUrl": {
+            "description": "Frozen paid-receipt object key, or null. Not a URL: request a short-lived link from `GET /public/invoices/{id}/pdf`.",
+            "example": "invoices/00000000-0000-4000-a000-000000000002/1700000000000.pdf",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "refundedVatAmt": {
+            "description": "Refunded VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "sellerName": {
+            "description": "Seller name shown on the invoice",
+            "example": "مركز سواء",
+            "type": "string"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum value)",
+            "example": "PAID",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Net amount before discount and VAT, in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "total": {
+            "description": "Invoice total in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "vatAmt": {
+            "description": "VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "vatRate": {
+            "description": "VAT rate as a fraction of 1 (0 when VAT is off)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "sellerName",
+          "branchId",
+          "clientId",
+          "employeeId",
+          "bookingId",
+          "packagePurchaseId",
+          "subtotal",
+          "discountAmt",
+          "vatRate",
+          "vatAmt",
+          "total",
+          "refundedAmount",
+          "refundedVatAmt",
+          "currency",
+          "status",
+          "issuedAt",
+          "dueAt",
+          "paidAt",
+          "createdAt",
+          "pdfUrl",
+          "payments"
+        ],
+        "type": "object"
+      },
       "PublicMobileHomeCardDto": {
         "properties": {
           "descriptionAr": {
@@ -34361,6 +35375,21 @@
           "price",
           "vatRate"
         ],
+        "type": "object"
+      },
+      "PublicPaymentWebhookAckDto": {
+        "properties": {
+          "reason": {
+            "description": "Machine-readable drop reason, present only with `skipped`. Values implemented by the handler: missing_body (controller), missing_metadata, invoice_not_found, missing_payment_config, webhook_secret_decrypt_failed, invalid_signature, missing_signature, duplicate, payment_not_found, invoice_mismatch, identity_mismatch, terminal_invoice, currency_mismatch, already_refunded, invalid_transition, amount_mismatch, and the dynamic `non_terminal_status:<provider status>`.",
+            "example": "invalid_signature",
+            "type": "string"
+          },
+          "skipped": {
+            "description": "Present and true only when the delivery was dropped-and-acked without settling. Absent on a settled delivery (the body is then `{}`).",
+            "example": true,
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "PublicPractitionerBookingOptionDto": {
@@ -34814,6 +35843,40 @@
         },
         "required": [
           "programs"
+        ],
+        "type": "object"
+      },
+      "PublicRefundRequestResponseDto": {
+        "properties": {
+          "amount": {
+            "description": "Refundable amount in halalas",
+            "example": 20000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "createdAt": {
+            "description": "Creation instant (ISO 8601 UTC)",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Refund request UUID",
+            "example": "00000000-0000-4000-a000-000000000050",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Refund request status (Prisma enum value); always PENDING_REVIEW on creation",
+            "example": "PENDING_REVIEW",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "amount",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -37999,6 +39062,16 @@
         "required": [
           "ok"
         ],
+        "type": "object"
+      },
+      "SmsWebhookDeliveryReceiptAckDto": {
+        "properties": {
+          "skipped": {
+            "description": "Present and true only when the receipt was acknowledged without changing a delivery row (duplicate event id, stale out-of-order receipt, no SMS config, or provider mismatch). Absent on an applied receipt.",
+            "example": true,
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "SmtpCredentialsDto": {
@@ -46784,6 +47857,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiChatCompletionResponseDto"
+                }
+              }
+            },
             "description": "AI reply with session ID and sources count"
           },
           "400": {
@@ -46825,6 +47905,16 @@
               }
             },
             "description": "Unhandled server error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "The AI provider is unavailable; retry later"
           }
         },
         "security": [
@@ -54994,6 +56084,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackagePurchaseSaleResponseDto"
+                }
+              }
+            },
             "description": "Package purchase created, invoice issued, payment recorded, credits activated"
           },
           "400": {
@@ -55035,6 +56132,16 @@
               }
             },
             "description": "Package or client not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Idempotent replay found a corrupted or incomplete purchase"
           },
           "500": {
             "content": {
@@ -68954,7 +70061,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramEnrollmentCreatedResponseDto"
+                }
+              }
+            },
+            "description": "Client enrolled; the created booking id, its lifecycle status and any issued invoice"
           },
           "400": {
             "content": {
@@ -68985,6 +70099,26 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Program or client not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Program is not open for enrollment, is full, or the client is already enrolled"
           },
           "500": {
             "content": {
@@ -76487,12 +77621,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Auth tokens",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicAuthClientSessionResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Credentials accepted. Session credentials are set as the httpOnly cookies `client_access_token` and `client_refresh_token`; only the client id is returned in the body."
           },
           "400": {
             "content": {
@@ -76503,6 +77636,26 @@
               }
             },
             "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid credentials"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Too many attempts, try again later"
           },
           "500": {
             "content": {
@@ -76585,12 +77738,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "New access token",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicAuthClientSessionResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Refresh credential rotated. New session credentials are set as the httpOnly cookies `client_access_token` and `client_refresh_token`; only the client id is returned in the body."
           },
           "400": {
             "content": {
@@ -76601,6 +77753,16 @@
               }
             },
             "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing, invalid or already-rotated refresh token"
           },
           "500": {
             "content": {
@@ -76634,16 +77796,15 @@
           "required": true
         },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Created client account with tokens",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicAuthClientSessionResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Client account created. Session credentials are set as the httpOnly cookies `client_access_token` and `client_refresh_token`; only the client id is returned in the body."
           },
           "400": {
             "content": {
@@ -76654,6 +77815,16 @@
               }
             },
             "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid OTP session token"
           },
           "500": {
             "content": {
@@ -78283,17 +79454,26 @@
         "operationId": "PublicInvoicesController_getInvoice_v1",
         "parameters": [
           {
+            "description": "Invoice UUID",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicInvoiceResponseDto"
+                }
+              }
+            },
+            "description": "Client-owned invoice with its payments. `pdfUrl` is the frozen receipt object key, never a presigned URL."
           },
           "400": {
             "content": {
@@ -78304,6 +79484,26 @@
               }
             },
             "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid client session"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invoice not found for this client"
           },
           "500": {
             "content": {
@@ -78343,6 +79543,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicInvoicePdfUrlDto"
+                }
+              }
+            },
             "description": "Short-lived URL of the paid receipt PDF"
           },
           "400": {
@@ -78355,7 +79562,24 @@
             },
             "description": "Validation failed"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid client session"
+          },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
             "description": "No receipt has been issued for this invoice"
           },
           "500": {
@@ -78934,12 +80158,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Invoice details",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicBookingInvoiceResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Booking-scoped invoice. `pdfUrl` is the frozen receipt object key, never a presigned URL."
           },
           "400": {
             "content": {
@@ -78972,7 +80195,14 @@
             "description": "Action denied by permission policy"
           },
           "404": {
-            "description": "Booking not found"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found or has no invoice"
           },
           "500": {
             "content": {
@@ -79025,12 +80255,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Updated booking",
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicBookingRescheduleResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Booking rescheduled; returns the client-safe booking projection"
           },
           "400": {
             "content": {
@@ -79061,6 +80290,26 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Slot or client schedule conflict"
           },
           "500": {
             "content": {
@@ -79376,7 +80625,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatConversationDto"
+                }
+              }
+            },
+            "description": "The conversation after the reception handoff request"
           },
           "400": {
             "content": {
@@ -79407,6 +80663,26 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Conversation not owned by the authenticated client or not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Conversation cannot request reception in its current state"
           },
           "500": {
             "content": {
@@ -79469,7 +80745,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatMessagePageDto"
+                }
+              }
+            },
+            "description": "Messages on the requested page (newest first)"
           },
           "400": {
             "content": {
@@ -79500,6 +80783,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Conversation not owned by the authenticated client or not found"
           },
           "500": {
             "content": {
@@ -79548,7 +80841,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatMessageDto"
+                }
+              }
+            },
+            "description": "The persisted message, public-safe projection"
           },
           "400": {
             "content": {
@@ -79579,6 +80879,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Conversation not owned by the authenticated client or not found"
           },
           "500": {
             "content": {
@@ -79706,6 +81016,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatConversationDto"
+                }
+              }
+            },
             "description": "Current conversation for the authenticated client"
           },
           "400": {
@@ -79787,7 +81104,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatOperationDto"
+                }
+              }
+            },
+            "description": "The operation after this transition, public-safe projection"
           },
           "400": {
             "content": {
@@ -79818,6 +81142,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Operation not owned by the authenticated client or not found"
           },
           "500": {
             "content": {
@@ -79868,7 +81202,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatOperationDto"
+                }
+              }
+            },
+            "description": "The operation after this transition, public-safe projection"
           },
           "400": {
             "content": {
@@ -79899,6 +81240,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Operation not owned by the authenticated client or not found"
           },
           "500": {
             "content": {
@@ -79949,7 +81300,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicClientChatOperationDto"
+                }
+              }
+            },
+            "description": "The operation after this transition, public-safe projection"
           },
           "400": {
             "content": {
@@ -79980,6 +81338,16 @@
               }
             },
             "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Operation not owned by the authenticated client or not found"
           },
           "500": {
             "content": {
@@ -80936,16 +82304,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "received": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublicPaymentWebhookAckDto"
                 }
               }
             },
-            "description": ""
+            "description": "Delivery acknowledged. An empty object `{}` means the payment was settled; `{ skipped: true, reason }` means the delivery was dropped-and-acked (malformed payload, bad signature, duplicate, non-terminal provider status, amount/currency mismatch, ...)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Infrastructure failure; the provider should retry"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Webhook claim temporarily unavailable; the provider should retry"
           }
         },
         "summary": "Receive Moyasar booking-payment webhook events",
@@ -81161,7 +82544,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRefundRequestResponseDto"
+                }
+              }
+            },
+            "description": "Refund request recorded as PENDING_REVIEW. No money moves on this route; staff review it from the dashboard."
           },
           "400": {
             "content": {
@@ -81172,6 +82562,36 @@
               }
             },
             "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid client session"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invoice not found for this client"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "A refund request already exists for this invoice"
           },
           "500": {
             "content": {
@@ -81335,16 +82755,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "received": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/SmsWebhookDeliveryReceiptAckDto"
                 }
               }
             },
-            "description": ""
+            "description": "Receipt acknowledged. An empty object `{}` means a delivery row was advanced; `{ skipped: true }` means the receipt was a duplicate, stale/out-of-order, or did not match the configured provider."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unsupported provider, missing request body, missing X-Signature header, no stored webhook secret, or configured-provider mismatch"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Signature verification, payload parsing or infrastructure failure; the provider should retry"
           }
         },
         "summary": "Inbound SMS delivery-receipt webhook",

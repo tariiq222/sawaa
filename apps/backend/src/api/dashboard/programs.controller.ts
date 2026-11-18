@@ -1,4 +1,5 @@
 import { ProgramDetailResponseDto } from './dto/program-detail-response.dto';
+import { ProgramEnrollmentCreatedResponseDto } from './dto/program-enrollment-response.dto';
 import {
   ProgramListItemResponseDto,
   ProgramPublishResponseDto,
@@ -31,7 +32,7 @@ import {
 import { ProgramStatus } from '@prisma/client';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
-import { ApiStandardResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
 import { CreateProgramHandler } from '../../modules/bookings/create-program/create-program.handler';
 import { UpdateProgramHandler } from '../../modules/bookings/update-program/update-program.handler';
 import { ListProgramsHandler } from '../../modules/bookings/list-programs/list-programs.handler';
@@ -164,10 +165,16 @@ export class DashboardProgramsController {
   @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Enroll a client on-behalf from the dashboard' })
   @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiCreatedResponse({
+    type: ProgramEnrollmentCreatedResponseDto,
+    description: 'Client enrolled; the created booking id, its lifecycle status and any issued invoice',
+  })
+  @ApiResponse({ status: 404, description: 'Program or client not found', type: ApiErrorDto })
+  @ApiResponse({ status: 409, description: 'Program is not open for enrollment, is full, or the client is already enrolled', type: ApiErrorDto })
   async enroll(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: EnrollClientDto,
-  ) {
+  ): Promise<ProgramEnrollmentCreatedResponseDto> {
     return this.enrollInProgram.execute({
       programId: id,
       clientId: dto.clientId,

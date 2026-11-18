@@ -7,7 +7,7 @@ import {
   ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse, ApiProperty,
 } from '@nestjs/swagger';
 import { DocumentStatus } from '@prisma/client';
-import { ApiStandardResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiStandardResponses } from '../../common/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
@@ -27,6 +27,7 @@ import { UpsertAiProviderConfigHandler } from '../../modules/ai/provider-config/
 import { TestAiProviderConfigHandler } from '../../modules/ai/provider-config/test-ai-provider-config.handler';
 import { UpsertAiProviderConfigDto, TestAiProviderConfigDto, AiProviderConfigResponseDto, AiProviderTestResponseDto, AiProviderModelSuggestionDto } from '../../modules/ai/provider-config/provider-config.dto';
 import { AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiChatCompletionResponseDto } from './dto/ai-response.dto';
 
 class KnowledgeDocumentSummaryResponseDto {
   @ApiProperty({ format: 'uuid', description: 'Document UUID.', example: '00000000-0000-4000-a000-000000000050' }) id!: string;
@@ -249,12 +250,13 @@ export class DashboardAiController {
   @Post('chat')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Send a chat message and receive an AI reply' })
-  @ApiOkResponse({ description: 'AI reply with session ID and sources count' })
+  @ApiOkResponse({ type: AiChatCompletionResponseDto, description: 'AI reply with session ID and sources count' })
+  @ApiResponse({ status: 503, description: 'The AI provider is unavailable; retry later', type: ApiErrorDto })
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   chatCompletionEndpoint(
     @Body() body: ChatCompletionDto,
     @Request() req: { user?: { id?: string } },
-  ) {
+  ): Promise<AiChatCompletionResponseDto> {
     // SECURITY (P0-4): caller identity is injected from the JWT, never from body.
     return this.chatCompletion.execute({
       userMessage: body.userMessage,

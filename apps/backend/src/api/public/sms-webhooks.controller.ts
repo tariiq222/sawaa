@@ -12,11 +12,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Public } from '../../common/guards/jwt.guard';
 import { SmsDlrHandler } from '../../modules/comms/sms-dlr/sms-dlr.handler';
 import { DEFAULT_ORG_ID } from '../../common/constants';
+import { ApiErrorDto } from '../../common/swagger';
+import { SmsWebhookDeliveryReceiptAckDto } from './sms-webhook-response.dto';
 
 const SUPPORTED_PROVIDERS = new Set(['UNIFONIC', 'TAQNYAT']);
 
@@ -31,12 +33,19 @@ export class PublicSmsWebhooksController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Inbound SMS delivery-receipt webhook' })
   @ApiParam({ name: 'provider', enum: ['UNIFONIC', 'TAQNYAT'] })
-  @ApiOkResponse({ schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
+  @ApiOkResponse({
+    type: SmsWebhookDeliveryReceiptAckDto,
+    description:
+      'Receipt acknowledged. An empty object `{}` means a delivery row was advanced; ' +
+      '`{ skipped: true }` means the receipt was a duplicate, stale/out-of-order, or did not match the configured provider.',
+  })
+  @ApiResponse({ status: 400, description: 'Unsupported provider, missing request body, missing X-Signature header, no stored webhook secret, or configured-provider mismatch', type: ApiErrorDto })
+  @ApiResponse({ status: 500, description: 'Signature verification, payload parsing or infrastructure failure; the provider should retry', type: ApiErrorDto })
   async handle(
     @Param('provider') provider: string,
     @Headers('x-signature') signatureHeader: string | undefined,
     @Req() req: RawBodyRequest<Request>,
-  ) {
+  ): Promise<SmsWebhookDeliveryReceiptAckDto> {
     const providerUpper = provider.toUpperCase();
     if (!SUPPORTED_PROVIDERS.has(providerUpper)) {
       throw new BadRequestException(`Unsupported SMS provider: ${provider}`);

@@ -1,8 +1,9 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Req, Ip, Res, UnauthorizedException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
-import { ApiPublicResponses } from '../../common/swagger';
+import { ApiErrorDto, ApiPublicResponses } from '../../common/swagger';
+import { PublicAuthClientSessionResponseDto } from './public-auth-response.dto';
 import { RegisterHandler } from '../../modules/identity/client-auth/register.handler';
 import { RegisterDto } from '../../modules/identity/client-auth/register.dto';
 import { ClientLoginHandler } from '../../modules/identity/client-auth/client-login.handler';
@@ -68,8 +69,14 @@ export class PublicAuthController {
   @Post('register')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Register a new client account' })
-  @ApiCreatedResponse({ schema: { type: 'object', description: 'Created client account with tokens' } })
-  async registerEndpoint(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  @ApiOkResponse({
+    type: PublicAuthClientSessionResponseDto,
+    description:
+      'Client account created. Session credentials are set as the httpOnly cookies ' +
+      '`client_access_token` and `client_refresh_token`; only the client id is returned in the body.',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid OTP session token', type: ApiErrorDto })
+  async registerEndpoint(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<PublicAuthClientSessionResponseDto> {
     const result = await this.register.execute(dto, req);
     setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
     return { clientId: result.clientId };
@@ -80,8 +87,15 @@ export class PublicAuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log in with email or phone and password' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Auth tokens' } })
-  async loginEndpoint(@Body() dto: ClientLoginDto, @Ip() ip: string, @Res({ passthrough: true }) res: Response) {
+  @ApiOkResponse({
+    type: PublicAuthClientSessionResponseDto,
+    description:
+      'Credentials accepted. Session credentials are set as the httpOnly cookies ' +
+      '`client_access_token` and `client_refresh_token`; only the client id is returned in the body.',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials', type: ApiErrorDto })
+  @ApiResponse({ status: 429, description: 'Too many attempts, try again later', type: ApiErrorDto })
+  async loginEndpoint(@Body() dto: ClientLoginDto, @Ip() ip: string, @Res({ passthrough: true }) res: Response): Promise<PublicAuthClientSessionResponseDto> {
     const result = await this.login.execute(dto, ip, undefined, undefined, 'web');
     setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
     return { clientId: result.clientId };
@@ -94,12 +108,18 @@ export class PublicAuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'New access token' } })
+  @ApiOkResponse({
+    type: PublicAuthClientSessionResponseDto,
+    description:
+      'Refresh credential rotated. New session credentials are set as the httpOnly cookies ' +
+      '`client_access_token` and `client_refresh_token`; only the client id is returned in the body.',
+  })
+  @ApiResponse({ status: 401, description: 'Missing, invalid or already-rotated refresh token', type: ApiErrorDto })
   async refreshEndpoint(
     @Body() dto: RefreshTokenDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<PublicAuthClientSessionResponseDto> {
     const rawToken = getRefreshTokenFromRequest(req);
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token required');

@@ -8,11 +8,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Public } from '../../common/guards/jwt.guard';
 import { MoyasarWebhookHandler } from '../../modules/finance/moyasar-webhook/moyasar-webhook.handler';
 import { MoyasarWebhookDto } from '../../modules/finance/moyasar-webhook/moyasar-webhook.dto';
+import { ApiErrorDto } from '../../common/swagger';
+import { PublicPaymentWebhookAckDto } from './public-payment-webhook-response.dto';
 
 @ApiTags('Public / Payments')
 @Controller('public/payments/webhook')
@@ -27,11 +29,19 @@ export class PublicPaymentWebhookController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Receive Moyasar booking-payment webhook events' })
   @ApiBody({ type: MoyasarWebhookDto })
-  @ApiOkResponse({ schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
+  @ApiOkResponse({
+    type: PublicPaymentWebhookAckDto,
+    description:
+      'Delivery acknowledged. An empty object `{}` means the payment was settled; ' +
+      '`{ skipped: true, reason }` means the delivery was dropped-and-acked (malformed payload, ' +
+      'bad signature, duplicate, non-terminal provider status, amount/currency mismatch, ...).',
+  })
+  @ApiResponse({ status: 503, description: 'Webhook claim temporarily unavailable; the provider should retry', type: ApiErrorDto })
+  @ApiResponse({ status: 500, description: 'Infrastructure failure; the provider should retry', type: ApiErrorDto })
   async handle(
     @Req() req: RawBodyRequest<Request>,
     @Headers('x-moyasar-signature') signature: string | undefined,
-  ) {
+  ): Promise<PublicPaymentWebhookAckDto> {
     const rawBody = req.rawBody?.toString('utf8');
     // A missing body is malformed input — it will never succeed on retry.
     // Drop-and-ack with HTTP 200 (and a log) so Moyasar stops retrying,

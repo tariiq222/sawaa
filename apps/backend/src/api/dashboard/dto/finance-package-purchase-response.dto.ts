@@ -275,3 +275,55 @@ export class PackagePurchaseRefundResponseDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Full-refund instant, or null for a partial refund', example: '2026-10-11T09:00:00.000Z' })
   refundedAt!: Date | null;
 }
+
+/**
+ * `POST /dashboard/finance/package-purchases` — sale result.
+ *
+ * The handler returns the freshly persisted purchase row plus a credit snapshot
+ * for the "sale succeeded" screen. `purchase` is deliberately documented as a
+ * free-form object: both the fresh-sale path and the replay path hand the caller
+ * the raw Prisma row, and the replay path is typed with an index signature in the
+ * handler (`create-package-purchase.handler.ts`), so pinning exact keys here
+ * would either be false or force a change to a protected module.
+ */
+export class PackagePurchaseSaleCreditDto {
+  @ApiProperty({ type: String, nullable: true, description: 'Pinned service UUID, or null on flexible credits', example: '00000000-0000-4000-a000-0000000000d4' })
+  serviceId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Pinned employee UUID, or null on flexible credits', example: null })
+  employeeId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Pinned duration-option UUID, or null on flexible credits', example: null })
+  durationOptionId!: string | null;
+
+  @ApiProperty({ description: 'Frozen unit price for this credit in halalas', example: 25000 })
+  unitPriceSnapshot!: number;
+
+  @ApiProperty({ description: 'Total sessions granted (paid + free)', example: 8 })
+  totalQuantity!: number;
+
+  @ApiProperty({ description: 'Sessions already consumed; 0 immediately after a sale', example: 0 })
+  usedQuantity!: number;
+
+  @ApiProperty({ description: 'Sessions reserved by pending bookings; 0 immediately after a sale', example: 0 })
+  reservedQuantity!: number;
+}
+
+export class PackagePurchaseSaleResponseDto {
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    description: 'The persisted package-purchase row as stored (raw Prisma record, no computed price fields)',
+  })
+  purchase!: Record<string, unknown>;
+
+  @ApiProperty({ format: 'uuid', description: 'Invoice issued for this sale', example: '00000000-0000-4000-a000-0000000000d7' })
+  invoiceId!: string;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Recorded payment UUID, or null for a free sale', example: '00000000-0000-4000-a000-0000000000d8' })
+  paymentId!: string | null;
+
+  @ApiProperty({ type: [PackagePurchaseSaleCreditDto], description: 'Credit buckets created (or replayed) for this sale' })
+  credits!: PackagePurchaseSaleCreditDto[];
+}
+
