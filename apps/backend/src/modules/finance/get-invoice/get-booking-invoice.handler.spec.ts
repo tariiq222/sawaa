@@ -1,38 +1,40 @@
 import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { buildInvoice, createPrismaMock } from '../../../../test/factories';
 import { GetBookingInvoiceHandler } from './get-booking-invoice.handler';
 
-const mockInvoice = {
+const mockInvoice = buildInvoice({
   id: 'inv-1',
-  organizationId: 'org-1',
   branchId: 'branch-1',
   clientId: 'client-1',
   employeeId: 'emp-1',
   bookingId: 'booking-1',
-  subtotal: '100.00',
-  discountAmt: '10.00',
-  vatRate: '0.15',
-  vatAmt: '13.50',
-  total: '103.50',
-  refundedAmount: '0.00',
-  refundedVatAmt: '0.00',
+  subtotal: new Prisma.Decimal('100.00'),
+  discountAmt: new Prisma.Decimal('10.00'),
+  vatRate: new Prisma.Decimal('0.15'),
+  vatAmt: new Prisma.Decimal('13.50'),
+  total: new Prisma.Decimal('103.50'),
+  refundedAmount: new Prisma.Decimal('0.00'),
+  refundedVatAmt: new Prisma.Decimal('0.00'),
   currency: 'SAR',
   status: 'PAID',
   issuedAt: new Date('2026-04-17T10:00:00Z'),
   dueAt: null,
   paidAt: new Date('2026-04-17T10:05:00Z'),
   createdAt: new Date('2026-04-17T10:00:00Z'),
-};
+});
 
 describe('GetBookingInvoiceHandler', () => {
-  const buildPrisma = (invoice: typeof mockInvoice | null = mockInvoice) => ({
-    invoice: { findFirst: jest.fn().mockResolvedValue(invoice) },
-    organizationSettings: {
-      findFirst: jest.fn().mockResolvedValue({
-        companyNameEn: 'Fallback Clinic',
-        companyNameAr: 'عيادة احتياطية',
-      }),
-    },
-  });
+  const buildPrisma = (invoice: typeof mockInvoice | null = mockInvoice) =>
+    createPrismaMock({
+      invoice: { findFirst: invoice },
+      organizationSettings: {
+        findFirst: {
+          companyNameEn: 'Fallback Clinic',
+          companyNameAr: 'عيادة احتياطية',
+        },
+      },
+    });
 
   it('returns invoice scoped to booking + client', async () => {
     const prisma = buildPrisma();

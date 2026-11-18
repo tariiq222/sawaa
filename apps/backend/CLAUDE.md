@@ -101,6 +101,53 @@ npm run prisma:studio                # GUI
 npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit alongside any endpoint change
 ```
 
+## Test factories (MNT-25)
+
+New backend specs must build Prisma doubles and entity rows from
+[`test/factories/`](test/factories/index.ts). Do not add another ad-hoc
+`const prisma = { booking: { findFirst: jest.fn() } }` or a copy-pasted
+`mockBooking` literal. Existing specs are migrated only when touched.
+
+- **`createPrismaMock(config, extras?)`** — a typed `PrismaClient` double.
+  Only the models/operations you pass exist. Any other call throws
+  `unexpected Prisma call: <model>.<method>` (or `$queryRaw` / `$executeRaw`)
+  instead of silently resolving `undefined`, so an accidental dependency fails
+  the test. Method names are checked against the generated Prisma client; a
+  misspelt/nonexistent model or method name is a TypeScript error. Configured
+  values become `jest.fn().mockResolvedValue(value)`; pass a `jest.fn()`
+  yourself when a spec needs `mockResolvedValueOnce`, `mockImplementation`, or
+  call assertions. Unconfigured calls throw synchronously, so assert them with
+  `expect(() => ...).toThrow(...)`.
+- **`buildBooking(overrides?)`**, **`buildInvoice(overrides?)`**,
+  **`buildPayment(overrides?)`** — valid rows of the real Prisma types with
+  deterministic defaults. Amounts are `Prisma.Decimal` in integer halalas (the
+  schema contract), dates are fixed UTC instants, and every builder accepts a
+  `Partial<T>` override.
+
+```ts
+import { buildBooking, createPrismaMock } from '../../../../test/factories';
+
+const prisma = createPrismaMock({
+  booking: { findFirst: buildBooking({ id: 'bk-1', status: 'CONFIRMED' }) },
+  invoice: { findFirst: null },
+});
+prisma.booking.findFirst.mockResolvedValue(null); // typed Jest mock
+expect(() => prisma.booking.findMany()).toThrow('unexpected Prisma call: booking.findMany');
+```
+
+```ts
+import { Prisma } from '@prisma/client';
+import { buildInvoice } from '../../../../test/factories';
+
+const invoice = buildInvoice({ status: 'PAID', total: new Prisma.Decimal(15_000) });
+```
+
+```ts
+import { buildPayment } from '../../../../test/factories';
+
+const payment = buildPayment({ status: 'COMPLETED', method: 'CASH' });
+```
+
 ## Comms cluster — SMS
 
 - **SMS uses a single provider** (Unifonic or Taqnyat) configured via `/settings/sms`.
