@@ -17,6 +17,7 @@ interface OperationObject {
 
 interface ResponseObject {
   content?: Record<string, { schema?: Record<string, unknown> }>;
+  headers?: Record<string, unknown>;
 }
 
 interface SchemaProperty {
@@ -44,6 +45,12 @@ const spec = JSON.parse(readFileSync(specPath, 'utf-8')) as OpenApi;
 const problems: string[] = [];
 const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
 const SUCCESS_CODES = ['200', '201', '202', '204'];
+/**
+ * 3xx responses that ARE the contract (an endpoint whose job is to redirect,
+ * e.g. a presigned-media hop). A redirect is only accepted when it documents a
+ * `Location` header; a bare 3xx does not prove the response shape.
+ */
+const REDIRECT_CODES = ['301', '302', '303', '307', '308'];
 const DETAIL_KEYS = ['$ref', 'properties', 'items', 'allOf', 'oneOf', 'anyOf'];
 
 function hasDetailedJsonSchema(response: ResponseObject | undefined): boolean {
@@ -70,9 +77,12 @@ for (const [route, methods] of Object.entries(spec.paths ?? {})) {
     );
     if (!hasErrorResponse) problems.push(`${id} — no 4xx/5xx response documented`);
 
-    if (!SUCCESS_CODES.some((code) => code in responses)) {
+    const redirectWithLocation = REDIRECT_CODES.find(
+      (code) => responses[code]?.headers?.Location !== undefined,
+    );
+    if (!SUCCESS_CODES.some((code) => code in responses) && !redirectWithLocation) {
       problems.push(`${id} — no success response documented`);
-    } else {
+    } else if (SUCCESS_CODES.some((code) => code in responses)) {
       // 202/204-only operations carry no body contract; check the first of 200/201.
       const primaryCode = ['200', '201'].find((code) => code in responses);
       if (primaryCode) {

@@ -1,5 +1,4 @@
 [
-  "GET /api/v1/public/employees/{key}/image — no success response documented",
   "POST /api/v1/dashboard/finance/package-purchases — success response has no detailed schema",
   "schema AiProviderConfigResponseDto.connectionStatus — missing description and example",
   "schema AiProviderConfigResponseDto.hasCredential — missing description and example",
