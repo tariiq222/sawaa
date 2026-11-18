@@ -128,40 +128,60 @@
       "AiProviderConfigResponseDto": {
         "properties": {
           "connectionStatus": {
+            "description": "Derived connection state: NOT_CONFIGURED, CONNECTED, FAILED, or RETEST_REQUIRED after a provider or model change.",
+            "example": "NOT_CONFIGURED",
             "type": "string"
           },
           "hasCredential": {
+            "description": "Whether an encrypted credential is stored. The credential itself is never returned.",
+            "example": true,
             "type": "boolean"
           },
           "isEnabled": {
+            "description": "Whether the assistant may call the provider for this center.",
+            "example": false,
             "type": "boolean"
           },
           "lastTestedAt": {
+            "description": "When the stored credential was last tested, or null if it never was.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "string"
           },
           "lastTestErrorCode": {
+            "description": "Machine-readable code from the last failed credential test, or null when it succeeded or never ran.",
+            "example": "PROVIDER_TIMEOUT",
             "nullable": true,
             "type": "string"
           },
           "lastTestOk": {
+            "description": "Result of the last credential test, or null if no test has run.",
+            "example": true,
             "nullable": true,
             "type": "boolean"
           },
           "maxTokens": {
+            "description": "Maximum completion tokens currently configured for the provider, as a whole number.",
+            "example": 800,
             "type": "number"
           },
           "model": {
+            "description": "Pinned provider model identifier used for assistant completions.",
+            "example": "deepseek/deepseek-v4-flash-0731",
             "type": "string"
           },
           "provider": {
+            "description": "Configured AI provider identifier.",
             "enum": [
               "OPENROUTER"
             ],
+            "example": "OPENROUTER",
             "type": "string"
           },
           "temperature": {
+            "description": "Sampling temperature currently configured for the provider, from 0 to 2.",
+            "example": 0.4,
             "type": "number"
           }
         },
@@ -182,18 +202,26 @@
       "AiProviderModelSuggestionDto": {
         "properties": {
           "allowCustom": {
+            "description": "Whether clients may send a model identifier outside the curated list.",
+            "example": false,
             "type": "boolean"
           },
           "models": {
+            "description": "Curated model identifiers allowed for this provider.",
+            "example": [
+              "deepseek/deepseek-v4-flash-0731"
+            ],
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "provider": {
+            "description": "AI provider these suggestions apply to.",
             "enum": [
               "OPENROUTER"
             ],
+            "example": "OPENROUTER",
             "type": "string"
           }
         },
@@ -207,16 +235,24 @@
       "AiProviderTestResponseDto": {
         "properties": {
           "errorCode": {
+            "description": "Machine-readable failure code when ok is false, otherwise null.",
+            "example": "PROVIDER_RATE_LIMIT",
             "nullable": true,
             "type": "string"
           },
           "ok": {
+            "description": "Whether the candidate credential completed a bounded provider call.",
+            "example": true,
             "type": "boolean"
           },
           "persisted": {
+            "description": "Whether the candidate was saved, which only happens after a successful test with saveCredential set to true.",
+            "example": false,
             "type": "boolean"
           },
           "testedAt": {
+            "description": "When this candidate test ran.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "string"
@@ -4943,39 +4979,57 @@
       "ChatMessageResponseDto": {
         "properties": {
           "body": {
+            "description": "Message text as stored for the conversation.",
+            "example": "أريد حجز موعد",
             "type": "string"
           },
           "clientMessageId": {
+            "description": "Client idempotency id echoed back, or null when the client sent none.",
+            "example": "00000000-0000-4000-a000-000000000021",
             "format": "uuid",
             "nullable": true,
             "type": "string"
           },
           "conversationId": {
+            "description": "Conversation UUID the message belongs to.",
+            "example": "00000000-0000-4000-a000-000000000001",
             "format": "uuid",
             "type": "string"
           },
           "createdAt": {
+            "description": "Creation instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Message UUID.",
+            "example": "00000000-0000-4000-a000-000000000020",
             "format": "uuid",
             "type": "string"
           },
           "kind": {
+            "description": "Message kind: plain text, action card, operation result, or system event.",
             "enum": [
               "TEXT",
               "ACTION_CARD",
               "OPERATION_RESULT",
               "SYSTEM_EVENT"
             ],
+            "example": "TEXT",
             "type": "string"
           },
           "metadata": {
             "additionalProperties": true,
+            "description": "Sanitized free-form public metadata; present only when it matches an allow-listed variant.",
+            "example": {
+              "action": "OFFER_HANDOFF",
+              "reason": "USER_REQUESTED"
+            },
             "type": "object"
           },
           "senderType": {
+            "description": "Who sent the message.",
             "enum": [
               "CLIENT",
               "EMPLOYEE",
@@ -4984,6 +5038,7 @@
               "STAFF",
               "SYSTEM"
             ],
+            "example": "CLIENT",
             "type": "string"
           }
         },
@@ -5028,30 +5083,44 @@
       "ClaimGuestConversationResponseDto": {
         "properties": {
           "clientId": {
+            "description": "Owning client UUID, or null for a guest conversation.",
+            "example": "00000000-0000-4000-a000-000000000002",
             "format": "uuid",
             "nullable": true,
             "type": "string"
           },
           "createdAt": {
+            "description": "Creation instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "employeeId": {
+            "description": "Assigned employee UUID, or null.",
+            "example": null,
             "format": "uuid",
             "nullable": true,
             "type": "string"
           },
           "id": {
+            "description": "Conversation UUID.",
+            "example": "00000000-0000-4000-a000-000000000001",
             "format": "uuid",
             "type": "string"
           },
           "isAiChat": {
+            "description": "Whether the assistant answers this conversation.",
+            "example": true,
             "type": "boolean"
           },
           "language": {
+            "description": "Conversation language code.",
+            "example": "ar",
             "type": "string"
           },
           "resumedOperations": {
+            "description": "Chat operations re-linked to the authenticated client by the claim, each a public-safe operation projection. Empty when nothing was pending.",
+            "example": [],
             "items": {
               "additionalProperties": true,
               "type": "object"
@@ -5059,6 +5128,7 @@
             "type": "array"
           },
           "status": {
+            "description": "Conversation status.",
             "enum": [
               "OPEN",
               "AI_ACTIVE",
@@ -5066,9 +5136,12 @@
               "STAFF_ACTIVE",
               "CLOSED"
             ],
+            "example": "AI_ACTIVE",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update instant.",
+            "example": "2026-03-01T10:05:00.000Z",
             "format": "date-time",
             "type": "string"
           }
@@ -6739,12 +6812,18 @@
       "ClientChatConversationCursorMetaDto": {
         "properties": {
           "hasMore": {
+            "description": "Whether more conversations exist after this page.",
+            "example": false,
             "type": "boolean"
           },
           "limit": {
+            "description": "Page size actually applied to this read, after clamping to 1-100.",
+            "example": 20,
             "type": "number"
           },
           "nextCursor": {
+            "description": "Conversation UUID to send as `cursor` for the next page, or null when this page is the last.",
+            "example": "00000000-0000-4000-a000-000000000001",
             "format": "uuid",
             "nullable": true,
             "type": "string"
@@ -6760,20 +6839,29 @@
       "ClientChatConversationDetailDto": {
         "properties": {
           "createdAt": {
+            "description": "Creation instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Conversation UUID.",
+            "example": "00000000-0000-4000-a000-000000000001",
             "format": "uuid",
             "type": "string"
           },
           "isAiChat": {
+            "description": "Whether the assistant answers this conversation.",
+            "example": true,
             "type": "boolean"
           },
           "language": {
+            "description": "Conversation language code.",
+            "example": "ar",
             "type": "string"
           },
           "status": {
+            "description": "Conversation status.",
             "enum": [
               "OPEN",
               "AI_ACTIVE",
@@ -6781,9 +6869,12 @@
               "STAFF_ACTIVE",
               "CLOSED"
             ],
+            "example": "AI_ACTIVE",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update instant.",
+            "example": "2026-03-01T10:05:00.000Z",
             "format": "date-time",
             "type": "string"
           }
@@ -6867,10 +6958,14 @@
       "ClientChatConversationSummaryDto": {
         "properties": {
           "createdAt": {
+            "description": "Creation instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Conversation UUID.",
+            "example": "00000000-0000-4000-a000-000000000001",
             "format": "uuid",
             "type": "string"
           },
@@ -6880,15 +6975,24 @@
                 "$ref": "#/components/schemas/ClientChatLastMessageDto"
               }
             ],
+            "description": "Preview of the newest message, or null when the conversation has none.",
+            "example": {
+              "kind": "TEXT",
+              "preview": "أريد حجز موعد",
+              "senderType": "CLIENT"
+            },
             "nullable": true,
             "type": "object"
           },
           "lastMessageAt": {
+            "description": "When the newest message was sent, or null when the conversation has none.",
+            "example": "2026-03-01T10:05:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "string"
           },
           "status": {
+            "description": "Conversation status.",
             "enum": [
               "OPEN",
               "AI_ACTIVE",
@@ -6896,9 +7000,12 @@
               "STAFF_ACTIVE",
               "CLOSED"
             ],
+            "example": "AI_ACTIVE",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update instant.",
+            "example": "2026-03-01T10:05:00.000Z",
             "format": "date-time",
             "type": "string"
           }
@@ -6943,12 +7050,14 @@
       "ClientChatLastMessageDto": {
         "properties": {
           "kind": {
+            "description": "Kind of the last message.",
             "enum": [
               "TEXT",
               "ACTION_CARD",
               "OPERATION_RESULT",
               "SYSTEM_EVENT"
             ],
+            "example": "TEXT",
             "type": "string"
           },
           "preview": {
@@ -6956,6 +7065,7 @@
             "type": "string"
           },
           "senderType": {
+            "description": "Who sent the last message.",
             "enum": [
               "CLIENT",
               "EMPLOYEE",
@@ -6964,6 +7074,7 @@
               "STAFF",
               "SYSTEM"
             ],
+            "example": "CLIENT",
             "type": "string"
           }
         },
@@ -18472,6 +18583,14 @@
       "KnowledgeDocumentDetailResponseDto": {
         "properties": {
           "chunks": {
+            "description": "Indexed chunks of the current content, ordered by chunkIndex.",
+            "example": [
+              {
+                "chunkIndex": 0,
+                "id": "00000000-0000-4000-a000-000000000051",
+                "tokenCount": 128
+              }
+            ],
             "items": {
               "properties": {
                 "chunkIndex": {
@@ -18490,51 +18609,74 @@
             "type": "array"
           },
           "content": {
+            "description": "Plain-text document body, or null when the document holds no stored text.",
+            "example": "Clinic opening hours are Sunday to Thursday, 09:00 to 17:00.",
             "maxLength": 50000,
             "nullable": true,
             "type": "object"
           },
           "createdAt": {
+            "description": "Creation instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Document UUID.",
+            "example": "00000000-0000-4000-a000-000000000050",
             "format": "uuid",
             "type": "string"
           },
           "isPublished": {
+            "description": "Whether the document is available to the assistant.",
+            "example": false,
             "type": "boolean"
           },
           "lastIndexedAt": {
+            "description": "When indexing last completed successfully, or null if the current content was never indexed.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "object"
           },
           "lastIndexErrorCode": {
+            "description": "Machine-readable code from the last failed indexing attempt, or null.",
+            "example": "CONTENT_MISSING",
             "nullable": true,
             "type": "object"
           },
           "metadata": {
+            "description": "Free-form JSON metadata supplied with the document.",
+            "example": {
+              "source": "admin"
+            },
             "nullable": true,
             "type": "object"
           },
           "publishedAt": {
+            "description": "Publication instant, or null while the document is unpublished.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "object"
           },
           "sourceRef": {
+            "description": "Document source reference: an HTTPS URL for `url` entries, otherwise null.",
+            "example": "https://example.com/faq",
             "nullable": true,
             "type": "object"
           },
           "sourceType": {
+            "description": "Document source: manually authored text, or a page fetched from sourceRef.",
             "enum": [
               "manual",
               "url"
             ],
+            "example": "manual",
             "type": "string"
           },
           "status": {
+            "description": "Indexing status; reset to PENDING whenever content or source changes.",
             "enum": [
               "PENDING",
               "EMBEDDED",
@@ -18544,9 +18686,13 @@
             "type": "string"
           },
           "title": {
+            "description": "Document title.",
+            "example": "Clinic FAQ",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           }
@@ -18572,12 +18718,21 @@
       "KnowledgeDocumentPageResponseDto": {
         "properties": {
           "data": {
+            "description": "Documents on this page, newest first.",
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/KnowledgeDocumentSummaryResponseDto"
             },
             "type": "array"
           },
           "meta": {
+            "description": "Pagination metadata for the full result set.",
+            "example": {
+              "limit": 20,
+              "page": 1,
+              "total": 1,
+              "totalPages": 1
+            },
             "properties": {
               "limit": {
                 "type": "number"
@@ -18609,46 +18764,67 @@
       "KnowledgeDocumentSummaryResponseDto": {
         "properties": {
           "createdAt": {
+            "description": "Creation instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Document UUID.",
+            "example": "00000000-0000-4000-a000-000000000050",
             "format": "uuid",
             "type": "string"
           },
           "isPublished": {
+            "description": "Whether the document is available to the assistant.",
+            "example": false,
             "type": "boolean"
           },
           "lastIndexedAt": {
+            "description": "When indexing last completed successfully, or null if the current content was never indexed.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "object"
           },
           "lastIndexErrorCode": {
+            "description": "Machine-readable code from the last failed indexing attempt, or null.",
+            "example": "CONTENT_MISSING",
             "nullable": true,
             "type": "object"
           },
           "metadata": {
+            "description": "Free-form JSON metadata supplied with the document.",
+            "example": {
+              "source": "admin"
+            },
             "nullable": true,
             "type": "object"
           },
           "publishedAt": {
+            "description": "Publication instant, or null while the document is unpublished.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "nullable": true,
             "type": "object"
           },
           "sourceRef": {
+            "description": "Document source reference: an HTTPS URL for `url` entries, otherwise null.",
+            "example": "https://example.com/faq",
             "nullable": true,
             "type": "object"
           },
           "sourceType": {
+            "description": "Document source: manually authored text, or a page fetched from sourceRef.",
             "enum": [
               "manual",
               "url"
             ],
+            "example": "manual",
             "type": "string"
           },
           "status": {
+            "description": "Indexing status; reset to PENDING whenever content or source changes.",
             "enum": [
               "PENDING",
               "EMBEDDED",
@@ -18658,9 +18834,13 @@
             "type": "string"
           },
           "title": {
+            "description": "Document title.",
+            "example": "Clinic FAQ",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update instant.",
+            "example": "2026-03-01T10:00:00.000Z",
             "format": "date-time",
             "type": "string"
           }
@@ -18684,13 +18864,19 @@
       "KnowledgeReindexResponseDto": {
         "properties": {
           "contentHash": {
+            "description": "SHA-256 hex digest of the document content being indexed.",
+            "example": "0000000000000000000000000000000000000000000000000000000000000000",
             "type": "string"
           },
           "documentId": {
+            "description": "Document UUID queued for reindexing.",
+            "example": "00000000-0000-4000-a000-000000000050",
             "format": "uuid",
             "type": "string"
           },
           "eventId": {
+            "description": "Outbox event UUID for the reindex request, or null when no new event was created.",
+            "example": "00000000-0000-4000-a000-000000000052",
             "format": "uuid",
             "nullable": true,
             "type": "object"
@@ -19191,13 +19377,25 @@
       "ListClientChatConversationsResponseDto": {
         "properties": {
           "data": {
+            "description": "Conversations owned by the authenticated client, most recent activity first.",
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/ClientChatConversationSummaryDto"
             },
             "type": "array"
           },
           "meta": {
-            "$ref": "#/components/schemas/ClientChatConversationCursorMetaDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientChatConversationCursorMetaDto"
+              }
+            ],
+            "description": "Cursor pagination metadata.",
+            "example": {
+              "hasMore": false,
+              "limit": 20,
+              "nextCursor": null
+            }
           }
         },
         "required": [
@@ -38634,15 +38832,20 @@
             "writeOnly": true
           },
           "isEnabled": {
+            "description": "Enable the assistant. Enabling requires a stored credential whose successful test matches the current provider and model.",
+            "example": false,
             "type": "boolean"
           },
           "maxTokens": {
             "default": 800,
+            "description": "Maximum completion tokens from 1 to 32000, as a whole number. Omitted keeps the stored value; a new configuration defaults to 800.",
+            "example": 800,
             "maximum": 32000,
             "minimum": 1,
             "type": "number"
           },
           "model": {
+            "description": "Pinned model identifier; only the single supported OpenRouter model is accepted.",
             "enum": [
               "deepseek/deepseek-v4-flash-0731"
             ],
@@ -38650,9 +38853,11 @@
             "type": "string"
           },
           "provider": {
+            "description": "AI provider to configure.",
             "enum": [
               "OPENROUTER"
             ],
+            "example": "OPENROUTER",
             "type": "string"
           },
           "saveCredential": {
@@ -38661,6 +38866,8 @@
           },
           "temperature": {
             "default": 0.4,
+            "description": "Sampling temperature from 0 to 2. Omitted keeps the stored value; a new configuration defaults to 0.4.",
+            "example": 0.4,
             "maximum": 2,
             "minimum": 0,
             "type": "number"
@@ -39293,10 +39500,12 @@
             "type": "string"
           },
           "sourceType": {
+            "description": "Document source: `manual` for a plain-text body, `url` for an external page referenced by sourceRef.",
             "enum": [
               "manual",
               "url"
             ],
+            "example": "manual",
             "nullable": true,
             "type": "string"
           },
@@ -40130,15 +40339,20 @@
       "UpsertAiProviderConfigDto": {
         "properties": {
           "isEnabled": {
+            "description": "Enable the assistant. Enabling requires a stored credential whose successful test matches the current provider and model.",
+            "example": false,
             "type": "boolean"
           },
           "maxTokens": {
             "default": 800,
+            "description": "Maximum completion tokens from 1 to 32000, as a whole number. Omitted keeps the stored value; a new configuration defaults to 800.",
+            "example": 800,
             "maximum": 32000,
             "minimum": 1,
             "type": "number"
           },
           "model": {
+            "description": "Pinned model identifier; only the single supported OpenRouter model is accepted.",
             "enum": [
               "deepseek/deepseek-v4-flash-0731"
             ],
@@ -40146,13 +40360,17 @@
             "type": "string"
           },
           "provider": {
+            "description": "AI provider to configure.",
             "enum": [
               "OPENROUTER"
             ],
+            "example": "OPENROUTER",
             "type": "string"
           },
           "temperature": {
             "default": 0.4,
+            "description": "Sampling temperature from 0 to 2. Omitted keeps the stored value; a new configuration defaults to 0.4.",
+            "example": 0.4,
             "maximum": 2,
             "minimum": 0,
             "type": "number"

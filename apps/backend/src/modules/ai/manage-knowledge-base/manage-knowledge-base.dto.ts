@@ -156,7 +156,7 @@ export class UpdateDocumentDto {
 	content?: string;
 
 	@IsOptional() @IsIn(['manual', 'url'])
-	@ApiPropertyOptional({ enum: ['manual', 'url'], nullable: true })
+	@ApiPropertyOptional({ enum: ['manual', 'url'], nullable: true, description: 'Document source: `manual` for a plain-text body, `url` for an external page referenced by sourceRef.', example: 'manual' })
 	sourceType?: KnowledgeSourceType;
 
 	@ValidateIf((o: UpdateDocumentDto) => o.sourceType === 'url' || o.sourceRef !== undefined)
