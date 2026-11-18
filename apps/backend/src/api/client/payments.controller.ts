@@ -36,6 +36,7 @@ import { ReconcileNativePaymentHandler } from '../../modules/finance/native-paym
 import { InitClientPaymentDto } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
 import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { GetClientBankTransferSettingsHandler } from '../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
+import { ClientPaymentRecordDto } from './dto/client-payment-response.dto';
 
 // `GET client/payments/methods` is intentionally absent: the website wizard reads
 // it anonymously, so it stays on the public `/public/payments/methods` route.
@@ -149,12 +150,12 @@ export class ClientPaymentsController {
       },
     },
   })
-  @ApiCreatedResponse({ description: 'Receipt uploaded, payment recorded as PENDING_VERIFICATION' })
+  @ApiCreatedResponse({ type: ClientPaymentRecordDto, description: 'Receipt uploaded, payment recorded as PENDING_VERIFICATION' })
   uploadBankTransfer(
     @ClientSession() session: ClientSession,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: ClientBankTransferUploadDto,
-  ) {
+  ): Promise<ClientPaymentRecordDto> {
     if (!file) throw new BadRequestException('receipt file is required');
     return this.bankTransferUpload.execute({
       invoiceId: body.invoiceId,

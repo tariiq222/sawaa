@@ -36,6 +36,12 @@ import { ClientCreateBookingDto } from '../../modules/bookings/client/client-cre
 import { ClientListBookingsQuery } from '../../modules/bookings/client/client-list-bookings.query';
 import { ClientCancelBookingRequestDto } from '../../modules/bookings/client/client-cancel-booking-request.dto';
 import { ClientRateBookingDto } from '../../modules/bookings/client/client-rate-booking.dto';
+import {
+  ClientBookingInvoiceResponseDto,
+  ClientBookingJoinResponseDto,
+  ClientBookingRatingResponseDto,
+  ClientBookingRescheduleResponseDto,
+} from './dto/client-booking-response.dto';
 
 @ApiExtraModels(CancellationRefundSummaryDto, PersistedCancellationRefundDto, ClientBookingDto)
 @ApiTags('Client / Bookings')
@@ -174,7 +180,10 @@ export class ClientBookingsController {
   @Patch(':id/reschedule')
   @ApiOperation({ summary: 'Reschedule a booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Booking rescheduled', schema: { type: 'object' } })
+  // The body is a controller-composed projection
+  // (`projectClientBookingMutation` returns `Partial<Booking>`), so the return
+  // type stays inferred and the documented DTO is the wire contract.
+  @ApiOkResponse({ type: ClientBookingRescheduleResponseDto, description: 'Booking rescheduled' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   async rescheduleBooking(
     @ClientSession() session: ClientSession,
@@ -189,13 +198,13 @@ export class ClientBookingsController {
   @Post(':id/rate')
   @ApiOperation({ summary: 'Submit a rating for a completed booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiCreatedResponse({ description: 'Rating submitted', schema: { type: 'object' } })
+  @ApiCreatedResponse({ type: ClientBookingRatingResponseDto, description: 'Rating submitted' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
   async rateBooking(
     @ClientSession() session: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: ClientRateBookingDto,
-  ) {
+  ): Promise<ClientBookingRatingResponseDto> {
     const booking = await this.bookingAction.executeForRate(id, session.id);
     return this.rate.execute({
       bookingId: id,
@@ -210,9 +219,12 @@ export class ClientBookingsController {
   @Get(':id/join')
   @ApiOperation({ summary: 'Get (or lazily create) the Zoom join URL for an ONLINE booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Zoom join URL and appointment time', schema: { type: 'object' } })
+  @ApiOkResponse({ type: ClientBookingJoinResponseDto, description: 'Zoom join URL and appointment time' })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  async join(@ClientSession() session: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
+  async join(
+    @ClientSession() session: ClientSession,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ClientBookingJoinResponseDto> {
     const booking = await this.bookingAction.executeForJoin(id, session.id);
     if (booking.zoomJoinUrl) {
       return { joinUrl: booking.zoomJoinUrl, scheduledAt: booking.scheduledAt };
@@ -224,9 +236,15 @@ export class ClientBookingsController {
   @Get(':id/invoice')
   @ApiOperation({ summary: 'Get the invoice for a booking' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ schema: { type: 'object', description: 'Invoice details; `hasReceipt` replaces the receipt storage key' } })
+  @ApiOkResponse({
+    type: ClientBookingInvoiceResponseDto,
+    description: 'Invoice details; `hasReceipt` replaces the receipt storage key',
+  })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  async invoice(@ClientSession() session: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
+  async invoice(
+    @ClientSession() session: ClientSession,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ClientBookingInvoiceResponseDto> {
     return toClientInvoice(await this.bookingInvoice.execute(id, session.id));
   }
 }

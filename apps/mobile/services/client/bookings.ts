@@ -265,6 +265,32 @@ interface RateData {
   isPublic?: boolean;
 }
 
+/**
+ * Response types for the unified `/client` booking endpoints.
+ *
+ * Mirror the documented OpenAPI schemas (`ClientBookingRatingResponseDto`,
+ * `ClientBookingJoinResponseDto`). Money fields are decimal strings.
+ * `services/__tests__/client-surface-contract.test.ts` fails when the local
+ * declarations drift from the committed snapshot. Type-only: no request URL,
+ * parameter or body changes.
+ */
+export interface ClientBookingRating {
+  id: string;
+  bookingId: string;
+  clientId: string;
+  employeeId: string;
+  /** 1–5 */
+  score: number;
+  comment: string | null;
+  isPublic: boolean;
+  createdAt: string;
+}
+
+export interface ClientBookingJoinLink {
+  joinUrl: string | null;
+  scheduledAt: string;
+}
+
 export const clientBookingsService = {
   async list(params?: BookingListParams): Promise<BookingsListResponse> {
     // The unified API paginates with `pageSize`; screens keep passing `limit`.
@@ -337,9 +363,9 @@ export const clientBookingsService = {
     return normalizeClientBooking(asRecord(response.data)?.booking ?? response.data);
   },
 
-  async rate(id: string, data: RateData) {
+  async rate(id: string, data: RateData): Promise<ClientBookingRating> {
     try {
-      const response = await api.post(
+      const response = await api.post<ClientBookingRating>(
         `/client/bookings/${id}/rate`,
         data,
       );
@@ -357,11 +383,11 @@ export const clientBookingsService = {
     }
   },
 
-  async getJoinUrl(id: string) {
+  async getJoinUrl(id: string): Promise<ClientBookingJoinLink> {
     // `joinUrl` is nullable: the handler re-reads the booking after the create
     // attempt, and a not-yet-created Zoom meeting yields null. Runtime request
     // and return are unchanged; only the declared type matches the snapshot.
-    const response = await api.get<{ joinUrl: string | null; scheduledAt: string }>(
+    const response = await api.get<ClientBookingJoinLink>(
       `/client/bookings/${id}/join`,
     );
     return response.data;

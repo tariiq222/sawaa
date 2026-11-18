@@ -87,8 +87,29 @@ export interface PaymentsListResponse {
   meta: ListMeta;
 }
 
+/**
+ * One row of `GET /client/invoices` (`ClientInvoiceListItemDto`).
+ * Money is integer halalas; `vatRate` is a fraction of 1.
+ * Type-only; the request and the returned object are unchanged.
+ */
 export interface ClientInvoiceListItem {
   id: string;
+  number: number;
+  bookingId: string | null;
+  serviceName: string;
+  scheduledAt: string | null;
+  subtotal: number;
+  discountAmt: number;
+  vatRate: number;
+  vatAmt: number;
+  total: number;
+  refundedAmount: number;
+  currency: string;
+  status: string;
+  paymentStatus: string | null;
+  issuedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
   [key: string]: unknown;
 }
 
@@ -118,9 +139,17 @@ export async function getMyInvoicePdfUrl(id: string): Promise<{ url: string }> {
   return response.data;
 }
 
+/** `POST /client/refunds/request` result (`ClientRefundRequestResponseDto`). `amount` is integer halalas. */
+export interface ClientRefundRequestResult {
+  id: string;
+  status: string;
+  amount: number;
+  createdAt: string;
+}
+
 /** POST /client/refunds/request */
-export async function requestRefund(input: ClientRefundRequestInput): Promise<unknown> {
-  const response = await api.post<unknown>('/client/refunds/request', input);
+export async function requestRefund(input: ClientRefundRequestInput): Promise<ClientRefundRequestResult> {
+  const response = await api.post<ClientRefundRequestResult>('/client/refunds/request', input);
   return response.data;
 }
 

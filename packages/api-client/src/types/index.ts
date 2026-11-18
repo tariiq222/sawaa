@@ -203,3 +203,11 @@ export type {
 } from './chat'
 
 export type { CancellationRefund, PersistedCancellationRefund, CancellationPreview, CancellationQuoteInput, ClientCancellationResult } from './cancellation'
+export type {
+  ClientBookingJoinLink,
+  ClientBookingRating,
+  ClientBookingMutation,
+  ClientBookingRescheduleResult,
+  ClientRefundRequestResult,
+  ClientPackageBookingResult,
+} from './client-surface'

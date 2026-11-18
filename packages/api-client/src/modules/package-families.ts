@@ -1,4 +1,5 @@
 import { apiRequest } from '../client'
+import type { ClientPackageBookingResult } from '../types/client-surface'
 import type {
   PackageFamily, PackageFamilyInput, ClientPackagePurchase,
   InitPackagePurchaseInput, InitPackagePurchaseResponse, BookMyPackageCreditInput,
@@ -15,4 +16,4 @@ export const getPublicPackageFamily = (id: string) => apiRequest<PackageFamily>(
 export const initPackagePurchase = (input: InitPackagePurchaseInput) => apiRequest<InitPackagePurchaseResponse>('/client/package-purchases/init', { method: 'POST', credentials: 'include', body: JSON.stringify(input) })
 export const listMyPackagePurchases = () => apiRequest<ClientPackagePurchase[]>('/client/packages/purchases', { credentials: 'include' })
 export const getMyPackagePurchase = (id: string) => apiRequest<ClientPackagePurchase>(`/client/packages/purchases/${segment(id)}`, { credentials: 'include' })
-export const bookMyPackageCredit = (input: BookMyPackageCreditInput) => apiRequest<{ id: string; status: string; packageCreditId: string }>('/client/packages/book', { method: 'POST', credentials: 'include', body: JSON.stringify(input) })
+export const bookMyPackageCredit = (input: BookMyPackageCreditInput) => apiRequest<ClientPackageBookingResult>('/client/packages/book', { method: 'POST', credentials: 'include', body: JSON.stringify(input) })

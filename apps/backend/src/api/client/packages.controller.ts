@@ -10,6 +10,8 @@ import { ListClientPackagePurchasesHandler } from '../../modules/finance/package
 import { ClientPackageBookDto } from '../../modules/bookings/client/client-package-book.dto';
 import { ClientPackageBookHandler } from '../../modules/bookings/client/client-package-book.handler';
 import { ClientPackagePurchaseStatusHandler } from '../../modules/bookings/client/client-package-purchase-status.handler';
+import { ClientBookingRecordDto } from './dto/client-booking-response.dto';
+import { ClientPackagePurchaseDto } from './dto/client-package-response.dto';
 
 class ClientPackagePurchasesQuery {
   @ApiPropertyOptional({ enum: PackagePurchaseStatus, enumName: 'PackagePurchaseStatus' })
@@ -31,8 +33,11 @@ export class ClientPackagesController {
 
   @Get('purchases')
   @ApiOperation({ summary: 'List the authenticated client package purchases and credit balance' })
-  @ApiOkResponse({ description: 'Decorated package purchases owned by the authenticated client' })
-  async listMyPurchases(@ClientSession() session: ClientSession, @Query() query: ClientPackagePurchasesQuery) {
+  @ApiOkResponse({ type: [ClientPackagePurchaseDto], description: 'Decorated package purchases owned by the authenticated client' })
+  async listMyPurchases(
+    @ClientSession() session: ClientSession,
+    @Query() query: ClientPackagePurchasesQuery,
+  ): Promise<ClientPackagePurchaseDto[]> {
     const purchases = await this.listPurchases.execute({ clientId: session.id, status: query.status });
     return purchases.map(({ notes: _notes, ...safePurchase }) => safePurchase);
   }
@@ -40,8 +45,11 @@ export class ClientPackagesController {
   @Get('purchases/:id')
   @ApiOperation({ summary: 'Read an authenticated client package purchase status' })
   @ApiParam({ name: 'id', description: 'Package purchase UUID', format: 'uuid' })
-  @ApiOkResponse({ description: 'Decorated package purchase status' })
-  getMyPurchase(@ClientSession() session: ClientSession, @Param('id', ParseUUIDPipe) id: string) {
+  @ApiOkResponse({ type: ClientPackagePurchaseDto, description: 'Decorated package purchase status' })
+  getMyPurchase(
+    @ClientSession() session: ClientSession,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ClientPackagePurchaseDto> {
     return this.purchaseStatus.execute(id, session.id);
   }
 
@@ -49,8 +57,11 @@ export class ClientPackagesController {
   @Post('book')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Book an appointment using an owned package credit' })
-  @ApiCreatedResponse({ description: 'Package credit booking created' })
-  bookCredit(@ClientSession() session: ClientSession, @Body() body: ClientPackageBookDto) {
+  @ApiCreatedResponse({ type: ClientBookingRecordDto, description: 'Package credit booking created' })
+  bookCredit(
+    @ClientSession() session: ClientSession,
+    @Body() body: ClientPackageBookDto,
+  ): Promise<ClientBookingRecordDto> {
     return this.bookPackageCredit.execute({
       ...body,
       clientId: session.id,

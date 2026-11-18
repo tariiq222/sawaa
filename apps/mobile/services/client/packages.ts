@@ -22,6 +22,18 @@ export type ClientPackageFamily = PackageFamily & { vatRate?: number };
  */
 export type ClientPackagePurchaseRow = ClientPackagePurchase & { vatAmount?: number; totalCharged?: number };
 
+/**
+ * `POST /client/packages/book` result: the raw created `Booking` row
+ * (`ClientBookingRecordDto`). Only what this app reads is declared;
+ * `services/__tests__/client-surface-contract.test.ts` pins the key subset to
+ * the snapshot. Type-only.
+ */
+export interface ClientPackageBookingResult {
+  id: string;
+  status: string;
+  packageCreditId: string | null;
+}
+
 const ATTEMPT_STORAGE_PREFIX = 'sawaa.package-purchase.attempt';
 const PENDING_PURCHASE_STORAGE_KEY = 'sawaa.package-purchase.pending';
 
@@ -162,8 +174,8 @@ export const clientPackagesService = {
     return response.data;
   },
 
-  async bookCredit(input: BookMyPackageCreditInput) {
-    const response = await api.post('/client/packages/book', input);
+  async bookCredit(input: BookMyPackageCreditInput): Promise<ClientPackageBookingResult> {
+    const response = await api.post<ClientPackageBookingResult>('/client/packages/book', input);
     return response.data;
   },
 };
