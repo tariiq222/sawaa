@@ -86,7 +86,7 @@
     "libphonenumber-js": "^1.12.42",
     "minio": "^8.0.7",
     "nestjs-cls": "^4.5.0",
-    "nodemailer": "9.1.0",
+    "nodemailer": "10.6.0",
     "openai": "^6.34.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
