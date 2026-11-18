@@ -47,6 +47,21 @@ function normalizeNotification(item: NotificationPayload): Notification {
 
 const BASE = '/client/notifications';
 
+/**
+ * `POST /client/notifications/fcm-token` wire row
+ * (`ClientNotificationFcmTokenDto`, the Prisma `FcmToken` columns).
+ * `services/__tests__/client-surface-contract.test.ts` guards this shape
+ * against the committed OpenAPI snapshot. Type-only.
+ */
+export interface ClientNotificationFcmToken {
+  id: string;
+  clientId: string;
+  token: string;
+  platform: string;
+  lastSeenAt: string;
+  createdAt: string;
+}
+
 export const notificationsService = {
   async getAll(params?: NotificationParams): Promise<NotificationListResponse> {
     const { perPage, ...rest } = params ?? {};
@@ -72,7 +87,7 @@ export const notificationsService = {
   },
 
   async registerFcmToken(token: string, platform: 'ios' | 'android') {
-    const response = await api.post<ApiResponse<unknown>>(
+    const response = await api.post<ApiResponse<ClientNotificationFcmToken>>(
       `${BASE}/fcm-token`,
       { token, platform },
     );

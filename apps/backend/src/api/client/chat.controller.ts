@@ -30,6 +30,12 @@ import { ClientChatConversationDetailDto, ListClientChatConversationsDto, ListCl
 import { ListClientChatConversationsHandler } from '../../modules/comms/chat/messages/list-client-chat-conversations.handler';
 import { GetClientChatConversationHandler } from '../../modules/comms/chat/messages/get-client-chat-conversation.handler';
 import { WebChatEnabledGuard } from '../../modules/comms/chat/web-chat-availability.service';
+import {
+  ClientChatConversationDto,
+  ClientChatMessageDto,
+  ClientChatMessagePageDto,
+  ClientChatOperationDto,
+} from './dto/client-chat-response.dto';
 
 type CookieRequest = Request & { cookies?: Record<string, unknown> };
 
@@ -73,8 +79,8 @@ export class ClientChatController {
 
   @Get('conversations/current')
   @ApiOperation({ summary: 'Get the authenticated client chat conversation' })
-  @ApiOkResponse({ description: 'Current conversation for the authenticated client' })
-  current(@ClientSession() session: { id: string }) {
+  @ApiOkResponse({ type: ClientChatConversationDto, description: 'Current conversation for the authenticated client' })
+  current(@ClientSession() session: { id: string }): Promise<ClientChatConversationDto> {
     return this.getCurrentConversation.execute({ clientId: session.id });
   }
 
@@ -133,12 +139,13 @@ export class ClientChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a message as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiCreatedResponse({ type: ClientChatMessageDto, description: 'The persisted message, public-safe projection' })
   async sendMessageForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() dto: SendChatMessageDto,
     @ClientSession() session: { id: string },
     @Ip() ipAddress: string,
-  ) {
+  ): Promise<ClientChatMessageDto> {
     const message = await this.sendMessage.execute({
       audience: 'client',
       conversationId,
@@ -171,11 +178,12 @@ export class ClientChatController {
   @Header('Cache-Control', 'no-store, max-age=0')
   @ApiOperation({ summary: 'List messages as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiOkResponse({ type: ClientChatMessagePageDto, description: 'Messages on the requested page' })
   listMessagesForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Query() dto: ListChatMessagesDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<ClientChatMessagePageDto> {
     return this.listMessages.execute({
       audience: 'client',
       conversationId,
@@ -190,11 +198,12 @@ export class ClientChatController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request reception handoff as the authenticated client' })
   @ApiParam({ name: 'conversationId', format: 'uuid', description: 'Client conversation UUID' })
+  @ApiCreatedResponse({ type: ClientChatConversationDto, description: 'The conversation moved to reception handoff' })
   async requestReceptionForClient(
     @Param('conversationId', ParseUUIDPipe) conversationId: string,
     @Body() _dto: ClientRequestHandoffDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<ClientChatConversationDto> {
     return toChatConversationResponse(await this.requestHandoff.execute({
       audience: 'client',
       conversationId,
@@ -207,11 +216,12 @@ export class ClientChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Acknowledge an additional appointment before confirmation' })
   @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  @ApiOkResponse({ type: ClientChatOperationDto, description: 'The operation after this transition, public-safe projection' })
   async acknowledgeAdditionalBooking(
     @Param('operationId', ParseUUIDPipe) operationId: string,
     @Body() dto: OperationVersionDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<ClientChatOperationDto> {
     return toPublicChatOperation(await this.acknowledgeOperation.execute({
       operationId,
       clientId: session.id,
@@ -224,11 +234,12 @@ export class ClientChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm and execute a prepared chat operation' })
   @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  @ApiOkResponse({ type: ClientChatOperationDto, description: 'The operation after this transition, public-safe projection' })
   async confirmPreparedOperation(
     @Param('operationId', ParseUUIDPipe) operationId: string,
     @Body() dto: OperationVersionDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<ClientChatOperationDto> {
     return toPublicChatOperation(await this.confirmOperation.execute({
       operationId,
       clientId: session.id,
@@ -241,11 +252,12 @@ export class ClientChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Decline a prepared chat operation without executing it' })
   @ApiParam({ name: 'operationId', format: 'uuid', description: 'Chat operation UUID' })
+  @ApiOkResponse({ type: ClientChatOperationDto, description: 'The operation after this transition, public-safe projection' })
   async declinePreparedOperation(
     @Param('operationId', ParseUUIDPipe) operationId: string,
     @Body() dto: OperationVersionDto,
     @ClientSession() session: { id: string },
-  ) {
+  ): Promise<ClientChatOperationDto> {
     return toPublicChatOperation(await this.declineOperation.execute({
       operationId,
       clientId: session.id,

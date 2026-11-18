@@ -4,7 +4,7 @@ import { Type } from 'class-transformer';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
-import { CLIENT_PAGE_SCHEMA, toClientPage } from './client-page';
+import { toClientPage } from './client-page';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../common/swagger';
 import { ClientThrottle } from '../../common/throttle/client-throttle';
@@ -16,6 +16,11 @@ import { GetUnreadCountHandler } from '../../modules/comms/notifications/get-unr
 import { RegisterFcmTokenHandler } from '../../modules/comms/fcm-tokens/register-fcm-token.handler';
 import { UnregisterFcmTokenHandler } from '../../modules/comms/fcm-tokens/unregister-fcm-token.handler';
 import { RegisterFcmTokenDto } from '../../modules/comms/fcm-tokens/register-fcm-token.dto';
+import {
+  ClientNotificationFcmTokenDto,
+  ClientNotificationPageDto,
+  ClientNotificationUnreadCountDto,
+} from './dto/client-notification-response.dto';
 
 export class ListClientNotificationsQuery {
   @ApiPropertyOptional({ description: 'Return only unread notifications', example: true })
@@ -49,8 +54,11 @@ export class ClientNotificationsController {
 
   @Get()
   @ApiOperation({ summary: 'List notifications for the current client' })
-  @ApiOkResponse({ description: 'Paginated notification list', schema: CLIENT_PAGE_SCHEMA })
-  async list(@ClientSession() session: ClientSession, @Query() q: ListClientNotificationsQuery) {
+  @ApiOkResponse({ type: ClientNotificationPageDto, description: 'Paginated notification list' })
+  async list(
+    @ClientSession() session: ClientSession,
+    @Query() q: ListClientNotificationsQuery,
+  ): Promise<ClientNotificationPageDto> {
     const result = await this.listNotifications.execute({
       recipientId: session.id,
       unreadOnly: q.unreadOnly,
@@ -62,8 +70,8 @@ export class ClientNotificationsController {
 
   @Get('unread-count')
   @ApiOperation({ summary: 'Get unread notification count for the current client' })
-  @ApiOkResponse({ description: 'Unread count value' })
-  unreadCount(@ClientSession() session: ClientSession) {
+  @ApiOkResponse({ type: ClientNotificationUnreadCountDto, description: 'Unread count value' })
+  unreadCount(@ClientSession() session: ClientSession): Promise<ClientNotificationUnreadCountDto> {
     return this.getUnreadCount.execute({ recipientId: session.id });
   }
 
@@ -83,8 +91,11 @@ export class ClientNotificationsController {
   @Post('fcm-token')
   @HttpCode(201)
   @ApiOperation({ summary: 'Register an FCM registration token for the current client' })
-  @ApiCreatedResponse({ description: 'Token stored' })
-  registerFcmToken(@ClientSession() session: ClientSession, @Body() body: RegisterFcmTokenDto) {
+  @ApiCreatedResponse({ type: ClientNotificationFcmTokenDto, description: 'Token stored' })
+  registerFcmToken(
+    @ClientSession() session: ClientSession,
+    @Body() body: RegisterFcmTokenDto,
+  ): Promise<ClientNotificationFcmTokenDto> {
     return this.registerFcm.execute({ clientId: session.id, ...body });
   }
 

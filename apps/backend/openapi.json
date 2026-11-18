@@ -4930,6 +4930,16 @@
         ],
         "type": "object"
       },
+      "ChatMessageKind": {
+        "description": "Message kind",
+        "enum": [
+          "TEXT",
+          "ACTION_CARD",
+          "OPERATION_RESULT",
+          "SYSTEM_EVENT"
+        ],
+        "type": "string"
+      },
       "ChatMessageResponseDto": {
         "properties": {
           "body": {
@@ -4986,6 +4996,30 @@
           "createdAt"
         ],
         "type": "object"
+      },
+      "ChatOperationStatus": {
+        "description": "Operation status",
+        "enum": [
+          "AWAITING_AUTH",
+          "AWAITING_EXISTING_BOOKING_ACK",
+          "AWAITING_CONFIRMATION",
+          "EXECUTING",
+          "SUCCEEDED",
+          "FAILED",
+          "DECLINED",
+          "EXPIRED"
+        ],
+        "type": "string"
+      },
+      "ChatOperationType": {
+        "description": "Operation type",
+        "enum": [
+          "LIST_OWN_APPOINTMENTS",
+          "CREATE_BOOKING",
+          "RESCHEDULE_BOOKING",
+          "CANCEL_BOOKING"
+        ],
+        "type": "string"
       },
       "ClaimGuestConversationDto": {
         "properties": {},
@@ -5492,6 +5526,409 @@
         ],
         "type": "object"
       },
+      "ClientBookingInvoiceResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "nullable": true,
+            "type": "string"
+          },
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-00000000000c",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "discountAmt": {
+            "description": "Discount amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "dueAt": {
+            "description": "Due instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000004",
+            "format": "uuid",
+            "type": "string"
+          },
+          "hasReceipt": {
+            "description": "Whether a paid receipt PDF exists. Fetch it with `GET /client/invoices/:id/pdf`; the receipt storage key is never returned here.",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Invoice UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "issuedAt": {
+            "description": "Issue instant, or null",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "packagePurchaseId": {
+            "description": "Package purchase UUID, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "paidAt": {
+            "description": "Paid instant, or null",
+            "example": "2026-05-20T09:05:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "refundedVatAmt": {
+            "description": "Refunded VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "sellerName": {
+            "description": "Seller name shown on the invoice",
+            "example": "مركز سواء",
+            "type": "string"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum)",
+            "example": "PAID",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Net amount before VAT and discount, in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "total": {
+            "description": "Invoice total in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "vatAmt": {
+            "description": "VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "vatRate": {
+            "description": "VAT rate as a fraction of 1 (0 when VAT is off)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "sellerName",
+          "branchId",
+          "clientId",
+          "employeeId",
+          "bookingId",
+          "packagePurchaseId",
+          "subtotal",
+          "discountAmt",
+          "vatRate",
+          "vatAmt",
+          "total",
+          "refundedAmount",
+          "refundedVatAmt",
+          "currency",
+          "status",
+          "issuedAt",
+          "dueAt",
+          "paidAt",
+          "createdAt",
+          "hasReceipt"
+        ],
+        "type": "object"
+      },
+      "ClientBookingJoinResponseDto": {
+        "properties": {
+          "joinUrl": {
+            "description": "Zoom attendee join URL; null when the meeting has not been created yet (the booking is re-read after the create attempt).",
+            "example": "https://zoom.us/j/123456789",
+            "nullable": true,
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Scheduled session start (ISO 8601 UTC)",
+            "example": "2026-05-20T07:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "joinUrl",
+          "scheduledAt"
+        ],
+        "type": "object"
+      },
+      "ClientBookingMutationDto": {
+        "properties": {
+          "bookingNumber": {
+            "description": "Human-friendly sequential booking number",
+            "example": 1024,
+            "type": "number"
+          },
+          "bookingType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingType"
+              }
+            ],
+            "description": "Appointment shape (Prisma enum)",
+            "example": "INDIVIDUAL"
+          },
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-00000000000c",
+            "format": "uuid",
+            "type": "string"
+          },
+          "branchNameSnapshot": {
+            "description": "Branch name captured at booking time",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelledAt": {
+            "description": "Cancellation instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelReason": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CancellationReason"
+              }
+            ],
+            "description": "Cancellation reason (Prisma enum), or null",
+            "example": null,
+            "nullable": true
+          },
+          "categoryNameSnapshot": {
+            "description": "Category name captured at booking time",
+            "example": "Family counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "checkedInAt": {
+            "description": "Check-in instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "completedAt": {
+            "description": "Completion instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmedAt": {
+            "description": "Confirmation instant, or null",
+            "example": "2026-05-19T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T06:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel (Prisma enum)",
+            "example": "IN_PERSON"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "example": 60,
+            "type": "integer"
+          },
+          "durationMinutesSnapshot": {
+            "description": "Duration captured at booking time, or null",
+            "example": 60,
+            "nullable": true,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeNameSnapshot": {
+            "description": "Employee name captured at booking time",
+            "example": "Ahmed Al-Qahtani",
+            "nullable": true,
+            "type": "string"
+          },
+          "endsAt": {
+            "description": "End instant (UTC)",
+            "example": "2026-05-20T08:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Booking UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "noShowAt": {
+            "description": "No-show instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "payAtClinic": {
+            "description": "Client pays at the center",
+            "example": false,
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Booked price in halalas, serialized as a decimal string",
+            "example": "20000",
+            "type": "string"
+          },
+          "priceSnapshot": {
+            "description": "Price captured at booking time, decimal string, or null",
+            "example": "20000",
+            "nullable": true,
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Start instant (UTC)",
+            "example": "2026-05-20T07:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID; null for group-program bookings",
+            "example": "00000000-0000-4000-a000-000000000005",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceNameSnapshot": {
+            "description": "Service name captured at booking time",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingStatus"
+              }
+            ],
+            "description": "Booking status (Prisma enum)",
+            "example": "CONFIRMED"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-05-20T06:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "zoomJoinUrl": {
+            "description": "Zoom attendee join URL, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingStatus": {
+            "description": "Zoom meeting creation state, or null",
+            "enum": [
+              "PENDING",
+              "CREATED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingNumber",
+          "serviceId",
+          "employeeId",
+          "branchId",
+          "status",
+          "bookingType",
+          "deliveryType",
+          "scheduledAt",
+          "endsAt",
+          "durationMins",
+          "durationMinutesSnapshot",
+          "price",
+          "priceSnapshot",
+          "currency",
+          "payAtClinic",
+          "serviceNameSnapshot",
+          "employeeNameSnapshot",
+          "branchNameSnapshot",
+          "categoryNameSnapshot",
+          "zoomJoinUrl",
+          "zoomMeetingStatus",
+          "createdAt",
+          "updatedAt",
+          "checkedInAt",
+          "confirmedAt",
+          "completedAt",
+          "noShowAt",
+          "cancelledAt",
+          "cancelReason"
+        ],
+        "type": "object"
+      },
       "ClientBookingPaymentDto": {
         "properties": {
           "amount": {
@@ -5537,6 +5974,528 @@
           "totalAmount",
           "method",
           "status"
+        ],
+        "type": "object"
+      },
+      "ClientBookingRatingResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Rated booking UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID derived from the booking",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "comment": {
+            "description": "Optional client comment, or null",
+            "example": "Great session",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID derived from the booking",
+            "example": "00000000-0000-4000-a000-000000000004",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "Rating UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Whether the rating is publicly visible. Always false on creation: client-supplied visibility is ignored.",
+            "example": false,
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Rating score from 1 to 5",
+            "example": 5,
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "clientId",
+          "employeeId",
+          "score",
+          "comment",
+          "isPublic",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ClientBookingRecordDto": {
+        "properties": {
+          "autoNoShowSuppressedAt": {
+            "description": "Instant until which automatic no-show is suppressed after a restore",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "bookingNumber": {
+            "description": "Human-friendly sequential booking number",
+            "example": 1024,
+            "type": "number"
+          },
+          "bookingType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingType"
+              }
+            ],
+            "description": "Appointment shape",
+            "example": "INDIVIDUAL"
+          },
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-0000-0000-00000000000c",
+            "type": "string"
+          },
+          "branchNameSnapshot": {
+            "description": "Branch name captured at booking time",
+            "example": "Riyadh",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelledAt": {
+            "description": "Cancellation instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelNotes": {
+            "description": "Free-text cancellation notes",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelReason": {
+            "description": "Cancellation reason",
+            "enum": [
+              "CLIENT_REQUESTED",
+              "EMPLOYEE_UNAVAILABLE",
+              "NO_SHOW",
+              "SYSTEM_EXPIRED",
+              "OTHER"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "categoryNameSnapshot": {
+            "description": "Category name captured at booking time",
+            "example": "Family counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "checkedInAt": {
+            "description": "Check-in instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "type": "string"
+          },
+          "completedAt": {
+            "description": "Completion instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmedAt": {
+            "description": "Confirmation instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "couponCode": {
+            "description": "Applied coupon code",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-30T08:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "creationIdempotencyKey": {
+            "description": "Client-supplied idempotency key for creation",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "creationRequestHash": {
+            "description": "Canonical hash of the creation request paired with the idempotency key",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel",
+            "example": "IN_PERSON"
+          },
+          "departmentNameSnapshot": {
+            "description": "Department name captured at booking time",
+            "example": "Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "discountedPrice": {
+            "description": "Discounted price in halalas, decimal string",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "example": 60,
+            "type": "number"
+          },
+          "durationMinutesSnapshot": {
+            "description": "Duration in minutes captured at booking time",
+            "example": 60,
+            "nullable": true,
+            "type": "number"
+          },
+          "durationOptionId": {
+            "description": "Service duration option UUID",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-0000-0000-000000000003",
+            "type": "string"
+          },
+          "employeeNameSnapshot": {
+            "description": "Employee name captured at booking time",
+            "example": "Ahmed Al-Qahtani",
+            "nullable": true,
+            "type": "string"
+          },
+          "endsAt": {
+            "description": "End instant (UTC)",
+            "example": "2026-06-01T10:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "Hold expiry instant for unconfirmed bookings",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Booking UUID",
+            "example": "00000000-0000-0000-0000-000000000002",
+            "type": "string"
+          },
+          "isHistoricalImport": {
+            "description": "True for rows imported from the legacy system",
+            "example": false,
+            "type": "boolean"
+          },
+          "lateEntryRecordedAt": {
+            "description": "When the late entry was recorded",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lateEntryRecordedBy": {
+            "description": "User id who recorded the late entry",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "noShowAt": {
+            "description": "No-show instant",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "notes": {
+            "description": "Free-text notes",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "packageCreditId": {
+            "description": "Package credit UUID when the booking consumes package credit",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "payAtClinic": {
+            "description": "Client selected payment at the center; independent of financial payment status",
+            "example": false,
+            "type": "boolean"
+          },
+          "price": {
+            "description": "Price in halalas, serialized as a decimal string (Prisma Decimal)",
+            "example": "20000",
+            "type": "string"
+          },
+          "priceSnapshot": {
+            "description": "Price in halalas captured at booking time, decimal string",
+            "example": "20000",
+            "nullable": true,
+            "type": "string"
+          },
+          "programId": {
+            "description": "Program UUID for group bookings",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Start instant (UTC)",
+            "example": "2026-06-01T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service UUID; null for group-program bookings",
+            "example": "00000000-0000-0000-0000-000000000005",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceNameSnapshot": {
+            "description": "Service name captured at booking time",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingSource"
+              }
+            ],
+            "description": "Where the booking was created",
+            "example": "RECEPTION"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingStatus"
+              }
+            ],
+            "description": "Booking status",
+            "example": "CONFIRMED"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-05-30T08:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "zoomCreateAttemptCount": {
+            "description": "Number of Zoom creation attempts",
+            "example": 0,
+            "type": "number"
+          },
+          "zoomCreateLeaseExpiresAt": {
+            "description": "Zoom creation lease expiry",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomCreateLeaseOwner": {
+            "description": "Worker that holds the Zoom creation lease",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomCreatePhase": {
+            "description": "Durable Zoom creation phase",
+            "example": "BEFORE_CALL",
+            "type": "string"
+          },
+          "zoomHostUrl": {
+            "description": "Zoom host URL (present on write responses because the row is returned unmapped)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomJoinUrl": {
+            "description": "Zoom join URL",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingCreatedAt": {
+            "description": "When the Zoom meeting was created",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingError": {
+            "description": "Last Zoom creation error",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingId": {
+            "description": "Zoom meeting id",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomMeetingStatus": {
+            "description": "Zoom meeting creation state",
+            "enum": [
+              "PENDING",
+              "CREATED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomStartUrl": {
+            "description": "Zoom start URL (present on write responses because the row is returned unmapped)",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomSyncLeaseExpiresAt": {
+            "description": "Zoom sync lease expiry",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomSyncLeaseOwner": {
+            "description": "Worker that holds the Zoom sync lease",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "zoomSyncRevision": {
+            "description": "Zoom sync revision counter",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "clientId",
+          "employeeId",
+          "serviceId",
+          "bookingType",
+          "deliveryType",
+          "source",
+          "creationIdempotencyKey",
+          "creationRequestHash",
+          "status",
+          "isHistoricalImport",
+          "lateEntryRecordedAt",
+          "lateEntryRecordedBy",
+          "scheduledAt",
+          "endsAt",
+          "durationMins",
+          "price",
+          "currency",
+          "notes",
+          "cancelReason",
+          "cancelNotes",
+          "cancelledAt",
+          "confirmedAt",
+          "checkedInAt",
+          "autoNoShowSuppressedAt",
+          "completedAt",
+          "noShowAt",
+          "expiresAt",
+          "durationOptionId",
+          "programId",
+          "packageCreditId",
+          "payAtClinic",
+          "couponCode",
+          "discountedPrice",
+          "zoomMeetingId",
+          "zoomJoinUrl",
+          "zoomHostUrl",
+          "zoomStartUrl",
+          "zoomMeetingStatus",
+          "zoomMeetingError",
+          "zoomMeetingCreatedAt",
+          "zoomCreatePhase",
+          "zoomCreateLeaseOwner",
+          "zoomCreateLeaseExpiresAt",
+          "zoomCreateAttemptCount",
+          "zoomSyncRevision",
+          "zoomSyncLeaseOwner",
+          "zoomSyncLeaseExpiresAt",
+          "priceSnapshot",
+          "durationMinutesSnapshot",
+          "branchNameSnapshot",
+          "employeeNameSnapshot",
+          "serviceNameSnapshot",
+          "categoryNameSnapshot",
+          "departmentNameSnapshot",
+          "bookingNumber",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ClientBookingRescheduleResponseDto": {
+        "properties": {
+          "booking": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientBookingMutationDto"
+              }
+            ],
+            "description": "The rescheduled booking, client-safe projection"
+          }
+        },
+        "required": [
+          "booking"
         ],
         "type": "object"
       },
@@ -5755,6 +6714,28 @@
         ],
         "type": "object"
       },
+      "ClientChatAssistantRecoveryMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminant",
+            "enum": [
+              "ASSISTANT_RECOVERY"
+            ],
+            "example": "ASSISTANT_RECOVERY",
+            "type": "string"
+          },
+          "canRetry": {
+            "description": "Whether the client may retry the assistant reply",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "canRetry"
+        ],
+        "type": "object"
+      },
       "ClientChatConversationCursorMetaDto": {
         "properties": {
           "hasMore": {
@@ -5817,6 +6798,72 @@
         ],
         "type": "object"
       },
+      "ClientChatConversationDto": {
+        "properties": {
+          "clientId": {
+            "description": "Owning client UUID, or null for a guest conversation",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Assigned employee UUID, or null",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Conversation UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isAiChat": {
+            "description": "Whether the assistant answers this conversation",
+            "example": true,
+            "type": "boolean"
+          },
+          "language": {
+            "description": "Conversation language code",
+            "example": "ar",
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConversationStatus"
+              }
+            ],
+            "description": "Conversation status",
+            "example": "AI_ACTIVE"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-05-20T09:05:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "employeeId",
+          "isAiChat",
+          "status",
+          "language",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "ClientChatConversationSummaryDto": {
         "properties": {
           "createdAt": {
@@ -5866,6 +6913,33 @@
         ],
         "type": "object"
       },
+      "ClientChatHandoffMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminant",
+            "enum": [
+              "OFFER_HANDOFF"
+            ],
+            "example": "OFFER_HANDOFF",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why reception handoff was offered",
+            "enum": [
+              "OUT_OF_SCOPE",
+              "USER_REQUESTED",
+              "LIMIT_REACHED"
+            ],
+            "example": "USER_REQUESTED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
       "ClientChatLastMessageDto": {
         "properties": {
           "kind": {
@@ -5897,6 +6971,308 @@
           "preview",
           "senderType",
           "kind"
+        ],
+        "type": "object"
+      },
+      "ClientChatMessageDto": {
+        "properties": {
+          "body": {
+            "description": "Message body",
+            "example": "أريد حجز موعد",
+            "type": "string"
+          },
+          "clientMessageId": {
+            "description": "Client idempotency id echoed back, or null",
+            "example": "00000000-0000-4000-a000-000000000021",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "conversationId": {
+            "description": "Conversation UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message UUID",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatMessageKind"
+              }
+            ],
+            "description": "Message kind",
+            "example": "TEXT"
+          },
+          "metadata": {
+            "description": "Sanitized public metadata; absent unless it matches an allow-listed variant",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ClientChatHandoffMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/ClientChatAssistantRecoveryMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/ClientChatOperationCardMetadataDto"
+              },
+              {
+                "$ref": "#/components/schemas/ClientChatOperationResultMetadataDto"
+              }
+            ]
+          },
+          "senderType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MessageSenderType"
+              }
+            ],
+            "description": "Who sent the message",
+            "example": "CLIENT"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "body",
+          "kind",
+          "clientMessageId",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ClientChatMessagePageDto": {
+        "properties": {
+          "data": {
+            "description": "Messages on this page (newest first)",
+            "items": {
+              "$ref": "#/components/schemas/ClientChatMessageDto"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientChatMessagePageMetaDto"
+              }
+            ],
+            "description": "Cursor pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "ClientChatMessagePageMetaDto": {
+        "properties": {
+          "hasMore": {
+            "description": "Whether more messages exist after this page",
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Page size used for this read",
+            "example": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "nextCursor": {
+            "description": "Cursor for the next page, or null when exhausted",
+            "example": null,
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "nextCursor",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "ClientChatOperationCardMetadataDto": {
+        "properties": {
+          "action": {
+            "description": "Metadata discriminant",
+            "enum": [
+              "CHAT_OPERATION"
+            ],
+            "example": "CHAT_OPERATION",
+            "type": "string"
+          },
+          "operation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientChatOperationDto"
+              }
+            ],
+            "description": "Prepared operation shown on the card"
+          }
+        },
+        "required": [
+          "action",
+          "operation"
+        ],
+        "type": "object"
+      },
+      "ClientChatOperationDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking UUID touched by the operation, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "confirmationCount": {
+            "description": "Confirmation steps already recorded",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "errorCode": {
+            "description": "Machine-readable failure code, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "Expiry instant (ISO 8601)",
+            "example": "2026-05-20T10:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Operation UUID",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "type": "string"
+          },
+          "requiredConfirmations": {
+            "description": "Confirmation steps required before execution",
+            "example": 1,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatOperationStatus"
+              }
+            ],
+            "description": "Operation status",
+            "example": "AWAITING_CONFIRMATION"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "description": "Sanitized display summary. The mapper keeps only these keys (nested allow-list for `existingBooking`/`proposedBooking`): action, intent, existingBooking, proposedBooking, scheduledAt, endsAt, oldScheduledAt, newScheduledAt, newEndsAt, durationMins, price, currency, serviceName, employeeName, branchName, deliveryType, status. Dates are ISO strings, `durationMins`/`price` are finite non-negative numbers, and unsafe markup/URLs are dropped.",
+            "example": {
+              "action": "CREATE_BOOKING",
+              "currency": "SAR",
+              "scheduledAt": "2026-06-02T09:00:00.000Z",
+              "serviceName": "Family consultation"
+            },
+            "type": "object"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatOperationType"
+              }
+            ],
+            "description": "Operation type",
+            "example": "CREATE_BOOKING"
+          },
+          "version": {
+            "description": "Optimistic-lock version; send it back as `expectedVersion`",
+            "example": 1,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "version",
+          "requiredConfirmations",
+          "confirmationCount",
+          "expiresAt",
+          "bookingId",
+          "errorCode",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "ClientChatOperationResultMetadataDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking UUID created/rescheduled by the operation, or null. Absent on a declined result.",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "nullable": true,
+            "type": "string"
+          },
+          "operationId": {
+            "description": "Operation UUID (safe id charset)",
+            "example": "00000000-0000-4000-a000-000000000010",
+            "type": "string"
+          },
+          "outcome": {
+            "description": "Outcome code. Absent on a declined result.",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_RESCHEDULED",
+              "BOOKING_CANCELLED",
+              "CANCELLATION_REQUESTED",
+              "OPERATION_FAILED",
+              "APPOINTMENTS_LISTED"
+            ],
+            "example": "BOOKING_CREATED",
+            "type": "string"
+          },
+          "status": {
+            "description": "Terminal operation status",
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "DECLINED"
+            ],
+            "example": "SUCCEEDED",
+            "type": "string"
+          },
+          "syncPending": {
+            "description": "True when the Zoom URL sync is still pending",
+            "example": true,
+            "type": "boolean"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatOperationType"
+              }
+            ],
+            "description": "Operation type",
+            "example": "CREATE_BOOKING"
+          }
+        },
+        "required": [
+          "operationId",
+          "type",
+          "status"
         ],
         "type": "object"
       },
@@ -6039,6 +7415,412 @@
         ],
         "type": "string"
       },
+      "ClientInvoiceDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Booking UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "nullable": true,
+            "type": "string"
+          },
+          "branchId": {
+            "description": "Branch UUID",
+            "example": "00000000-0000-4000-a000-00000000000c",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "discountAmt": {
+            "description": "Discount amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "dueAt": {
+            "description": "Due instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee UUID",
+            "example": "00000000-0000-4000-a000-000000000004",
+            "format": "uuid",
+            "type": "string"
+          },
+          "hasReceipt": {
+            "description": "Whether a paid receipt PDF exists. Fetch it with `GET /client/invoices/:id/pdf`; the receipt storage key is never returned on these routes.",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Invoice UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "issuedAt": {
+            "description": "Issue instant, or null",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "number": {
+            "description": "Sequential invoice number",
+            "example": 1024,
+            "type": "integer"
+          },
+          "packagePurchaseId": {
+            "description": "Package purchase UUID, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "paidAt": {
+            "description": "Paid instant, or null",
+            "example": "2026-05-20T09:05:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "payments": {
+            "description": "Client-safe payments on this invoice",
+            "items": {
+              "$ref": "#/components/schemas/ClientInvoicePaymentDto"
+            },
+            "type": "array"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "refundedVatAmt": {
+            "description": "Refunded VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "sellerName": {
+            "description": "Seller name shown on the invoice",
+            "example": "مركز سواء",
+            "type": "string"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum)",
+            "example": "PAID",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Net amount before VAT and discount, in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "total": {
+            "description": "Invoice total in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "vatAmt": {
+            "description": "VAT amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "vatRate": {
+            "description": "VAT rate as a fraction of 1 (0 when VAT is off)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "sellerName",
+          "branchId",
+          "clientId",
+          "employeeId",
+          "bookingId",
+          "packagePurchaseId",
+          "subtotal",
+          "discountAmt",
+          "vatRate",
+          "vatAmt",
+          "total",
+          "refundedAmount",
+          "refundedVatAmt",
+          "currency",
+          "status",
+          "issuedAt",
+          "dueAt",
+          "paidAt",
+          "createdAt",
+          "hasReceipt",
+          "payments"
+        ],
+        "type": "object"
+      },
+      "ClientInvoiceListItemDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Related booking UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "discountAmt": {
+            "description": "Discount amount in halalas",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Invoice UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "issuedAt": {
+            "description": "Issue instant, or null",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "number": {
+            "description": "Sequential invoice number",
+            "example": 1024,
+            "type": "integer"
+          },
+          "paidAt": {
+            "description": "Paid instant, or null",
+            "example": "2026-05-20T09:05:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "paymentStatus": {
+            "description": "Latest payment status (Prisma enum), or null when no payment exists",
+            "example": "COMPLETED",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "scheduledAt": {
+            "description": "Appointment start instant, or null",
+            "example": "2026-05-20T07:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceName": {
+            "description": "Service name snapshot, or an empty string when absent",
+            "example": "Family consultation",
+            "type": "string"
+          },
+          "status": {
+            "description": "Invoice status (Prisma enum)",
+            "example": "PAID",
+            "type": "string"
+          },
+          "subtotal": {
+            "description": "Subtotal in halalas",
+            "example": 20000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Invoice total in halalas",
+            "example": 20000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "vatAmt": {
+            "description": "VAT amount in halalas",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "vatRate": {
+            "description": "VAT rate as a fraction of 1 (0 when VAT is off)",
+            "example": 0,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bookingId",
+          "serviceName",
+          "scheduledAt",
+          "subtotal",
+          "discountAmt",
+          "vatRate",
+          "vatAmt",
+          "total",
+          "refundedAmount",
+          "currency",
+          "status",
+          "paymentStatus",
+          "issuedAt",
+          "paidAt",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ClientInvoiceListResponseDto": {
+        "properties": {
+          "items": {
+            "description": "Invoices on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/ClientInvoiceListItemDto"
+            },
+            "type": "array"
+          },
+          "outstandingBalance": {
+            "description": "Outstanding balance across all client invoices, in halalas",
+            "example": 25000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "description": "Records per page",
+            "example": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching invoices",
+            "example": 8,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "outstandingBalance"
+        ],
+        "type": "object"
+      },
+      "ClientInvoicePaymentDto": {
+        "properties": {
+          "amount": {
+            "description": "Amount in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "id": {
+            "description": "Payment UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "description": "Payment method (Prisma enum)",
+            "example": "ONLINE_CARD",
+            "type": "string"
+          },
+          "number": {
+            "description": "Sequential payment number",
+            "example": 42,
+            "type": "integer"
+          },
+          "processedAt": {
+            "description": "Provider processing instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "status": {
+            "description": "Payment status (Prisma enum)",
+            "example": "COMPLETED",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "amount",
+          "refundedAmount",
+          "currency",
+          "method",
+          "status",
+          "createdAt",
+          "processedAt"
+        ],
+        "type": "object"
+      },
+      "ClientInvoicePdfUrlDto": {
+        "properties": {
+          "url": {
+            "description": "Short-lived presigned download URL for the paid receipt PDF (5 minutes)",
+            "example": "https://minio.local/finance-invoices/receipts/00000000-0000-4000-a000-000000000002.pdf?X-Amz-Expires=300",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
       "ClientLoginDto": {
         "properties": {
           "email": {
@@ -6059,6 +7841,103 @@
         },
         "required": [
           "password"
+        ],
+        "type": "object"
+      },
+      "ClientNotificationFcmTokenDto": {
+        "properties": {
+          "clientId": {
+            "description": "Client UUID",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Registration UUID",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "description": "Last time this device registered",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "platform": {
+            "description": "Device platform",
+            "example": "ios",
+            "type": "string"
+          },
+          "token": {
+            "description": "FCM registration token",
+            "example": "fcm-token-placeholder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "token",
+          "platform",
+          "lastSeenAt",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ClientNotificationPageDto": {
+        "properties": {
+          "items": {
+            "description": "Notifications on the requested page",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponseDto"
+            },
+            "type": "array"
+          },
+          "page": {
+            "description": "1-based page number",
+            "example": 1,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "description": "Records per page",
+            "example": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching notifications",
+            "example": 8,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object"
+      },
+      "ClientNotificationUnreadCountDto": {
+        "properties": {
+          "count": {
+            "description": "Number of unread notifications for the authenticated client",
+            "example": 3,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
         ],
         "type": "object"
       },
@@ -6111,6 +7990,734 @@
           "creditId",
           "branchId",
           "scheduledAt"
+        ],
+        "type": "object"
+      },
+      "ClientPackageCreditAvailabilityDto": {
+        "properties": {
+          "bookable": {
+            "description": "Whether the credit can be booked right now",
+            "example": true,
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "Machine reason when not bookable, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookable",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "ClientPackageCreditConstraintDto": {
+        "properties": {
+          "dimension": {
+            "description": "Constraint dimension",
+            "enum": [
+              "SERVICE",
+              "PRACTITIONER",
+              "DURATION",
+              "DELIVERY_TYPE"
+            ],
+            "example": "SERVICE",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Constraint mode",
+            "enum": [
+              "ANY",
+              "INCLUDE",
+              "EXCLUDE"
+            ],
+            "example": "INCLUDE",
+            "type": "string"
+          },
+          "targetIds": {
+            "description": "Flattened target ids for the constraint; empty for ANY",
+            "example": [
+              "00000000-0000-4000-a000-000000000010"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "dimension",
+          "mode",
+          "targetIds"
+        ],
+        "type": "object"
+      },
+      "ClientPackageCreditDto": {
+        "properties": {
+          "availability": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientPackageCreditAvailabilityDto"
+              }
+            ],
+            "description": "Live bookability of the bucket"
+          },
+          "categoryBookingMode": {
+            "description": "Category booking mode, or null",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "nullable": true,
+            "type": "string"
+          },
+          "categoryId": {
+            "description": "Service category UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000020",
+            "nullable": true,
+            "type": "string"
+          },
+          "categoryNameAr": {
+            "description": "Service category name (Arabic)",
+            "example": "الإرشاد الأسري",
+            "type": "string"
+          },
+          "categoryNameEn": {
+            "description": "Service category name (English), or null",
+            "example": "Family counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "constraints": {
+            "description": "Snapshot eligibility rules",
+            "items": {
+              "$ref": "#/components/schemas/ClientPackageCreditConstraintDto"
+            },
+            "type": "array"
+          },
+          "deliveryTypeSnapshot": {
+            "description": "Frozen delivery channel, or null",
+            "example": "IN_PERSON",
+            "nullable": true,
+            "type": "string"
+          },
+          "departmentId": {
+            "description": "Department UUID, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "departmentNameAr": {
+            "description": "Department name (Arabic)",
+            "example": "الإرشاد",
+            "type": "string"
+          },
+          "departmentNameEn": {
+            "description": "Department name (English), or null",
+            "example": "Counseling",
+            "nullable": true,
+            "type": "string"
+          },
+          "dependsOnGroupId": {
+            "description": "Group UUID this bucket depends on, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "durationLabelAr": {
+            "description": "Duration label (Arabic)",
+            "example": "٦٠ دقيقة",
+            "type": "string"
+          },
+          "durationLabelEn": {
+            "description": "Duration label (English), or null",
+            "example": "60 minutes",
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes, or null",
+            "example": 60,
+            "nullable": true,
+            "type": "number"
+          },
+          "durationMinsSnapshot": {
+            "description": "Frozen duration in minutes, or null",
+            "example": 60,
+            "nullable": true,
+            "type": "number"
+          },
+          "durationOptionId": {
+            "description": "Pinned duration option UUID, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Pinned employee UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeNameAr": {
+            "description": "Employee name (Arabic)",
+            "example": "أحمد الغامدي",
+            "type": "string"
+          },
+          "employeeNameEn": {
+            "description": "Employee name (English), or null",
+            "example": "Ahmed Al-Ghamdi",
+            "nullable": true,
+            "type": "string"
+          },
+          "employeeNameSnapshot": {
+            "description": "Frozen employee name, or null",
+            "example": "Ahmed Al-Ghamdi",
+            "nullable": true,
+            "type": "string"
+          },
+          "groupLabel": {
+            "description": "Purchase group label, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Credit bucket UUID",
+            "example": "00000000-0000-4000-a000-000000000011",
+            "format": "uuid",
+            "type": "string"
+          },
+          "listPriceSnapshot": {
+            "description": "Frozen list price in halalas, or null",
+            "example": 20000,
+            "nullable": true,
+            "type": "number"
+          },
+          "netValue": {
+            "description": "Net paid value for this credit in halalas, or null",
+            "example": 18000,
+            "nullable": true,
+            "type": "number"
+          },
+          "purchaseGroupId": {
+            "description": "Purchase group UUID, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "remaining": {
+            "description": "Remaining sessions: total − used − reserved",
+            "example": 3,
+            "type": "integer"
+          },
+          "reservedQuantity": {
+            "description": "Reserved (booked, not delivered) sessions",
+            "example": 1,
+            "type": "integer"
+          },
+          "sequenceMode": {
+            "description": "Sequence mode of the group, or null",
+            "enum": [
+              "ORDERED",
+              "UNORDERED"
+            ],
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Pinned service UUID, or null for flexible credits",
+            "example": "00000000-0000-4000-a000-000000000005",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceIsBookable": {
+            "description": "Whether the service/employee are still active and linked",
+            "example": true,
+            "type": "boolean"
+          },
+          "serviceNameAr": {
+            "description": "Service name (Arabic)",
+            "example": "استشارة أسرية",
+            "type": "string"
+          },
+          "serviceNameEn": {
+            "description": "Service name (English), or null",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "serviceNameSnapshot": {
+            "description": "Frozen service name, or null",
+            "example": "Family consultation",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionPosition": {
+            "description": "Position within the purchase group, or null",
+            "example": null,
+            "nullable": true,
+            "type": "integer"
+          },
+          "totalQuantity": {
+            "description": "Total sessions in this bucket",
+            "example": 5,
+            "type": "integer"
+          },
+          "unitPriceSnapshot": {
+            "description": "Unit price snapshot in halalas",
+            "example": 20000,
+            "type": "number"
+          },
+          "usedQuantity": {
+            "description": "Consumed sessions",
+            "example": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "employeeId",
+          "durationOptionId",
+          "serviceNameAr",
+          "serviceNameEn",
+          "employeeNameAr",
+          "employeeNameEn",
+          "durationLabelAr",
+          "durationLabelEn",
+          "durationMins",
+          "durationMinsSnapshot",
+          "deliveryTypeSnapshot",
+          "serviceNameSnapshot",
+          "employeeNameSnapshot",
+          "listPriceSnapshot",
+          "netValue",
+          "unitPriceSnapshot",
+          "totalQuantity",
+          "usedQuantity",
+          "reservedQuantity",
+          "remaining",
+          "categoryId",
+          "categoryNameAr",
+          "categoryNameEn",
+          "categoryBookingMode",
+          "departmentId",
+          "departmentNameAr",
+          "departmentNameEn",
+          "serviceIsBookable",
+          "constraints",
+          "purchaseGroupId",
+          "sessionPosition",
+          "groupLabel",
+          "sequenceMode",
+          "dependsOnGroupId",
+          "availability"
+        ],
+        "type": "object"
+      },
+      "ClientPackageOfferSnapshotDto": {
+        "properties": {
+          "familyId": {
+            "description": "Package family UUID",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "type": "string"
+          },
+          "familyNameAr": {
+            "description": "Family name (Arabic)",
+            "example": "باقة أسرة",
+            "type": "string"
+          },
+          "familyNameEn": {
+            "description": "Family name (English), or null",
+            "example": "Family package",
+            "nullable": true,
+            "type": "string"
+          },
+          "optionNameAr": {
+            "description": "Option name (Arabic)",
+            "example": "خمس جلسات",
+            "type": "string"
+          },
+          "optionNameEn": {
+            "description": "Option name (English), or null",
+            "example": "Five sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionCount": {
+            "description": "Session count at purchase time",
+            "example": 5,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "familyId",
+          "familyNameAr",
+          "familyNameEn",
+          "optionNameAr",
+          "optionNameEn",
+          "sessionCount"
+        ],
+        "type": "object"
+      },
+      "ClientPackagePurchaseDto": {
+        "properties": {
+          "amountPaid": {
+            "description": "Net amount paid in halalas",
+            "example": 80000,
+            "type": "number"
+          },
+          "branchId": {
+            "description": "Branch UUID (declared optional on the handler row type)",
+            "example": "00000000-0000-4000-a000-00000000000c",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "credits": {
+            "description": "Credit buckets of this purchase",
+            "items": {
+              "$ref": "#/components/schemas/ClientPackageCreditDto"
+            },
+            "type": "array"
+          },
+          "discountSnapshot": {
+            "description": "Discount snapshot in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "familyId": {
+            "description": "Package family UUID, or null",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "nullable": true,
+            "type": "string"
+          },
+          "familyNameAr": {
+            "description": "Family name (Arabic), or null",
+            "example": "باقة أسرة",
+            "nullable": true,
+            "type": "string"
+          },
+          "familyNameEn": {
+            "description": "Family name (English), or null",
+            "example": "Family package",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Package purchase UUID",
+            "example": "00000000-0000-4000-a000-000000000040",
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoiceId": {
+            "description": "Purchase invoice UUID, or null (declared optional on the handler row type)",
+            "example": "00000000-0000-4000-a000-000000000008",
+            "nullable": true,
+            "type": "string"
+          },
+          "modelVersion": {
+            "description": "Credit model version",
+            "enum": [
+              "LEGACY",
+              "GROUPED_V2"
+            ],
+            "example": "LEGACY",
+            "type": "string"
+          },
+          "offerSnapshot": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientPackageOfferSnapshotDto"
+              }
+            ],
+            "description": "Frozen offer identity, or null for legacy purchases",
+            "nullable": true,
+            "type": "object"
+          },
+          "optionNameAr": {
+            "description": "Option name (Arabic), or null",
+            "example": "خمس جلسات",
+            "nullable": true,
+            "type": "string"
+          },
+          "optionNameEn": {
+            "description": "Option name (English), or null",
+            "example": "Five sessions",
+            "nullable": true,
+            "type": "string"
+          },
+          "packageFamilyId": {
+            "description": "Package family UUID from the offer snapshot, or null (declared optional on the handler row type)",
+            "example": "00000000-0000-4000-a000-000000000030",
+            "nullable": true,
+            "type": "string"
+          },
+          "packageId": {
+            "description": "Session package UUID",
+            "example": "00000000-0000-4000-a000-000000000031",
+            "format": "uuid",
+            "type": "string"
+          },
+          "packageNameAr": {
+            "description": "Package name (Arabic)",
+            "example": "باقة خمس جلسات",
+            "type": "string"
+          },
+          "packageNameEn": {
+            "description": "Package name (English), or null",
+            "example": "Five-session package",
+            "nullable": true,
+            "type": "string"
+          },
+          "paidAt": {
+            "description": "Paid instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "refundAmount": {
+            "description": "Refunded amount in halalas",
+            "example": 0,
+            "type": "number"
+          },
+          "refundedAt": {
+            "description": "Refunded instant, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionCount": {
+            "description": "Session count from the offer snapshot, or null",
+            "example": 5,
+            "nullable": true,
+            "type": "integer"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PackagePurchaseStatus"
+              }
+            ],
+            "description": "Purchase status",
+            "example": "ACTIVE"
+          },
+          "subtotalSnapshot": {
+            "description": "Subtotal snapshot in halalas",
+            "example": 80000,
+            "type": "number"
+          },
+          "totalCharged": {
+            "description": "VAT-inclusive amount charged in halalas",
+            "example": 80000,
+            "type": "number"
+          },
+          "vatAmount": {
+            "description": "VAT on the purchase invoice in halalas; 0 when VAT is off",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "packageId",
+          "packageNameAr",
+          "packageNameEn",
+          "offerSnapshot",
+          "familyId",
+          "familyNameAr",
+          "familyNameEn",
+          "optionNameAr",
+          "optionNameEn",
+          "sessionCount",
+          "status",
+          "subtotalSnapshot",
+          "discountSnapshot",
+          "amountPaid",
+          "vatAmount",
+          "totalCharged",
+          "refundAmount",
+          "paidAt",
+          "refundedAt",
+          "createdAt",
+          "modelVersion",
+          "credits"
+        ],
+        "type": "object"
+      },
+      "ClientPaymentRecordDto": {
+        "properties": {
+          "amount": {
+            "description": "Payment amount in halalas (decimal string)",
+            "example": "20000",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "description": "ISO 4217 currency code",
+            "example": "SAR",
+            "type": "string"
+          },
+          "effectiveReceivedAt": {
+            "description": "Instant the money was actually received, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "failureReason": {
+            "description": "Failure or refund reason, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "gatewayRef": {
+            "description": "Provider transaction reference (Moyasar payment id), or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Payment UUID",
+            "example": "00000000-0000-4000-a000-0000000000a1",
+            "format": "uuid",
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "description": "Idempotency key stored on the row, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "invoiceId": {
+            "description": "Invoice UUID",
+            "example": "00000000-0000-4000-a000-0000000000a2",
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
+            ],
+            "description": "Payment method used",
+            "example": "CASH"
+          },
+          "nativeConfigFingerprint": {
+            "description": "SHA-256 of the native checkout configuration, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "number": {
+            "description": "Sequential payment number",
+            "example": 1024,
+            "type": "number"
+          },
+          "processedAt": {
+            "description": "Provider processing instant, or null",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptEntryReason": {
+            "description": "Reason recorded with the receipt entry, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptEvidenceRef": {
+            "description": "Receipt evidence reference, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptRecordedBy": {
+            "description": "Staff user UUID that recorded the receipt, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptUrl": {
+            "description": "MinIO receipt path, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "refundedAmount": {
+            "description": "Refunded amount in halalas (decimal string)",
+            "example": "0",
+            "type": "string"
+          },
+          "refundProviderLeaseExpiresAt": {
+            "description": "Provider-refund lease expiry, or null",
+            "example": null,
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "refundProviderLeaseOwner": {
+            "description": "Provider-refund lease owner, or null",
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
+            ],
+            "example": "COMPLETED"
+          },
+          "updatedAt": {
+            "description": "Last update instant",
+            "example": "2026-10-10T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "invoiceId",
+          "amount",
+          "refundedAmount",
+          "currency",
+          "method",
+          "status",
+          "gatewayRef",
+          "idempotencyKey",
+          "nativeConfigFingerprint",
+          "receiptUrl",
+          "failureReason",
+          "refundProviderLeaseOwner",
+          "refundProviderLeaseExpiresAt",
+          "effectiveReceivedAt",
+          "receiptRecordedBy",
+          "receiptEvidenceRef",
+          "receiptEntryReason",
+          "processedAt",
+          "createdAt",
+          "updatedAt"
         ],
         "type": "object"
       },
@@ -6331,6 +8938,40 @@
         },
         "required": [
           "score"
+        ],
+        "type": "object"
+      },
+      "ClientRefundRequestResponseDto": {
+        "properties": {
+          "amount": {
+            "description": "Refundable amount in halalas",
+            "example": 20000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "createdAt": {
+            "description": "Creation instant",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Refund request UUID",
+            "example": "00000000-0000-4000-a000-000000000050",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Refund request status (Prisma enum); always PENDING_REVIEW on creation",
+            "example": "PENDING_REVIEW",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "amount",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -7495,6 +10136,17 @@
           "handoffSummary"
         ],
         "type": "object"
+      },
+      "ConversationStatus": {
+        "description": "Conversation status",
+        "enum": [
+          "OPEN",
+          "AI_ACTIVE",
+          "WAITING_FOR_STAFF",
+          "STAFF_ACTIVE",
+          "CLOSED"
+        ],
+        "type": "string"
       },
       "CouponListResponseDto": {
         "properties": {
@@ -14102,6 +16754,145 @@
         ],
         "type": "object"
       },
+      "HealthCheckResultDto": {
+        "properties": {
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HealthIndicatorResultDto"
+            },
+            "description": "All indicator results, keyed by name",
+            "example": {
+              "database": {
+                "status": "up"
+              },
+              "minio": {
+                "status": "up"
+              },
+              "queue": {
+                "status": "up"
+              },
+              "redis": {
+                "status": "up"
+              }
+            },
+            "type": "object"
+          },
+          "error": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HealthIndicatorResultDto"
+            },
+            "description": "Failed indicators, keyed by name; empty when healthy",
+            "example": {},
+            "type": "object"
+          },
+          "gitSha": {
+            "description": "Deployed git SHA, or \"unknown\" when unset",
+            "example": "a1b2c3d",
+            "type": "string"
+          },
+          "info": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HealthIndicatorResultDto"
+            },
+            "description": "Results of the healthy indicators, keyed by name",
+            "example": {
+              "database": {
+                "status": "up"
+              },
+              "minio": {
+                "status": "up"
+              },
+              "queue": {
+                "status": "up"
+              },
+              "redis": {
+                "status": "up"
+              }
+            },
+            "type": "object"
+          },
+          "status": {
+            "description": "Aggregate health status",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "example": "ok",
+            "type": "string"
+          },
+          "version": {
+            "description": "Running application version",
+            "example": "2.2.0",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "gitSha",
+          "info",
+          "error",
+          "details"
+        ],
+        "type": "object"
+      },
+      "HealthIndicatorResultDto": {
+        "properties": {
+          "message": {
+            "description": "Failure message when the indicator is down",
+            "example": "Redis unreachable",
+            "type": "string"
+          },
+          "status": {
+            "description": "Indicator status",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "example": "up",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "HealthLivenessResponseDto": {
+        "properties": {
+          "gitSha": {
+            "description": "Deployed git SHA (GIT_SHA), or \"unknown\" when unset",
+            "example": "a1b2c3d",
+            "type": "string"
+          },
+          "status": {
+            "description": "Process liveness marker",
+            "enum": [
+              "ok"
+            ],
+            "example": "ok",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "Instant the probe was answered",
+            "example": "2026-05-20T09:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "description": "Running application version (APP_VERSION, package version, or \"unknown\")",
+            "example": "2.2.0",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "version",
+          "gitSha"
+        ],
+        "type": "object"
+      },
       "HolidayRecordDto": {
         "properties": {
           "branchId": {
@@ -16719,6 +19510,18 @@
           "availability"
         ],
         "type": "object"
+      },
+      "MessageSenderType": {
+        "description": "Who sent the message",
+        "enum": [
+          "CLIENT",
+          "EMPLOYEE",
+          "VISITOR",
+          "AI",
+          "STAFF",
+          "SYSTEM"
+        ],
+        "type": "string"
       },
       "MobileAuthEmailVerificationSentDto": {
         "properties": {
@@ -39573,12 +42376,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Invoice details; `hasReceipt` replaces the receipt storage key",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingInvoiceResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Invoice details; `hasReceipt` replaces the receipt storage key"
           },
           "400": {
             "content": {
@@ -39661,7 +42463,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingJoinResponseDto"
                 }
               }
             },
@@ -39758,7 +42560,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingRatingResponseDto"
                 }
               }
             },
@@ -39855,7 +42657,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientBookingRescheduleResponseDto"
                 }
               }
             },
@@ -40215,7 +43017,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatConversationDto"
+                }
+              }
+            },
+            "description": "The conversation moved to reception handoff"
           },
           "400": {
             "content": {
@@ -40308,7 +43117,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatMessagePageDto"
+                }
+              }
+            },
+            "description": "Messages on the requested page"
           },
           "400": {
             "content": {
@@ -40387,7 +43203,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatMessageDto"
+                }
+              }
+            },
+            "description": "The persisted message, public-safe projection"
           },
           "400": {
             "content": {
@@ -40545,6 +43368,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatConversationDto"
+                }
+              }
+            },
             "description": "Current conversation for the authenticated client"
           },
           "400": {
@@ -40626,7 +43456,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatOperationDto"
+                }
+              }
+            },
+            "description": "The operation after this transition, public-safe projection"
           },
           "400": {
             "content": {
@@ -40707,7 +43544,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatOperationDto"
+                }
+              }
+            },
+            "description": "The operation after this transition, public-safe projection"
           },
           "400": {
             "content": {
@@ -40788,7 +43632,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientChatOperationDto"
+                }
+              }
+            },
+            "description": "The operation after this transition, public-safe projection"
           },
           "400": {
             "content": {
@@ -40873,44 +43724,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "description": "Paginated invoices with the full client outstanding balance",
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "outstandingBalance": {
-                      "description": "Outstanding balance across all client invoices, in halalas",
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "page": {
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "pageSize": {
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "total": {
-                      "minimum": 0,
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "total",
-                    "page",
-                    "pageSize",
-                    "outstandingBalance"
-                  ],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientInvoiceListResponseDto"
                 }
               }
             },
-            "description": ""
+            "description": "Paginated invoices with the full client outstanding balance"
           },
           "400": {
             "content": {
@@ -40981,6 +43799,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInvoiceDto"
+                }
+              }
+            },
             "description": "Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned."
           },
           "400": {
@@ -41063,6 +43888,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInvoicePdfUrlDto"
+                }
+              }
+            },
             "description": "Short-lived URL of the paid receipt PDF"
           },
           "400": {
@@ -41167,33 +43999,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "page": {
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "pageSize": {
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "total": {
-                      "minimum": 0,
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "total",
-                    "page",
-                    "pageSize"
-                  ],
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientNotificationPageDto"
                 }
               }
             },
@@ -41335,6 +44141,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientNotificationFcmTokenDto"
+                }
+              }
+            },
             "description": "Token stored"
           },
           "400": {
@@ -41466,6 +44279,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientNotificationUnreadCountDto"
+                }
+              }
+            },
             "description": "Unread count value"
           },
           "400": {
@@ -41714,6 +44534,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookingRecordDto"
+                }
+              }
+            },
             "description": "Package credit booking created"
           },
           "400": {
@@ -41783,6 +44610,16 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClientPackagePurchaseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
             "description": "Decorated package purchases owned by the authenticated client"
           },
           "400": {
@@ -41854,6 +44691,13 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPackagePurchaseDto"
+                }
+              }
+            },
             "description": "Decorated package purchase status"
           },
           "400": {
@@ -42062,6 +44906,13 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPaymentRecordDto"
+                }
+              }
+            },
             "description": "Receipt uploaded, payment recorded as PENDING_VERIFICATION"
           },
           "400": {
@@ -43638,7 +46489,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientRefundRequestResponseDto"
+                }
+              }
+            },
+            "description": "Refund request created for staff review"
           },
           "400": {
             "content": {
@@ -66579,37 +69437,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "db": {
-                      "example": "ok",
-                      "type": "string"
-                    },
-                    "gitSha": {
-                      "example": "a1b2c3d",
-                      "type": "string"
-                    },
-                    "queue": {
-                      "example": "ok",
-                      "type": "string"
-                    },
-                    "redis": {
-                      "example": "ok",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "ok",
-                      "type": "string"
-                    },
-                    "version": {
-                      "example": "2.1.9",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/HealthCheckResultDto"
                 }
               }
             },
             "description": "Health check result with per-service status"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Application is shutting down"
           }
         },
         "summary": "Platform health check (DB, Redis, BullMQ)",
@@ -66624,7 +69476,24 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthLivenessResponseDto"
+                }
+              }
+            },
+            "description": "Process is alive; build metadata included"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
           }
         },
         "summary": "Liveness check — always returns 200 if the process is alive",
@@ -66639,7 +69508,34 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheckResultDto"
+                }
+              }
+            },
             "description": "Health check result with per-service status"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Application is shutting down"
           }
         },
         "summary": "Readiness check — includes DB, Redis, queues",

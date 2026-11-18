@@ -12,6 +12,11 @@ import {
   extractInvoicePdfKey,
 } from '../../modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
 import { ListClientInvoicesHandler } from '../../modules/finance/list-client-invoices/list-client-invoices.handler';
+import {
+  ClientInvoiceDto,
+  ClientInvoiceListResponseDto,
+  ClientInvoicePdfUrlDto,
+} from './dto/client-invoice-response.dto';
 
 // Short-lived presigned download window for client-facing PDF links (5 minutes).
 const INVOICE_PDF_URL_EXPIRY_SECONDS = 300;
@@ -29,27 +34,23 @@ export class ClientInvoicesController {
 
   @Get()
   @ApiOperation({ summary: 'List client invoices' })
-  @ApiOkResponse({ schema: {
-    type: 'object', description: 'Paginated invoices with the full client outstanding balance',
-    required: ['items', 'total', 'page', 'pageSize', 'outstandingBalance'],
-    properties: {
-      items: { type: 'array', items: { type: 'object' } },
-      total: { type: 'integer', minimum: 0 },
-      page: { type: 'integer', minimum: 1 },
-      pageSize: { type: 'integer', minimum: 1 },
-      outstandingBalance: { type: 'integer', minimum: 0, description: 'Outstanding balance across all client invoices, in halalas' },
-    },
-  } })
-  list(@ClientSession() session: ClientSession, @Query() q: ClientListQueryDto) {
+  @ApiOkResponse({
+    type: ClientInvoiceListResponseDto,
+    description: 'Paginated invoices with the full client outstanding balance',
+  })
+  list(@ClientSession() session: ClientSession, @Query() q: ClientListQueryDto): Promise<ClientInvoiceListResponseDto> {
     return this.listClientInvoices.execute(session.id, q.page ?? 1, q.pageSize ?? 20);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get an invoice by id (client-scoped)' })
   @ApiParam({ name: 'id', description: 'Invoice UUID', format: 'uuid' })
-  @ApiOkResponse({ description: 'Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned.' })
+  @ApiOkResponse({ type: ClientInvoiceDto, description: 'Invoice found. `hasReceipt` tells whether a paid receipt PDF exists (fetch it via GET :id/pdf); the storage key is never returned.' })
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
-  async get(@Param('id', ParseUUIDPipe) id: string, @ClientSession() session: ClientSession) {
+  async get(
+    @Param('id', ParseUUIDPipe) id: string,
+    @ClientSession() session: ClientSession,
+  ): Promise<ClientInvoiceDto> {
     // Ownership is part of the query: a foreign id is a 404, never a 403.
     return toClientInvoice(await this.getPublicInvoice.execute(id, session.id));
   }
@@ -60,9 +61,12 @@ export class ClientInvoicesController {
     description: 'Returns a short-lived URL for the paid receipt only. Responds 404 when no receipt has been issued for the invoice.',
   })
   @ApiParam({ name: 'id', description: 'Invoice UUID', format: 'uuid' })
-  @ApiOkResponse({ description: 'Short-lived URL of the paid receipt PDF' })
+  @ApiOkResponse({ type: ClientInvoicePdfUrlDto, description: 'Short-lived URL of the paid receipt PDF' })
   @ApiResponse({ status: 404, description: 'No receipt has been issued for this invoice', type: ApiErrorDto })
-  async getPdf(@Param('id', ParseUUIDPipe) id: string, @ClientSession() session: ClientSession) {
+  async getPdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @ClientSession() session: ClientSession,
+  ): Promise<ClientInvoicePdfUrlDto> {
     const invoice = await this.getPublicInvoice.execute(id, session.id);
     if (!invoice.pdfUrl) {
       throw new NotFoundException('No paid receipt has been issued for this invoice');

@@ -6,6 +6,7 @@ import type {
   PaymentListResponse,
   PaymentStats,
 } from '../types/payment'
+import type { ClientRefundRequestResult } from '../types/client-surface'
 
 function buildQueryString(query: Record<string, unknown>): string {
   const params = new URLSearchParams()
@@ -88,8 +89,8 @@ export async function processPayment(payload: {
 export async function requestRefund(
   invoiceId: string,
   reason?: string,
-): Promise<unknown> {
-  return apiRequest('/client/refunds/request', {
+): Promise<ClientRefundRequestResult> {
+  return apiRequest<ClientRefundRequestResult>('/client/refunds/request', {
     method: 'POST',
     credentials: 'include',
     body: JSON.stringify(reason ? { invoiceId, reason } : { invoiceId }),

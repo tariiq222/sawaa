@@ -1,5 +1,10 @@
 import type { CancellationPreview, CancellationQuoteInput, ClientCancellationResult } from '../types/cancellation';
 import type {
+  ClientBookingJoinLink,
+  ClientBookingRating,
+  ClientBookingRescheduleResult,
+} from '../types/client-surface';
+import type {
   ClientProfile,
   ClientBookingListResponse,
   ClientInvoiceListResponse,
@@ -97,8 +102,8 @@ export interface RateMyBookingPayload {
 export async function rateMyBooking(
   bookingId: string,
   payload: RateMyBookingPayload,
-): Promise<unknown> {
-  return apiRequest<unknown>(`/client/bookings/${encodeURIComponent(bookingId)}/rate`, {
+): Promise<ClientBookingRating> {
+  return apiRequest<ClientBookingRating>(`/client/bookings/${encodeURIComponent(bookingId)}/rate`, {
     method: 'POST',
     credentials: 'include',
     body: JSON.stringify(payload),
@@ -106,8 +111,8 @@ export async function rateMyBooking(
 }
 
 /** GET /client/bookings/:id/join — lazily resolves the online session link. */
-export async function getMyBookingJoinLink(bookingId: string): Promise<unknown> {
-  return apiRequest<unknown>(`/client/bookings/${encodeURIComponent(bookingId)}/join`, {
+export async function getMyBookingJoinLink(bookingId: string): Promise<ClientBookingJoinLink> {
+  return apiRequest<ClientBookingJoinLink>(`/client/bookings/${encodeURIComponent(bookingId)}/join`, {
     credentials: 'include',
   });
 }
@@ -115,8 +120,8 @@ export async function getMyBookingJoinLink(bookingId: string): Promise<unknown> 
 export async function rescheduleMyBooking(
   bookingId: string,
   payload: RescheduleMyBookingPayload,
-): Promise<{ booking: unknown }> {
-  return apiRequest<{ booking: unknown }>(
+): Promise<ClientBookingRescheduleResult> {
+  return apiRequest<ClientBookingRescheduleResult>(
     `/client/bookings/${bookingId}/reschedule`,
     {
       method: 'PATCH',
