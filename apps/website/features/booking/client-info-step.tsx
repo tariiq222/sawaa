@@ -2,8 +2,6 @@
 
 import { useState, useId, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { AvailableSlot, Service, EmployeeWithUser } from '@sawaa/shared';
-import type { PublicPaymentMethods } from '@/features/booking/booking.api';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { normalizeSaudiPhone } from '@/features/auth/auth.schema';
@@ -12,70 +10,15 @@ import { CURRENT_CLIENT_QUERY_KEY, useCurrentClient } from '@/features/auth/use-
 import { RegisterForm } from '@/features/auth/register-form';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { therapistDisplayName } from './therapist-name';
-
-interface ClientInfoStepProps {
-  slot: AvailableSlot;
-  service: Service;
-  employee: EmployeeWithUser;
-  /**
-   * Fractional org VAT rate (a fraction of 1, 0 when VAT is off). Display-only: the total is shown
-   * VAT-inclusive when > 0; the backend computes the real invoice.
-   */
-  vatRate?: number;
-  /**
-   * Pre-tax price in halalas for the chosen duration option. When provided,
-   * this overrides service.price so the displayed total matches what the
-   * backend derives from durationOptionId. Falls back to service.price when
-   * absent (e.g. services with no duration options).
-   */
-  selectedPriceHalalas?: number;
-  /** @deprecated back is handled by the wizard header — kept for compatibility */
-  onBack?: () => void;
-  /**
-   * Payment capabilities for this deployment. `undefined` while the lookup is
-   * still in flight or after it failed: a paid booking is never submitted on a
-   * guess, because the backend rejects a disabled method outright (400) and the
-   * whole booking is lost.
-   */
-  paymentMethods: PublicPaymentMethods | undefined;
-  /** True only while the capability lookup is in flight (drives the copy). */
-  paymentMethodsLoading: boolean;
-  /** Confirm the booking using the selected collection path. */
-  onSubmitInfo: (payAtClinic: boolean) => void;
-  isSubmitting: boolean;
-}
-
-type WebsitePaymentMethod = 'ONLINE' | 'AT_CENTER';
-
-const fieldLabelClass = 'block text-[0.8125rem] font-bold mb-2';
-const fieldLabelStyle = {
-  color: 'var(--sw-secondary-700)',
-};
-
-const baseInputClass =
-  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-[var(--surface)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 placeholder:opacity-40';
-
-function inputStyle(invalid: boolean): React.CSSProperties {
-  return {
-    border: invalid
-      ? '1.5px solid var(--error)'
-      : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
-    color: 'var(--sw-secondary-700)',
-    fontWeight: 500,
-  };
-}
-
-function FieldIcon({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="absolute top-1/2 -translate-y-1/2 start-3.5 grid place-items-center pointer-events-none"
-      style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)' }}
-    >
-      {children}
-    </span>
-  );
-}
+import {
+  baseInputClass,
+  FieldIcon,
+  fieldLabelClass,
+  fieldLabelStyle,
+  inputStyle,
+  type ClientInfoStepProps,
+  type WebsitePaymentMethod,
+} from './client-info-step-shared';
 
 export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedPriceHalalas, onSubmitInfo, isSubmitting, paymentMethods, paymentMethodsLoading }: ClientInfoStepProps) {
   const t = useT();
