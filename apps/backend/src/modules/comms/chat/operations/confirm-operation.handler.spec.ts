@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import {
   ChatMessageKind,
   ChatOperationStatus,
@@ -431,5 +431,153 @@ describe('ConfirmOperationHandler', () => {
     expect(cancelHarness.cancellation.execute).not.toHaveBeenCalled();
     expect(cancelHarness.getOperation()).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'CANCELLATION_CONSENT_REQUIRED' });
     expect(cancelHarness.tx.commsChatMessage.create).toHaveBeenCalledWith({ data: expect.objectContaining({ body: 'لإلغاء الموعد، افتح تفاصيل الموعد وراجع شروط الإلغاء والاسترداد ثم أكّد موافقتك.' }) });
+  });
+
+  it('rejects a stale expected version before any mutation', async () => {
+    const { handler, createBooking, rls } = harness();
+    await expect(handler.execute({
+      operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 7,
+    })).rejects.toThrow(ConflictException);
+    expect(rls.withTransaction).toHaveBeenCalledTimes(1);
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects a confirmation count that skipped the required acknowledgement step', async () => {
+    const { handler, createBooking } = harness({ requiredConfirmations: 2, confirmationCount: 0, version: 1 });
+    await expect(handler.execute({
+      operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 1,
+    })).rejects.toThrow(BadRequestException);
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it('records an unsupported operation type as a failed execution', async () => {
+    const { handler, createBooking, tx } = harness({ type: ChatOperationType.LIST_OWN_APPOINTMENTS });
+    const result = await handler.execute({
+      operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0,
+    });
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'UNSUPPORTED_OPERATION' });
+    expect(createBooking.execute).not.toHaveBeenCalled();
+    expect(tx.commsChatMessage.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      metadata: expect.objectContaining({ outcome: 'OPERATION_FAILED' }),
+    }) });
+  });
+
+  it('does not overwrite an operation that another request already completed', async () => {
+    const { handler, tx, createBooking, audit } = harness();
+    tx.chatOperation.findUnique
+      .mockResolvedValueOnce({ ...baseOperation })
+      .mockResolvedValueOnce({ ...baseOperation, status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-other' });
+    createBooking.execute.mockRejectedValue(new Error('late failure after concurrent commit'));
+
+    const result = await handler.execute({
+      operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0,
+    });
+
+    expect(result).toMatchObject({ status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-other' });
+    expect(tx.commsChatMessage.create).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('rejects recovery when the durable creation key already belongs to another hash', async () => {
+    const { handler, tx, quote, createBooking } = harness();
+    tx.booking.findUnique.mockResolvedValue({
+      id: 'booking-recovered', clientId: 'client-1',
+      branchId: bookingPayload.branchId, employeeId: bookingPayload.employeeId,
+      serviceId: bookingPayload.serviceId,
+      scheduledAt: new Date(bookingPayload.scheduledAt), endsAt: new Date(bookingPayload.endsAt),
+      durationMins: bookingPayload.durationMins, durationOptionId: bookingPayload.durationOptionId,
+      bookingType: bookingPayload.bookingType, deliveryType: bookingPayload.deliveryType,
+      price: bookingPayload.price, currency: bookingPayload.currency, source: 'AI_CHAT',
+      creationRequestHash: 'a-different-hash',
+    });
+
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'IDEMPOTENCY_CONFLICT' });
+    expect(tx.booking.updateMany).not.toHaveBeenCalled();
+    expect(quote.quoteBooking).not.toHaveBeenCalled();
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it('accepts a lost hash backfill race when the winner wrote the same hash', async () => {
+    const { handler, tx, createBooking } = harness();
+    const expectedHash = bookingCreationRequestHash({
+      ...bookingPayload, clientId: 'client-1', source: 'AI_CHAT',
+    });
+    tx.booking.findUnique
+      .mockResolvedValueOnce({
+        id: 'booking-recovered', clientId: 'client-1',
+        branchId: bookingPayload.branchId, employeeId: bookingPayload.employeeId,
+        serviceId: bookingPayload.serviceId,
+        scheduledAt: new Date(bookingPayload.scheduledAt), endsAt: new Date(bookingPayload.endsAt),
+        durationMins: bookingPayload.durationMins, durationOptionId: bookingPayload.durationOptionId,
+        bookingType: bookingPayload.bookingType, deliveryType: bookingPayload.deliveryType,
+        price: bookingPayload.price, currency: bookingPayload.currency, source: 'AI_CHAT',
+        creationRequestHash: null,
+      })
+      .mockResolvedValueOnce({ creationRequestHash: expectedHash });
+    tx.booking.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+
+    expect(result).toMatchObject({ status: ChatOperationStatus.SUCCEEDED, bookingId: 'booking-recovered' });
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it('fails recovery when a lost hash backfill race wrote a different hash', async () => {
+    const { handler, tx, createBooking } = harness();
+    tx.booking.findUnique
+      .mockResolvedValueOnce({
+        id: 'booking-recovered', clientId: 'client-1',
+        branchId: bookingPayload.branchId, employeeId: bookingPayload.employeeId,
+        serviceId: bookingPayload.serviceId,
+        scheduledAt: new Date(bookingPayload.scheduledAt), endsAt: new Date(bookingPayload.endsAt),
+        durationMins: bookingPayload.durationMins, durationOptionId: bookingPayload.durationOptionId,
+        bookingType: bookingPayload.bookingType, deliveryType: bookingPayload.deliveryType,
+        price: bookingPayload.price, currency: bookingPayload.currency, source: 'AI_CHAT',
+        creationRequestHash: null,
+      })
+      .mockResolvedValueOnce({ creationRequestHash: 'a-different-hash' });
+    tx.booking.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'IDEMPOTENCY_CONFLICT' });
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it('fails an operation whose persisted payload is not an object', async () => {
+    const { handler, createBooking } = harness({ payload: ['not', 'an', 'object'] });
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'INVALID_PAYLOAD' });
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['branchId', ''],
+    ['durationOptionId', 5],
+    ['price', -1],
+    ['price', 'not-a-number'],
+    ['deliveryType', 'NOT_A_DELIVERY_TYPE'],
+  ])('fails an operation whose persisted %s is invalid (%p)', async (field, value) => {
+    const { handler, createBooking } = harness({
+      payload: { ...bookingPayload, [field]: value },
+    });
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: 'INVALID_PAYLOAD' });
+    expect(createBooking.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new ConflictException('slot taken'), 'BOOKING_CONFLICT'],
+    [new BadRequestException('bad request'), 'VALIDATION_FAILED'],
+    [new Error('unexpected'), 'EXECUTION_FAILED'],
+  ])('maps a mutation failure %p to error code %s', async (error, expectedCode) => {
+    const { handler, createBooking } = harness();
+    createBooking.execute.mockRejectedValue(error);
+
+    const result = await handler.execute({ operationId: baseOperation.id, clientId: 'client-1', expectedVersion: 0 });
+
+    expect(result).toMatchObject({ status: ChatOperationStatus.FAILED, errorCode: expectedCode });
   });
 });
