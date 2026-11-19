@@ -1,13 +1,17 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { CompleteBookingHandler } from './complete-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
+
+const buildLedger = () => ({
+  ensureBookingInvoiceInTx: jest.fn().mockResolvedValue(null),
+});
 
 describe('CompleteBookingHandler', () => {
   it('accepts DEPOSIT_PAID without settling its outstanding balance', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, status: BookingStatus.DEPOSIT_PAID, checkedInAt: null });
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     const { where, data } = prisma.booking.updateMany.mock.calls[0][0];
     expect(where.status).toBe(BookingStatus.DEPOSIT_PAID);
     expect(data.status).toBe(BookingStatus.COMPLETED);
@@ -21,7 +25,7 @@ describe('CompleteBookingHandler', () => {
   it('completes CONFIRMED booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.COMPLETED }) }),
     );
@@ -31,7 +35,7 @@ describe('CompleteBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CANCELLED });
     await expect(
-      new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
+      new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -39,7 +43,7 @@ describe('CompleteBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue(null);
     await expect(
-      new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
+      new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -50,7 +54,7 @@ describe('CompleteBookingHandler — package credit consumption', () => {
     const packageBooking = { ...mockBooking, status: BookingStatus.CONFIRMED, packageCreditId: 'credit-1' };
     prisma.booking.findUnique.mockResolvedValue(packageBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.packageCreditUsage.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { bookingId: 'book-1', status: 'RESERVED' } }),
@@ -66,7 +70,7 @@ describe('CompleteBookingHandler — package credit consumption', () => {
     const paidBooking = { ...mockBooking, status: BookingStatus.CONFIRMED, packageCreditId: null };
     prisma.booking.findUnique.mockResolvedValue(paidBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.packageCreditUsage.findFirst).not.toHaveBeenCalled();
     expect(prisma.packageCredit.update).not.toHaveBeenCalled();
@@ -78,7 +82,7 @@ describe('CompleteBookingHandler — status log', () => {
     const prisma = buildPrisma();
     const confirmedBooking = { ...mockBooking, status: BookingStatus.CONFIRMED };
     prisma.booking.findUnique.mockResolvedValue(confirmedBooking);
-    const handler = new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+    const handler = new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
@@ -110,26 +114,25 @@ describe('payAtClinic invoice creation', () => {
     return prisma;
   }
 
-  it('creates an Invoice on completion when payAtClinic is true and none exists', async () => {
+  it('asks the ledger to create a payAtClinic invoice on completion', async () => {
     const prisma = buildPrismaWithInvoice();
+    const ledger = buildLedger();
     const confirmedBooking = {
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
       payAtClinic: true,
-      price: 100,
+      price: new Prisma.Decimal(100),
       discountedPrice: null,
       currency: 'SAR',
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, ledger as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
-    expect(invoiceData.subtotal.toString()).toBe('100');
-    expect(invoiceData.vatRate.toString()).toBe('0.15');
-    expect(invoiceData.vatAmt.toString()).toBe('15');
-    expect(invoiceData.total.toString()).toBe('115');
-    expect(invoiceData.status).toBe('ISSUED');
+    expect(ledger.ensureBookingInvoiceInTx).toHaveBeenCalledTimes(1);
+    const cmd = ledger.ensureBookingInvoiceInTx.mock.calls[0][1];
+    expect(cmd.subtotal.toString()).toBe('100');
+    expect(cmd.issueMode).toBe('ISSUED');
   });
 
   it('does NOT create an invoice when payAtClinic is false', async () => {
@@ -141,14 +144,14 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildLedger() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
 
-  it('does NOT create a duplicate invoice when one already exists', async () => {
+  it('delegates the duplicate-invoice no-op to the ledger', async () => {
     const prisma = buildPrismaWithInvoice();
-    prisma.invoice.findUnique = jest.fn().mockResolvedValue({ id: 'inv-1' });
+    const ledger = buildLedger();
     const confirmedBooking = {
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
@@ -156,69 +159,119 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, ledger as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
+    // The ledger owns the existing-invoice check; the handler still writes nothing.
+    expect(ledger.ensureBookingInvoiceInTx).toHaveBeenCalledTimes(1);
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
 
-  it('uses discountedPrice when present', async () => {
-    const prisma = buildPrismaWithInvoice();
+  it('passes discountedPrice as the ledger subtotal when present', async () => {
+    const prisma = buildPrisma();
+    const ledger = buildLedger();
     const confirmedBooking = {
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
       payAtClinic: true,
-      price: 100,
-      discountedPrice: 80,
+      price: new Prisma.Decimal(100),
+      discountedPrice: new Prisma.Decimal(80),
       currency: 'SAR',
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, ledger as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
-    expect(invoiceData.subtotal.toString()).toBe('80');
+    const cmd = ledger.ensureBookingInvoiceInTx.mock.calls[0][1];
+    expect(cmd.subtotal.toString()).toBe('80');
   });
 
-  it('uses per-org vatRate from OrganizationSettings', async () => {
-    const prisma = buildPrismaWithInvoice();
-    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ vatRate: '0.05' });
+  it('leaves the VAT rate to the ledger so OrganizationSettings stays the single source', async () => {
+    const prisma = buildPrisma();
+    const ledger = buildLedger();
     const confirmedBooking = {
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
       payAtClinic: true,
-      price: 200,
+      price: new Prisma.Decimal(200),
       discountedPrice: null,
       currency: 'SAR',
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, ledger as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
-    expect(invoiceData.vatAmt.toString()).toBe('10');
-    expect(invoiceData.total.toString()).toBe('210');
+    const cmd = ledger.ensureBookingInvoiceInTx.mock.calls[0][1];
+    // The handler must not resolve or compute VAT itself any more.
+    expect(cmd).not.toHaveProperty('vatRate');
+    expect((prisma as { organizationSettings?: { findFirst?: jest.Mock } }).organizationSettings?.findFirst).toBeUndefined();
+    expect(cmd.subtotal.toString()).toBe('200');
   });
 
-  it('creates payAtClinic invoice using computeVat with discount applied', async () => {
-    // subtotal=8000 (discountedPrice), vatRate=0.15
-    // vatAmt = round_half_up(8000 * 0.15) = 1200
-    // total  = 8000 + 1200 = 9200
-    const prisma = buildPrismaWithInvoice();
+  it('keeps the discounted net amount as the ledger subtotal, leaving VAT to the ledger', async () => {
+    const prisma = buildPrisma();
+    const ledger = buildLedger();
     const confirmedBooking = {
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
       payAtClinic: true,
-      price: 10000,
-      discountedPrice: 8000,
+      price: new Prisma.Decimal(10000),
+      discountedPrice: new Prisma.Decimal(8000),
       currency: 'SAR',
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, ledger as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
-    expect(invoiceData.subtotal.toString()).toBe('8000');
-    expect(invoiceData.vatAmt.toString()).toBe('1200');
-    expect(invoiceData.total.toString()).toBe('9200');
+    const cmd = ledger.ensureBookingInvoiceInTx.mock.calls[0][1];
+    expect(cmd.subtotal.toString()).toBe('8000');
+    expect(cmd.issueMode).toBe('ISSUED');
+    expect(cmd.issuedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('CompleteBookingHandler — payAtClinic invoice', () => {
+  it('delegates invoice creation to the finance ledger, not to Prisma directly', async () => {
+    const prisma = buildPrisma();
+    const ledger = buildLedger();
+    prisma.booking.findUnique.mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      payAtClinic: true,
+      discountedPrice: null,
+    });
+
+    await new CompleteBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      ledger as never,
+    ).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect(ledger.ensureBookingInvoiceInTx).toHaveBeenCalledTimes(1);
+    const [txArg, cmd] = ledger.ensureBookingInvoiceInTx.mock.calls[0];
+    expect(txArg).toBeDefined();
+    expect(cmd).toMatchObject({
+      bookingId: 'book-1',
+      issueMode: 'ISSUED',
+    });
+    // The handler must no longer write the invoice itself.
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it('does not call the ledger for a prepaid booking', async () => {
+    const prisma = buildPrisma();
+    const ledger = buildLedger();
+    prisma.booking.findUnique.mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      payAtClinic: false,
+    });
+
+    await new CompleteBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      ledger as never,
+    ).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect(ledger.ensureBookingInvoiceInTx).not.toHaveBeenCalled();
   });
 });

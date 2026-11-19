@@ -280,6 +280,7 @@ describe("Scenario 1 — Mother books online session for child, pays Mada, Zoom 
 		const completeHandler = new CompleteBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
+			{ ensureBookingInvoiceInTx: jest.fn().mockResolvedValue(null) } as never,
 		);
 		await completeHandler.execute({
 			bookingId: "book-1",
@@ -449,23 +450,25 @@ describe("Scenario 3 — Reception books for client, pay-at-clinic, check-in, ca
 		prisma.invoice.findUnique.mockResolvedValue(null);
 		prisma.invoice.create.mockResolvedValue({ id: "inv-3" });
 
+		const ledger = { ensureBookingInvoiceInTx: jest.fn().mockResolvedValue(null) };
 		const completeHandler = new CompleteBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
+			ledger as never,
 		);
 		await completeHandler.execute({
 			bookingId: "book-3",
 			changedBy: "reception-1",
 		});
 
-		expect(prisma.invoice.create).toHaveBeenCalledWith(
-			expect.objectContaining({
-				data: expect.objectContaining({
-					subtotal: expect.anything(),
-					status: "ISSUED",
-				}),
-			}),
-		);
+		// The handler delegates invoice creation to finance; the ledger owns
+		// the VAT/subtotal computation and the ISSUED status.
+		expect(ledger.ensureBookingInvoiceInTx).toHaveBeenCalledTimes(1);
+		expect(ledger.ensureBookingInvoiceInTx.mock.calls[0][1]).toMatchObject({
+			bookingId: "book-3",
+			issueMode: "ISSUED",
+		});
+		expect(prisma.invoice.create).not.toHaveBeenCalled();
 	});
 });
 
@@ -1920,6 +1923,7 @@ describe("Scenario 30 — Client attended but staff forgot to mark complete", ()
 		const completeHandler = new CompleteBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
+			{ ensureBookingInvoiceInTx: jest.fn().mockResolvedValue(null) } as never,
 		);
 		await completeHandler.execute({
 			bookingId: "book-30",
