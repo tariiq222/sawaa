@@ -171,7 +171,6 @@
   "write bookings -> finance.coupon (apps/backend/src/modules/bookings/cancel-booking/cancel-booking.handler.ts)",
   "write bookings -> finance.coupon (apps/backend/src/modules/bookings/client/client-cancel-booking.handler.ts)",
   "write bookings -> finance.coupon (apps/backend/src/modules/bookings/create-booking/create-booking.handler.ts)",
-  "write bookings -> finance.invoice (apps/backend/src/modules/bookings/complete-booking/complete-booking.handler.ts)",
   "write bookings -> finance.invoice (apps/backend/src/modules/bookings/create-booking/create-booking.handler.ts)",
   "write bookings -> finance.invoice (apps/backend/src/modules/bookings/delete-booking/delete-booking.handler.ts)",
   "write bookings -> finance.invoice (apps/backend/src/modules/bookings/enroll-in-program/enroll-in-program.handler.ts)",

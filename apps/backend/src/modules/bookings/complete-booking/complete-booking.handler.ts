@@ -4,7 +4,7 @@ import { PrismaService, TransactionService } from '../../../infrastructure/datab
 import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
-import { computeVat } from '../../finance/money.helper';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import {
   consumePackageCreditForBooking,
   markPackageCreditDeliveredForBooking,
@@ -21,6 +21,7 @@ export class CompleteBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: TransactionService,
+    private readonly financeLedger: BookingFinanceLedgerService,
   ) {}
 
   async execute(cmd: CompleteBookingCommand) {
@@ -61,40 +62,21 @@ export class CompleteBookingHandler {
         await markPackageCreditDeliveredForBooking(tx, cmd.bookingId);
       }
 
-      // payAtClinic bookings have no invoice yet (create-booking.handler.ts skips it
-      // for payAtClinic). Create one now at completion time so the financial trail
-      // is complete. We use findUnique on bookingId to silently no-op if an invoice
-      // somehow already exists.
       if (booking.payAtClinic) {
-        const existing = await tx.invoice.findUnique({ where: { bookingId: booking.id } });
-        if (!existing) {
-          const orgSettings = await tx.organizationSettings.findFirst({
-            where: {},
-            // Same row the settings screen edits and invoices read (latest).
-            orderBy: { createdAt: 'desc' },
-            select: { vatRate: true },
-          });
-          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');
-          const subtotalDec = new Prisma.Decimal(
+        // payAtClinic bookings have no invoice until completion. The ledger
+        // service keeps the silent no-op when one already exists and applies
+        // the same VAT rules as every other booking invoice.
+        await this.financeLedger.ensureBookingInvoiceInTx(tx, {
+          bookingId: booking.id,
+          branchId: booking.branchId,
+          clientId: booking.clientId,
+          employeeId: booking.employeeId,
+          subtotal: new Prisma.Decimal(
             (booking.discountedPrice ?? booking.price).toString(),
-          );
-          const { vatAmtHalalas, totalHalalas } = computeVat(subtotalDec, vatRateDec);
-          await tx.invoice.create({
-            data: {
-              branchId: booking.branchId,
-              clientId: booking.clientId,
-              employeeId: booking.employeeId,
-              bookingId: booking.id,
-              subtotal: subtotalDec,
-              vatRate: vatRateDec,
-              vatAmt: vatAmtHalalas,
-              total: totalHalalas,
-              currency: booking.currency,
-              status: 'ISSUED',
-              issuedAt: new Date(),
-            },
-          });
-        }
+          ),
+          issueMode: 'ISSUED',
+          issuedAt: new Date(),
+        });
       }
 
       return updated;
