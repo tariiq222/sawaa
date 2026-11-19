@@ -7,6 +7,7 @@
 - [operations/repository-layout.md](./operations/repository-layout.md) — مسؤوليات المجلدات، تنظيم الجذر وسياسة الملفات المحلية.
 - [architecture/code-map.md](./architecture/code-map.md) — خريطة التطبيقات والحزم ومواضع التعديل.
 - [architecture/clinic-service-booking-contract.md](./architecture/clinic-service-booking-contract.md) — عقد العيادات والخدمات والحجز.
+- [architecture/adr-mnt-21-mobile-workspace-and-type-contract.md](./architecture/adr-mnt-21-mobile-workspace-and-type-contract.md) — ADR (MNT-21.1): قرار workspace الجوال وعقد الأنواع — مقترح ينتظر قرار المالك.
 
 ## الأدلة التشغيلية (Operations)
 

@@ -152,6 +152,7 @@ docs/architecture/*
 !docs/architecture/code-map.md
 # MNT-19.1 decision record: ownership of Client authentication fields.
 !docs/architecture/adr-002-client-auth-field-ownership.md
+!docs/architecture/adr-mnt-21-mobile-workspace-and-type-contract.md
 # Contains a QA login in clear text — keep local only
 docs/audits/2026-06-29-website-integration-audit.md
 .superpowers/
