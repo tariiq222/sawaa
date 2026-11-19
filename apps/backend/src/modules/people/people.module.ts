@@ -4,6 +4,8 @@ import { forwardRef, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { DatabaseModule } from '../../infrastructure/database';
+import { CLIENT_ACCOUNT_STORE } from '../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from './clients/client-account.store';
 import { MediaModule } from '../media/media.module';
 import { PublicEmployeeAvatarController } from '../../api/public/employee-avatar.controller';
 import { PublicEmployeeAvatarHandler } from './employees/self-profile/public-employee-avatar.handler';
@@ -83,7 +85,10 @@ const handlers = [
     DashboardPeopleEmployeeAccountController,
     PublicEmployeeAvatarController,
   ],
-  providers: [...handlers, PublicEmployeeAvatarHandler],
-  exports: [...handlers],
+  providers: [...handlers, PublicEmployeeAvatarHandler, PgClientAccountStore, {
+    provide: CLIENT_ACCOUNT_STORE,
+    useExisting: PgClientAccountStore,
+  }],
+  exports: [...handlers, CLIENT_ACCOUNT_STORE],
 })
 export class PeopleModule {}
