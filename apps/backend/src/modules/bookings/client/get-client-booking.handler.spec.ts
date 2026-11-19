@@ -1,13 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { buildBooking, createPrismaMock } from '../../../../test/factories';
 import { GetClientBookingHandler } from './get-client-booking.handler';
 import { ClientCancellationOutcomeHandler } from './client-cancellation-outcome.handler';
 import { PrismaService } from '../../../infrastructure/database';
 
 describe('GetClientBookingHandler', () => {
   let handler: GetClientBookingHandler;
+  let mockPrisma: ReturnType<typeof createPrismaMock>;
 
-  const booking = {
+  const booking = buildBooking({
     id: 'bk-1',
     clientId: 'cl-1',
     employeeId: 'emp-1',
@@ -20,7 +23,7 @@ describe('GetClientBookingHandler', () => {
     scheduledAt: new Date('2026-01-01T10:00:00Z'),
     endsAt: new Date('2026-01-01T11:00:00Z'),
     durationMins: 60,
-    price: 150,
+    price: new Prisma.Decimal(150),
     currency: 'SAR',
     zoomJoinUrl: 'https://zoom.us/j/123',
     zoomHostUrl: 'https://zoom.us/s/host-secret',
@@ -28,25 +31,26 @@ describe('GetClientBookingHandler', () => {
     notes: 'internal staff note',
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
-  };
+  });
 
-  const mockPrisma = {
-    booking: { findFirst: jest.fn() },
-    employee: { findFirst: jest.fn() },
-    service: { findFirst: jest.fn() },
-    branch: { findFirst: jest.fn() },
-    invoice: { findFirst: jest.fn() },
-    rating: { findUnique: jest.fn() },
-  };
   const mockOutcome = { execute: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', name: 'John', nameAr: 'جون', avatarUrl: null });
-    mockPrisma.service.findFirst.mockResolvedValue({ id: 'svc-1', nameEn: 'Therapy', nameAr: 'علاج', price: 150, durationMins: 60 });
-    mockPrisma.branch.findFirst.mockResolvedValue({ id: 'br-1', nameEn: 'Main', nameAr: 'الرئيسي' });
-    mockPrisma.invoice.findFirst.mockResolvedValue(null);
-    mockPrisma.rating.findUnique.mockResolvedValue(null);
+    mockPrisma = createPrismaMock({
+      booking: { findFirst: null },
+      employee: {
+        findFirst: { id: 'emp-1', name: 'John', nameAr: 'جون', avatarUrl: null },
+      },
+      service: {
+        findFirst: { id: 'svc-1', nameEn: 'Therapy', nameAr: 'علاج', price: new Prisma.Decimal(150), durationMins: 60 },
+      },
+      branch: {
+        findFirst: { id: 'br-1', nameEn: 'Main', nameAr: 'الرئيسي' },
+      },
+      invoice: { findFirst: null },
+      rating: { findUnique: null },
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
