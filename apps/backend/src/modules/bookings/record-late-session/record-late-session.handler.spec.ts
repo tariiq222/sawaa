@@ -172,6 +172,44 @@ describe("RecordLateSessionHandler", () => {
       transactions as any,
       new RecordPreviousReceiptHandler(transactions as any),
       process,
+      {
+        // Use the real VAT helper so this suite still proves the numbers it
+        // always proved; only the write location moved to finance.
+        createBookingInvoiceInTx: jest.fn(async (txClient, cmd) => {
+          const settings = await txClient.organizationSettings.findFirst({
+            where: {},
+            orderBy: { createdAt: 'desc' },
+            select: { vatRate: true },
+          });
+          const vatRate = new Prisma.Decimal(
+            settings?.vatRate?.toString() ?? '0',
+          );
+          const subtotal = new Prisma.Decimal(cmd.subtotal.toString());
+          const discountAmt = new Prisma.Decimal(
+            (cmd.discountAmt ?? 0).toString(),
+          );
+          const vatBase = subtotal.sub(discountAmt);
+          const vatAmt = vatBase.mul(vatRate).toDecimalPlaces(0);
+          const total = vatBase.add(vatAmt).toDecimalPlaces(0);
+          const invoice = {
+            id: uuid(7),
+            bookingId: cmd.bookingId,
+            branchId: cmd.branchId,
+            clientId: cmd.clientId,
+            employeeId: cmd.employeeId,
+            subtotal,
+            discountAmt,
+            vatRate,
+            vatAmt,
+            total,
+            status: 'DRAFT',
+            issuedAt: null,
+            paidAt: null,
+          };
+          state.invoice = invoice;
+          return invoice;
+        }),
+      } as any,
     );
   });
   afterEach(() => jest.useRealTimers());
@@ -394,6 +432,7 @@ describe("late session exclusion conflict recovery", () => {
         transactions as any,
         {} as any,
         {} as any,
+        { createBookingInvoiceInTx: jest.fn() } as any,
       );
       await expect(handler.execute(request, actor)).rejects.toMatchObject({
         response: {

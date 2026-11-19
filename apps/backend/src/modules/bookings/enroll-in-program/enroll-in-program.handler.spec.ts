@@ -9,6 +9,7 @@ import {
   PrismaService,
   TransactionService,
 } from '../../../infrastructure/database';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import { EventBusService } from '../../../infrastructure/events';
 
 describe('EnrollInProgramHandler', () => {
@@ -17,6 +18,7 @@ describe('EnrollInProgramHandler', () => {
   let rlsTransaction: any;
   let eventBus: { publish: jest.Mock; publishOptional: jest.Mock };
   let tx: any;
+  let financeLedger: { createBookingInvoiceInTx: jest.Mock };
 
   beforeEach(async () => {
     tx = {
@@ -84,12 +86,48 @@ describe('EnrollInProgramHandler', () => {
       publishOptional: jest.fn().mockResolvedValue(undefined),
     };
 
+    financeLedger = {
+      // Mirrors the DRAFT path: subtotal comes from the handler, VAT follows
+      // OrganizationSettings, and the invoice row is created by the stub so
+      // the existing assertions on tx.invoice.create keep their meaning.
+      createBookingInvoiceInTx: jest.fn(async (txClient: any, cmd: any) => {
+        const settings = await txClient.organizationSettings.findFirst({
+          where: {},
+          orderBy: { createdAt: 'desc' },
+          select: { vatRate: true },
+        });
+        const vatRate = Number(settings?.vatRate ?? 0);
+        const subtotal = Number(cmd.subtotal);
+        const vatAmt = Math.round(subtotal * vatRate);
+        const created = await txClient.invoice.create({
+          data: {
+            ...cmd,
+            vatRate,
+            vatAmt,
+            total: subtotal + vatAmt,
+            status: 'DRAFT',
+          },
+        });
+        return {
+          id: created.id,
+          subtotal: cmd.subtotal,
+          discountAmt: cmd.discountAmt ?? 0,
+          vatRate,
+          vatAmt,
+          total: subtotal + vatAmt,
+          status: 'DRAFT',
+          issuedAt: null,
+        };
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EnrollInProgramHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionService, useValue: rlsTransaction },
         { provide: EventBusService, useValue: eventBus },
+        { provide: BookingFinanceLedgerService, useValue: financeLedger },
       ],
     }).compile();
 

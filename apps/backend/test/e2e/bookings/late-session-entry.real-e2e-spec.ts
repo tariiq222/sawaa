@@ -1,6 +1,7 @@
 import { hashToInt32 } from "../../../src/modules/bookings/booking-lifecycle.helper";
 import { RecordLateSessionHandler } from "../../../src/modules/bookings/record-late-session/record-late-session.handler";
 import { RecordPreviousReceiptHandler } from "../../../src/modules/finance/record-previous-receipt/record-previous-receipt.handler";
+import { BookingFinanceLedgerService } from '../../../src/modules/finance/booking-finance/booking-finance-ledger.service';
 import { ProcessPaymentHandler } from "../../../src/modules/finance/process-payment/process-payment.handler";
 import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -666,6 +667,7 @@ describeReal(
         transactions as never,
         app.get(RecordPreviousReceiptHandler),
         app.get(ProcessPaymentHandler),
+        app.get(BookingFinanceLedgerService),
       );
       await expect(
         handler.execute(dto, {
