@@ -61,6 +61,7 @@ import { OnBookingCancelApprovedRefundHandler } from './events/on-booking-cancel
 import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoice-receipt.handler';
 import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
+import { BookingFinanceLedgerService } from './booking-finance/booking-finance-ledger.service';
 import { GenerateInvoicePdfHandler } from './generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ApplyInvoiceDiscountHandler } from './apply-invoice-discount/apply-invoice-discount.handler';
 import { EnsureBookingInvoiceHandler } from './ensure-booking-invoice/ensure-booking-invoice.handler';
@@ -125,8 +126,9 @@ const handlers = [
     IssueInvoiceReceiptHandler,
     SendInvoiceReceiptHandler,
     InvoicePdfRendererService,
+    BookingFinanceLedgerService,
   ],
-  exports: [...handlers, MoyasarApiClient, InvoicePdfRendererService],
+  exports: [...handlers, MoyasarApiClient, InvoicePdfRendererService, BookingFinanceLedgerService],
 })
 export class FinanceModule implements OnModuleInit {
   constructor(
