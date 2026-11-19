@@ -155,6 +155,11 @@ const buildExtendedPrisma = () => {
 // 1. أم تحجز جلسة لابنها أونلاين
 // ─────────────────────────────────────────────────────────────────────────────
 
+const buildFinanceLedger = () => ({
+	releaseCouponUsageInTx: jest.fn().mockResolvedValue({ released: true }),
+	createBookingInvoiceInTx: jest.fn().mockResolvedValue(null),
+});
+
 describe("Scenario 1 — Mother books online session for child, pays Mada, Zoom created, completed", () => {
 	it("creates ONLINE booking → CONFIRMED on payment → Zoom meeting created → staff marks COMPLETED", async () => {
 		const prisma = buildExtendedPrisma();
@@ -746,6 +751,7 @@ describe("Scenario 11 — Client requests cancel, staff approves, auto-refund", 
 			zoomService as never,
 			refundHandler as never,
 			groupCapacity as never,
+			buildFinanceLedger() as never,
 		);
 
 		const result = await handler.execute({
@@ -886,6 +892,7 @@ describe("Scenario 13 — Client cancels inside free window, direct cancel + aut
 			eventBus as never,
 			refundHandler as never,
 			groupCapacity as never,
+			buildFinanceLedger() as never,
 		);
 
 		const cancellationBooking = await prisma.booking.findUnique({ where: { id: "book-13" } });
@@ -1602,6 +1609,7 @@ describe("Scenario 24 — Client cancels online session, Zoom meeting deleted (b
 			zoomService as never,
 			refundHandler as never,
 			groupCapacity as never,
+			buildFinanceLedger() as never,
 		);
 
 		await handler.execute({
@@ -1768,6 +1776,7 @@ describe("Scenario 26 — Staff cancels all doctor sessions, full refund + resch
 			zoomService as never,
 			refundHandler as never,
 			groupCapacity as never,
+			buildFinanceLedger() as never,
 		);
 
 		const result = await handler.execute({

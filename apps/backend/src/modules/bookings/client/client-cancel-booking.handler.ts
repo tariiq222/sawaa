@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import { EventBusService } from '../../../infrastructure/events';
 import { stableEventId } from '../../../common/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -57,6 +58,7 @@ export class ClientCancelBookingHandler {
     _eventBus: EventBusService,
     private readonly refundHandler: RefundPaymentHandler,
     private readonly programCapacity: ProgramCapacityService,
+    private readonly financeLedger: BookingFinanceLedgerService,
   ) {}
 
   async execute(cmd: ClientCancelCommand): Promise<CancelResult> {
@@ -243,7 +245,9 @@ export class ClientCancelBookingHandler {
         }
       }
       if (booking.couponCode) {
-        await tx.coupon.updateMany({ where: { code: booking.couponCode, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+        await this.financeLedger.releaseCouponUsageInTx(tx, {
+          code: booking.couponCode,
+        });
       }
       if (booking.packageCreditId) await returnPackageCreditForBooking(tx, cmd.bookingId);
       if (booking.programId) {
