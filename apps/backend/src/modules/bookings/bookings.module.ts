@@ -10,6 +10,7 @@ import { MessagingModule } from '../../infrastructure/messaging.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { OrgConfigModule } from '../org-config/org-config.module';
 import { FinanceModule } from '../finance/finance.module';
+import { PackageLedgerModule } from './package-ledger/package-ledger.module';
 import { CreateBookingHandler } from './create-booking/create-booking.handler';
 import { CancelBookingHandler } from './cancel-booking/cancel-booking.handler';
 import { DeleteBookingHandler } from './delete-booking/delete-booking.handler';
@@ -153,6 +154,7 @@ const handlers = [
     OrgConfigModule,
     ZoomModule,
     FinanceModule,
+    PackageLedgerModule,
   ],
   controllers: [
     DashboardBookingsLateEntryController,
