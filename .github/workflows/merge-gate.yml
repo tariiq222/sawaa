@@ -133,6 +133,13 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build shared packages
         run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+      - name: Generate Prisma client (Lefthook runs backend typecheck)
+        # The pre-push hook below runs `pnpm typecheck` for every workspace,
+        # including the backend, whose e2e specs import `@prisma/client` types.
+        # In the old serial job the backend unit step generated the client
+        # first; this lane must generate it explicitly.
+        working-directory: apps/backend
+        run: pnpm run prisma:generate
       - name: Dashboard — typecheck + unit
         run: pnpm --filter dashboard typecheck && pnpm --filter dashboard test -- --run
       - name: Website — typecheck + unit
