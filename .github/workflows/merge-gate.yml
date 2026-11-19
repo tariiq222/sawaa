@@ -2,6 +2,13 @@
 # .github/retired-workflows/README.md), so `gate` and `critical-real-e2e` are
 # the required checks and carry everything the local pre-commit hook enforces.
 # The Git ancestry check is not proof of a deployed or manually accepted revision.
+#
+# MNT-14: `gate` used to be one serial job (~20 min), so the wall clock was the
+# sum of every lane. It is now an aggregator over five parallel lanes. The
+# check name MUST stay exactly `gate`: it is a required status in the repository
+# ruleset ("Sawaa develop and integration"), and renaming it would leave every
+# PR permanently unmergeable. The aggregator fails if any lane fails or is
+# skipped, and it publishes the lane results so a failure is still legible.
 
 name: merge-gate
 
@@ -19,149 +26,210 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Shared by every lane. Values are throwaway CI fixtures, never real secrets.
+env:
+  DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+  REDIS_HOST: localhost
+  REDIS_PORT: '6379'
+  JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+  JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+  JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+  JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+  CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
+  JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
+  MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+  AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+  SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+  ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+  EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+  AUTHENTICA_API_KEY: ci-authentica-key
+  MINIO_ENDPOINT: localhost
+  MINIO_PORT: '9000'
+  MINIO_ACCESS_KEY: minioadmin
+  MINIO_SECRET_KEY: minioadmin123
+  MINIO_BUCKET: sawaa-test
+  MINIO_USE_SSL: 'false'
+
 jobs:
   # ─────────────────────────────────────────────────────────────────────
-  # gate — the merge check (lint, typecheck, tests, drift, security).
+  # lint — ESLint for all three apps, the multi-tenant guard and the
+  # backend module-boundary baseline. Governs its own environment.
   # ─────────────────────────────────────────────────────────────────────
-  gate:
-    name: gate
+  lint:
+    name: gate/lint
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: read
-    # `edited` is included so a PR retargeted to develop/main gets a fresh
-    # gate. Every edit reruns the full gate on purpose: a skipped job would
-    # report success and could mask an earlier failure on the same SHA.
-
-    env:
-      # Backend unit tests + openapi:build-and-snapshot both load AppModule,
-      # which Joi-validates all of these at boot. Without them the gate
-      # fails with "Config validation error: DATABASE_URL is required..."
-      DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
-      REDIS_HOST: localhost
-      REDIS_PORT: '6379'
-      JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
-      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
-      JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
-      JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
-      CHAT_GUEST_TOKEN_SECRET: ci-chat-guest-token-secret-32chars-long
-      JWT_SMS_OTP_SECRET: ci-jwt-sms-otp-secret-32chars-long
-      MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
-      AI_PROVIDER_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
-      SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
-      ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
-      EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
-      AUTHENTICA_API_KEY: ci-authentica-key
-      MINIO_ENDPOINT: localhost
-      MINIO_PORT: '9000'
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin123
-      MINIO_BUCKET: sawaa-test
-      MINIO_USE_SSL: 'false'
-
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
       - uses: pnpm/action-setup@v6
-
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Build shared packages
-        # Dashboard + api-client resolve @sawaa/shared via its built
-        # CJS entry. Without this, typecheck fails with
-        # "Cannot find module '@sawaa/shared/...'" in dashboard,
-        # api-client, and the openapi snapshot step.
-        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
-
-      - name: Deploy-state regression tests
-        run: node --test scripts/check-deploy-state.test.mjs
-
-      - name: Staging OTP relay recipient boundary
-        run: node --test docker/openship/otp-relay.test.mjs
-
-      - name: OpenShip prebuilt compose parity and deploy verifier
-        run: node --test scripts/openship/*.test.mjs scripts/apple-release/target.test.mjs
-
-      - name: Deploy-state consistency
-        # Verifies that the candidate merge target is at-or-after the
-        # latest tagged code release on main; does not verify deployment. Catches the
-        # stale/divergent candidate scenario where develop was
-        # force-pushed or someone re-targeted a stale PR.
-        run: node scripts/check-deploy-state.mjs origin/main HEAD
-
-      - name: Backend — unit
-        run: pnpm --filter backend test
-
-      - name: Dashboard — typecheck + unit
-        run: pnpm --filter dashboard typecheck && pnpm --filter dashboard test -- --run
-
-      - name: Website — typecheck + unit
-        run: pnpm --filter @sawaa/website typecheck && pnpm --filter @sawaa/website test -- --run
-
       - name: Lint (ESLint + multi-tenant guard + backend boundaries)
         run: pnpm lint
 
-      - name: Package tests (shared, api-client, ui)
-        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client --filter @sawaa/ui test
-
-      - name: Dashboard API drift
-        run: node scripts/check-dashboard-api-drift.mjs
-
-      - name: Dashboard i18n verification
-        run: pnpm --filter dashboard run i18n:verify
-
-      - name: Install mobile workspace dependencies
-        working-directory: apps/mobile
+  # ─────────────────────────────────────────────────────────────────────
+  # backend — unit tests, OpenAPI snapshot determinism and the documentation
+  # coverage ratchet. These share the backend build, so they stay together.
+  # ─────────────────────────────────────────────────────────────────────
+  backend:
+    name: gate/backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'pnpm'
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Dependency security regression tests (root and mobile)
-        run: SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs scripts/security/refresh-dependency-fixes.test.cjs
-
-      - name: Mobile — build shared package + typecheck
-        working-directory: apps/mobile
-        run: pnpm --filter=@sawaa/shared build && pnpm typecheck
-
-      - name: Mobile — lint
-        working-directory: apps/mobile
-        run: pnpm lint
-
-      # `pnpm test` runs jest with --coverage, so the coverageThreshold block in
-      # apps/mobile/package.json is enforced here (not just collected locally).
-      - name: Mobile — unit tests (with coverage thresholds)
-        working-directory: apps/mobile
-        run: pnpm test --runInBand
-
+      - name: Build shared packages
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+      - name: Backend — unit
+        run: pnpm --filter backend test
       - name: OpenAPI snapshot drift
         run: cd apps/backend && pnpm run openapi:build-and-snapshot && git diff --exit-code -- openapi.json
-
       - name: OpenAPI documentation coverage ratchet
         run: pnpm --filter=backend run check:openapi-coverage
-
-      - name: api-client endpoint drift
-        run: node scripts/check-api-client-drift.mjs
-
       - name: Prisma migration immutability
         if: github.event_name == 'pull_request'
         # Diff against the PR's own base so develop-only migrations are
         # protected too (origin/main would report them as additions).
         run: node scripts/check-prisma-migration-immutability.mjs origin/${{ github.base_ref }}
 
+  # ─────────────────────────────────────────────────────────────────────
+  # web — dashboard and website typecheck + unit tests, the typed-client
+  # drift checks and dashboard i18n. They share the built workspace packages.
+  # ─────────────────────────────────────────────────────────────────────
+  web:
+    name: gate/web
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared packages
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client build
+      - name: Dashboard — typecheck + unit
+        run: pnpm --filter dashboard typecheck && pnpm --filter dashboard test -- --run
+      - name: Website — typecheck + unit
+        run: pnpm --filter @sawaa/website typecheck && pnpm --filter @sawaa/website test -- --run
+      - name: Lefthook pre-push (direct-push guard + typecheck)
+        # Runs the pre-push jobs from lefthook.yml (direct-push guard and
+        # turbo typecheck) so CI and the local hook share one definition.
+        # ESLint and the multi-tenant guard are NOT part of pre-push; they run
+        # in the dedicated `pnpm lint` lane.
+        # --no-TTY prevents lefthook from blocking on a missing TTY.
+        run: |
+          pnpm lefthook run pre-push --all-files --no-tty
+      - name: Package tests (shared, api-client, ui)
+        run: pnpm --filter @sawaa/shared --filter @sawaa/api-client --filter @sawaa/ui test
+      - name: Dashboard API drift
+        run: node scripts/check-dashboard-api-drift.mjs
+      - name: Dashboard i18n verification
+        run: pnpm --filter dashboard run i18n:verify
+      - name: api-client endpoint drift
+        run: node scripts/check-api-client-drift.mjs
+
+  # ─────────────────────────────────────────────────────────────────────
+  # mobile — its own lockfile and workspace, so it never shares a lane with
+  # root installs. Coverage thresholds are enforced by `pnpm test`.
+  # ─────────────────────────────────────────────────────────────────────
+  mobile:
+    name: gate/mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install mobile workspace dependencies
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile
+      - name: Dependency security regression tests (root and mobile)
+        run: SAWAA_INCLUDE_MOBILE_DEPENDENCIES=1 node --test scripts/security/dependency-fixes.test.cjs scripts/security/refresh-dependency-fixes.test.cjs
+      - name: Mobile — build shared package + typecheck
+        working-directory: apps/mobile
+        run: pnpm --filter=@sawaa/shared build && pnpm typecheck
+      - name: Mobile — lint
+        working-directory: apps/mobile
+        run: pnpm lint
+      # `pnpm test` runs jest with --coverage, so the coverageThreshold block in
+      # apps/mobile/package.json is enforced here (not just collected locally).
+      - name: Mobile — unit tests (with coverage thresholds)
+        working-directory: apps/mobile
+        run: pnpm test --runInBand
+
+  # ─────────────────────────────────────────────────────────────────────
+  # security — secret scan, dependency scan and the deploy-state regression
+  # suites. No application build, so it runs in parallel with the test lanes.
+  # ─────────────────────────────────────────────────────────────────────
+  security:
+    name: gate/security
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Deploy-state regression tests
+        run: node --test scripts/check-deploy-state.test.mjs
+      - name: Staging OTP relay recipient boundary
+        run: node --test docker/openship/otp-relay.test.mjs
+      - name: OpenShip prebuilt compose parity and deploy verifier
+        run: node --test scripts/openship/*.test.mjs scripts/apple-release/target.test.mjs
+      - name: Deploy-state consistency
+        # Verifies that the candidate merge target is at-or-after the
+        # latest tagged code release on main; does not verify deployment.
+        run: node scripts/check-deploy-state.mjs origin/main HEAD
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_VERSION: '8.30.1'
           GITLEAKS_ENABLE_COMMENTS: 'false'
-
       - name: Trivy filesystem scan (HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -179,7 +247,6 @@ jobs:
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
           version: 'v0.72.0'
-
       - name: Upload Trivy SARIF artifact
         if: always() && hashFiles('trivy-fs.sarif') != ''
         uses: actions/upload-artifact@v7
@@ -189,34 +256,45 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Lefthook pre-push (direct-push guard + typecheck)
-        # Runs the pre-push jobs from lefthook.yml (direct-push guard and
-        # turbo typecheck) so CI and the local hook share one definition.
-        # ESLint and the multi-tenant guard are NOT part of pre-push; they run
-        # in the dedicated `pnpm lint` step above.
-        # --no-TTY prevents lefthook from blocking on a missing TTY.
+  # ─────────────────────────────────────────────────────────────────────
+  # gate — REQUIRED CHECK. Must keep this exact name (see the header note).
+  # It runs after every lane and fails if any of them failed or was skipped.
+  # Required status checks do not treat a skipped job as passing, but the
+  # explicit `needs.*.result` assertion makes the reason unambiguous.
+  # ─────────────────────────────────────────────────────────────────────
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    needs: [lint, backend, web, mobile, security]
+    if: always()
+    steps:
+      - name: Assert every lane succeeded
         run: |
-          pnpm lefthook run pre-push --all-files --no-tty
-
-      - name: Compose gate result
-        if: success()
-        run: |
+          echo "lint=${{ needs.lint.result }}"
+          echo "backend=${{ needs.backend.result }}"
+          echo "web=${{ needs.web.result }}"
+          echo "mobile=${{ needs.mobile.result }}"
+          echo "security=${{ needs.security.result }}"
+          failed=0
+          for result in \
+            "${{ needs.lint.result }}" \
+            "${{ needs.backend.result }}" \
+            "${{ needs.web.result }}" \
+            "${{ needs.mobile.result }}" \
+            "${{ needs.security.result }}"; do
+            if [ "$result" != "success" ]; then failed=1; fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "❌ MERGE GATE FAILED: at least one lane did not succeed."
+            echo "See the individual gate/* jobs above."
+            exit 1
+          fi
           echo "✅ MERGE GATE PASSED for ${{ github.ref }}"
-          echo "The candidate is releasable."
-        shell: bash
-      - name: Compose gate result (failure)
-        if: failure()
-        run: |
-          echo "❌ MERGE GATE FAILED for ${{ github.ref }}"
-          echo "See the failing step output above."
-          echo "This PR cannot be merged until all checks pass."
-        shell: bash
+          echo "All five lanes succeeded."
 
-  # ─────────────────────────────────────────────────────────────────────
-  # critical-real-e2e — backend real-database e2e lane (test:e2e:critical).
-  # Runs against disposable Postgres and Redis services. Email-entry proof
-  # limits use real Redis; external delivery/payment providers remain mocked.
-  # ─────────────────────────────────────────────────────────────────────
   critical-real-e2e:
     name: critical-real-e2e
     runs-on: ubuntu-latest
