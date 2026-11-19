@@ -1,20 +1,16 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
   ChatMessageKind,
   ChatOperationStatus,
-  ChatOperationType,
-  DeliveryType,
   MessageSenderType,
   Prisma,
   type ChatOperation,
 } from '@prisma/client';
-import { isDeepStrictEqual } from 'node:util';
 import { TransactionService } from '../../../../infrastructure/database';
 import { CreateBookingHandler } from '../../../bookings/create-booking/create-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../../bookings/client/client-reschedule-booking.handler';
@@ -22,41 +18,21 @@ import { ClientCancelBookingHandler } from '../../../bookings/client/client-canc
 import { hashToInt32 } from '../../../bookings/booking-lifecycle.helper';
 import { RESCHEDULE_TX_ATTEMPTS } from '../../../bookings/reschedule-booking/reschedule-booking.handler';
 import { retrySerializableTransaction } from '../../../../common/database/person-reference-lock.helper';
-import { ACTIVE_BOOKING_STATUSES } from '../../../bookings/active-booking-statuses';
-import { bookingCreationRequestHash } from '../../../bookings/create-booking/creation-request-hash';
 import { lockChatConversation } from '../conversation-lock.helper';
 import { ChatAuditService } from '../chat-audit.service';
 import { assertOperationOwnership, lockChatOperation } from './acknowledge-existing-booking.handler';
+import { ChatBookingQuoteService } from './chat-booking-quote.service';
 import {
-  ChatBookingQuoteService,
-  type PreparedBookingPayload,
-  type PreparedReschedulePayload,
-} from './chat-booking-quote.service';
+  defaultMutationOutcome,
+  operationResultBody,
+  TERMINAL_STATUSES,
+  toOperationErrorCode,
+} from './confirm-operation.errors';
+import { assertConversationOwnership } from './confirm-operation.guards';
+import { executeOperationMutation } from './confirm-operation.mutations';
+import type { ConfirmOperationCommand } from './confirm-operation.types';
 
-export interface ConfirmOperationCommand {
-  operationId: string;
-  clientId: string;
-  expectedVersion: number;
-}
-
-type MutationResult = {
-  bookingId: string;
-  outcome: 'BOOKING_CREATED' | 'BOOKING_RESCHEDULED' | 'BOOKING_CANCELLED' | 'CANCELLATION_REQUESTED';
-  syncPending?: boolean;
-};
-
-class OperationExecutionError extends Error {
-  constructor(readonly publicCode: string, message: string) {
-    super(message);
-  }
-}
-
-const TERMINAL_STATUSES = new Set<ChatOperationStatus>([
-  ChatOperationStatus.SUCCEEDED,
-  ChatOperationStatus.FAILED,
-  ChatOperationStatus.DECLINED,
-  ChatOperationStatus.EXPIRED,
-]);
+export type { ConfirmOperationCommand } from './confirm-operation.types';
 
 @Injectable()
 export class ConfirmOperationHandler {
@@ -84,14 +60,14 @@ export class ConfirmOperationHandler {
           const operation = await tx.chatOperation.findUnique({ where: { id: command.operationId } });
           if (!operation) throw new NotFoundException('Chat operation not found');
           assertOperationOwnership(operation, command.clientId);
-          await this.assertConversationOwnership(tx, operation, command.clientId);
+          await assertConversationOwnership(tx, operation, command.clientId);
 
           if (TERMINAL_STATUSES.has(operation.status)) {
             if (operation.status === ChatOperationStatus.SUCCEEDED && !operation.resultMessageId) {
               const messageId = await this.writeResultMessage(tx, operation, {
                 status: ChatOperationStatus.SUCCEEDED,
                 bookingId: operation.bookingId,
-                outcome: this.defaultOutcome(operation.type),
+                outcome: defaultMutationOutcome(operation.type),
               });
               return tx.chatOperation.update({
                 where: { id: operation.id },
@@ -135,7 +111,11 @@ export class ConfirmOperationHandler {
           if (executing.count !== 1) throw new ConflictException('Operation changed concurrently');
           executionStarted = true;
 
-          const mutation = await this.executeMutation(tx, operation);
+          const mutation = await executeOperationMutation({
+            quote: this.quote,
+            createBooking: this.createBooking,
+            rescheduleBooking: this.rescheduleBooking,
+          }, tx, operation);
           await this.audit.record({
             action: 'OPERATION_CONFIRMED', conversationId: operation.conversationId, operationId: operation.id,
           }, tx);
@@ -165,142 +145,8 @@ export class ConfirmOperationHandler {
       return completed;
     } catch (error) {
       if (!executionStarted) throw error;
-      return this.markFailed(command, this.errorCode(error));
+      return this.markFailed(command, toOperationErrorCode(error));
     }
-  }
-
-  private async executeMutation(
-    tx: Prisma.TransactionClient,
-    operation: ChatOperation,
-  ): Promise<MutationResult> {
-    const payload = this.record(operation.payload);
-    const clientId = operation.clientId!;
-
-    if (operation.type === ChatOperationType.CREATE_BOOKING) {
-      const creationIdempotencyKey = `chat-operation:${operation.id}`;
-      const creationRequestHash = bookingCreationRequestHash({
-        branchId: this.string(payload, 'branchId'),
-        clientId,
-        employeeId: this.string(payload, 'employeeId'),
-        serviceId: this.string(payload, 'serviceId'),
-        scheduledAt: this.string(payload, 'scheduledAt'),
-        endsAt: this.string(payload, 'endsAt'),
-        durationMins: this.number(payload, 'durationMins'),
-        durationOptionId: this.optionalString(payload, 'durationOptionId'),
-        bookingType: this.string(payload, 'bookingType'),
-        deliveryType: this.deliveryType(payload, 'deliveryType'),
-        price: this.number(payload, 'price'),
-        currency: this.string(payload, 'currency'),
-        // Prepared chat bookings intentionally have no mutable checkout
-        // fields. Include their persisted defaults in the canonical command so
-        // legacy null-hash recovery cannot bless a different durable shape.
-        expiresAt: null,
-        payAtClinic: false,
-        couponCode: null,
-        notes: null,
-        source: 'AI_CHAT',
-      });
-      const recovered = await tx.booking.findUnique({
-        where: { creationIdempotencyKey },
-      });
-      if (recovered) {
-        await this.assertRecoveredCreation(tx, payload, clientId, creationRequestHash, recovered);
-        return { bookingId: recovered.id, outcome: 'BOOKING_CREATED' };
-      }
-      if (operation.requiredConfirmations === 1) {
-        const futureBooking = await tx.booking.findFirst({
-          where: {
-            clientId,
-            status: { in: [...ACTIVE_BOOKING_STATUSES] },
-            isHistoricalImport: false,
-            scheduledAt: { gt: new Date() },
-          },
-          select: { id: true },
-        });
-        if (futureBooking) {
-          throw new OperationExecutionError(
-            'EXISTING_BOOKING_CHANGED',
-            'A future appointment now requires an additional-booking acknowledgement',
-          );
-        }
-      }
-      const input = {
-        clientId,
-        branchId: this.string(payload, 'branchId'),
-        employeeId: this.string(payload, 'employeeId'),
-        serviceId: this.string(payload, 'serviceId'),
-        scheduledAt: this.string(payload, 'scheduledAt'),
-        durationOptionId: this.optionalString(payload, 'durationOptionId') ?? undefined,
-        deliveryType: this.deliveryType(payload, 'deliveryType'),
-        transaction: tx,
-      };
-      const fresh = await this.quote.quoteBooking(input);
-      this.assertUnchanged(operation.payload, fresh.payload);
-      const trusted = fresh.payload as PreparedBookingPayload;
-      const booking = await this.createBooking.execute({
-        branchId: trusted.branchId,
-        clientId,
-        employeeId: trusted.employeeId,
-        serviceId: trusted.serviceId,
-        scheduledAt: new Date(trusted.scheduledAt),
-        ...(trusted.durationOptionId ? { durationOptionId: trusted.durationOptionId } : {}),
-        bookingType: trusted.bookingType,
-        deliveryType: trusted.deliveryType,
-        currency: trusted.currency,
-        source: 'AI_CHAT',
-        creationIdempotencyKey,
-        creationRequestHash,
-        transaction: tx,
-      });
-      return { bookingId: booking.id, outcome: 'BOOKING_CREATED' };
-    }
-
-    if (operation.type === ChatOperationType.RESCHEDULE_BOOKING) {
-      const bookingId = this.string(payload, 'bookingId');
-      const newScheduledAt = this.string(payload, 'newScheduledAt');
-      const recovered = await tx.bookingStatusLog.findUnique({
-        where: { sourceActionId: operation.id },
-        select: { id: true },
-      });
-      if (recovered) {
-        const result = await this.rescheduleBooking.execute({
-          bookingId,
-          clientId,
-          newScheduledAt,
-          sourceActionId: operation.id,
-          transaction: tx,
-        });
-        return {
-          bookingId: result.booking.id,
-          outcome: 'BOOKING_RESCHEDULED',
-          syncPending: Boolean(result.booking.zoomMeetingId),
-        };
-      }
-      const fresh = await this.quote.quoteReschedule({
-        clientId, bookingId, newScheduledAt, transaction: tx,
-      });
-      this.assertUnchanged(operation.payload, fresh.payload as PreparedReschedulePayload);
-      const result = await this.rescheduleBooking.execute({
-        bookingId,
-        clientId,
-        newScheduledAt,
-        sourceActionId: operation.id,
-        transaction: tx,
-      });
-      return {
-        bookingId: result.booking.id,
-        outcome: 'BOOKING_RESCHEDULED',
-        syncPending: Boolean(result.booking.zoomMeetingId),
-      };
-    }
-
-    if (operation.type === ChatOperationType.CANCEL_BOOKING) {
-      // Chat confirmations do not display the current refund quote. Never invent
-      // consent on the client's behalf; the appointment screen owns this flow.
-      throw new OperationExecutionError('CANCELLATION_CONSENT_REQUIRED', 'Review cancellation terms on the appointment screen');
-    }
-
-    throw new OperationExecutionError('UNSUPPORTED_OPERATION', 'Operation cannot be confirmed');
   }
 
   private async markFailed(
@@ -356,7 +202,7 @@ export class ConfirmOperationHandler {
         conversationId: operation.conversationId,
         senderType: MessageSenderType.SYSTEM,
         senderId: null,
-        body: this.resultBody(result.status, result.outcome, result.syncPending === true),
+        body: operationResultBody(result.status, result.outcome, result.syncPending === true),
         kind: ChatMessageKind.OPERATION_RESULT,
         metadata: {
           operationId: operation.id,
@@ -379,166 +225,5 @@ export class ConfirmOperationHandler {
       },
     });
     return message.id;
-  }
-
-  private async assertConversationOwnership(
-    tx: Prisma.TransactionClient,
-    operation: Pick<ChatOperation, 'conversationId'>,
-    clientId: string,
-  ): Promise<void> {
-    const conversation = await tx.chatConversation.findFirst({
-      where: { id: operation.conversationId, clientId },
-      select: { id: true },
-    });
-    if (!conversation) throw new ForbiddenException('Conversation does not belong to this client');
-  }
-
-  private assertUnchanged(stored: Prisma.JsonValue, fresh: object): void {
-    if (!isDeepStrictEqual(stored, fresh)) {
-      throw new OperationExecutionError('QUOTE_CHANGED', 'Prepared appointment details changed');
-    }
-  }
-
-  private async assertRecoveredCreation(
-    tx: Prisma.TransactionClient,
-    payload: Record<string, Prisma.JsonValue>,
-    clientId: string,
-    creationRequestHash: string,
-    booking: {
-      id: string;
-      clientId: string;
-      branchId: string;
-      employeeId: string;
-      serviceId: string | null;
-      scheduledAt: Date;
-      endsAt: Date;
-      durationMins: number;
-      durationOptionId: string | null;
-      bookingType: string;
-      deliveryType: string;
-      price: Prisma.Decimal;
-      currency: string;
-      expiresAt: Date | null;
-      payAtClinic: boolean;
-      couponCode: string | null;
-      notes: string | null;
-      source: string;
-      creationRequestHash: string | null;
-    },
-  ): Promise<void> {
-    const persistedHash = bookingCreationRequestHash({
-      branchId: booking.branchId,
-      clientId: booking.clientId,
-      employeeId: booking.employeeId,
-      serviceId: booking.serviceId ?? '',
-      scheduledAt: booking.scheduledAt.toISOString(),
-      endsAt: booking.endsAt.toISOString(),
-      durationMins: booking.durationMins,
-      durationOptionId: booking.durationOptionId,
-      bookingType: booking.bookingType,
-      deliveryType: booking.deliveryType as never,
-      price: Number(booking.price),
-      currency: booking.currency,
-      expiresAt: booking.expiresAt?.toISOString() ?? null,
-      payAtClinic: booking.payAtClinic,
-      couponCode: booking.couponCode,
-      notes: booking.notes,
-      source: booking.source,
-    });
-    if (persistedHash !== creationRequestHash) {
-      throw new OperationExecutionError(
-        'IDEMPOTENCY_CONFLICT',
-        'Durable creation key belongs to a different booking',
-      );
-    }
-    if (booking.creationRequestHash === creationRequestHash) return;
-    if (booking.creationRequestHash !== null) {
-      throw new OperationExecutionError(
-        'IDEMPOTENCY_CONFLICT',
-        'Durable creation key belongs to a different booking',
-      );
-    }
-    const backfilled = await tx.booking.updateMany({
-      where: { id: booking.id, creationRequestHash: null },
-      data: { creationRequestHash },
-    });
-    if (backfilled.count !== 1) {
-      const raced = await tx.booking.findUnique({
-        where: { id: booking.id },
-        select: { creationRequestHash: true },
-      });
-      if (raced?.creationRequestHash !== creationRequestHash) {
-        throw new OperationExecutionError(
-          'IDEMPOTENCY_CONFLICT',
-          'Durable creation key hash backfill raced with another request',
-        );
-      }
-    }
-  }
-
-  private record(value: Prisma.JsonValue): Record<string, Prisma.JsonValue> {
-    if (!value || Array.isArray(value) || typeof value !== 'object') {
-      throw new OperationExecutionError('INVALID_PAYLOAD', 'Operation payload is invalid');
-    }
-    return value as Record<string, Prisma.JsonValue>;
-  }
-
-  private string(payload: Record<string, Prisma.JsonValue>, key: string): string {
-    const value = payload[key];
-    if (typeof value !== 'string' || value.length === 0) {
-      throw new OperationExecutionError('INVALID_PAYLOAD', `Operation ${key} is invalid`);
-    }
-    return value;
-  }
-
-  private optionalString(payload: Record<string, Prisma.JsonValue>, key: string): string | null {
-    const value = payload[key];
-    if (value === null || value === undefined) return null;
-    if (typeof value !== 'string' || value.length === 0) {
-      throw new OperationExecutionError('INVALID_PAYLOAD', `Operation ${key} is invalid`);
-    }
-    return value;
-  }
-
-  private number(payload: Record<string, Prisma.JsonValue>, key: string): number {
-    const value = payload[key];
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-      throw new OperationExecutionError('INVALID_PAYLOAD', `Operation ${key} is invalid`);
-    }
-    return value;
-  }
-
-  private deliveryType(payload: Record<string, Prisma.JsonValue>, key: string): DeliveryType {
-    const value = this.string(payload, key);
-    if (!Object.values(DeliveryType).includes(value as DeliveryType)) {
-      throw new OperationExecutionError('INVALID_PAYLOAD', 'Operation delivery type is invalid');
-    }
-    return value as DeliveryType;
-  }
-
-  private errorCode(error: unknown): string {
-    if (error instanceof OperationExecutionError) return error.publicCode;
-    if (error instanceof ConflictException) return 'BOOKING_CONFLICT';
-    if (error instanceof BadRequestException) return 'VALIDATION_FAILED';
-    return 'EXECUTION_FAILED';
-  }
-
-  private defaultOutcome(type: ChatOperationType): MutationResult['outcome'] {
-    if (type === ChatOperationType.RESCHEDULE_BOOKING) return 'BOOKING_RESCHEDULED';
-    if (type === ChatOperationType.CANCEL_BOOKING) return 'BOOKING_CANCELLED';
-    return 'BOOKING_CREATED';
-  }
-
-  private resultBody(status: ChatOperationStatus, outcome: string, syncPending = false): string {
-    if (outcome === 'CANCELLATION_CONSENT_REQUIRED') return 'لإلغاء الموعد، افتح تفاصيل الموعد وراجع شروط الإلغاء والاسترداد ثم أكّد موافقتك.';
-    if (status === ChatOperationStatus.FAILED) return 'تعذر تنفيذ الإجراء. يمكنك إعداد الطلب من جديد.';
-    if (outcome === 'BOOKING_RESCHEDULED') {
-      return syncPending
-        ? 'تمت إعادة جدولة الموعد، ويجري الآن مزامنة رابط الاجتماع عن بُعد.'
-        : 'تمت إعادة جدولة الموعد بنجاح.';
-    }
-    if (outcome === 'BOOKING_CANCELLED') return 'تم إلغاء الموعد بنجاح.';
-    if (outcome === 'CANCELLATION_REQUESTED') return 'تم تسجيل طلب إلغاء الموعد للمراجعة.';
-    return 'تم تأكيد الحجز بنجاح.';
   }
 }
