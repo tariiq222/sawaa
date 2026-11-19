@@ -9,6 +9,7 @@ import { RefundPaymentHandler } from '../../finance/refund-payment/refund-paymen
 import { CancelBookingHandler } from './cancel-booking.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { ProgramCapacityService } from '../program/program-capacity.service';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import { stableEventId } from '../../../common/events';
 
 type MockPrisma = {
@@ -40,6 +41,7 @@ const buildMockPrisma = (): MockPrisma => {
 describe('CancelBookingHandler', () => {
   let handler: CancelBookingHandler;
   let prisma: MockPrisma;
+  let financeLedger: { releaseCouponUsageInTx: jest.Mock };
   let eventBus: { publish: jest.Mock };
   let settingsHandler: { execute: jest.Mock };
   let zoomMeetingService: { deleteMeeting: jest.Mock };
@@ -70,6 +72,9 @@ describe('CancelBookingHandler', () => {
     refundHandler = { createRefundRequestInTx: jest.fn() };
     groupCapacity = { decrementEnrollment: jest.fn().mockResolvedValue(undefined) };
 
+    financeLedger = {
+      releaseCouponUsageInTx: jest.fn().mockResolvedValue({ released: true }),
+    };
     const moduleRef = await Test.createTestingModule({
       providers: [
         CancelBookingHandler,
@@ -80,6 +85,10 @@ describe('CancelBookingHandler', () => {
         { provide: ZoomMeetingService, useValue: zoomMeetingService },
         { provide: RefundPaymentHandler, useValue: refundHandler },
         { provide: ProgramCapacityService, useValue: groupCapacity },
+        {
+          provide: BookingFinanceLedgerService,
+          useValue: financeLedger,
+        },
       ],
     }).compile();
 
@@ -541,9 +550,8 @@ describe('CancelBookingHandler', () => {
         changedBy: 'user-1',
       });
 
-      expect(prisma.coupon.updateMany).toHaveBeenCalledWith({
-        where: { code: 'PROMO10', usedCount: { gt: 0 } },
-        data: { usedCount: { decrement: 1 } },
+      expect(financeLedger.releaseCouponUsageInTx).toHaveBeenCalledWith(prisma, {
+        code: 'PROMO10',
       });
     });
 

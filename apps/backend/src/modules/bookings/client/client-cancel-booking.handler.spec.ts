@@ -59,6 +59,11 @@ async function executeConsented(handler: ClientCancelBookingHandler, command: Om
   return handler.execute({ acceptedRefundTerms: true, ...command, quoteToken });
 }
 
+const buildFinanceLedger = () => ({
+  // Coupon release is the only ledger call this handler makes.
+  releaseCouponUsageInTx: jest.fn().mockResolvedValue({ released: true }),
+});
+
 describe('ClientCancelBookingHandler', () => {
   it.each([
     {}, { acceptedRefundTerms: false, quoteToken: 'a'.repeat(64) },
@@ -68,7 +73,7 @@ describe('ClientCancelBookingHandler', () => {
   ])('rejects missing or invalid explicit consent before any effect: %p', async consent => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
     await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', ...consent } as never)).rejects.toThrow(BadRequestException);
     expect(prisma.booking.updateMany).not.toHaveBeenCalled();
     expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
@@ -79,7 +84,7 @@ describe('ClientCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, bookingType: 'GROUP' });
     const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never,
-      buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+      buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
     await expect(handler.execute({ bookingId: 'book-1', clientId: 'client-1', acceptedRefundTerms: true,
       quoteToken: 'a'.repeat(64),
     })).rejects.toThrow(ForbiddenException);
@@ -90,7 +95,7 @@ describe('ClientCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
     const settings = buildSettingsHandler();
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     const result = await executeConsented(handler, {
       bookingId: 'book-1',
@@ -131,7 +136,7 @@ describe('ClientCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(soonBooking);
     const settings = buildSettingsHandler({ freeCancelBeforeHours: 24 });
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     const result = await executeConsented(handler, {
       bookingId: 'book-1',
@@ -150,7 +155,7 @@ describe('ClientCancelBookingHandler', () => {
   it('does not commit a client cancellation while an ONLINE reschedule sync lease is active', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, deliveryType: DeliveryType.ONLINE });
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
     await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
@@ -165,7 +170,7 @@ describe('ClientCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...futureBooking, deliveryType: DeliveryType.ONLINE });
     prisma.booking.updateMany.mockResolvedValue({ count: 0 });
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
     await expect(executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' })).rejects.toThrow('status changed concurrently');
     expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
   });
@@ -173,7 +178,7 @@ describe('ClientCancelBookingHandler', () => {
   it('throws NotFoundException when booking does not exist', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(null);
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     await expect(
       executeConsented(handler, { bookingId: 'bad-id', clientId: 'client-1' }),
@@ -183,7 +188,7 @@ describe('ClientCancelBookingHandler', () => {
   it('throws NotFoundException when client does not own the booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     await expect(
       handler.execute({ bookingId: 'book-1', clientId: 'other-client', acceptedRefundTerms: true, quoteToken: 'a'.repeat(64) }),
@@ -198,7 +203,7 @@ describe('ClientCancelBookingHandler', () => {
       ...futureBooking,
       status: BookingStatus.COMPLETED,
     });
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     await expect(
       executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' }),
@@ -211,7 +216,7 @@ describe('ClientCancelBookingHandler', () => {
       ...futureBooking,
       status: BookingStatus.AWAITING_PAYMENT,
     });
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
 
@@ -224,7 +229,7 @@ describe('ClientCancelBookingHandler', () => {
     const creditBooking = { ...futureBooking, packageCreditId: 'credit-1' };
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(creditBooking);
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
 
@@ -255,7 +260,7 @@ describe('ClientCancelBookingHandler', () => {
     };
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(soonCreditBooking);
-    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
 
     const result = await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1' });
 
@@ -273,6 +278,7 @@ describe('ClientCancelBookingHandler', () => {
     const handler = new ClientCancelBookingHandler(
       prisma as never, rls as never, buildSettingsHandler() as never,
       eventBus as never, buildRefundHandler() as never, buildGroupCapacity() as never,
+          buildFinanceLedger() as never,
     );
 
     const result = await executeConsented(handler, {
@@ -306,6 +312,7 @@ describe('ClientCancelBookingHandler', () => {
       buildPrisma() as never, buildRlsTransaction() as never,
       buildSettingsHandler({ requireCancelApproval: true }) as never,
       eventBus as never, buildRefundHandler() as never, buildGroupCapacity() as never,
+      buildFinanceLedger() as never,
     );
 
     await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never });
@@ -333,6 +340,7 @@ describe('ClientCancelBookingHandler', () => {
       buildPrisma() as never, buildRlsTransaction() as never,
       buildSettingsHandler() as never, buildEventBus() as never,
       buildRefundHandler() as never, buildGroupCapacity() as never,
+      buildFinanceLedger() as never,
     );
 
     await executeConsented(handler, { bookingId: 'book-1', clientId: 'client-1', sourceActionId, transaction: tx as never });
@@ -365,6 +373,7 @@ describe('ClientCancelBookingHandler', () => {
       buildPrisma() as never, buildRlsTransaction() as never,
       buildSettingsHandler() as never, buildEventBus() as never,
       buildRefundHandler() as never, buildGroupCapacity() as never,
+      buildFinanceLedger() as never,
     );
 
     await expect(executeConsented(handler, {
@@ -386,7 +395,7 @@ describe('enabled client cancellation policy', () => {
     db.outboxEvent.create.mockResolvedValue({});
     const refunds = buildRefundHandler();
     refunds.createRefundRequestInTx.mockRejectedValue(new Error('provider unavailable'));
-    const handler = new ClientCancelBookingHandler(db, buildRlsTransaction(db) as never, buildSettingsHandler(policy) as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never);
+    const handler = new ClientCancelBookingHandler(db, buildRlsTransaction(db) as never, buildSettingsHandler(policy) as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never, buildFinanceLedger() as never);
     return { db, handler, refunds, booking };
   }
   it.each([{}, { acceptedRefundTerms: false, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: null, quoteToken: 'a'.repeat(64) }, { acceptedRefundTerms: true }, { acceptedRefundTerms: true, quoteToken: '' }])('fails closed on enabled-policy consent %p', async consent => {
@@ -467,9 +476,10 @@ describe('legacy consent and financial compatibility', () => {
     const settingsHandler = { execute: jest.fn().mockResolvedValue(settings) };
     const refunds = buildRefundHandler();
     refunds.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'r1', idempotencyKey: 'key' });
-    const handler = new ClientCancelBookingHandler(db as never, buildRlsTransaction(db) as never, settingsHandler as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never);
+    const ledger = buildFinanceLedger();
+    const handler = new ClientCancelBookingHandler(db as never, buildRlsTransaction(db) as never, settingsHandler as never, buildEventBus() as never, refunds as never, buildGroupCapacity() as never, ledger as never);
     const command: ClientCancelCommand = { bookingId: 'book-1', clientId: 'client-1', acceptedRefundTerms: true as const, quoteToken: calculateClientCancellation(booking as never, settings, [captured], new Date()).quoteToken };
-    return { handler, db, refunds, command, booking, settingsHandler, settings };
+    return { handler, db, refunds, ledger, command, booking, settingsHandler, settings };
   }
   it('executes the accepted full refund when the clock crosses the legacy boundary after quote validation', async () => {
     const beforeBoundary = new Date('2030-01-01T10:00:00.000Z');
@@ -506,12 +516,12 @@ describe('legacy consent and financial compatibility', () => {
     expect(db.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CANCEL_REQUESTED, cancelReason: 'OTHER', cancelNotes: 'Plans changed' }) }));
   });
   it('persists cancelReason, releases the coupon and cancels the Zoom meeting for a web-style command', async () => {
-    const { handler, db, refunds, command } = setup('CONFIRMED', 'EARLY', { couponCode: 'SAVE10', zoomMeetingId: 'zoom-1' });
+    const { handler, db, refunds, ledger, command } = setup('CONFIRMED', 'EARLY', { couponCode: 'SAVE10', zoomMeetingId: 'zoom-1' });
     expect(await handler.execute({ ...command, reason: 'Plans changed' })).toMatchObject({ status: 'CANCELLED', requiresApproval: false });
     expect(refunds.createRefundRequestInTx).toHaveBeenCalledWith(db, expect.objectContaining({ paymentId: 'p1', amount: 2500 }));
     expect(db.booking.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ cancelReason: 'CLIENT_REQUESTED', cancelNotes: 'Plans changed', zoomMeetingStatus: 'CANCELLED' }) }));
     expect(db.bookingStatusLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ reason: 'CLIENT_REQUESTED' }) });
-    expect(db.coupon.updateMany).toHaveBeenCalledWith({ where: { code: 'SAVE10', usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+    expect(ledger.releaseCouponUsageInTx).toHaveBeenCalledWith(db, { code: 'SAVE10' });
     expect(db.outboxEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ payload: expect.objectContaining({ payload: expect.objectContaining({ zoomMeetingId: 'zoom-1', legacyClientCancellation: true, cancelNotes: 'Plans changed' }) }) }) });
   });
   it('persists the caller-supplied reason enum on a direct cancellation', async () => {

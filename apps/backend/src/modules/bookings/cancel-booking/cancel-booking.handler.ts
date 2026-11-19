@@ -1,3 +1,4 @@
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus, Prisma, RefundType } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
@@ -59,6 +60,7 @@ export class CancelBookingHandler {
     private readonly zoomMeetingService: ZoomMeetingService,
     private readonly refundHandler: RefundPaymentHandler,
     private readonly groupSessionCapacity: ProgramCapacityService,
+    private readonly financeLedger: BookingFinanceLedgerService,
   ) {}
 
   async execute(cmd: CancelBookingCommand) {
@@ -181,12 +183,8 @@ export class CancelBookingHandler {
         },
       });
       if (booking.couponCode) {
-        await tx.coupon.updateMany({
-          where: {
-            code: booking.couponCode,
-            usedCount: { gt: 0 },
-          },
-          data: { usedCount: { decrement: 1 } },
+        await this.financeLedger.releaseCouponUsageInTx(tx, {
+          code: booking.couponCode,
         });
       }
       // Session-package credit bookings: return the credit to its bucket in
