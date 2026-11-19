@@ -21,6 +21,7 @@ import {
   isProgramOpenForEnrollment,
 } from '../program/program-state-machine';
 import { lockPersonReferences } from '../../../common/database/person-reference-lock.helper';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 
 /**
  * Sentinel date used as Booking.scheduledAt until the program is SCHEDULED.
@@ -65,6 +66,7 @@ export class EnrollInProgramHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
+    private readonly financeLedger: BookingFinanceLedgerService,
   ) {}
 
   async execute(cmd: EnrollInProgramCommand): Promise<EnrollInProgramResult> {
@@ -284,36 +286,15 @@ export class EnrollInProgramHandler {
         // programs — subtotal = price.
         let invoiceId: string | null = null;
         if (price > 0) {
-          const orgSettings = await tx.organizationSettings.findFirst({
-            where: {},
-            // Same row the settings screen edits and invoices read (latest).
-            orderBy: { createdAt: 'desc' },
-            select: { vatRate: true },
-          });
-          const vatRate = new Prisma.Decimal(
-            orgSettings?.vatRate?.toString() ?? '0',
-          );
-          const subtotalDec = new Prisma.Decimal(price.toString());
-          const discountAmtDec = new Prisma.Decimal(0);
-          const vatBase = subtotalDec.sub(discountAmtDec);
-          const vatAmt = vatBase.mul(vatRate).toDecimalPlaces(0);
-          const total = vatBase.add(vatAmt).toDecimalPlaces(0);
-
-          const invoice = await tx.invoice.create({
-            data: {
-              branchId: booking.branchId,
-              clientId: booking.clientId,
-              employeeId: booking.employeeId,
-              bookingId: booking.id,
-              subtotal: subtotalDec.toNumber(),
-              discountAmt: discountAmtDec.toNumber(),
-              vatRate: vatRate.toNumber(),
-              vatAmt: vatAmt.toNumber(),
-              total: total.toNumber(),
-              currency: booking.currency,
-              status: 'DRAFT',
-            },
-            select: { id: true },
+          const invoice = await this.financeLedger.createBookingInvoiceInTx(tx, {
+            bookingId: booking.id,
+            branchId: booking.branchId,
+            clientId: booking.clientId,
+            employeeId: booking.employeeId,
+            subtotal: new Prisma.Decimal(price.toString()),
+            discountAmt: new Prisma.Decimal(0),
+            currency: booking.currency,
+            issueMode: 'DRAFT',
           });
           invoiceId = invoice.id;
         }

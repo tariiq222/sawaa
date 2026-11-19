@@ -6,8 +6,7 @@ import { retrySerializableTransaction } from "../../../common/database/person-re
 import { ProcessPaymentHandler } from "../../finance/process-payment/process-payment.handler";
 import { RecordPreviousReceiptHandler } from "../../finance/record-previous-receipt/record-previous-receipt.handler";
 import { assertManualReceiptMethod } from "../../finance/record-previous-receipt/manual-receipt-method.helper";
-import { resolveVatRate } from "../../finance/create-invoice/create-invoice.handler";
-import { computeVat } from "../../finance/money.helper";
+import { BookingFinanceLedgerService } from "../../finance/booking-finance/booking-finance-ledger.service";
 import { hashToInt32 } from "../booking-lifecycle.helper";
 import { RecordLateSessionDto } from "./record-late-session.dto";
 import {
@@ -29,6 +28,7 @@ export class RecordLateSessionHandler {
     private readonly transactions: TransactionService,
     private readonly previousReceipt: RecordPreviousReceiptHandler,
     private readonly processPayment: ProcessPaymentHandler,
+    private readonly financeLedger: BookingFinanceLedgerService,
   ) {}
   async execute(input: RecordLateSessionDto, actor: JwtUser) {
     const dto = validateLateSessionRequest(input, actor),
@@ -111,25 +111,15 @@ export class RecordLateSessionHandler {
               },
             });
             if (dto.amountHalalas > 0) {
-              const vatRate = await resolveVatRate(tx),
-                money = computeVat(
-                  new Prisma.Decimal(dto.amountHalalas),
-                  vatRate,
-                );
-              const invoice = await tx.invoice.create({
-                data: {
-                  bookingId: booking.id,
-                  branchId: dto.branchId,
-                  clientId: dto.clientId,
-                  employeeId: dto.employeeId,
-                  subtotal: dto.amountHalalas,
-                  discountAmt: 0,
-                  vatRate,
-                  vatAmt: money.vatAmtHalalas,
-                  total: money.totalHalalas,
-                  currency: booking.currency,
-                  status: "DRAFT",
-                },
+              const invoice = await this.financeLedger.createBookingInvoiceInTx(tx, {
+                bookingId: booking.id,
+                branchId: dto.branchId,
+                clientId: dto.clientId,
+                employeeId: dto.employeeId,
+                subtotal: new Prisma.Decimal(dto.amountHalalas),
+                discountAmt: new Prisma.Decimal(0),
+                currency: booking.currency,
+                issueMode: "DRAFT",
               });
               if (dto.paymentMode === "PREVIOUSLY_RECEIVED")
                 await this.previousReceipt.execute({
