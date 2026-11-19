@@ -12,6 +12,7 @@
 
 - [operations/deployment-policy.md](./operations/deployment-policy.md) — سياسة النشر المعتمدة؛ المرجع الحاكم لأي نشر.
 - [operations/restore-runbook.md](./operations/restore-runbook.md) — إجراءات استعادة النسخ الاحتياطية (Postgres + MinIO + Env).
+- [operations/dependency-overrides.md](./operations/dependency-overrides.md) — سجل كل `pnpm.overrides` بتصنيفه وسببه وتاريخ إدخاله؛ يُراجع كل ربع (MNT-26).
 - [../apps/backend/docs/operations/p2-credential-rekey-2026-05-09.md](../apps/backend/docs/operations/p2-credential-rekey-2026-05-09.md) — إجراء تدوير مفاتيح تشفير الـ credentials.
 
 ## القرارات المعمارية (ADRs)
