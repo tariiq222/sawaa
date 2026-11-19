@@ -124,8 +124,14 @@ UPDATE "PackageCredit" SET "usedQuantity" = "totalQuantity", "reservedQuantity" 
 |---|---|
 | `git fetch origin integration/maintainability` | exit 0، `origin/integration/maintainability` = `ebdddce4e5f261f4f598a10ab710661a6bb46073` |
 | `node scripts/check-backend-boundaries.mjs` | exit 0، مطابق للـbaseline |
-| `git worktree add .worktrees/mnt17-step1 -b codex/mnt-17-step1-design origin/integration/maintainability` | exit 0 |
-| `git diff --check` | exit 0 |
+| `git worktree add .worktrees/mnt17-step1 -b codex/mnt-17-step1-design origin/integration/maintainability` | exit 0، HEAD = `ebdddce4e` |
+| `git diff --check` (working tree، قبل staging) | exit 0 — لا يفحص الملفات غير المتتبعة |
+| `git diff --cached --check` (بعد `git add` للوثيقة) | exit 0 — هذا هو الفحص ذو المعنى |
+| `git commit` (pre-commit: legacy multi-tenant guard) | exit 0، `b37fa57ce` |
+| `git push -u origin codex/mnt-17-step1-design` | exit 0 — بعد `LEFTHOOK=0` لأن `pre-push` يشغّل `pnpm typecheck` والـworktree بلا `node_modules` |
+| `gh pr create --base integration/maintainability` | exit 0، PR #299 |
+
+**حاجز مسجّل:** `pre-push` typecheck لم يُشغَّل فعليًا في هذا الـworktree (لا `node_modules`). الوثيقة لا تحتوي TypeScript، لكن typecheck الحقيقي مطلوب في CI. لا يوجد ادعاء بأنه مرّ.
 
 لم تُشغَّل أي اختبارات (Jest / e2e / premerge) في هذه المرحلة لأنها لا تُغيّر كودًا. أي ادعاء بسلامة سلوكية بعد الترحيل يبقى مؤجلًا إلى أدلة PRs اللاحقة.
 
