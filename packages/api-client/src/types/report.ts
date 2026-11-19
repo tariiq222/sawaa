@@ -1,16 +1,23 @@
+import type { components } from './generated/openapi'
+
+type Schemas = components['schemas']
+
+/**
+ * NOT derived: the only documented revenue report
+ * (`POST /dashboard/ops/reports` → `OpsRevenueReportDto`) is bucketed by
+ * `byDay`/`byMethod`/`byStatus`, not by month. No module in this package calls
+ * it. Kept hand-written.
+ */
 export interface RevenueByMonth {
   month: string
   revenue: number
   bookings: number
 }
 
-export interface RevenueByEmployee {
-  employeeId: string
-  name: string
-  revenue: number
-  bookings: number
-}
+/** Field-for-field `OpsOverviewTopPractitionerDto` (from `OpsOverviewReportDto.topPractitioners`). */
+export type RevenueByEmployee = Schemas['OpsOverviewTopPractitionerDto']
 
+/** NOT derived: `OpsOverviewTopServiceDto` is `{count,nameAr,nameEn,serviceId}`, a different shape. */
 export interface RevenueByService {
   serviceId: string
   name: string
@@ -18,6 +25,7 @@ export interface RevenueByService {
   bookings: number
 }
 
+/** NOT derived: see `RevenueByMonth` — the documented report has no byMonth/by Employee/byService rollups. */
 export interface RevenueReport {
   totalRevenue: number
   totalBookings: number
@@ -28,6 +36,7 @@ export interface RevenueReport {
   byService: RevenueByService[]
 }
 
+/** NOT derived: `OpsBookingsReportDto` uses `byStatus`/`byType` arrays and different counter names. */
 export interface BookingReport {
   total: number
   byStatus: {
@@ -45,6 +54,7 @@ export interface BookingReport {
   byDay: Array<{ date: string; count: number }>
 }
 
+/** NOT derived: `GET /dashboard/stats` returns today's counters (`todayBookings`, `todayRevenue`, …), not these totals. */
 export interface DashboardStats {
   totalRevenue: number
   totalBookings: number
@@ -52,6 +62,7 @@ export interface DashboardStats {
   totalEmployees: number
 }
 
+/** NOT derived: no documented report request uses `dateFrom`/`dateTo` (the ops report takes `from`/`to`). */
 export interface ReportDateParams {
   dateFrom?: string
   dateTo?: string

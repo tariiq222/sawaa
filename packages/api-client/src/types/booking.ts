@@ -1,11 +1,19 @@
+import type { components, paths } from './generated/openapi'
 import type { PaginatedResponse, PaginationParams } from './api'
+
+type Schemas = components['schemas']
+type BookingRow = Schemas['BookingRowDto']
+type BookingListQueryDoc = NonNullable<
+  paths['/api/v1/dashboard/bookings']['get']['parameters']['query']
+>
 
 /**
  * Booking status values (snake_case in UI/API, mapped to UPPER_CASE in the DB
- * enum). This runtime tuple is the single source of truth for `BookingStatus`;
- * it mirrors the backend `BookingStatus` enum in apps/backend/openapi.json.
- * Keep the two in sync — the colocated booking.test.ts enforces this against
- * the committed OpenAPI spec (the enum-drift gate).
+ * enum). This runtime tuple is the single source of truth for the runtime
+ * vocabulary; `BookingStatus` is DERIVED from the snapshot's `BookingStatus`
+ * enum and the two are pinned equal by the compile-time checks below.
+ * The colocated booking.test.ts still enforces the tuple against the committed
+ * OpenAPI spec at runtime (the enum-drift gate).
  */
 export const BOOKING_STATUSES = [
   'pending',
@@ -20,78 +28,99 @@ export const BOOKING_STATUSES = [
   'cancel_requested',
 ] as const
 
-export type BookingStatus = (typeof BOOKING_STATUSES)[number]
+/** `BookingStatus` enum from the snapshot, lower-cased to the UI vocabulary. */
+export type BookingStatus = Lowercase<Schemas['BookingStatus']>
+
+// Compile-time parity guard: if the snapshot enum and the runtime tuple diverge,
+// one of these stops compiling (the test also checks it at runtime).
+type _StatusEnumCoversTuple = (typeof BOOKING_STATUSES)[number] extends BookingStatus ? true : never
+type _StatusTupleCoversEnum = BookingStatus extends (typeof BOOKING_STATUSES)[number] ? true : never
+const _statusEnumCoversTuple: _StatusEnumCoversTuple = true
+const _statusTupleCoversEnum: _StatusTupleCoversEnum = true
+void _statusEnumCoversTuple
+void _statusTupleCoversEnum
 
 /**
- * Booking kind (snake_case in UI/API, mapped to UPPER_CASE in DB).
- * individual -> INDIVIDUAL
- * walk_in -> WALK_IN
- * group -> GROUP
+ * Booking kind (snake_case UI/API; the snapshot's `BookingType` is UPPER_CASE).
+ * individual -> INDIVIDUAL, walk_in -> WALK_IN, group -> GROUP.
  */
-export type BookingType = 'individual' | 'walk_in' | 'group'
+export type BookingType = Lowercase<Schemas['BookingType']>
+
+/** Delivery channel — the snapshot's `DeliveryType` already uses this vocabulary. */
+export type DeliveryType = Schemas['DeliveryType']
+
+/** Values returned by the dashboard booking mapper (from `BookingRowDto['type']`). */
+export type BookingResponseType = BookingRow['type']
+export type BookingResponseDeliveryType = NonNullable<BookingRow['deliveryType']>
 
 /**
- * Delivery channel — independent from BookingType.
- * IN_PERSON = physically at the branch; ONLINE = virtual (Zoom or other).
+ * Origin of a booking. Derived from the snapshot's `BookingSource` but
+ * deliberately projected to the two values this client sends/filters on; the
+ * enum also carries server-originated `WHATSAPP`/`AI_CHAT` values.
  */
-export type DeliveryType = 'IN_PERSON' | 'ONLINE'
-
-/** Values returned by the dashboard booking mapper (distinct from request enums). */
-export type BookingResponseType = 'in_person' | 'walk_in' | 'group'
-export type BookingResponseDeliveryType = 'in_person' | 'online'
+export type BookingSource = Extract<Schemas['BookingSource'], 'RECEPTION' | 'ONLINE'>
 
 /**
- * Origin of a booking — mirrors the backend Prisma `BookingSource` enum.
- * RECEPTION = created by staff at the front desk (dashboard / mobile-employee).
- * ONLINE    = self-service booking from the public website.
+ * Row returned by `GET /api/v1/dashboard/bookings` / `…/{id}`
+ * (`BookingRowDto`), projected to the keys this client exposes. `client`,
+ * `employee`, `service` are narrowed picks of the documented nested DTOs.
  */
-export type BookingSource = 'RECEPTION' | 'ONLINE'
-
-export interface BookingListItem {
+export type BookingListItem = Pick<
+  BookingRow,
+  | 'id'
+  | 'date'
+  | 'startTime'
+  | 'endTime'
+  | 'checkedInAt'
+  | 'notes'
+  | 'adminNotes'
+  | 'createdAt'
+  | 'priceSnapshot'
+  | 'durationMinutesSnapshot'
+  | 'branchNameSnapshot'
+  | 'categoryNameSnapshot'
+> & {
   /** Collection intent; never a substitute for financial payment status. */
-  payAtClinic?: boolean
-  id: string
-  date: string | null
-  startTime: string | null
-  endTime: string | null
+  payAtClinic?: BookingRow['payAtClinic']
   status: BookingStatus
   type: BookingResponseType
   deliveryType: BookingResponseDeliveryType | null
-  checkedInAt: string | null
-  notes: string | null
-  adminNotes: string | null
-  isLateEntry?: boolean
-  lateEntryRecordedAt?: string | null
-  lateEntryRecordedBy?: string | null
+  isLateEntry?: BookingRow['isLateEntry']
+  lateEntryRecordedAt?: BookingRow['lateEntryRecordedAt']
+  lateEntryRecordedBy?: BookingRow['lateEntryRecordedBy']
+  /** Legacy UI key the API never produced; kept for the old component fallback. */
   lateEntryRecordedByName?: string | null
-  createdAt: string
-  client: {
-    id: string
-    firstName: string
-    lastName: string
-    phone: string | null
-  } | null
-  employee: {
-    id: string
-    user: { firstName: string; lastName: string }
-    specialty: string | null
-    specialtyAr: string | null
-  } | null
-  service: { id: string; nameAr: string; nameEn: string; price: number; duration: number } | null
-
-  // ─── Snapshot fields (denormalized at booking creation for stable history) ───
-  priceSnapshot: number | null
-  durationMinutesSnapshot: number | null
-  branchNameSnapshot: string | null
-  categoryNameSnapshot: string | null
+  client:
+    | Pick<Schemas['BookingRowClientDto'], 'id' | 'firstName' | 'lastName' | 'phone'>
+    | null
+  employee:
+    | (Pick<Schemas['BookingRowEmployeeDto'], 'id'> & {
+        // booking-row.mapper.ts coerces null → '', but the old exported
+        // contract allowed null, so it is preserved here.
+        specialty: Schemas['BookingRowEmployeeDto']['specialty'] | null
+        specialtyAr: Schemas['BookingRowEmployeeDto']['specialtyAr'] | null
+        user: Pick<Schemas['BookingRowEmployeeUserDto'], 'firstName' | 'lastName'>
+      })
+    | null
+  service:
+    | Pick<Schemas['BookingRowServiceDto'], 'id' | 'nameAr' | 'nameEn' | 'price' | 'duration'>
+    | null
 }
 
-/** Dashboard write endpoints return a Prisma booking row, not mapBookingRow. */
-export interface BookingWriteResult {
-  id: string
-  status: Uppercase<BookingStatus>
-}
+/**
+ * Dashboard write endpoints (create / cancel / confirm / complete) return a
+ * Prisma booking row, not the mapped list row. All four operations document a
+ * record DTO sharing `id` + UPPER_CASE `status`; `BookingRecordDto` is the
+ * common one (`CreatedBookingRecordDto`/`CancelledBookingRecordDto` add keys).
+ */
+export type BookingWriteResult = Pick<Schemas['BookingRecordDto'], 'id' | 'status'>
 
+/**
+ * NOT derived: `GET /dashboard/bookings/stats` documents
+ * `BookingsStatsResponseDto` (`todayCount`, `pendingCount`, `completedToday`,
+ * `revenueToday`), a different shape from these dashboard counters. No module
+ * in this package calls that route. Kept hand-written.
+ */
 export interface BookingStats {
   total: number
   today: number
@@ -101,27 +130,29 @@ export interface BookingStats {
   cancelled: number
 }
 
-export interface BookingListQuery extends PaginationParams {
-  status?: BookingStatus
-  /** Filter by booking kind (INDIVIDUAL / GROUP / WALK_IN on the backend). */
-  bookingType?: BookingType
-  /** Filter by delivery channel (IN_PERSON / ONLINE on the backend). */
-  deliveryType?: DeliveryType
-  employeeId?: string
-  clientId?: string
-  branchId?: string
-  serviceId?: string
-  /** Filter by booking origin (RECEPTION / ONLINE on the backend). */
-  source?: BookingSource
-  /** Return bookings on or after this date (ISO 8601). */
-  fromDate?: string
-  /** Return bookings on or before this date (ISO 8601). */
-  toDate?: string
-  /** Filter guest (online) vs walk-in bookings. */
-  isGuest?: boolean
-  isLateEntry?: boolean
-}
+/**
+ * Query of `GET /api/v1/dashboard/bookings`, plus paging. The snapshot's enum
+ * params are UPPER_CASE, while this client sends the lower-case aliases the
+ * DTO normalises server-side (`mapBookingStatus`/`mapBookingType`), so those
+ * four are re-typed to the UI vocabulary instead of taking the raw enum.
+ */
+export type BookingListQuery = PaginationParams &
+  Omit<BookingListQueryDoc, 'status' | 'bookingType' | 'deliveryType' | 'source'> & {
+    status?: BookingStatus
+    /** Filter by booking kind (INDIVIDUAL / GROUP / WALK_IN on the backend). */
+    bookingType?: BookingType
+    /** Filter by delivery channel (IN_PERSON / ONLINE on the backend). */
+    deliveryType?: DeliveryType
+    /** Filter by booking origin (RECEPTION / ONLINE on the backend). */
+    source?: BookingSource
+  }
 
+/**
+ * NOT derived: `POST /dashboard/bookings` documents `CreateBookingDto`
+ * (`scheduledAt`, required `clientId`/`branchId`, `bookingType`). This legacy
+ * payload uses `date`/`startTime`/`type` and no module here sends it. Kept
+ * hand-written to preserve the exported contract.
+ */
 export interface CreateBookingPayload {
   employeeId: string
   serviceId: string
@@ -141,50 +172,16 @@ export interface CreateBookingPayload {
 
 export type BookingListResponse = PaginatedResponse<BookingListItem>
 
-/** Staff-only command. All monetary numbers are integer halalas; timestamps are ISO 8601. */
-export interface RecordLateSessionPayload {
-  clientId: string
-  branchId: string
-  employeeId: string
-  serviceId: string
-  deliveryType: DeliveryType
-  scheduledAt: string
-  durationMins: number
-  status: 'COMPLETED' | 'CONFIRMED' | 'NO_SHOW' | 'CANCELLED'
-  amountHalalas: number
-  notes?: string
-  paymentMode: 'UNPAID' | 'PREVIOUSLY_RECEIVED' | 'COLLECT_NOW'
-  paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'MADA' | 'TABBY'
-  paymentAmountHalalas?: number
-  receivedAt?: string
-  receiptEvidenceRef?: string
-  receiptEntryReason?: string
-  cancelledAt?: string
-  cancellationReason?: string
-  noShowAt?: string
-  creationIdempotencyKey: string
-}
+/** Staff-only command. Request body of `POST /dashboard/bookings/late-entry`. */
+export type RecordLateSessionPayload = Schemas['RecordLateSessionDto']
 
-/** Financial amounts are integer halalas, without a client-side currency conversion. */
-export interface RecordLateSessionResponse {
-  booking: BookingListItem
-  invoice: { id: string; subtotal: number; vatRate: number; total: number; status: string } | null
-  payment: {
-    id: string; amount: number; method: string; status: string
-    createdAt: string; processedAt: string | null
-    effectiveReceivedAt: string | null
-    receiptRecordedBy: string | null
-    receiptEvidenceRef: string | null
-    receiptEntryReason: string | null
-  } | null
-  outstanding: number
-  isLateEntry: true
-  lateEntryRecordedAt: string
-  lateEntryRecordedBy: string
-}
+/**
+ * 201 body of `POST /dashboard/bookings/late-entry` (`LateEntryResultDto`).
+ * Intentionally wider than the old hand-written shape: the handler returns the
+ * full documented row/invoice/payment DTOs, and every field the old type
+ * declared is present here. Money fields are integer halalas.
+ */
+export type RecordLateSessionResponse = Schemas['LateEntryResultDto']
 
-/** Current server financial settings for the staff late-entry form. */
-export interface LateSessionContext {
-  vatRate: number
-  paymentMethods: Array<'CASH' | 'BANK_TRANSFER' | 'MADA' | 'TABBY'>
-}
+/** 200 body of `GET /dashboard/bookings/late-entry/context`. */
+export type LateSessionContext = Schemas['GetLateSessionContextResponseDto']

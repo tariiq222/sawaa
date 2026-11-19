@@ -28,7 +28,7 @@
     "db:migrate": "pnpm --filter=backend run prisma:migrate:deploy",
     "db:seed": "pnpm --filter=backend run seed",
     "db:reset": "pnpm --filter=backend run prisma:migrate:deploy && pnpm --filter=backend run seed",
-    "openapi:sync": "pnpm --filter=backend run openapi:export && pnpm --filter=dashboard run openapi:generate",
+    "openapi:sync": "pnpm --filter=backend run openapi:export && pnpm --filter=dashboard run openapi:generate && pnpm --filter=@sawaa/api-client run openapi:generate",
     "e2e:dashboard": "pnpm --filter dashboard e2e",
     "e2e": "E2E_TELEMETRY_DISABLED=1 e2e run",
     "e2e:smoke": "E2E_TELEMETRY_DISABLED=1 e2e run --tag smoke --exclude-tag agent",
