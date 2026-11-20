@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PackageCreditUsageStatus, PackagePurchaseStatus, RefundStatus } from '@prisma/client';
 import { RefundPackagePurchaseHandler } from './refund-package-purchase.handler';
 import { consumePackageCreditForBooking } from '../../../bookings/package-credit-consume.helper';
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 
 const PURCHASE_ID = '00000000-0000-4000-a000-000000000007';
 const INVOICE_ID = '00000000-0000-4000-a000-000000000010';
@@ -72,6 +73,7 @@ function buildHandler(opts: { tx?: ReturnType<typeof buildTx> } = {}) {
     prisma as never,
     rls as never,
     eventBus as never,
+    new PackageLedgerService() as never,
   );
   return { handler, prisma, tx, rls, eventBus };
 }
@@ -602,6 +604,7 @@ describe('RefundPackagePurchaseHandler', () => {
         {} as never,
         rls as never,
         eventBus as never,
+        new PackageLedgerService() as never,
       );
 
       // The whole callback rejects — withTransaction (and Prisma underneath

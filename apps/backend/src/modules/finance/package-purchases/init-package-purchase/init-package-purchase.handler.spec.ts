@@ -15,6 +15,7 @@ import {
   selfPurchaseFingerprint,
 } from "./init-package-purchase.handler";
 import { resolvePackageGroupOfferings } from "../../../org-experience/session-packages/package-group-offering.helper";
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 
 jest.mock("../../../org-experience/session-packages/package-group-offering.helper", () => ({
   resolvePackageGroupOfferings: jest.fn(),
@@ -217,6 +218,7 @@ function buildHandler(
     pricing as never,
     moyasar as never,
     native as never,
+    new PackageLedgerService() as never,
   );
   return { handler, prisma, pricing, moyasar, tx, rls, native };
 }

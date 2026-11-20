@@ -10,6 +10,7 @@ import { CreatePackagePurchaseHandler } from '../../../src/modules/finance/packa
 import { InitPackagePurchaseHandler } from '../../../src/modules/finance/package-purchases/init-package-purchase/init-package-purchase.handler';
 import { ActivatePackagePurchaseHandler } from '../../../src/modules/finance/package-purchases/activate-package-purchase/activate-package-purchase.handler';
 import { TransactionService } from '../../../src/infrastructure/database';
+import { PackageLedgerService } from '../../../src/modules/bookings/package-ledger/package-ledger.service';
 
 const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.skip;
 
@@ -58,6 +59,8 @@ describeRealE2e('grouped package purchase snapshots (real DB)', () => {
         getCheckoutInvoice: jest.fn(),
         findCheckoutInvoiceByMetadata: jest.fn(),
       } as never,
+      undefined as never,
+      app.get(PackageLedgerService),
     );
     activatePackagePurchase = app.get(ActivatePackagePurchaseHandler);
     await prisma.branch.create({ data: { id: ids.branchId, nameAr: `group-purchase-${ids.branchId}`, isActive: true } });

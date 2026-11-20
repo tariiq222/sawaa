@@ -6,6 +6,7 @@ import { parsePackageCreditSnapshot, type PackageCreditSnapshotItem } from './pa
 import { applyGroupedPackagePrice, type GroupedCatalogPackage } from '../../org-experience/session-packages/package-group-catalog.helper';
 import type { ResolvedPackageGroupOffering } from '../../org-experience/session-packages/package-group-offering.helper';
 import type { GlobalDiscount } from '@sawaa/shared/types';
+import type { PackageLedgerService } from '../../bookings/package-ledger/package-ledger.service';
 
 export const GROUPED_PURCHASE_SNAPSHOT_VERSION = 2 as const;
 export const GROUPED_PURCHASE_MODEL_VERSION = 'GROUPED_V2' as const;
@@ -341,11 +342,11 @@ export async function issueGroupedPackageCredits(
   tx: Prisma.TransactionClient,
   purchaseId: string,
   snapshot: GroupedPackagePurchaseSnapshot,
+  ledger: PackageLedgerService,
 ): Promise<void> {
   const groupRows = new Map<string, { id: string }>();
   for (const group of [...snapshot.groups].sort((a, b) => a.sortOrder - b.sortOrder)) {
-    const created = await tx.packagePurchaseGroup.create({
-      data: {
+    const created = await ledger.createPackagePurchaseGroupInTx(tx, {
         purchaseId,
         key: group.key,
         label: group.label,
@@ -353,8 +354,6 @@ export async function issueGroupedPackageCredits(
         employeeId: group.employeeId,
         sequenceMode: group.sequenceMode,
         sortOrder: group.sortOrder,
-      },
-      select: { id: true },
     });
     groupRows.set(group.key, created);
   }
@@ -362,7 +361,10 @@ export async function issueGroupedPackageCredits(
     if (group.dependsOnGroupKey !== null) {
       const dependsOn = groupRows.get(group.dependsOnGroupKey);
       if (!dependsOn) throw new BadRequestException('GROUPED_V2 purchase dependency cannot be remapped');
-      await tx.packagePurchaseGroup.update({ where: { id: groupRows.get(group.key)!.id }, data: { dependsOnGroupId: dependsOn.id } });
+      await ledger.linkPackagePurchaseGroupDependencyInTx(tx, {
+        groupId: groupRows.get(group.key)!.id,
+        dependsOnGroupId: dependsOn.id,
+      });
     }
   }
   for (const credit of [...snapshot.credits].sort((a, b) => {
@@ -370,8 +372,7 @@ export async function issueGroupedPackageCredits(
     const right = snapshot.groups.find((group) => group.key === b.groupKey)?.sortOrder ?? 0;
     return left - right || a.sessionPosition - b.sessionPosition;
   })) {
-    await tx.packageCredit.create({
-      data: {
+    await ledger.createPackageCreditInTx(tx, {
         purchaseId,
         purchaseGroupId: groupRows.get(credit.groupKey)!.id,
         sessionPosition: credit.sessionPosition,
@@ -393,7 +394,6 @@ export async function issueGroupedPackageCredits(
           mode: constraint.mode,
           targets: { create: constraint.targets.map((target) => ({ targetId: target.targetId })) },
         })) },
-      },
     });
   }
 }

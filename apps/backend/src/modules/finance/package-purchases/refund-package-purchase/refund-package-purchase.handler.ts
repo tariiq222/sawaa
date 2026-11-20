@@ -8,7 +8,6 @@ import { randomUUID } from 'node:crypto';
 import {
   BookingStatus,
   InvoiceStatus,
-  PackageCreditUsageStatus,
   PackagePurchaseStatus,
   PackageRefundEventSource,
   PackageRefundType,
@@ -23,6 +22,7 @@ import { computeRefundAccounting } from '../../refund-payment/refund-vat.helper'
 import { decimalToHalalas } from '../../money.helper';
 import { DEFAULT_ORG_ID } from '../../../../common/constants';
 import { RefundPackagePurchaseDto } from './refund-package-purchase.dto';
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 
 export type RefundPackagePurchaseCommand = RefundPackagePurchaseDto & {
   purchaseId: string;
@@ -79,6 +79,7 @@ export class RefundPackagePurchaseHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: TransactionService,
     private readonly eventBus: EventBusService,
+    private readonly packageLedger: PackageLedgerService,
   ) {}
 
   async execute(cmd: RefundPackagePurchaseCommand) {
@@ -97,21 +98,9 @@ export class RefundPackagePurchaseHandler {
       // P1 (concurrency): lock the purchase row for the duration of the tx so
       // two concurrent refunds serialise. SELECT ... FOR UPDATE — same pattern
       // as the gateway refund path.
-      const rows = await tx.$queryRaw<
-        Array<{
-          id: string;
-          status: PackagePurchaseStatus;
-          amountPaid: Prisma.Decimal;
-          refundAmount: Prisma.Decimal | null;
-          clientId: string;
-          notes: string | null;
-        }>
-      >`SELECT id, status, "amountPaid", "refundAmount", "clientId", notes
-          FROM "PackagePurchase"
-          WHERE id = ${cmd.purchaseId}
-          FOR UPDATE`;
-
-      const purchase = rows[0];
+      const purchase = await this.packageLedger.lockPackagePurchaseForRefundInTx(tx, {
+        purchaseId: cmd.purchaseId,
+      });
       if (!purchase) {
         throw new NotFoundException('Package purchase not found');
       }
@@ -242,16 +231,14 @@ export class RefundPackagePurchaseHandler {
       // P1 (concurrency): updateMany with a status != REFUNDED guard. If a
       // concurrent transaction already flipped the row to REFUNDED, count is 0
       // and we bail — a second guard layer on top of the row lock.
-      const { count } = await tx.packagePurchase.updateMany({
-        where: { id: cmd.purchaseId, status: { not: PackagePurchaseStatus.REFUNDED } },
-        data: {
-          status: isFullRefund ? PackagePurchaseStatus.REFUNDED : purchase.status,
-          refundedAt: isFullRefund ? refundedAt : undefined,
-          refundAmount: new Prisma.Decimal(newCumulativeRefund),
-          notes: mergedNotes,
-        },
+      const { updated } = await this.packageLedger.markPackagePurchaseRefundInTx(tx, {
+        purchaseId: cmd.purchaseId,
+        status: isFullRefund ? PackagePurchaseStatus.REFUNDED : purchase.status,
+        refundedAt: isFullRefund ? refundedAt : undefined,
+        refundAmount: new Prisma.Decimal(newCumulativeRefund),
+        notes: mergedNotes,
       });
-      if (count === 0) {
+      if (!updated) {
         throw new BadRequestException('Package purchase is already refunded');
       }
 
@@ -262,11 +249,9 @@ export class RefundPackagePurchaseHandler {
         // Also zero reservedQuantity: a credit voided here may still hold
         // reservations from booked-but-undelivered appointments, and leaving
         // them would over-subscribe a bucket that is already fully "used".
-        await tx.$executeRaw`
-          UPDATE "PackageCredit"
-          SET "usedQuantity" = "totalQuantity", "reservedQuantity" = 0
-          WHERE "purchaseId" = ${cmd.purchaseId}
-        `;
+        await this.packageLedger.voidPackageCreditsInTx(tx, {
+          purchaseId: cmd.purchaseId,
+        });
 
         // The future-booking guard above only blocks a refund when a credit
         // funds a booking that is still SCHEDULED IN THE FUTURE. A booking
@@ -281,15 +266,9 @@ export class RefundPackagePurchaseHandler {
         // consume can find one — CONSUMED rows are left untouched, since
         // those sessions were already delivered and a refund does not undo
         // service already given.
-        await tx.packageCreditUsage.updateMany({
-          where: {
-            credit: { purchaseId: cmd.purchaseId },
-            status: PackageCreditUsageStatus.RESERVED,
-          },
-          data: {
-            status: PackageCreditUsageStatus.RETURNED,
-            returnedAt: refundedAt,
-          },
+        await this.packageLedger.terminateReservedUsagesInTx(tx, {
+          purchaseId: cmd.purchaseId,
+          at: refundedAt,
         });
       }
 

@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 import {
   DiscountType,
   PackageConstraintDimension,
@@ -179,6 +180,7 @@ function buildHandler(
     pricing as never,
     processPayment as never,
     eventBus as never,
+    new PackageLedgerService() as never,
   );
   return { handler, tx, processPayment, eventBus, pricing };
 }
