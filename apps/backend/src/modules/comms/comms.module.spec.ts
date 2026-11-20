@@ -32,7 +32,9 @@ describe('CommsModule runtime import graph', () => {
     const identityImports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, IdentityModule) as unknown[];
 
     expect(commsImports.map(resolveForwardRef)).toContain(PeopleModule);
-    expect(identityImports.map(resolveForwardRef)).toContain(CommsModule);
+    // MNT-19.3: identity no longer imports CommsModule (the email queue moved
+    // to SendEmailQueueModule), so the identity → comms import edge is gone.
+    expect(identityImports).not.toContain(CommsModule);
   });
 
   it('registers the unified dashboard controller and its event consumers once', () => {

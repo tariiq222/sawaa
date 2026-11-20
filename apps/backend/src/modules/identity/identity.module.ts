@@ -26,7 +26,7 @@ import { ResendEmailEntryPhoneHandler } from './mobile-email-entry/resend-email-
 import { VerifyEmailEntryPhoneHandler } from './mobile-email-entry/verify-email-entry-phone.handler';
 import { ReviewLoginHandler } from './review-login/review-login.handler';
 import { ReviewOtpHandler } from './review-otp/review-otp.handler';
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -63,6 +63,7 @@ import { VerifyOtpHandler } from './otp/verify-otp.handler';
 import { OtpSessionService } from './otp/otp-session.service';
 import { OtpSessionGuard } from './otp/otp-session.guard';
 import { NotificationChannelModule } from '../comms/notification-channel/notification-channel.module';
+import { SendEmailQueueModule } from '../comms/send-email/send-email.module';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { RegisterHandler } from './client-auth/register.handler';
 import { MobilePasswordLoginHandler } from './mobile-password-login/mobile-password-login.handler';
@@ -77,7 +78,6 @@ import { MailModule } from '../../infrastructure/mail';
 import { StorageModule } from '../../infrastructure/storage';
 import { RequestPasswordResetHandler } from './user-password-reset/request-password-reset/request-password-reset.handler';
 import { PerformPasswordResetHandler } from './user-password-reset/perform-password-reset/perform-password-reset.handler';
-import { CommsModule } from '../comms/comms.module';
 import { RegisterMobileUserHandler } from './register-mobile-user/register-mobile-user.handler';
 import { RequestMobileLoginOtpHandler } from './request-mobile-login-otp/request-mobile-login-otp.handler';
 import { VerifyMobileOtpHandler } from './verify-mobile-otp/verify-mobile-otp.handler';
@@ -148,7 +148,7 @@ const handlers = [
     StorageModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     NotificationChannelModule,
-    forwardRef(() => CommsModule),
+    SendEmailQueueModule,
     PlatformSettingsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

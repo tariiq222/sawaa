@@ -1234,7 +1234,7 @@
                 "$ref": "#/components/schemas/DeliveryType"
               }
             ],
-            "description": "Delivery channel for this service",
+            "description": "Delivery channel",
             "example": "IN_PERSON"
           },
           "durationMins": {
