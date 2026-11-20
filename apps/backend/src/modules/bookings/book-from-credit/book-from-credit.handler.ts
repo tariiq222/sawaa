@@ -5,96 +5,36 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import {
-  ActivityAction,
-  DeliveryType,
-  PackageCreditUsageStatus,
-  PackagePurchaseStatus,
-  Prisma,
-} from '@prisma/client';
+import { DeliveryType, PackagePurchaseStatus } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
-import { BookingCreatedEvent } from '../events/booking-created.event';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { hashToInt32 } from '../booking-lifecycle.helper';
 import {
   ACTIVE_BOOKING_STATUSES,
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
 } from '../active-booking-statuses';
-import {
-  BookingTarget,
-  CreditConstraint,
-  creditMatchesTarget,
-  specificityScore,
-} from '../package-credit-matching.helper';
 import { BookFromCreditDto } from './book-from-credit.dto';
+import { loadBookingParties, loadCategoryAndDepartmentNames } from './book-from-credit.parties';
+import { resolveCreditAndTarget } from './book-from-credit.resolve';
+import { createCreditBooking } from './book-from-credit.write';
 import {
-  isSerializableTransactionConflict,
   lockPersonReferences,
   retrySerializableTransaction,
 } from '../../../common/database/person-reference-lock.helper';
-import { lockPackagePurchase } from '../package-purchase-lock.helper';
 import {
-  BookingTargetEligibility,
-  validateBookingTargetEligibility,
-} from '../booking-target-eligibility.helper';
-import { assertPackageSessionBookable } from '../package-credit-availability.helper';
+  assertScheduledInFuture,
+  assertTargetSelection,
+  mapConcurrentCreditConflict,
+  resolveCreditRouting,
+} from './book-from-credit.rules';
+import { lockPackagePurchase } from '../package-purchase-lock.helper';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
   scheduledAt: Date;
   /** Acting user id (set by the controller). */
   userId?: string;
 };
-
-/** Row shape returned by the FOR UPDATE raw select on PackageCredit. */
-interface LockedCreditRow {
-  id: string;
-  purchaseId: string;
-  serviceId: string | null;
-  employeeId: string | null;
-  durationOptionId: string | null;
-  totalQuantity: number;
-  usedQuantity: number;
-  reservedQuantity: number;
-  purchaseGroupId: string | null;
-  sessionPosition: number | null;
-  durationMinsSnapshot: number | null;
-  deliveryTypeSnapshot: DeliveryType | null;
-}
-
-/**
- * Prisma reports a Serializable transaction abort as P2034. Raw-query errors
- * can additionally preserve PostgreSQL's 40001 code directly, in `meta.code`,
- * or in the PrismaPg driver-adapter cause. All represent a safe rollback, so
- * expose the concurrent loser as a domain conflict instead of leaking a 500.
- */
-function mapConcurrentCreditConflict(error: unknown): never {
-  if (isSerializableTransactionConflict(error)) {
-    throw new ConflictException('Package credit was consumed concurrently; please retry');
-  }
-
-  throw error;
-}
-
-/**
- * Real availability = totalQuantity − usedQuantity − reservedQuantity > 0.
- * Prisma cannot express this as a field-reference `where` comparison (it can
- * only compare a column against another COLUMN, not a computed sum), so both
- * credit-selection paths in `resolveCreditAndTarget` fetch with a coarse
- * `usedQuantity < totalQuantity` DB filter and apply this JS predicate
- * afterwards as the authoritative check — otherwise a credit fully booked out
- * for future appointments (usedQuantity 0, reservedQuantity == totalQuantity)
- * would look available and get selected, only for the in-transaction overdraw
- * guard to reject the whole booking with a false "no credit left".
- */
-function hasAvailableCapacity(credit: {
-  totalQuantity: number;
-  usedQuantity: number;
-  reservedQuantity?: number | null;
-}): boolean {
-  return credit.usedQuantity + (credit.reservedQuantity ?? 0) < credit.totalQuantity;
-}
 
 /**
  * Reserve one session-package credit to create a zero-value booking.
@@ -131,117 +71,49 @@ export class BookFromCreditHandler {
 
   async execute(cmd: BookFromCreditCommand) {
     const scheduledAt = new Date(cmd.scheduledAt);
-    if (scheduledAt <= new Date()) {
-      throw new BadRequestException('Booking must be scheduled in the future');
-    }
-
-    if (!cmd.creditId && !(cmd.serviceId && cmd.employeeId && cmd.durationOptionId)) {
-      throw new BadRequestException(
-        'Provide either creditId or the full (serviceId, employeeId, durationOptionId) triple',
-      );
-    }
-    const suppliedTargetFields = [cmd.serviceId, cmd.employeeId, cmd.durationOptionId]
-      .filter((value) => value !== undefined && value !== null).length;
-    if (cmd.creditId && suppliedTargetFields > 0 && suppliedTargetFields < 3) {
-      throw new BadRequestException(
-        'Provide all of serviceId, employeeId and durationOptionId when selecting a credit target',
-      );
-    }
+    assertScheduledInFuture(scheduledAt, new Date());
+    assertTargetSelection({
+      creditId: cmd.creditId,
+      serviceId: cmd.serviceId,
+      employeeId: cmd.employeeId,
+      durationOptionId: cmd.durationOptionId,
+    });
 
     // ── Resolve the credit bucket + the concrete booking target ──
     // Flexible credits: the caller supplies the target and it is validated against
     // the credit's constraints. Legacy credits: the target is the credit's triple.
-    const { credit, target, eligibility } = await this.resolveCreditAndTarget(cmd);
+    const { credit, target, eligibility } = await resolveCreditAndTarget(this.prisma, cmd);
     const creditServiceId = target.serviceId;
     const creditEmployeeId = target.employeeId;
-    const creditDurationOptionId = target.durationOptionId;
 
     // ── Validate the supporting entities + slot (mirrors create-booking) ──
-    const branch = await this.prisma.branch.findFirst({
-      where: { id: cmd.branchId },
-      select: { id: true, nameAr: true, isActive: true },
+    const { branch, employee, service } = await loadBookingParties(this.prisma, {
+      branchId: cmd.branchId,
+      clientId: cmd.clientId,
+      employeeId: creditEmployeeId,
+      serviceId: creditServiceId,
     });
-    if (!branch) throw new NotFoundException('Branch not found');
-    if (branch.isActive === false) throw new BadRequestException('Branch is not active');
-
-    const client = await this.prisma.client.findFirst({
-      where: { id: cmd.clientId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!client) throw new NotFoundException('Client not found');
-
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: creditEmployeeId },
-      select: { id: true, name: true, isActive: true },
-    });
-    if (!employee) throw new NotFoundException('Employee not found');
-    if (employee.isActive === false) throw new BadRequestException('Employee is not active');
-
-    const service = await this.prisma.service.findFirst({
-      where: { id: creditServiceId },
-      select: {
-        id: true,
-        nameAr: true,
-        categoryId: true,
-        isActive: true,
-        archivedAt: true,
-        bufferMinutes: true,
-      },
-    });
-    if (!service) throw new NotFoundException('Service not found');
-    if (service.isActive === false) throw new BadRequestException('Service is not active');
-    if (service.archivedAt != null) throw new BadRequestException('Service is archived');
 
     // The selected concrete target determines duration: legacy credits use
     // their frozen duration, while flexible credits use the caller's target.
     const durationOption = eligibility.durationOption;
     if (!durationOption) throw new NotFoundException('Credit duration option not found');
-    const isGroupedV2 = credit.purchase?.modelVersion === 'GROUPED_V2';
-    if (isGroupedV2 && (credit.durationMinsSnapshot == null || credit.deliveryTypeSnapshot == null)) {
-      throw new BadRequestException('Grouped package credit snapshot is incomplete');
-    }
-    const durationMins = isGroupedV2
-      ? credit.durationMinsSnapshot!
-      : durationOption.durationMins;
-    const deliveryType: DeliveryType = isGroupedV2
-      ? credit.deliveryTypeSnapshot!
-      : eligibility.deliveryType;
-    if (
-      isGroupedV2 &&
-      (durationOption.durationMins !== credit.durationMinsSnapshot ||
-        eligibility.deliveryType !== credit.deliveryTypeSnapshot)
-    ) {
-      throw new BadRequestException(
-        'Current practitioner offering no longer matches the package credit snapshot',
-      );
-    }
-    if (cmd.deliveryType && cmd.deliveryType !== deliveryType) {
-      throw new BadRequestException('Delivery type does not match the package credit snapshot');
-    }
+    const { durationMins, deliveryType } = resolveCreditRouting({
+      credit,
+      durationOption,
+      eligibility,
+      requestedDeliveryType: cmd.deliveryType ?? null,
+    });
 
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
 
     const bookingSettings = await this.settingsHandler.execute({ branchId: cmd.branchId });
 
     // Resolve category/department snapshot names.
-    let categoryName: string | null = null;
-    let departmentName: string | null = null;
-    if (service.categoryId) {
-      const category = await this.prisma.serviceCategory.findFirst({
-        where: { id: service.categoryId },
-        select: { nameAr: true, departmentId: true },
-      });
-      if (category) {
-        categoryName = category.nameAr;
-        if (category.departmentId) {
-          const department = await this.prisma.department.findFirst({
-            where: { id: category.departmentId },
-            select: { nameAr: true },
-          });
-          if (department) departmentName = department.nameAr;
-        }
-      }
-    }
+    const { categoryName, departmentName } = await loadCategoryAndDepartmentNames(
+      this.prisma,
+      service.categoryId,
+    );
 
     await this.assertSlotAvailable({
       employeeId: creditEmployeeId,
@@ -323,314 +195,23 @@ export class BookFromCreditHandler {
           );
         }
 
-        // OVERDRAW GUARD: lock the credit row and recount inside the lock.
-        const lockedRows = await tx.$queryRaw<LockedCreditRow[]>`
-          SELECT id, "purchaseId", "serviceId", "employeeId", "durationOptionId",
-                 "purchaseGroupId", "sessionPosition", "durationMinsSnapshot", "deliveryTypeSnapshot",
-                 "totalQuantity", "usedQuantity", "reservedQuantity"
-          FROM "PackageCredit"
-          WHERE id = ${credit.id}
-          FOR UPDATE
-        `;
-        if (lockedRows.length === 0) {
-          throw new NotFoundException('Package credit not found');
-        }
-        const locked = lockedRows[0];
-        if (
-          locked.purchaseId !== credit.purchaseId ||
-          locked.serviceId !== credit.serviceId ||
-          locked.employeeId !== credit.employeeId ||
-          locked.durationOptionId !== credit.durationOptionId
-        ) {
-          throw new ConflictException(
-            'Package credit routing changed; please refresh and retry',
-          );
-        }
-        await assertPackageSessionBookable(tx, credit.id, target, {
-          serviceId: credit.serviceId,
-          employeeId: credit.employeeId,
-          durationOptionId: credit.durationOptionId,
-          durationMinsSnapshot: credit.durationMinsSnapshot,
-          deliveryTypeSnapshot: credit.deliveryTypeSnapshot,
-        }, { skipCapacity: true });
-        // A reserved session belongs to an appointment that has not happened
-        // yet; it occupies a seat exactly like a delivered one.
-        if (locked.usedQuantity + locked.reservedQuantity >= locked.totalQuantity) {
-          // The bucket was exhausted (delivered + booked) by a concurrent
-          // winner between the pre-lock read and acquiring the row lock —
-          // reject the over-draw.
-          throw new ConflictException('No remaining credit in this package');
-        }
-
-        // Serialize bookingNumber generation (same advisory-lock pattern as create-booking).
-        const numberLockKey1 = hashToInt32('booking_number');
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${numberLockKey1}::int, 0::int)`;
-        const lastBooking = await tx.booking.findFirst({
-          where: {},
-          orderBy: { bookingNumber: 'desc' },
-          select: { bookingNumber: true },
+        return createCreditBooking({
+          tx,
+          cmd,
+          credit,
+          target,
+          parties: { branch, employee, service },
+          scheduledAt,
+          endsAt,
+          durationMins,
+          deliveryType,
+          categoryName,
+          departmentName,
         });
-        const nextBookingNumber = (lastBooking?.bookingNumber ?? 0) + 1;
-
-        const created = await tx.booking.create({
-          data: {
-            branchId: cmd.branchId,
-            clientId: cmd.clientId,
-            employeeId: creditEmployeeId,
-            serviceId: creditServiceId,
-            durationOptionId: creditDurationOptionId,
-            scheduledAt,
-            endsAt,
-            durationMins,
-            // Zero-value booking: pre-paid at purchase, so no price is owed.
-            price: new Prisma.Decimal(0),
-            discountedPrice: new Prisma.Decimal(0),
-            currency: 'SAR',
-            bookingType: 'INDIVIDUAL',
-            deliveryType,
-            source: 'RECEPTION',
-            notes: cmd.notes,
-            packageCreditId: credit.id,
-            status: 'CONFIRMED',
-            confirmedAt: new Date(),
-            priceSnapshot: new Prisma.Decimal(0),
-            durationMinutesSnapshot: durationMins,
-            branchNameSnapshot: branch.nameAr,
-            employeeNameSnapshot: employee.name,
-            serviceNameSnapshot: credit.serviceNameSnapshot ?? service.nameAr,
-            categoryNameSnapshot: categoryName,
-            departmentNameSnapshot: departmentName,
-            bookingNumber: nextBookingNumber,
-          },
-        });
-
-        // Reserve the session (not consume it) + increment the reserved
-        // counter (id-keyed update — no nested save, per
-        // .tariq/memory/notes/lessons.md). The session is only actually
-        // consumed once it is delivered — see `consumePackageCreditForBooking`.
-        await tx.packageCreditUsage.create({
-          data: {
-            creditId: credit.id,
-            bookingId: created.id,
-            status: PackageCreditUsageStatus.RESERVED,
-          },
-        });
-        await tx.packageCredit.update({
-          where: { id: credit.id },
-          data: { reservedQuantity: { increment: 1 } },
-        });
-
-        // P1-2 audit trail: every cross-client credit consumption is recorded
-        // with the acting staff user + the target client + the credit bucket.
-        // The endpoint already requires create:Booking, so the audit row is
-        // the accountability layer that makes a rogue receptionist's
-        // cross-client consumption traceable after the fact.
-        await tx.activityLog.create({
-          data: {
-            userId: cmd.userId ?? cmd.clientId,
-            action: ActivityAction.CREATE,
-            entity: 'PackageCreditUsage',
-            entityId: credit.id,
-            description: `Staff consumed a session-package credit on behalf of a client`,
-            metadata: {
-              bookingId: created.id,
-              bookingNumber: nextBookingNumber,
-              targetClientId: cmd.clientId,
-              creditId: credit.id,
-              purchaseId: credit.purchaseId,
-              employeeId: creditEmployeeId,
-              scheduledAt: scheduledAt.toISOString(),
-            } as Prisma.InputJsonValue,
-          },
-        });
-
-        // A purchase completes when its last session is DELIVERED, not when it is
-        // booked — the auto-complete moved to `consumePackageCreditForBooking`.
-
-        // Outbox the BookingCreatedEvent inside the transaction so a crash
-        // before publish is recovered by the OutboxPublisherCron.
-        const createdEvent = new BookingCreatedEvent({
-          bookingId: created.id,
-          bookingNumber: created.bookingNumber,
-          clientId: created.clientId,
-          employeeId: created.employeeId ?? '',
-          organizationId: DEFAULT_ORG_ID,
-          scheduledAt: created.scheduledAt,
-          serviceId: created.serviceId!,
-        });
-        await tx.outboxEvent.create({
-          data: {
-            aggregateId: created.id,
-            eventType: createdEvent.eventName,
-            payload: createdEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
-          },
-        });
-
-        return created;
       }, { isolationLevel: 'Serializable' }),
     ).catch(mapConcurrentCreditConflict);
 
     return booking;
-  }
-
-  /**
-   * Resolve the credit bucket AND the concrete booking target.
-   *
-   *  - With a triple (service/employee/duration), the target is the caller's:
-   *    an explicit creditId is validated against the credit's constraints; without
-   *    one, the narrowest eligible credit (then FIFO) is auto-selected.
-   *  - With only a creditId (no triple), the target is the credit's legacy triple
-   *    (a flexible credit rejects this — it needs an explicit target).
-   */
-  private async resolveCreditAndTarget(
-    cmd: BookFromCreditCommand,
-  ): Promise<{
-    credit: {
-      id: string;
-      purchaseId: string;
-      serviceId: string | null;
-      employeeId: string | null;
-      durationOptionId: string | null;
-      totalQuantity: number;
-      usedQuantity: number;
-      reservedQuantity: number;
-      durationMinsSnapshot: number | null;
-      deliveryTypeSnapshot: DeliveryType | null;
-      serviceNameSnapshot: string | null;
-      employeeNameSnapshot: string | null;
-      purchase: { modelVersion: string };
-      constraints: CreditConstraint[];
-    };
-    target: BookingTarget;
-    eligibility: BookingTargetEligibility;
-  }> {
-    const select = {
-      id: true,
-      purchaseId: true,
-      serviceId: true,
-      employeeId: true,
-      durationOptionId: true,
-      totalQuantity: true,
-      usedQuantity: true,
-      reservedQuantity: true,
-      durationMinsSnapshot: true,
-      deliveryTypeSnapshot: true,
-      serviceNameSnapshot: true,
-      employeeNameSnapshot: true,
-      purchase: { select: { modelVersion: true } },
-      constraints: {
-        select: {
-          dimension: true,
-          mode: true,
-          targets: { select: { targetId: true } },
-        },
-      },
-    } as const;
-
-    const hasTriple = !!(cmd.serviceId && cmd.employeeId && cmd.durationOptionId);
-
-    if (cmd.creditId) {
-      const credit = await this.prisma.packageCredit.findFirst({
-        where: {
-          id: cmd.creditId,
-          // Prisma cannot express `usedQuantity + reservedQuantity <
-          // totalQuantity` as a field-reference comparison, so this coarse
-          // filter only rules out credits that are already fully DELIVERED.
-          // A credit that is fully booked out by RESERVED sessions still
-          // passes here and is caught by the JS predicate below, which is
-          // the authoritative availability check.
-          usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
-          purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
-        },
-        select,
-      });
-      if (!credit || !hasAvailableCapacity(credit)) {
-        throw new NotFoundException('No usable package credit found for this id');
-      }
-
-      // A flexible credit uses the caller's concrete triple. A legacy credit
-      // without one derives it from the immutable credit routing fields.
-      const targetIds = hasTriple
-        ? {
-            serviceId: cmd.serviceId!,
-            employeeId: cmd.employeeId!,
-            durationOptionId: cmd.durationOptionId!,
-          }
-        : {
-            serviceId: credit.serviceId,
-            employeeId: credit.employeeId,
-            durationOptionId: credit.durationOptionId,
-          };
-      if (!targetIds.serviceId || !targetIds.employeeId || !targetIds.durationOptionId) {
-        throw new BadRequestException(
-          'This credit needs an explicit service, practitioner and duration',
-        );
-      }
-      const eligibility = await validateBookingTargetEligibility(this.prisma, {
-        serviceId: targetIds.serviceId,
-        employeeId: targetIds.employeeId,
-        durationOptionId: targetIds.durationOptionId,
-        deliveryType: cmd.deliveryType ?? null,
-        bookingType: 'INDIVIDUAL',
-      });
-      const target: BookingTarget = {
-        serviceId: targetIds.serviceId,
-        employeeId: targetIds.employeeId,
-        durationOptionId: targetIds.durationOptionId,
-        deliveryType: eligibility.deliveryType,
-      };
-      if (!creditMatchesTarget(credit, target)) {
-        throw new BadRequestException('The selected credit is not valid for this booking');
-      }
-      return { credit, target, eligibility };
-    }
-
-    if (!hasTriple) {
-      throw new BadRequestException(
-        'Provide either creditId or the full (serviceId, employeeId, durationOptionId) triple',
-      );
-    }
-
-    const requestedTarget: BookingTarget = {
-      serviceId: cmd.serviceId!,
-      employeeId: cmd.employeeId!,
-      durationOptionId: cmd.durationOptionId!,
-      deliveryType: cmd.deliveryType ?? null,
-    };
-
-    // Validate the concrete target before matching any credit. In particular,
-    // the selected duration supplies deliveryType when the caller omitted it.
-    const eligibility = await validateBookingTargetEligibility(this.prisma, {
-      ...requestedTarget,
-      bookingType: 'INDIVIDUAL',
-    });
-    const target: BookingTarget = {
-      ...requestedTarget,
-      deliveryType: eligibility.deliveryType,
-    };
-
-    // Auto-select: all client's ACTIVE credits with remaining, filter by the
-    // matching engine, then narrowest-first (specificity) then FIFO.
-    const candidates = await this.prisma.packageCredit.findMany({
-      where: {
-        // Same coarse DB filter as the explicit-creditId path — it still
-        // helps cut down the candidate set, but real availability (including
-        // reservedQuantity) is checked in JS below.
-        usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
-        purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
-      },
-      orderBy: [{ purchase: { createdAt: 'asc' } }, { createdAt: 'asc' }],
-      select,
-    });
-    const credit = candidates
-      .filter((c) => hasAvailableCapacity(c) && creditMatchesTarget(c, target))
-      .sort((a, b) => specificityScore(b) - specificityScore(a))[0];
-    if (!credit) {
-      throw new NotFoundException(
-        'No matching package credit with remaining capacity for this client',
-      );
-    }
-    return { credit, target, eligibility };
   }
 
   private async assertSlotAvailable(input: {
