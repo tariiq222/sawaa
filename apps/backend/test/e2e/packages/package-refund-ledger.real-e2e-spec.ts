@@ -9,6 +9,7 @@
 
 import { INestApplication } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
+import { PackageLedgerService } from '../../../src/modules/bookings/package-ledger/package-ledger.service';
 import {
   InvoiceStatus,
   PackagePurchaseStatus,
@@ -325,6 +326,7 @@ describeRealE2e("Package refund ledger — real DB", () => {
       prisma,
       failingRls as never,
       app.get(EventBusService),
+      app.get(PackageLedgerService),
     );
 
     await expect(failingHandler.execute(command(seeded.purchaseId, 30_000))).rejects.toThrow(

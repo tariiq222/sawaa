@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
+import { PackageLedgerService } from '../../bookings/package-ledger/package-ledger.service';
 import {
   packagePurchaseRequestFingerprint,
   CreatePackagePurchaseHandler,
@@ -76,6 +77,8 @@ describe('package family checkout contracts', () => {
       { withTransaction: jest.fn() } as never,
       { compute: jest.fn() } as never,
       {} as never,
+      undefined as never,
+      new PackageLedgerService() as never,
     );
 
     await expect(handler.execute({
@@ -120,6 +123,7 @@ describe('package family checkout contracts', () => {
       { compute: jest.fn().mockResolvedValue({ subtotal: 5000, discountAmount: 0, finalPrice: 5000, itemUnitPrices: [{ unitPrice: 1000 }], lines: [{ net: 5000 }] }) } as never,
       { execute: jest.fn().mockResolvedValue({ id: 'payment-1' }) } as never,
       { publishOptional: jest.fn() } as never,
+      new PackageLedgerService() as never,
     );
 
     await handler.execute({

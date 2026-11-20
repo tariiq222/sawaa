@@ -62,6 +62,7 @@ import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoic
 import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
 import { BookingFinanceLedgerService } from './booking-finance/booking-finance-ledger.service';
+import { PackageLedgerModule } from '../bookings/package-ledger/package-ledger.module';
 import { GenerateInvoicePdfHandler } from './generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ApplyInvoiceDiscountHandler } from './apply-invoice-discount/apply-invoice-discount.handler';
 import { EnsureBookingInvoiceHandler } from './ensure-booking-invoice/ensure-booking-invoice.handler';
@@ -113,7 +114,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule, EmailModule, TelemetryModule],
+  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule, EmailModule, TelemetryModule, PackageLedgerModule],
   controllers: [DashboardFinanceController, RefundsController],
   providers: [
     PreviousReceiptRecordedAuditHandler,

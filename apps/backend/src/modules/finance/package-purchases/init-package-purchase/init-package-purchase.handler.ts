@@ -23,6 +23,7 @@ import { MoyasarApiClient } from "../../moyasar-api/moyasar-api.client";
 import { resolveVatRate } from "../../create-invoice/create-invoice.handler";
 import { computeVat } from "../../money.helper";
 import { DEFAULT_ORG_ID } from "../../../../common/constants";
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 import { InitPackagePurchaseDto } from "./init-package-purchase.dto";
 import {
   createPackageCreditSnapshot,
@@ -124,6 +125,7 @@ export class InitPackagePurchaseHandler {
     private readonly pricing: ComputePackagePriceService,
     private readonly moyasar: MoyasarApiClient,
     private readonly nativePayment: InitNativePaymentHandler = undefined!,
+    private readonly packageLedger: PackageLedgerService,
   ) {}
 
   async execute(cmd: InitPackagePurchaseCommand): Promise<InitPackagePurchaseResult>;
@@ -523,8 +525,7 @@ export class InitPackagePurchaseHandler {
 
     try {
       return await this.rlsTransaction.withTransaction(async (tx) => {
-        const purchase = await tx.packagePurchase.create({
-          data: {
+        const purchase = await this.packageLedger.createPackagePurchaseInTx(tx, {
             idempotencyKey: cmd.idempotencyKey,
             requestFingerprint,
             creditSnapshot: creditSnapshot as unknown as Prisma.InputJsonValue,
@@ -541,8 +542,6 @@ export class InitPackagePurchaseHandler {
             // paidAt is required by the schema; it is overwritten with the real
             // settlement time on activation. Stamp init time as a placeholder.
             paidAt: new Date(),
-          },
-          select: { id: true },
         });
 
         const invoice = await tx.invoice.create({

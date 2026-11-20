@@ -4,6 +4,7 @@ import { InvoiceStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AppModule } from '../../../src/app.module';
 import { PrismaService, TransactionService } from '../../../src/infrastructure/database';
+import { PackageLedgerService } from '../../../src/modules/bookings/package-ledger/package-ledger.service';
 import { InitClientPaymentHandler } from '../../../src/modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { ProcessPaymentHandler } from '../../../src/modules/finance/process-payment/process-payment.handler';
 import { BankTransferUploadHandler } from '../../../src/modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
@@ -340,6 +341,8 @@ describeRealE2e('Payment reservation concurrency — real Postgres', () => {
       rls,
       { compute: jest.fn() } as never,
       moyasar as never,
+      undefined as never,
+      new PackageLedgerService() as never,
     );
 
     try {

@@ -26,9 +26,11 @@ export class PackageLedgerService {
   async createPackagePurchaseInTx(
     tx: Prisma.TransactionClient,
     data: Prisma.PackagePurchaseUncheckedCreateInput,
-  ): Promise<{ id: string }> {
-    const row = await tx.packagePurchase.create({ data, select: { id: true } });
-    return { id: row.id };
+  ): Promise<Prisma.PackagePurchaseGetPayload<Record<string, never>>> {
+    // The full row is returned on purpose: callers read amountPaid / status /
+    // creditSnapshot right after creation, and narrowing this to { id } would
+    // force a second query inside the same transaction.
+    return tx.packagePurchase.create({ data });
   }
 
   /**

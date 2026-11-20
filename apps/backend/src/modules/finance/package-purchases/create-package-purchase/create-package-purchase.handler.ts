@@ -23,6 +23,7 @@ import {
   type GroupedPackagePurchaseSnapshot,
 } from '../package-group-purchase-snapshot';
 import { CreatePackagePurchaseDto } from './create-package-purchase.dto';
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 import { buildPackageOfferSnapshot } from '../package-offer-snapshot';
 
 export type CreatePackagePurchaseCommand = CreatePackagePurchaseDto & {
@@ -82,6 +83,7 @@ export class CreatePackagePurchaseHandler {
     private readonly pricing: ComputePackagePriceService,
     private readonly processPayment: ProcessPaymentHandler,
     private readonly eventBus: EventBusService,
+    private readonly packageLedger: PackageLedgerService,
   ) {}
 
   async execute(dto: CreatePackagePurchaseCommand) {
@@ -202,8 +204,7 @@ export class CreatePackagePurchaseHandler {
       const vatRate = await resolveVatRate(tx);
       const vat = computeVat(new Prisma.Decimal(price.finalPrice), vatRate);
       const grossTotal = vat.totalHalalas.toNumber();
-      const purchase = await tx.packagePurchase.create({
-        data: {
+      const purchase = await this.packageLedger.createPackagePurchaseInTx(tx, {
           idempotencyKey: dto.idempotencyKey,
           requestFingerprint,
           packageId: pkg.id,
@@ -220,7 +221,6 @@ export class CreatePackagePurchaseHandler {
           amountPaid: new Prisma.Decimal(price.finalPrice),
           paidAt: new Date(),
           notes: dto.notes ?? null,
-        },
       });
 
       // One PackageCredit per SessionPackageItem. The total quantity includes
@@ -230,12 +230,11 @@ export class CreatePackagePurchaseHandler {
       // Per-credit create (not createMany) so each credit snapshots its item's
       // eligibility constraints — the rule the matching engine reads at booking.
       if (groupedSnapshot) {
-        await issueGroupedPackageCredits(tx, purchase.id, groupedSnapshot);
+        await issueGroupedPackageCredits(tx, purchase.id, groupedSnapshot, this.packageLedger);
       }
       for (let idx = 0; idx < (groupedSnapshot ? 0 : pkg.items.length); idx++) {
         const item = pkg.items[idx];
-        await tx.packageCredit.create({
-          data: {
+        await this.packageLedger.createPackageCreditInTx(tx, {
             purchaseId: purchase.id,
             serviceId: item.serviceId,
             employeeId: item.employeeId,
@@ -250,7 +249,6 @@ export class CreatePackagePurchaseHandler {
             totalQuantity: item.paidQuantity + item.freeQuantity,
             usedQuantity: 0,
             constraints: { create: buildCreditConstraintCreate(item) },
-          },
         });
       }
 

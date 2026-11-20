@@ -30,8 +30,16 @@ describe('PackageLedgerService', () => {
 
   const asTx = () => tx as unknown as Prisma.TransactionClient;
 
-  it('creates the purchase and returns only its id', async () => {
-    tx.packagePurchase.create.mockResolvedValue({ id: 'p-1' });
+  it('creates the purchase and returns the full row', async () => {
+    const created = {
+      id: 'p-1',
+      packageId: 'pkg-1',
+      clientId: 'c-1',
+      branchId: 'b-1',
+      status: PackagePurchaseStatus.PENDING,
+      amountPaid: new Prisma.Decimal(100),
+    };
+    tx.packagePurchase.create.mockResolvedValue(created);
     await expect(
       service.createPackagePurchaseInTx(asTx(), {
         packageId: 'pkg-1',
@@ -42,10 +50,11 @@ describe('PackageLedgerService', () => {
         amountPaid: new Prisma.Decimal(100),
         paidAt: new Date('2026-01-01'),
       }),
-    ).resolves.toEqual({ id: 'p-1' });
+    ).resolves.toEqual(created);
+    // No `select`: callers read amountPaid/status right after creation, so
+    // narrowing to { id } would force a second query inside the transaction.
     expect(tx.packagePurchase.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ packageId: 'pkg-1' }),
-      select: { id: true },
     });
   });
 

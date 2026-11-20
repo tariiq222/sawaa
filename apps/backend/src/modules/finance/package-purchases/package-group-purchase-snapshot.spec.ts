@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { PackageConstraintDimension, PackageConstraintMode, Prisma } from '@prisma/client';
+import { PackageLedgerService } from '../../bookings/package-ledger/package-ledger.service';
 import {
   createGroupedPackagePurchaseSnapshot,
   issueGroupedPackageCredits,
@@ -93,11 +94,12 @@ describe('package-group-purchase-snapshot', () => {
       },
       packageCredit: { create: jest.fn().mockResolvedValue({}) },
     };
-    await issueGroupedPackageCredits(tx as never, 'purchase-1', snapshot);
+    await issueGroupedPackageCredits(tx as never, 'purchase-1', snapshot, new PackageLedgerService() as never);
     expect(tx.packagePurchaseGroup.create).toHaveBeenCalledTimes(2);
     expect(tx.packagePurchaseGroup.update).toHaveBeenCalledWith({
       where: { id: 'purchase-group-follow-up' },
       data: { dependsOnGroupId: 'purchase-group-base' },
+      select: { id: true },
     });
     expect(tx.packageCredit.create).toHaveBeenCalledTimes(2);
     const creditData = tx.packageCredit.create.mock.calls[1][0].data;

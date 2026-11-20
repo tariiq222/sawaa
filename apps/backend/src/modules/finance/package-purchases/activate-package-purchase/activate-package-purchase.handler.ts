@@ -14,6 +14,7 @@ import {
   type GroupedPackagePurchaseSnapshot,
 } from '../package-group-purchase-snapshot';
 import type { PaymentCompletedPayload } from '../../events/payment-completed.event';
+import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
 
 /**
  * Activates a self-purchased session package when its Moyasar payment completes.
@@ -50,6 +51,7 @@ export class ActivatePackagePurchaseHandler {
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
     private readonly pricing: ComputePackagePriceService,
+    private readonly packageLedger: PackageLedgerService,
   ) {}
 
   register(): void {
@@ -153,11 +155,11 @@ export class ActivatePackagePurchaseHandler {
         await this.rlsTransaction.withTransaction(async (tx) => {
           // Atomic guard: flip ONLY while still PENDING. If a concurrent delivery
           // already flipped it, `count` is 0 and we issue NO credits.
-          const flipped = await tx.packagePurchase.updateMany({
-            where: { id: packagePurchaseId, status: PackagePurchaseStatus.PENDING },
-            data: { status: PackagePurchaseStatus.ACTIVE, paidAt: new Date() },
+          const { activated } = await this.packageLedger.activatePendingPackagePurchaseInTx(tx, {
+            purchaseId: packagePurchaseId,
+            paidAt: new Date(),
           });
-          if (flipped.count === 0) {
+          if (!activated) {
             this.logger.log(
               `Package purchase ${packagePurchaseId} was already activated concurrently — no credits issued`,
             );
@@ -167,11 +169,10 @@ export class ActivatePackagePurchaseHandler {
           // Per-credit create (not createMany) so each credit snapshots its
           // item's eligibility constraints for the matching engine.
           if (groupedSnapshot) {
-            await issueGroupedPackageCredits(tx, packagePurchaseId, groupedSnapshot);
+            await issueGroupedPackageCredits(tx, packagePurchaseId, groupedSnapshot, this.packageLedger);
           }
           for (const item of creditSnapshot ?? []) {
-            await tx.packageCredit.create({
-              data: {
+            await this.packageLedger.createPackageCreditInTx(tx, {
                 purchaseId: packagePurchaseId,
                 serviceId: item.serviceId,
                 employeeId: item.employeeId,
@@ -181,7 +182,6 @@ export class ActivatePackagePurchaseHandler {
                 totalQuantity: item.totalQuantity,
                 usedQuantity: 0,
                 constraints: { create: buildCreditConstraintCreate(item) },
-              },
             });
           }
         });
