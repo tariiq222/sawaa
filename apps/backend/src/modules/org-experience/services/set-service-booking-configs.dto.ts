@@ -77,7 +77,10 @@ export class ServiceAvailabilityWindowInputDto {
 
 export class BookingConfigInputDto {
   @ApiProperty({
-    description: 'Delivery channel for this service',
+    // Shared OpenAPI enum schema "DeliveryType" is written by the last scanned
+    // DTO carrying enumName: 'DeliveryType'; module reordering can flip the
+    // winner (MNT-19.3). All writers must keep this exact description.
+    description: 'Delivery channel',
     enum: DeliveryType,
     enumName: 'DeliveryType',
     example: DeliveryType.IN_PERSON,
