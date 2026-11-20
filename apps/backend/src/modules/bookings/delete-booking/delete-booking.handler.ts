@@ -7,7 +7,6 @@ import {
 } from "@nestjs/common";
 import {
 	ActivityAction,
-	PaymentStatus,
 	Prisma,
 } from "@prisma/client";
 import {
@@ -17,6 +16,8 @@ import {
 import { isTerminalStatus } from "../booking-state-machine";
 import { assertBookingIsMutable } from "../booking-lifecycle.helper";
 import { toIntakeRevisionData } from "../../../common/database/intake-response-history.helper";
+import { BookingFinanceLedgerService, BLOCKING_PAYMENT_STATUSES } from "../../finance/booking-finance/booking-finance-ledger.service";
+import { BookingHasBlockingPaymentError } from "../../finance/booking-finance/booking-finance-ledger.types";
 
 export interface DeleteBookingCommand {
 	bookingId: string;
@@ -65,16 +66,10 @@ function isLockNotAvailable(error: unknown): boolean {
 export class DeleteBookingHandler {
 	private readonly logger = new Logger(DeleteBookingHandler.name);
 
-	private static readonly BLOCKING_PAYMENT_STATUSES: PaymentStatus[] = [
-		PaymentStatus.COMPLETED,
-		PaymentStatus.PARTIALLY_REFUNDED,
-		PaymentStatus.REFUNDED,
-		PaymentStatus.PENDING_VERIFICATION,
-	];
-
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly rlsTransaction: TransactionService,
+		private readonly financeLedger: BookingFinanceLedgerService,
 	) {}
 
 	async execute(cmd: DeleteBookingCommand): Promise<void> {
@@ -106,7 +101,7 @@ export class DeleteBookingHandler {
 		const blockingPayment = await this.prisma.payment.findFirst({
 			where: {
 				invoice: { bookingId: booking.id },
-				status: { in: DeleteBookingHandler.BLOCKING_PAYMENT_STATUSES },
+				status: { in: [...BLOCKING_PAYMENT_STATUSES] },
 			},
 			select: { id: true },
 		});
@@ -147,44 +142,15 @@ export class DeleteBookingHandler {
 						DELETE_BOOKING_MESSAGES.nonTerminal(lockedBooking.status),
 					);
 				}
-				const invoiceRows = await tx.$queryRaw<Array<{ id: string }>>`
-				SELECT "id" FROM "Invoice"
-				WHERE "bookingId" = ${lockedBooking.id}
-				FOR UPDATE NOWAIT
-			`;
-				const invoice = invoiceRows[0];
-				if (invoice) {
-					await tx.$queryRaw<Array<{ id: string }>>`
-					SELECT "id" FROM "PaymentCollectionIdempotency"
-					WHERE "invoiceId" = ${invoice.id}
-					ORDER BY "id" FOR UPDATE NOWAIT
-				`;
-					await tx.$queryRaw<Array<{ id: string }>>`
-					SELECT "id" FROM "RefundRequest"
-					WHERE "invoiceId" = ${invoice.id}
-					ORDER BY "id" FOR UPDATE NOWAIT
-				`;
-					await tx.$queryRaw<Array<{ id: string }>>`
-					SELECT "id" FROM "Payment"
-					WHERE "invoiceId" = ${invoice.id}
-					ORDER BY "id" FOR UPDATE NOWAIT
-					`;
-					const lockedBlockingPayment = await tx.payment.findFirst({
-						where: {
-							invoiceId: invoice.id,
-							status: { in: DeleteBookingHandler.BLOCKING_PAYMENT_STATUSES },
-						},
-						select: { id: true },
+				try {
+					await this.financeLedger.deleteBookingInvoiceAndFinancialsInTx(tx, {
+						bookingId: lockedBooking.id,
 					});
-					if (lockedBlockingPayment) {
+				} catch (error) {
+					if (error instanceof BookingHasBlockingPaymentError) {
 						throw new BadRequestException(DELETE_BOOKING_MESSAGES.blockingPayment);
 					}
-					await tx.refundRequest.deleteMany({ where: { invoiceId: invoice.id } });
-					await tx.paymentCollectionIdempotency.deleteMany({
-						where: { invoiceId: invoice.id },
-					});
-					await tx.payment.deleteMany({ where: { invoiceId: invoice.id } });
-					await tx.invoice.delete({ where: { id: invoice.id } });
+					throw error;
 				}
 				await tx.bookingStatusLog.deleteMany({
 					where: { bookingId: booking.id },

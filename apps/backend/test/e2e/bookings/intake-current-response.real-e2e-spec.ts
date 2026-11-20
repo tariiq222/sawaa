@@ -10,6 +10,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { BookingStatus, DeliveryType, InvoiceStatus, PaymentMethod, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../../src/infrastructure/database';
 import { DeleteBookingHandler } from '../../../src/modules/bookings/delete-booking/delete-booking.handler';
+import { BookingFinanceLedgerService } from '../../../src/modules/finance/booking-finance/booking-finance-ledger.service';
 import { DeleteIntakeFormHandler } from '../../../src/modules/org-experience/intake-forms/delete-intake-form.handler';
 import { GetIntakeFormResponsesHandler } from '../../../src/modules/org-experience/intake-forms/get-intake-form-responses.handler';
 import { SubmitIntakeResponseHandler } from '../../../src/modules/org-experience/submit-intake-response/submit-intake-response.handler';
@@ -123,7 +124,7 @@ describeRealE2e('T3 intake current response (real e2e)', () => {
   );
 
   const deleteBookingHandler = (client: PrismaClient, rls: typeof rlsA) =>
-    new DeleteBookingHandler(client as never, rls as never);
+    new DeleteBookingHandler(client as never, rls as never, new BookingFinanceLedgerService());
 
   const deleteFormHandler = (client: PrismaClient, rls: typeof rlsA) =>
     new DeleteIntakeFormHandler(client as never, rls as never);

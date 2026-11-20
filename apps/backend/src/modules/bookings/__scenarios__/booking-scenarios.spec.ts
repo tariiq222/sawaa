@@ -155,9 +155,53 @@ const buildExtendedPrisma = () => {
 // 1. أم تحجز جلسة لابنها أونلاين
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Mirrors the real ledger closely enough that the existing assertions on
+// prisma.invoice.create / prisma.coupon.update keep proving the same facts.
 const buildFinanceLedger = () => ({
-	releaseCouponUsageInTx: jest.fn().mockResolvedValue({ released: true }),
-	createBookingInvoiceInTx: jest.fn().mockResolvedValue(null),
+	releaseCouponUsageInTx: jest.fn(async (tx: any, cmd: { code: string }) => {
+		const { count } = await tx.coupon.updateMany({
+			where: { code: cmd.code, usedCount: { gt: 0 } },
+			data: { usedCount: { decrement: 1 } },
+		});
+		return { released: count > 0 };
+	}),
+	consumeCouponUsageInTx: jest.fn(async (tx: any, cmd: { couponId: string }) => {
+		await tx.coupon.update({
+			where: { id: cmd.couponId },
+			data: { usedCount: { increment: 1 } },
+		});
+	}),
+	createBookingInvoiceInTx: jest.fn(async (tx: any, cmd: any) => {
+		const settings = await tx.organizationSettings.findFirst({
+			where: {},
+			orderBy: { createdAt: 'desc' },
+			select: { vatRate: true },
+		});
+		const vatRateDec = new Prisma.Decimal(settings?.vatRate?.toString() ?? '0');
+		const subtotalDec = new Prisma.Decimal(cmd.subtotal.toString());
+		const discountAmtDec = new Prisma.Decimal((cmd.discountAmt ?? 0).toString());
+		const vatBase = subtotalDec.sub(discountAmtDec);
+		const vatAmt = vatBase.mul(vatRateDec).toDecimalPlaces(0);
+		const total = vatBase.add(vatAmt).toDecimalPlaces(0);
+		const created = await tx.invoice.create({
+			data: {
+				branchId: cmd.branchId,
+				clientId: cmd.clientId,
+				employeeId: cmd.employeeId,
+				bookingId: cmd.bookingId,
+				subtotal: subtotalDec,
+				discountAmt: discountAmtDec,
+				vatRate: vatRateDec,
+				vatAmt,
+				total,
+				currency: cmd.currency,
+				status: cmd.issueMode,
+			},
+			select: { id: true },
+		});
+		return { id: created.id, subtotal: subtotalDec, discountAmt: discountAmtDec,
+			vatRate: vatRateDec, vatAmt, total, status: cmd.issueMode, issuedAt: null };
+	}),
 });
 
 describe("Scenario 1 — Mother books online session for child, pays Mada, Zoom created, completed", () => {
@@ -181,6 +225,7 @@ describe("Scenario 1 — Mother books online session for child, pays Mada, Zoom 
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		prisma.branch.findFirst.mockResolvedValue({
@@ -416,6 +461,7 @@ describe("Scenario 3 — Reception books for client, pay-at-clinic, check-in, ca
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		const created = await createHandler.execute({
@@ -957,6 +1003,7 @@ describe("Scenario 14 — Booking rejected when employee does not provide servic
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await expect(
@@ -1043,6 +1090,7 @@ describe("Scenario 15 — Coupon discount applied before VAT", () => {
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await handler.execute({
@@ -1122,6 +1170,7 @@ describe("Scenario 16 — Race condition: two clients book last slot simultaneou
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await handler.execute({
@@ -1229,6 +1278,7 @@ describe("Scenario 18 — Booking too close to appointment (less than min lead t
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		// Booking in 10 minutes
@@ -1292,6 +1342,7 @@ describe("Scenario 19 — Booking too far in future (> maxAdvanceBookingDays)", 
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		// 5 months = ~150 days
@@ -1351,6 +1402,7 @@ describe("Scenario 20 — Employee deactivated, booking rejected", () => {
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await expect(
@@ -1408,6 +1460,7 @@ describe("Scenario 21 — Service is archived/hidden, booking rejected", () => {
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await expect(
@@ -1459,6 +1512,7 @@ describe("Scenario 21 — Service is archived/hidden, booking rejected", () => {
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await expect(
@@ -1502,6 +1556,7 @@ describe("Scenario 22 — Branch is inactive, booking rejected", () => {
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await expect(
@@ -1878,6 +1933,7 @@ describe("Scenario 28 — Service price changes after booking, snapshot preserve
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
+			buildFinanceLedger() as never,
 		);
 
 		await handler.execute({

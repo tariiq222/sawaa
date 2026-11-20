@@ -7,6 +7,7 @@ import { PriceResolverService } from '../../org-experience/services/price-resolv
 import { GetBookingSettingsHandler, DEFAULT_BOOKING_SETTINGS } from '../get-booking-settings/get-booking-settings.handler';
 import { EventBusService } from '../../../infrastructure/events';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import {
@@ -147,6 +148,60 @@ const chatCreationHash = (scheduledAt = futureDate) => bookingCreationRequestHas
   source: 'AI_CHAT',
 });
 
+function buildFinanceLedger() {
+  return {
+    // Coupon consume keeps calling prisma.coupon.update so the existing
+    // assertions on that row keep their meaning.
+    consumeCouponUsageInTx: jest.fn(async (tx: any, cmd: { couponId: string }) => {
+      await tx.coupon.update({
+        where: { id: cmd.couponId },
+        data: { usedCount: { increment: 1 } },
+      });
+    }),
+    // Invoice create mirrors the real service: resolve VAT from settings,
+    // compute with the real helper, then write via prisma.invoice.create.
+    createBookingInvoiceInTx: jest.fn(async (tx: any, cmd: any) => {
+      const settings = await tx.organizationSettings.findFirst({
+        where: {},
+        orderBy: { createdAt: 'desc' },
+        select: { vatRate: true },
+      });
+      const vatRateDec = new Prisma.Decimal(settings?.vatRate?.toString() ?? '0');
+      const subtotalDec = new Prisma.Decimal(cmd.subtotal.toString());
+      const discountAmtDec = new Prisma.Decimal((cmd.discountAmt ?? 0).toString());
+      const vatBase = subtotalDec.sub(discountAmtDec);
+      const vatAmt = vatBase.mul(vatRateDec).toDecimalPlaces(0);
+      const total = vatBase.add(vatAmt).toDecimalPlaces(0);
+      const created = await tx.invoice.create({
+        data: {
+          branchId: cmd.branchId,
+          clientId: cmd.clientId,
+          employeeId: cmd.employeeId,
+          bookingId: cmd.bookingId,
+          subtotal: subtotalDec,
+          discountAmt: discountAmtDec,
+          vatRate: vatRateDec,
+          vatAmt,
+          total,
+          currency: cmd.currency,
+          status: cmd.issueMode,
+        },
+        select: { id: true },
+      });
+      return {
+        id: created.id,
+        subtotal: subtotalDec,
+        discountAmt: discountAmtDec,
+        vatRate: vatRateDec,
+        vatAmt,
+        total,
+        status: cmd.issueMode,
+        issuedAt: null,
+      };
+    }),
+  };
+}
+
 describe('CreateBookingHandler', () => {
   let handler: CreateBookingHandler;
   let prisma: ReturnType<typeof buildPrisma>;
@@ -156,6 +211,7 @@ describe('CreateBookingHandler', () => {
   let eventBus: ReturnType<typeof buildEventBus>;
   let couponValidator: ReturnType<typeof buildCouponValidator>;
   let availabilityHandler: ReturnType<typeof buildAvailabilityHandler>;
+  let financeLedger: ReturnType<typeof buildFinanceLedger>;
 
   beforeEach(async () => {
     prisma = buildPrisma();
@@ -164,6 +220,7 @@ describe('CreateBookingHandler', () => {
     eventBus = buildEventBus();
     couponValidator = buildCouponValidator();
     availabilityHandler = buildAvailabilityHandler();
+    financeLedger = buildFinanceLedger();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -175,6 +232,7 @@ describe('CreateBookingHandler', () => {
         { provide: EventBusService, useValue: eventBus },
         { provide: ValidateCouponService, useValue: couponValidator },
         { provide: CheckAvailabilityHandler, useValue: availabilityHandler },
+        { provide: BookingFinanceLedgerService, useValue: financeLedger },
       ],
     }).compile();
 
@@ -309,6 +367,7 @@ describe('CreateBookingHandler', () => {
       eventBus as any,
       couponValidator as any,
       availabilityHandler as any,
+      financeLedger as any,
     );
 
     await expect(guardedHandler.execute(baseDto)).rejects.toThrow('Selected booking time is not available');
@@ -932,6 +991,7 @@ describe('CreateBookingHandler', () => {
       eventBus as any,
       couponValidator as any,
       availabilityHandler as any,
+      financeLedger as any,
     );
     await expect(guardedHandler.execute(baseDto)).rejects.toThrow('Selected booking time is not available');
     expect(prisma.booking.create).not.toHaveBeenCalled();

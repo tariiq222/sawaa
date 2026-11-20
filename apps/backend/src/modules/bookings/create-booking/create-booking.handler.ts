@@ -15,7 +15,7 @@ import { CreateBookingDto } from './create-booking.dto';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
-import { computeVat } from '../../finance/money.helper';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 import { hashToInt32 } from '../booking-lifecycle.helper';
 import {
   ACTIVE_BOOKING_STATUSES,
@@ -65,6 +65,7 @@ export class CreateBookingHandler {
     private readonly eventBus: EventBusService,
     private readonly couponValidator: ValidateCouponService,
     private readonly availabilityHandler: CheckAvailabilityHandler,
+    private readonly financeLedger: BookingFinanceLedgerService,
   ) {}
 
   async execute(dto: CreateBookingCommand) {
@@ -336,9 +337,8 @@ export class CreateBookingHandler {
             subtotal: Number(price),
           });
           discountedPrice = Math.max(0, new Prisma.Decimal(price.toString()).sub(new Prisma.Decimal(result.discount.toString())).toDecimalPlaces(2).toNumber());
-          await tx.coupon.update({
-            where: { id: result.couponId },
-            data: { usedCount: { increment: 1 } },
+          await this.financeLedger.consumeCouponUsageInTx(tx, {
+            couponId: result.couponId,
           });
         }
 
@@ -444,37 +444,22 @@ export class CreateBookingHandler {
         // issuedAt and flips it to PARTIALLY_PAID/PAID.
         // Skip: pay-at-clinic (no online payment) and zero-price bookings.
         if (!dto.payAtClinic && effectivePrice > 0) {
-          const orgSettings = await tx.organizationSettings.findFirst({
-            where: {},
-            // Same row the settings screen edits and invoices read (latest).
-            orderBy: { createdAt: 'desc' },
-            select: { vatRate: true },
-          });
-          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');
-
           const subtotalDec = new Prisma.Decimal(price.toString());
           const discountAmtDec = discountedPrice !== null
             ? subtotalDec.sub(new Prisma.Decimal(discountedPrice.toString()))
             : new Prisma.Decimal(0);
-          const vatBaseDec = subtotalDec.sub(discountAmtDec);
-          const { vatAmtHalalas, totalHalalas } = computeVat(vatBaseDec, vatRateDec);
 
-          invoice = await tx.invoice.create({
-            data: {
-              branchId: booking.branchId,
-              clientId: booking.clientId,
-              employeeId: booking.employeeId,
-              bookingId: booking.id,
-              subtotal: subtotalDec,
-              discountAmt: discountAmtDec,
-              vatRate: vatRateDec,
-              vatAmt: vatAmtHalalas,
-              total: totalHalalas,
-              currency: booking.currency,
-              status: 'DRAFT',
-            },
-            select: { id: true },
+          const created = await this.financeLedger.createBookingInvoiceInTx(tx, {
+            bookingId: booking.id,
+            branchId: booking.branchId,
+            clientId: booking.clientId,
+            employeeId: booking.employeeId,
+            subtotal: subtotalDec,
+            discountAmt: discountAmtDec,
+            currency: booking.currency,
+            issueMode: 'DRAFT',
           });
+          invoice = { id: created.id };
         }
 
         // CR-5: write to outbox INSIDE the transaction instead of publishing
