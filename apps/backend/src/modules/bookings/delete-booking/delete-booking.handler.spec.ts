@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, PaymentStatus } from '@prisma/client';
 import { DeleteBookingHandler } from './delete-booking.handler';
+import { BookingFinanceLedgerService } from '../../finance/booking-finance/booking-finance-ledger.service';
 
 const buildPrisma = (overrides: Record<string, unknown> = {}) => {
   const callOrder: string[] = [];
@@ -97,7 +98,7 @@ const buildRls = (tx: unknown) => ({
 describe('DeleteBookingHandler', () => {
   it('hard-deletes a clean terminal booking with no invoice', async () => {
     const { prisma, tx } = buildPrisma();
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -112,7 +113,7 @@ describe('DeleteBookingHandler', () => {
   it('does not run a global payment guard when the booking has no invoice', async () => {
     const { prisma, tx } = buildPrisma();
 
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -141,7 +142,7 @@ describe('DeleteBookingHandler', () => {
       },
     ]);
 
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -178,7 +179,7 @@ describe('DeleteBookingHandler', () => {
     }]);
     tx.intakeResponseRevision.createMany.mockRejectedValue(new Error('archive unavailable'));
 
-    await expect(new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await expect(new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     })).rejects.toThrow('archive unavailable');
@@ -188,7 +189,7 @@ describe('DeleteBookingHandler', () => {
 
   it('takes the booking row lock before intake archival and deletion', async () => {
     const { prisma, tx, callOrder } = buildPrisma();
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -202,7 +203,7 @@ describe('DeleteBookingHandler', () => {
     const { prisma, tx, callOrder } = buildPrisma();
     tx.invoice.findUnique.mockResolvedValue({ id: 'invoice-1' });
 
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -215,7 +216,7 @@ describe('DeleteBookingHandler', () => {
     const { prisma, tx, callOrder } = buildPrisma();
     tx.invoice.findUnique.mockResolvedValue({ id: 'invoice-1' });
 
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -251,7 +252,7 @@ describe('DeleteBookingHandler', () => {
       .mockRejectedValueOnce(lockError);
 
     await expect(
-      new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+      new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
         bookingId: 'book-1',
         changedBy: 'admin-1',
       }),
@@ -267,7 +268,7 @@ describe('DeleteBookingHandler', () => {
     tx.$queryRaw.mockRejectedValueOnce(databaseError);
 
     await expect(
-      new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+      new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
         bookingId: 'book-1',
         changedBy: 'admin-1',
       }),
@@ -280,7 +281,7 @@ describe('DeleteBookingHandler', () => {
     tx.activityLog.create.mockImplementation(async () => { callOrder.push('audit'); return { id: 'log-1' }; });
     tx.booking.delete.mockImplementation(async () => { callOrder.push('delete'); return { id: 'book-1' }; });
 
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-7',
     });
@@ -302,7 +303,7 @@ describe('DeleteBookingHandler', () => {
     const { prisma, tx } = buildPrisma();
     tx.invoice.findUnique = jest.fn().mockResolvedValue({ id: 'inv-1' });
 
-    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1',
       changedBy: 'admin-1',
     });
@@ -329,7 +330,7 @@ describe('DeleteBookingHandler', () => {
     });
 
     await expect(
-      new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+      new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
         bookingId: 'book-1',
         changedBy: 'admin-1',
       }),
@@ -345,7 +346,7 @@ describe('DeleteBookingHandler', () => {
     if (stage === 'preflight') prisma.payment.findFirst.mockImplementation(matchPartialRefund);
     else tx.payment.findFirst.mockImplementation(matchPartialRefund);
 
-    await expect(new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+    await expect(new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
       bookingId: 'book-1', changedBy: 'admin-1',
     })).rejects.toBeInstanceOf(BadRequestException);
     expect(tx.refundRequest.deleteMany).not.toHaveBeenCalled();
@@ -362,7 +363,7 @@ describe('DeleteBookingHandler', () => {
     });
 
     await expect(
-      new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+      new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
         bookingId: 'book-1',
         changedBy: 'admin-1',
       }),
@@ -377,7 +378,7 @@ describe('DeleteBookingHandler', () => {
     });
 
     await expect(
-      new DeleteBookingHandler(prisma as never, buildRls(tx) as never).execute({
+      new DeleteBookingHandler(prisma as never, buildRls(tx) as never, new BookingFinanceLedgerService()).execute({
         bookingId: 'missing',
         changedBy: 'admin-1',
       }),

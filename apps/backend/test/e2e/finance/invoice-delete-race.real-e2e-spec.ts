@@ -16,6 +16,7 @@ import {
   PrismaClient,
 } from '@prisma/client';
 import { DeleteBookingHandler } from '../../../src/modules/bookings/delete-booking/delete-booking.handler';
+import { BookingFinanceLedgerService } from '../../../src/modules/finance/booking-finance/booking-finance-ledger.service';
 import { CreateInvoiceHandler } from '../../../src/modules/finance/create-invoice/create-invoice.handler';
 import { ProcessPaymentHandler } from '../../../src/modules/finance/process-payment/process-payment.handler';
 import { getRealE2eDatabaseUrl } from '../../helpers/create-real-e2e-app';
@@ -86,7 +87,7 @@ describeRealE2e('T3 Invoice and booking-delete concurrency (real e2e)', () => {
   });
 
   const deleteHandler = (client: PrismaClient, transaction = plainTransaction(client)) =>
-    new DeleteBookingHandler(client as never, transaction as never);
+    new DeleteBookingHandler(client as never, transaction as never, new BookingFinanceLedgerService());
 
   const createInvoiceHandler = (
     client: PrismaClient,
