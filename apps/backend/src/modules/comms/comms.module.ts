@@ -73,6 +73,7 @@ import { AiModule } from '../ai/ai.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { PeopleModule } from '../people/people.module';
+import { SendEmailQueueModule } from './send-email/send-email.module';
 import { AdministrativeAssistantService } from './chat/assistant/administrative-assistant.service';
 import { RetryAdministrativeMessageHandler } from './chat/assistant/retry-administrative-message.handler';
 import { AdministrativeToolsService } from './chat/assistant/administrative-tools.service';
@@ -215,6 +216,7 @@ const eventHandlers = [
     SmsModule,
     EmailModule,
     AiModule,
+    SendEmailQueueModule,
     BookingsModule,
     OrgExperienceModule,
     forwardRef(() => PeopleModule),
