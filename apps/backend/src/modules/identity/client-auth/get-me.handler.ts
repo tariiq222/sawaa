@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { withProvenEmailOnly } from '../../people/clients/client.serializer';
+import { withProvenEmailOnly } from '../../../common/projections/with-proven-email-only';
 import { ClientProfileDto } from './client-profile.dto';
 
 export type ClientProfile = ClientProfileDto;
