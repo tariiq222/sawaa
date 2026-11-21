@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
 import { ReviewLoginHandler } from './review-login.handler';
 import { ClientLoginHandler } from '../client-auth/client-login.handler';
+import { PgClientAccountStore } from '../../people/clients/client-account.store';
 import { PasswordService } from '../shared/password.service';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
@@ -28,7 +29,7 @@ describe('review account password boundary', () => {
     const multi = { incr: jest.fn().mockReturnThis(), expire: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue([[null, 1]]) };
     const redis = { getClient: () => ({ multi: () => multi, expire: jest.fn(), del: jest.fn() }) } as unknown as RedisService;
     issue = jest.fn().mockResolvedValue({ accessToken: 'client-access', rawRefresh: 'client-refresh', accessMaxAgeMs: 900000, refreshMaxAgeMs: 1000000 });
-    const login = new ClientLoginHandler(prisma, redis, passwords, { issueTokenPair: issue } as unknown as ClientTokenService);
+    const login = new ClientLoginHandler(prisma, redis, passwords, { issueTokenPair: issue } as unknown as ClientTokenService, new PgClientAccountStore());
     config = new ConfigService({ MOBILE_REVIEW_CLIENT_ID: id });
     handler = new ReviewLoginHandler(config, prisma, login);
   });

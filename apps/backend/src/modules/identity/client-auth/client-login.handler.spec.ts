@@ -5,9 +5,30 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 
 describe('ClientLoginHandler', () => {
   let handler: ClientLoginHandler;
+
+  const storeSpies = {
+    findByIdentifier: jest.fn(),
+    lockForAuth: jest.fn(),
+    createRegisteredClient: jest.fn(),
+    setPasswordHash: jest.fn(),
+    bumpTokenVersion: jest.fn(),
+    recordFailedLogin: jest.fn(),
+    clearFailedLogin: jest.fn(),
+    markLastLogin: jest.fn(),
+    setEmailProof: jest.fn(),
+    clearEmailProof: jest.fn(),
+    setPendingEmail: jest.fn(),
+    setPhoneProof: jest.fn(),
+    anonymizeForDeletion: jest.fn(),
+    recordPasswordHistory: jest.fn(),
+    listRecentPasswordHashes: jest.fn(),
+  };
+  const store: ClientAccountStore = storeSpies as unknown as ClientAccountStore;
 
   const mockPrisma = {
     client: {
@@ -77,6 +98,7 @@ describe('ClientLoginHandler', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientLoginHandler,
+        { provide: CLIENT_ACCOUNT_STORE, useValue: store },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockRedis },
         { provide: PasswordService, useValue: mockPasswords },
@@ -92,12 +114,12 @@ describe('ClientLoginHandler', () => {
       { passwordHash: 'hash', deletedAt: new Date() },
       { passwordHash: 'hash', lockoutUntil: new Date(Date.now() + 600_000) }])(
       'counts and performs a cost-12 dummy comparison for rejected account %j', async (state) => {
-        mockPrisma.client.findFirst.mockResolvedValue(state);
+        storeSpies.findByIdentifier.mockResolvedValue(state);
         mockPasswords.verify.mockResolvedValue(true); // Even a dummy match cannot authenticate.
         await expect(handler.execute({ email: 'unknown@example.com', password: 'WrongPass1' }, '1.2.3.4'))
           .rejects.toThrow('Invalid credentials');
         expect(multiExec).toHaveBeenCalledTimes(2);
-        expect(multiExec.mock.invocationCallOrder[0]).toBeLessThan(mockPrisma.client.findFirst.mock.invocationCallOrder[0]);
+        expect(multiExec.mock.invocationCallOrder[0]).toBeLessThan(storeSpies.findByIdentifier.mock.invocationCallOrder[0]);
         expect(mockPasswords.verify).toHaveBeenCalledWith('WrongPass1', expect.stringMatching(/^\$2[aby]\$12\$/));
         expect(mockPrisma.client.update).not.toHaveBeenCalled();
         expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
@@ -107,26 +129,26 @@ describe('ClientLoginHandler', () => {
       queueAttempts(identifier, ip);
       await expect(handler.execute({ email: 'unknown@example.com', password: 'WrongPass1' }, '1.2.3.4'))
         .rejects.toThrow('Invalid credentials');
-      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
+      expect(storeSpies.findByIdentifier).not.toHaveBeenCalled();
       expect(mockPasswords.verify).not.toHaveBeenCalled();
       expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
     });
     it('pins a mobile login lookup to the prevalidated client identity', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue(null);
+      storeSpies.findByIdentifier.mockResolvedValue(null);
       await expect(handler.execute({ phone: '+966501234567', password: 'SecurePass123' }, '1.2.3.4', 'expected-client')).rejects.toThrow(UnauthorizedException);
-      expect(mockPrisma.client.findFirst).toHaveBeenCalledWith({ where: { phone: '+966501234567', deletedAt: null, id: 'expected-client' } });
+      expect(store.findByIdentifier).toHaveBeenCalledWith(expect.anything(), { phone: '+966501234567' });
       expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
     });
 
     it.each([{ isActive: false }, { deletedAt: new Date() }])('rejects a disabled client before token issuance', async (state) => {
-      mockPrisma.client.findFirst.mockResolvedValue({ id: 'disabled', passwordHash: 'hash', ...state });
+      storeSpies.findByIdentifier.mockResolvedValue({ id: 'disabled', passwordHash: 'hash', ...state });
       mockPasswords.verify.mockResolvedValue(true);
       await expect(handler.execute({ email: 'client@example.com', password: 'SecurePass123' })).rejects.toThrow(UnauthorizedException);
       expect(mockClientTokens.issueTokenPair).not.toHaveBeenCalled();
     });
 
     it('returns tokens on successful login', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-1',
         email: 'test@example.com',
         passwordHash: 'hashed_pw',
@@ -158,10 +180,7 @@ describe('ClientLoginHandler', () => {
       expect(result.clientId).toBe('cl-1');
       expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:id:test@example.com');
       expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:ip:1.2.3.4');
-      expect(mockPrisma.client.update).toHaveBeenCalledWith({
-        where: { id: 'cl-1' },
-        data: { lastLoginAt: expect.any(Date) },
-      });
+      expect(storeSpies.markLastLogin).toHaveBeenCalledWith(expect.anything(), 'cl-1', expect.any(Date));
       expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({
         id: 'cl-1',
         email: 'test@example.com',
@@ -173,7 +192,7 @@ describe('ClientLoginHandler', () => {
     // carrying the *live* version, otherwise the strategy's tokenVersion check
     // rejects every freshly-issued token and locks the client out.
     it('passes the live tokenVersion through to the issued token after a reset (P1-7)', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-reset',
         email: 'reset@example.com',
         passwordHash: 'hashed_pw',
@@ -198,7 +217,7 @@ describe('ClientLoginHandler', () => {
     });
 
     it('throws Unauthorized for non-existent client', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue(null);
+      storeSpies.findByIdentifier.mockResolvedValue(null);
 
       await expect(
         handler.execute({ email: 'nobody@example.com', password: 'WrongPass1' }, '1.2.3.4'),
@@ -206,7 +225,7 @@ describe('ClientLoginHandler', () => {
     });
 
     it('throws Unauthorized for locked account', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-2',
         email: 'locked@example.com',
         passwordHash: 'hashed_pw',
@@ -219,7 +238,7 @@ describe('ClientLoginHandler', () => {
     });
 
     it('throws Unauthorized for wrong password', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-3',
         email: 'test@example.com',
         passwordHash: 'hashed_pw',
@@ -234,14 +253,14 @@ describe('ClientLoginHandler', () => {
         handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
 
-      expect(mockPrisma.client.update).toHaveBeenCalledWith({
-        where: { id: 'cl-3' },
-        data: { loginAttempts: { increment: 1 }, lockoutUntil: undefined },
+      expect(storeSpies.recordFailedLogin).toHaveBeenCalledWith(expect.anything(), 'cl-3', {
+        attempts: 1,
+        lockoutUntil: undefined,
       });
     });
 
     it('locks account after 5 failed attempts', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-4',
         email: 'test@example.com',
         passwordHash: 'hashed_pw',
@@ -256,17 +275,14 @@ describe('ClientLoginHandler', () => {
         handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
 
-      expect(mockPrisma.client.update).toHaveBeenCalledWith({
-        where: { id: 'cl-4' },
-        data: {
-          loginAttempts: { increment: 1 },
-          lockoutUntil: expect.any(Date),
-        },
+      expect(storeSpies.recordFailedLogin).toHaveBeenCalledWith(expect.anything(), 'cl-4', {
+        attempts: 5,
+        lockoutUntil: expect.any(Date),
       });
     });
 
     it('throws Unauthorized when per-email rate limit exceeded', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-5',
         email: 'test@example.com',
         passwordHash: 'hashed_pw',
@@ -360,7 +376,7 @@ describe('ClientLoginHandler', () => {
     });
 
     it('returns tokens on successful phone login and rate-limits on the phone identifier', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-p1',
         email: null,
         phone: '+966501234567',
@@ -378,9 +394,7 @@ describe('ClientLoginHandler', () => {
         '1.2.3.4',
       );
 
-      expect(mockPrisma.client.findFirst).toHaveBeenCalledWith({
-        where: { phone: '+966501234567', deletedAt: null },
-      });
+      expect(store.findByIdentifier).toHaveBeenCalledWith(expect.anything(), { phone: '+966501234567' });
       expect(multiIncr).toHaveBeenCalledWith('client_login:id:+966501234567');
       expect(result.accessToken).toBe('mock-access-token');
       expect(result.clientId).toBe('cl-p1');
@@ -390,7 +404,7 @@ describe('ClientLoginHandler', () => {
     });
 
     it('throws constant Invalid credentials for unknown phone', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue(null);
+      storeSpies.findByIdentifier.mockResolvedValue(null);
 
       const err = await handler
         .execute({ phone: '+966509999999', password: 'WrongPass1' }, '1.2.3.4')
@@ -400,7 +414,7 @@ describe('ClientLoginHandler', () => {
     });
 
     it('throws constant Invalid credentials for wrong password on phone login and increments lockout counters', async () => {
-      mockPrisma.client.findFirst.mockResolvedValue({
+      storeSpies.findByIdentifier.mockResolvedValue({
         id: 'cl-p2',
         email: null,
         phone: '+966501234567',
@@ -417,9 +431,9 @@ describe('ClientLoginHandler', () => {
         .catch((e) => e);
       expect(err).toBeInstanceOf(UnauthorizedException);
       expect(err.message).toBe('Invalid credentials');
-      expect(mockPrisma.client.update).toHaveBeenCalledWith({
-        where: { id: 'cl-p2' },
-        data: { loginAttempts: { increment: 1 }, lockoutUntil: undefined },
+      expect(storeSpies.recordFailedLogin).toHaveBeenCalledWith(expect.anything(), 'cl-p2', {
+        attempts: 1,
+        lockoutUntil: undefined,
       });
     });
 
@@ -430,14 +444,14 @@ describe('ClientLoginHandler', () => {
           '1.2.3.4',
         ),
       ).rejects.toThrow(BadRequestException);
-      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
+      expect(storeSpies.findByIdentifier).not.toHaveBeenCalled();
     });
 
     it('rejects a request providing neither email nor phone before any lookup', async () => {
       await expect(
         handler.execute({ password: 'SecurePass123' }, '1.2.3.4'),
       ).rejects.toThrow(BadRequestException);
-      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
+      expect(storeSpies.findByIdentifier).not.toHaveBeenCalled();
     });
   });
 });

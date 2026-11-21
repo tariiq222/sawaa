@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import type { ClientChannel } from '../../../common/auth/client-channel';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 import { ClientLoginDto } from './client-login.dto';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
 
@@ -20,6 +22,7 @@ export class ClientLoginHandler {
     private readonly redis: RedisService,
     private readonly passwords: PasswordService,
     private readonly clientTokens: ClientTokenService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(dto: ClientLoginDto, ip = 'unknown', expectedClientId?: string, admittedAttempt?: ClientPasswordAttempt, channel: ClientChannel = 'web') {
@@ -43,13 +46,20 @@ export class ClientLoginHandler {
       })
       : await countClientPasswordAttempt(redisClient, identifier, ip);
     const { identifierAttempts, identifierKey, ipKey } = attempt;
-    const client = await this.prisma.client.findFirst({
-      where: {
-        ...(dto.email ? { email: dto.email } : { phone: dto.phone }),
-        deletedAt: null,
-        ...(expectedClientId ? { id: expectedClientId } : {}),
-      },
-    });
+    // Reads run in the caller's transaction client so the store's
+    // "exactly one write per method" contract holds; this handler performs
+    // its writes one at a time, exactly as the direct Prisma calls did.
+    const client = await this.accounts.findByIdentifier(
+      this.prisma as unknown as Prisma.TransactionClient,
+      dto.email ? { email: dto.email } : { phone: dto.phone! },
+    );
+    // Mobile login pins the lookup to the client identity it prevalidated;
+    // a mismatch counts as unknown credentials, exactly as the previous
+    // `id: expectedClientId` filter on the direct Prisma read did.
+    if (expectedClientId && client?.id !== expectedClientId) {
+      await this.passwords.verify(dto.password, DUMMY_PASSWORD_HASH);
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     if (!client || !client.passwordHash || client.isActive === false || client.deletedAt ||
         (client.lockoutUntil && client.lockoutUntil > new Date())) {
@@ -60,36 +70,29 @@ export class ClientLoginHandler {
     const passwordMatch = await this.passwords.verify(dto.password, client.passwordHash);
 
     if (!passwordMatch) {
-      await this.prisma.client.update({
-        where: { id: client.id },
-        data: {
-          loginAttempts: { increment: 1 },
-          lockoutUntil:
-            identifierAttempts >= MAX_CLIENT_IDENTIFIER_ATTEMPTS - 1
-              ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
-              : undefined,
-        },
-      });
-
+      const tx = this.prisma as unknown as Prisma.TransactionClient;
       // Constant response on every failure path (unknown account, missing
       // password, wrong password, lockout) so the error message can't be used
       // to enumerate which emails/phones are registered. Lockout is still
       // enforced server-side via lockoutUntil above. Mirrors the staff
       // /auth/lookup fix.
+      await this.accounts.recordFailedLogin(tx, client.id, {
+        attempts: client.loginAttempts + 1,
+        lockoutUntil:
+          identifierAttempts >= MAX_CLIENT_IDENTIFIER_ATTEMPTS - 1
+            ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+            : undefined,
+      });
+
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    const tx = this.prisma as unknown as Prisma.TransactionClient;
     if (client.loginAttempts > 0 || client.lockoutUntil) {
-      await this.prisma.client.update({
-        where: { id: client.id },
-        data: { loginAttempts: 0, lockoutUntil: null },
-      });
+      await this.accounts.clearFailedLogin(tx, client.id);
     }
 
-    await this.prisma.client.update({
-      where: { id: client.id },
-      data: { lastLoginAt: new Date() },
-    });
+    await this.accounts.markLastLogin(tx, client.id, new Date());
 
     await Promise.all([redisClient.del(identifierKey), redisClient.del(ipKey)]);
 

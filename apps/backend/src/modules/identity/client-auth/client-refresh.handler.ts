@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { ClientTokenService } from '../shared/client-token.service';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class ClientRefreshHandler {
@@ -10,6 +10,7 @@ export class ClientRefreshHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: TransactionService,
     private readonly clientTokens: ClientTokenService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(rawToken: string, clientId?: string, accessToken?: string) {
@@ -50,7 +51,10 @@ export class ClientRefreshHandler {
     // would be defeated (SEC-AUTH-02). Lock the Client first, exactly like
     // NativeRefreshHandler and the reset flow, then consume + read + insert.
     return this.rlsTransaction.withTransaction(async (tx) => {
-      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Client" WHERE "id" = ${resolvedClientId} FOR UPDATE`);
+      const client = await this.accounts.lockForAuth(tx, resolvedClientId);
+      if (!client || !client.isActive || client.deletedAt) {
+        throw new UnauthorizedException('Client not found or inactive');
+      }
 
       const revoked = await tx.clientRefreshToken.updateMany({
         where: { id: matched.id, revokedAt: null, expiresAt: { gt: new Date() } },
@@ -59,13 +63,6 @@ export class ClientRefreshHandler {
       if (revoked.count === 0) {
         // Lost the rotation race — another request consumed this refresh token first.
         throw new UnauthorizedException('Invalid or expired refresh token');
-      }
-
-      const client = await tx.client.findFirst({
-        where: { id: resolvedClientId },
-      });
-      if (!client || !client.isActive || client.deletedAt) {
-        throw new UnauthorizedException('Client not found or inactive');
       }
 
       // P1-7: carry the live tokenVersion through refresh so rotated access
