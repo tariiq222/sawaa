@@ -1,5 +1,5 @@
 import { OnRefundOutcomeHandler } from './events/on-refund-outcome.handler';
-import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { DashboardCommsController } from '../../api/dashboard/comms.controller';
 import { DashboardCommsInboxController } from '../../api/dashboard/comms-inbox.controller';
 import { DashboardCommsEmailTemplatesController } from '../../api/dashboard/comms-email-templates.controller';
@@ -219,7 +219,7 @@ const eventHandlers = [
     SendEmailQueueModule,
     BookingsModule,
     OrgExperienceModule,
-    forwardRef(() => PeopleModule),
+    PeopleModule,
     NotificationOutboxModule,
   ],
   controllers: [
