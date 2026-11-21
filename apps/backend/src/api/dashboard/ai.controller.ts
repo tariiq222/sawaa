@@ -26,7 +26,7 @@ import { GetAiProviderConfigHandler } from '../../modules/ai/provider-config/get
 import { UpsertAiProviderConfigHandler } from '../../modules/ai/provider-config/upsert-ai-provider-config.handler';
 import { TestAiProviderConfigHandler } from '../../modules/ai/provider-config/test-ai-provider-config.handler';
 import { UpsertAiProviderConfigDto, TestAiProviderConfigDto, AiProviderConfigResponseDto, AiProviderTestResponseDto, AiProviderModelSuggestionDto } from '../../modules/ai/provider-config/provider-config.dto';
-import { AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../infrastructure/ai/ai-provider-config.types';
 import { AiChatCompletionResponseDto } from './dto/ai-response.dto';
 
 class KnowledgeDocumentSummaryResponseDto {

@@ -172,8 +172,6 @@
   "import people -> org-experience (apps/backend/src/modules/people/people.module.ts)",
   "import platform -> finance (apps/backend/src/modules/platform/platform.module.ts)",
   "import platform -> identity (apps/backend/src/modules/platform/platform.module.ts)",
-  "layer infrastructure -> modules/ai (apps/backend/src/infrastructure/ai/ai-provider-client.service.ts)",
-  "layer infrastructure -> modules/ai (apps/backend/src/infrastructure/ai/chat.adapter.ts)",
   "write bookings -> org-config+org-experience.intakeResponse (apps/backend/src/modules/bookings/delete-booking/delete-booking.handler.ts)",
   "write bookings -> org-config+org-experience.intakeResponseRevision (apps/backend/src/modules/bookings/delete-booking/delete-booking.handler.ts)",
   "write bookings -> org-config+org-experience.rating (apps/backend/src/modules/bookings/delete-booking/delete-booking.handler.ts)",

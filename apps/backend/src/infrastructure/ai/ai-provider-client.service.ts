@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { PrismaService } from '../database/prisma.service';
-import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL, parseAiProviderConfig } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL, parseAiProviderConfig } from './ai-provider-config.types';
 import { AiProviderCredentialsService } from './ai-provider-credentials.service';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

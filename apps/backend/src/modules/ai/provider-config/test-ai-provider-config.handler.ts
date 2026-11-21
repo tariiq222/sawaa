@@ -3,7 +3,7 @@ import { ActivityAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { AiProviderClientService } from '../../../infrastructure/ai/ai-provider-client.service';
 import { AiProviderCredentialsService } from '../../../infrastructure/ai/ai-provider-credentials.service';
-import { AiConnectionStatus, assertProviderModel } from './ai-provider-config.types';
+import { AiConnectionStatus, assertProviderModel } from '../../../infrastructure/ai/ai-provider-config.types';
 import { TransactionService } from '../../../common/database/transaction.service';
 import { TestAiProviderConfigDto } from './provider-config.dto';
 
