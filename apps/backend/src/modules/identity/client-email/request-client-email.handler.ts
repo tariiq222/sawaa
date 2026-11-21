@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 import { ClientEmailStore, maskEmail, sameAddress } from './client-email.store';
@@ -6,10 +6,16 @@ import { RequestClientEmailDto } from './client-email.dto';
 import { ClientEmailChallengeDto } from './client-email.response';
 import { EmailEntryDeliveryError, MobileEmailDelivery } from '../mobile-email-entry/mobile-email-delivery';
 import { MobileEmailSendLimiter } from '../mobile-email-entry/mobile-email-send-limiter';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class RequestClientEmailHandler {
-  constructor(private readonly store: ClientEmailStore, private readonly delivery: MobileEmailDelivery, private readonly limiter: MobileEmailSendLimiter) {}
+  constructor(
+    private readonly store: ClientEmailStore,
+    private readonly delivery: MobileEmailDelivery,
+    private readonly limiter: MobileEmailSendLimiter,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
   async execute(clientId: string, input: RequestClientEmailDto): Promise<ClientEmailChallengeDto> {
     const email = this.store.normalize(input.email);
     // No ownership/availability check here: probing another owner's address must
@@ -38,7 +44,7 @@ export class RequestClientEmailHandler {
         await tx.clientEmailChallenge.updateMany({ where: { clientId, consumedAt: null }, data: { consumedAt: new Date() } });
         const created = await tx.clientEmailChallenge.create({ data: { clientId, email, codeHash, expiresAt } });
         // The pending value never blocks other owners: no unique index, no login use.
-        await tx.client.update({ where: { id: clientId }, data: { pendingEmail: email } });
+        await this.accounts.setPendingEmail(tx, clientId, email);
         return created;
       });
     } catch (error) { await settle('rejected'); throw error; }

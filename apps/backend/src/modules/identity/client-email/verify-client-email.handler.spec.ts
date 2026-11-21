@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { Logger } from '@nestjs/common';
 import { ClientEmailStore } from './client-email.store';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { VerifyClientEmailHandler } from './verify-client-email.handler';
 
 type ClientRow = {
@@ -74,7 +75,7 @@ async function fixture(opts: { client?: ClientRow; others?: ClientRow[]; users?:
   const transactions = { withTransaction: async (fn: (value: typeof tx) => unknown) => fn(tx) };
   const store = new ClientEmailStore(transactions as never);
   const prisma = { client: { findUnique: tx.client.findUnique } };
-  const handler = new VerifyClientEmailHandler(store, prisma as never);
+  const handler = new VerifyClientEmailHandler(store, prisma as never, new PgClientAccountStore());
   async function challenge(email = 'new@example.test', clientId = 'client-a') {
     const row: ChallengeRow = {
       id: `challenge-${challenges.length + 1}`, clientId, email,

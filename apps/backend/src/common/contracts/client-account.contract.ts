@@ -36,10 +36,16 @@ export interface ClientAuthView {
 
 /** Named fields only — callers can never pass an arbitrary `ClientUpdateInput`. */
 export interface NewRegisteredClient {
+  /** Set when the client row is linked to an existing `User` login identity. */
+  userId?: string;
   email: string | null;
   phone: string | null;
   name: string;
-  passwordHash: string;
+  /** Component names; `name` stays the synced single-string field. */
+  firstName?: string;
+  lastName?: string;
+  /** Null for passwordless mobile sign-up; required by password registration. */
+  passwordHash: string | null;
   emailVerified: Date | null;
   phoneVerified: Date | null;
   consentedAt: Date | null;
@@ -110,6 +116,28 @@ export interface ClientAccountStore {
     clientId: string,
     next: { email: string; verifiedAt: Date },
   ): Promise<void>;
+
+  /**
+   * The client declined to keep an unverified email: the address is dropped,
+   * any pending value cleared, and the prompt marked resolved.
+   */
+  declineEmailProof(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    at: Date,
+  ): Promise<void>;
+
+  /**
+   * Release an address still held unverified by another client row, so the
+   * verifying owner can claim it. The write is conditional (deletedAt null,
+   * emailVerified null, case-insensitive same address) and re-evaluated under
+   * the caller's row lock; returns whether this holder was released.
+   */
+  releaseUnverifiedEmail(
+    tx: Prisma.TransactionClient,
+    holderClientId: string,
+    address: string,
+  ): Promise<boolean>;
 
   clearEmailProof(
     tx: Prisma.TransactionClient,

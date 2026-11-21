@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
@@ -6,6 +6,7 @@ import { ClientEmailStore, clientEmailStatus } from './client-email.store';
 import { VerifyClientEmailDto } from './client-email.dto';
 import { ClientEmailStatusDto } from './client-email.response';
 import { detailsUnavailable, invalidCode, translateConflict } from '../mobile-email-entry/mobile-email-errors';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 // Two owners racing for each other's unverified addresses can deadlock;
 // PostgreSQL aborts one side (P2034). Report it like any ownership clash.
@@ -17,7 +18,11 @@ function translateVerifyConflict(error: unknown): never {
 @Injectable()
 export class VerifyClientEmailHandler {
   private readonly logger = new Logger(VerifyClientEmailHandler.name);
-  constructor(private readonly store: ClientEmailStore, private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly store: ClientEmailStore,
+    private readonly prisma: PrismaService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
   async execute(clientId: string, input: VerifyClientEmailDto): Promise<ClientEmailStatusDto> {
     // Error sentinels are returned (not thrown) so the transaction COMMITS:
     // a failed attempt must be persisted before the HTTP error goes out.
@@ -52,14 +57,10 @@ export class VerifyClientEmailHandler {
       // remaining clash surfaces as a unique conflict (409) below.
       const released: string[] = [];
       for (const holder of holders) {
-        const cleared = await tx.client.updateMany({
-          where: { id: holder.id, deletedAt: null, emailVerified: null, email: { equals: address, mode: 'insensitive' } },
-          data: { email: null },
-        });
-        if (cleared.count === 1) released.push(holder.id);
+        if (await this.accounts.releaseUnverifiedEmail(tx, holder.id, address)) released.push(holder.id);
       }
       const now = new Date();
-      await tx.client.update({ where: { id: clientId }, data: { email: address, emailVerified: now, pendingEmail: null, emailPromptResolvedAt: now } });
+      await this.accounts.setEmailProof(tx, clientId, { email: address, verifiedAt: now });
       if (linked) await tx.user.update({ where: { id: linked.id }, data: { email: address, emailVerifiedAt: now } });
       await tx.clientEmailChallenge.updateMany({ where: { clientId, consumedAt: null }, data: { consumedAt: now } });
       return { released };

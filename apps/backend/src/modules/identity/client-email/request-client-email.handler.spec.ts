@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ClientEmailStore } from './client-email.store';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { RequestClientEmailHandler } from './request-client-email.handler';
 
 type ClientRow = {
@@ -53,7 +54,7 @@ function fixture(client: ClientRow = baseClient(), otherClients: ClientRow[] = [
   let sentCode = '';
   const delivery = { send: jest.fn(async (_channel: string, _target: string, code: string) => { sentCode = code; }) };
   const limiter = { reserve: jest.fn(async () => ({ key: 'key', id: 'id' })), settle: jest.fn() };
-  const handler = new RequestClientEmailHandler(store, delivery as never, limiter as never);
+  const handler = new RequestClientEmailHandler(store, delivery as never, limiter as never, new PgClientAccountStore());
   return { client, clients, challenges, tx, delivery, limiter, handler, code: () => sentCode };
 }
 

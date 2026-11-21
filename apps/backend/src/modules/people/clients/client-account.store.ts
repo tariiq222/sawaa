@@ -64,9 +64,12 @@ export class PgClientAccountStore implements ClientAccountStore {
   ): Promise<ClientAuthView> {
     const row = await tx.client.create({
       data: {
+        ...(input.userId ? { userId: input.userId } : {}),
         email: input.email,
         phone: input.phone,
         name: input.name,
+        ...(input.firstName ? { firstName: input.firstName } : {}),
+        ...(input.lastName ? { lastName: input.lastName } : {}),
         passwordHash: input.passwordHash,
         emailVerified: input.emailVerified,
         phoneVerified: input.phoneVerified,
@@ -170,6 +173,35 @@ export class PgClientAccountStore implements ClientAccountStore {
       data: { emailVerified: null, pendingEmail: null },
       select: { id: true },
     });
+  }
+
+  async declineEmailProof(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    at: Date,
+  ): Promise<void> {
+    await tx.client.update({
+      where: { id: clientId },
+      data: { email: null, pendingEmail: null, emailPromptResolvedAt: at },
+      select: { id: true },
+    });
+  }
+
+  async releaseUnverifiedEmail(
+    tx: Prisma.TransactionClient,
+    holderClientId: string,
+    address: string,
+  ): Promise<boolean> {
+    const cleared = await tx.client.updateMany({
+      where: {
+        id: holderClientId,
+        deletedAt: null,
+        emailVerified: null,
+        email: { equals: address, mode: 'insensitive' },
+      },
+      data: { email: null },
+    });
+    return cleared.count === 1;
   }
 
   async setPendingEmail(

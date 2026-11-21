@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { ClientTokenService, type ClientTokenPair } from '../shared/client-token.service';
@@ -7,6 +7,7 @@ import { detailsUnavailable, invalidCode, translateConflict } from '../mobile-em
 import { ClientPhoneStore } from './client-phone.store';
 import { VerifyClientPhoneDto } from './client-phone.dto';
 import { ClientPhoneVerifiedDto } from './client-phone.response';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 const MAX_ATTEMPTS = 5;
 
@@ -19,7 +20,11 @@ function translateVerifyConflict(error: unknown): never {
 @Injectable()
 export class VerifyClientPhoneHandler {
   private readonly logger = new Logger(VerifyClientPhoneHandler.name);
-  constructor(private readonly store: ClientPhoneStore, private readonly tokens: ClientTokenService) {}
+  constructor(
+    private readonly store: ClientPhoneStore,
+    private readonly tokens: ClientTokenService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
 
   async execute(clientId: string, input: VerifyClientPhoneDto, channel: ClientChannel = 'mobile'): Promise<ClientPhoneVerifiedDto & { tokenPair: ClientTokenPair }> {
     // Error sentinels are returned (not thrown) so a wrong attempt COMMITS.
@@ -44,15 +49,17 @@ export class VerifyClientPhoneHandler {
       if (client.userId && (!linked || linked.role !== 'CLIENT')) return { error: 'conflict' as const };
 
       const now = new Date();
-      const updated = await tx.client.update({
-        where: { id: clientId },
-        data: { phone, phoneVerified: now, tokenVersion: { increment: 1 } },
-      });
+      // The number is the login identity: the proof write and the tokenVersion
+      // bump happen as two named store writes inside the same transaction, so
+      // every outstanding session dies with the new number.
+      await this.accounts.setPhoneProof(tx, clientId, { phone, verifiedAt: now });
+      await this.accounts.bumpTokenVersion(tx, clientId);
       if (linked) await tx.user.update({ where: { id: linked.id }, data: { phone, phoneVerifiedAt: now } });
       // The number is the login identity: close every other session.
       await tx.clientRefreshToken.updateMany({ where: { clientId, revokedAt: null }, data: { revokedAt: now } });
       await tx.clientPhoneChallenge.updateMany({ where: { clientId, consumedAt: null }, data: { consumedAt: now } });
-      const pair = await this.tokens.issueTokenPair(updated, { channel }, tx);
+      const updated = await this.accounts.lockForAuth(tx, clientId);
+      const pair = await this.tokens.issueTokenPair(updated!, { channel }, tx);
       return { phone, tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh }, tokenPair: pair };
     }).catch(translateVerifyConflict);
 

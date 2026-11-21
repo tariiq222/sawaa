@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { RefreshTokenSource } from '@prisma/client';
 import { ClientTokenService } from '../shared/client-token.service';
 import { TokenService } from '../shared/token.service';
@@ -7,10 +7,17 @@ import { EmailEntryVerified } from './mobile-email-entry.response';
 import { MobileEmailFlowStore, hashContinuation, newContinuation } from './mobile-email-flow.store';
 import { MobileEmailIdentity } from './mobile-email-identity';
 import { invalidCode, translateConflict } from './mobile-email-errors';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class VerifyEmailEntryHandler {
-  constructor(private readonly store: MobileEmailFlowStore, private readonly identity: MobileEmailIdentity, private readonly clientTokens: ClientTokenService, private readonly tokens: TokenService) {}
+  constructor(
+    private readonly store: MobileEmailFlowStore,
+    private readonly identity: MobileEmailIdentity,
+    private readonly clientTokens: ClientTokenService,
+    private readonly tokens: TokenService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
   async execute(cmd: VerifyEmailEntryDto): Promise<EmailEntryVerified> {
     const result = await this.store.transaction<EmailEntryVerified | null>(async tx => {
       const flow = await this.store.lock(tx, cmd.challengeId);
@@ -30,7 +37,12 @@ export class VerifyEmailEntryHandler {
       if (candidate.kind === 'unavailable') return { next: 'unavailable' };
       if (candidate.kind === 'staff') return { next: 'authenticated', sessionKind: 'staff', tokens: await this.tokens.issueTokenPair(candidate.user, { isSuperAdmin: candidate.user.isSuperAdmin }, tx, RefreshTokenSource.MOBILE) };
       const client = candidate.kind === 'clientOnly'
-        ? await tx.client.update({ where: { id: candidate.client.id }, data: { lastLoginAt: new Date() } })
+        ? await (async () => {
+          await this.accounts.markLastLogin(tx, candidate.client.id, new Date());
+          const refreshed = await this.accounts.lockForAuth(tx, candidate.client.id);
+          if (!refreshed) throw new Error(`client vanished during email-entry login: ${candidate.client.id}`);
+          return refreshed;
+        })()
         : candidate.client;
       const pair = await this.clientTokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated', sessionKind: 'client', tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };

@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { ClientEmailStore } from './client-email.store';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { DeclineClientEmailHandler } from './decline-client-email.handler';
 
 type ClientRow = {
@@ -44,7 +45,7 @@ function fixture(client: ClientRow = baseClient()) {
   const transactions = { withTransaction: async (fn: (value: typeof tx) => unknown) => fn(tx) };
   const store = new ClientEmailStore(transactions as never);
   const prisma = { client: { findUnique: tx.client.findUnique } };
-  const handler = new DeclineClientEmailHandler(store, prisma as never);
+  const handler = new DeclineClientEmailHandler(store, prisma as never, new PgClientAccountStore());
   return { client, challenges, tx, handler };
 }
 
