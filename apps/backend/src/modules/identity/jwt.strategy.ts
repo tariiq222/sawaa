@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../common/constants';
-import { CaslAbilityFactory } from './casl/casl-ability.factory';
+import { CaslAbilityFactory } from '../../common/casl/casl-ability.factory';
 import { loadSystemRolePermissions } from './shared/load-system-role-permissions';
 import type { JwtPayload } from './shared/token.service';
 

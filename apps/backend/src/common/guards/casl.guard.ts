@@ -6,7 +6,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { CaslAbilityFactory } from '../../modules/identity/casl/casl-ability.factory';
+import { CaslAbilityFactory } from '../../common/casl/casl-ability.factory';
 
 type Action = 'manage' | 'create' | 'read' | 'update' | 'delete';
 type Subject = string;

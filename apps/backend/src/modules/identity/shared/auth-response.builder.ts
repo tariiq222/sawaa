@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { User } from '@prisma/client';
-import { flattenPermissions } from '../casl/flatten-permissions';
+import { flattenPermissions } from '../../../common/casl/flatten-permissions';
 
 export interface AuthResponse {
   accessToken: string;

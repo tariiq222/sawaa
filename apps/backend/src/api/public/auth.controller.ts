@@ -39,7 +39,7 @@ import { Public } from '../../common/guards/jwt.guard';
 import { IsString, MinLength, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ApiPublicResponses, ApiErrorDto } from '../../common/swagger';
-import { flattenPermissions } from '../../modules/identity/casl/flatten-permissions';
+import { flattenPermissions } from '../../common/casl/flatten-permissions';
 import { loadSystemRolePermissions } from '../../modules/identity/shared/load-system-role-permissions';
 
 class ChangePasswordDto {

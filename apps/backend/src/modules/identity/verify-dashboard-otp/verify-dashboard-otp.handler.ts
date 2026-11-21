@@ -5,7 +5,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { TokenService } from '../shared/token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
-import { flattenPermissions } from '../casl/flatten-permissions';
+import { flattenPermissions } from '../../../common/casl/flatten-permissions';
 import { loadSystemRolePermissions } from '../shared/load-system-role-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';

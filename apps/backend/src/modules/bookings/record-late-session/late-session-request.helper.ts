@@ -4,7 +4,7 @@ import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
 import { JwtUser } from "../../../common/auth/current-user.decorator";
-import { CaslAbilityFactory } from "../../identity/casl/casl-ability.factory";
+import { CaslAbilityFactory } from "../../../common/casl/casl-ability.factory";
 import { RecordLateSessionDto } from "./record-late-session.dto";
 export function validateLateSessionRequest(
   input: RecordLateSessionDto,

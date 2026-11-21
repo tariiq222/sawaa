@@ -93,7 +93,7 @@ const prohibited = [
   },
   {
     name: "built-in authorization residue",
-    roots: ["apps/backend/src/modules/identity/casl/built-in-rules.ts"],
+    roots: ["apps/backend/src/common/casl/built-in-rules.ts"],
     pattern: /WhatsappConversation/i,
   },
   {

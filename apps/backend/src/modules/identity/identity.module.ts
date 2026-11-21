@@ -56,7 +56,7 @@ import { AssignPermissionsHandler } from './roles/assign-permissions.handler';
 import { ListRolesHandler } from './roles/list-roles.handler';
 import { ListPermissionsHandler } from './roles/list-permissions.handler';
 import { ChangePasswordHandler } from './users/change-password.handler';
-import { CaslAbilityFactory } from './casl/casl-ability.factory';
+import { CaslAbilityFactory } from '../../common/casl/casl-ability.factory';
 import { DashboardIdentityController } from '../../api/dashboard/identity.controller';
 import { RequestOtpHandler } from './otp/request-otp.handler';
 import { VerifyOtpHandler } from './otp/verify-otp.handler';

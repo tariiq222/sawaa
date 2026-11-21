@@ -1,6 +1,6 @@
 import { JwtStrategy } from './jwt.strategy';
 import { UnauthorizedException } from '@nestjs/common';
-import { CaslAbilityFactory } from './casl/casl-ability.factory';
+import { CaslAbilityFactory } from '../../common/casl/casl-ability.factory';
 import { loadSystemRolePermissions } from './shared/load-system-role-permissions';
 
 jest.mock('./shared/load-system-role-permissions', () => ({
