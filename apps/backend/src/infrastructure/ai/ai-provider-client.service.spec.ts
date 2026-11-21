@@ -1,5 +1,5 @@
 import { AiProviderClientService } from './ai-provider-client.service';
-import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL } from './ai-provider-config.types';
 
 jest.mock('openai', () => jest.fn().mockImplementation((options) => ({ options })));
 

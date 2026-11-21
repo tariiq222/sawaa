@@ -3,7 +3,7 @@ import { ActivityAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { TransactionService } from '../../../common/database/transaction.service';
 import { AiProviderCredentialsService } from '../../../infrastructure/ai/ai-provider-credentials.service';
-import { AiConnectionStatus, assertProviderModel, toPublicAiProviderConfig } from './ai-provider-config.types';
+import { AiConnectionStatus, assertProviderModel, toPublicAiProviderConfig } from '../../../infrastructure/ai/ai-provider-config.types';
 import { UpsertAiProviderConfigDto } from './provider-config.dto';
 
 @Injectable()

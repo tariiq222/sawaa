@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { TestAiProviderConfigHandler } from './test-ai-provider-config.handler';
 import { UpsertAiProviderConfigHandler } from './upsert-ai-provider-config.handler';
 import { GetAiProviderConfigHandler } from './get-ai-provider-config.handler';
-import { AiConnectionStatus, AiProvider } from './ai-provider-config.types';
+import { AiConnectionStatus, AiProvider } from '../../../infrastructure/ai/ai-provider-config.types';
 
 const row = (overrides: Record<string, unknown> = {}) => ({ id: 'id', singletonKey: 'singleton', provider: AiProvider.OPENROUTER, credentialCiphertext: 'v1.fake', model: 'deepseek/deepseek-v4-flash-0731', temperature: .4, maxTokens: 800, isEnabled: false, connectionStatus: AiConnectionStatus.CONNECTED, lastTestedAt: new Date(), lastTestOk: true, lastTestErrorCode: null, configVersion: 3, testedConfigHash: 'hash', createdAt: new Date(), updatedAt: new Date(), ...overrides });
 const dto = (overrides: Record<string, unknown> = {}) => ({ provider: AiProvider.OPENROUTER, model: 'deepseek/deepseek-v4-flash-0731', candidateApiKey: 'candidate-key', saveCredential: true, ...overrides }) as any;

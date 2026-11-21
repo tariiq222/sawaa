@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatAdapter } from './chat.adapter';
 import { AiProviderClientService } from './ai-provider-client.service';
-import { AiProvider } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiProvider } from './ai-provider-config.types';
 
 const mockCreate = jest.fn();
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { isProviderEnumDecodeError } from '../../../infrastructure/ai/ai-provider-client.service';
-import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL, toPublicAiProviderConfig } from './ai-provider-config.types';
+import { AiConnectionStatus, AiProvider, DEFAULT_OPENROUTER_MODEL, toPublicAiProviderConfig } from '../../../infrastructure/ai/ai-provider-config.types';
 
 const pinnedRetestProjection = (overrides: Record<string, unknown> = {}) => ({
   provider: AiProvider.OPENROUTER,
