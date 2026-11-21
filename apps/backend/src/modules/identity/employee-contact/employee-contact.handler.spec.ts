@@ -2,6 +2,7 @@ import * as bcrypt from 'bcryptjs';
 import { EmployeeContactStore } from './employee-contact.store';
 import { RequestEmployeeContactHandler } from './request-employee-contact.handler';
 import { VerifyEmployeeContactHandler } from './verify-employee-contact.handler';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 
 async function fixture() {
   const user = { id: 'user-a', email: 'old@example.com', phone: '+966501234567', isActive: true, role: 'EMPLOYEE' };
@@ -26,7 +27,7 @@ async function fixture() {
   const delivery = { send: jest.fn(async (_channel, _target, code) => { sentCode = code; }) };
   const limiter = { reserve: jest.fn(async () => ({ key: 'key', id: 'id' })), settle: jest.fn() };
   const request = new RequestEmployeeContactHandler(store, delivery as never, limiter as never);
-  const verify = new VerifyEmployeeContactHandler(store);
+  const verify = new VerifyEmployeeContactHandler(store, new PgClientAccountStore());
   return { user, employee, tx, challenges, request, verify, delivery, code: () => sentCode };
 }
 

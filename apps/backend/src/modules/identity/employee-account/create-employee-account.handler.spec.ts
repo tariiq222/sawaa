@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateEmployeeAccountHandler } from './create-employee-account.handler';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 
 const makeEmployee = (overrides: Partial<{
   id: string;
@@ -76,6 +77,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       password as never,
+      new PgClientAccountStore(),
     );
 
     const result = await handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'actor-1' });
@@ -105,6 +107,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       password as never,
+      new PgClientAccountStore(),
     );
 
     await handler.execute({ employeeId: 'emp-1', role: 'RECEPTIONIST' as never, password: 'P@ssw0rd123', actorUserId: 'actor-1' });
@@ -128,6 +131,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       buildPassword() as never,
+      new PgClientAccountStore(),
     );
 
     await expect(
@@ -143,6 +147,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       buildPassword() as never,
+      new PgClientAccountStore(),
     );
 
     await expect(
@@ -158,6 +163,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       buildPassword() as never,
+      new PgClientAccountStore(),
     );
 
     await expect(
@@ -173,6 +179,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       buildPassword() as never,
+      new PgClientAccountStore(),
     );
 
     await expect(
@@ -189,6 +196,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       buildPassword() as never,
+      new PgClientAccountStore(),
     );
 
     await expect(
@@ -205,6 +213,7 @@ describe('CreateEmployeeAccountHandler', () => {
       prisma as never,
       buildRlsTransaction(prisma) as never,
       buildPassword() as never,
+      new PgClientAccountStore(),
     );
 
     await expect(

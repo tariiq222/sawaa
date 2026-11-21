@@ -3,6 +3,8 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateClientProfileHandler } from './update-client-profile.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { GetMeHandler } from './get-me.handler';
 
 describe('UpdateClientProfileHandler', () => {
@@ -58,6 +60,7 @@ describe('UpdateClientProfileHandler', () => {
         UpdateClientProfileHandler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GetMeHandler, useValue: mockGetMe },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
       ],
     }).compile();
 

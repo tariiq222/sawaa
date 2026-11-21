@@ -6,6 +6,8 @@ import { TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { NativeRefreshHandler } from './native-refresh.handler';
 import { NativeLogoutHandler } from './native-logout.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { NativeSessionLookup } from './native-session.lookup';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 
@@ -36,7 +38,7 @@ describe('native session handlers', () => {
       refreshToken: { findMany: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn() },
       clientRefreshToken: { findMany: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn() },
       user: { findUnique: jest.fn(), update: jest.fn() },
-      client: { findUnique: jest.fn(), update: jest.fn() },
+      client: { findUnique: jest.fn().mockResolvedValue({ id: 'client-1', userId: null, isActive: true, deletedAt: null, tokenVersion: 2 }), update: jest.fn() },
       fcmToken: { deleteMany: jest.fn() },
       employee: { findFirst: jest.fn() },
       $queryRaw: jest.fn(),
@@ -57,6 +59,7 @@ describe('native session handlers', () => {
         { provide: TokenService, useValue: tokens },
         { provide: ClientTokenService, useValue: clientTokens },
         { provide: PlatformSettingsService, useValue: settings },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
       ],
     }).compile();
 
@@ -270,7 +273,7 @@ describe('native session handlers', () => {
       data: { revokedAt: expect.any(Date) },
     });
     expect(prisma.client.update).toHaveBeenCalledWith({
-      where: { id: 'client-1' }, data: { tokenVersion: { increment: 1 } },
+      where: { id: 'client-1' }, data: { tokenVersion: { increment: 1 } }, select: { tokenVersion: true },
     });
     expect(prisma.fcmToken.deleteMany).toHaveBeenCalledWith({ where: { clientId: 'client-1' } });
   });

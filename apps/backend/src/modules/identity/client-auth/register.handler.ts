@@ -1,5 +1,6 @@
-import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { Request } from 'express';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { OtpSessionService } from '../otp/otp-session.service';
 import { ClientTokenService } from '../shared/client-token.service';
@@ -8,6 +9,7 @@ import { RegisterDto } from './register.dto';
 import { OtpPurpose, OtpChannel } from '@prisma/client';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
 import { PRIVACY_POLICY_VERSION } from './consent.constants';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class RegisterHandler {
@@ -18,6 +20,7 @@ export class RegisterHandler {
     private readonly otpSession: OtpSessionService,
     private readonly clientTokens: ClientTokenService,
     private readonly passwords: PasswordService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(dto: RegisterDto, rawRequest: Request) {
@@ -58,36 +61,27 @@ export class RegisterHandler {
         throw new BadRequestException('Account already has a password. Please log in instead.');
       }
 
-      const updated = await this.prisma.client.update({
-        where: { id: existing.id },
-        data: {
-          passwordHash,
-          emailVerified: isEmailChannel ? new Date() : existing.emailVerified,
-          phoneVerified: !isEmailChannel ? new Date() : existing.phoneVerified,
-          name: dto.name ?? existing.name,
-          accountType: 'FULL',
-          claimedAt: new Date(),
-          consentedAt,
-          consentVersion: PRIVACY_POLICY_VERSION,
-        },
+      const updated = await this.accounts.claimGuestClient(this.prisma as unknown as Prisma.TransactionClient, existing.id, {
+        passwordHash,
+        emailVerified: isEmailChannel ? new Date() : existing.emailVerified,
+        phoneVerified: !isEmailChannel ? new Date() : existing.phoneVerified,
+        name: dto.name ?? existing.name,
+        consentedAt,
+        consentVersion: PRIVACY_POLICY_VERSION,
       });
       clientId = updated.id;
       tokenVersion = updated.tokenVersion;
       this.logger.log(`Guest-to-account merge: client ${clientId} (${maskIdentifier(identifier)})`);
     } else {
-      const created = await this.prisma.client.create({
-        data: {
-          email: isEmailChannel ? identifier : null,
-          phone: !isEmailChannel ? identifier : null,
-          name: dto.name ?? identifier,
-          passwordHash,
-          emailVerified: isEmailChannel ? new Date() : null,
-          phoneVerified: !isEmailChannel ? new Date() : null,
-          accountType: 'FULL',
-          claimedAt: new Date(),
-          consentedAt,
-          consentVersion: PRIVACY_POLICY_VERSION,
-        },
+      const created = await this.accounts.createRegisteredClient(this.prisma as unknown as Prisma.TransactionClient, {
+        email: isEmailChannel ? identifier : null,
+        phone: !isEmailChannel ? identifier : null,
+        name: dto.name ?? identifier,
+        passwordHash,
+        emailVerified: isEmailChannel ? new Date() : null,
+        phoneVerified: !isEmailChannel ? new Date() : null,
+        consentedAt,
+        consentVersion: PRIVACY_POLICY_VERSION,
       });
       clientId = created.id;
       tokenVersion = created.tokenVersion;

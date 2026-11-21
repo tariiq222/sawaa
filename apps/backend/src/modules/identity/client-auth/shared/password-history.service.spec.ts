@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { PasswordHistoryService, PASSWORD_HISTORY_DEPTH } from './password-history.service';
 import { PasswordService } from '../../shared/password.service';
+import { PgClientAccountStore } from '../../../../modules/people/clients/client-account.store';
 
 type PrismaMock = {
   passwordHistory: {
@@ -24,7 +25,7 @@ describe('PasswordHistoryService', () => {
   describe('assertNotReused', () => {
     it('passes when current hash is null and history is empty', async () => {
       const prisma = buildPrisma();
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       await expect(
         svc.assertNotReused('c1', 'o1', 'NewPass123', null),
       ).resolves.toBeUndefined();
@@ -32,7 +33,7 @@ describe('PasswordHistoryService', () => {
 
     it('rejects when new password matches current hash', async () => {
       const prisma = buildPrisma();
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       const currentHash = await passwords.hash('OldPass123');
       await expect(
         svc.assertNotReused('c1', 'o1', 'OldPass123', currentHash),
@@ -46,7 +47,7 @@ describe('PasswordHistoryService', () => {
         { passwordHash: await passwords.hash('other') },
         { passwordHash: reusedHash },
       ]);
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       await expect(
         svc.assertNotReused('c1', 'o1', 'ReusedPass1', null),
       ).rejects.toThrow(BadRequestException);
@@ -58,7 +59,7 @@ describe('PasswordHistoryService', () => {
       prisma.passwordHistory.findMany.mockResolvedValue([
         { passwordHash: await passwords.hash('older1') },
       ]);
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       await expect(
         svc.assertNotReused('c1', 'o1', 'BrandNewPass1', currentHash),
       ).resolves.toBeUndefined();
@@ -66,7 +67,7 @@ describe('PasswordHistoryService', () => {
 
     it('queries at most HISTORY_DEPTH rows', async () => {
       const prisma = buildPrisma();
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       await svc.assertNotReused('c1', 'o1', 'NewPass', null);
       expect(prisma.passwordHistory.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ take: PASSWORD_HISTORY_DEPTH }),
@@ -78,7 +79,7 @@ describe('PasswordHistoryService', () => {
     it('inserts new row and trims beyond HISTORY_DEPTH', async () => {
       const prisma = buildPrisma();
       prisma.passwordHistory.findMany.mockResolvedValue([{ id: 'surplus-1' }, { id: 'surplus-2' }]);
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       await svc.record(prisma as never, 'c1', 'o1', 'hash-new');
       expect(prisma.passwordHistory.create).toHaveBeenCalledWith({
         // org scoping moved to RLS / removed in single-tenant migration
@@ -92,7 +93,7 @@ describe('PasswordHistoryService', () => {
     it('skips deleteMany when under HISTORY_DEPTH', async () => {
       const prisma = buildPrisma();
       prisma.passwordHistory.findMany.mockResolvedValue([]);
-      const svc = new PasswordHistoryService(prisma as never, passwords);
+      const svc = new PasswordHistoryService(prisma as never, passwords, new PgClientAccountStore());
       await svc.record(prisma as never, 'c1', 'o1', 'hash-new');
       expect(prisma.passwordHistory.deleteMany).not.toHaveBeenCalled();
     });

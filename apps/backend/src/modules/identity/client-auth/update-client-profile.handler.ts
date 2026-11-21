@@ -1,9 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateClientProfileDto } from './update-client-profile.dto';
 import { GetMeHandler, type ClientProfile } from './get-me.handler';
 import { normalizePhone } from '../shared/identifier-detector';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 /**
  * Splits a full name into firstName/lastName the same way other identity
@@ -21,6 +22,7 @@ export class UpdateClientProfileHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly getMe: GetMeHandler,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(clientId: string, dto: UpdateClientProfileDto): Promise<ClientProfile> {
@@ -97,7 +99,7 @@ export class UpdateClientProfileHandler {
     if (dto.pushEnabled !== undefined) data.pushEnabled = dto.pushEnabled;
 
     try {
-      await this.prisma.client.update({ where: { id: clientId }, data, select: { id: true } });
+      await this.accounts.updateClientProfile(this.prisma as unknown as Prisma.TransactionClient, clientId, data as Parameters<ClientAccountStore['updateClientProfile']>[2]);
     } catch (error) {
       // Preserve the email TOCTOU conflict behavior; other unique conflicts
       // must not reveal whether a phone belongs to another account.

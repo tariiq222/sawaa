@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { RequestAccountDeletionHandler } from './request-account-deletion.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { TransactionService } from '../../../infrastructure/database';
 
 describe('RequestAccountDeletionHandler', () => {
@@ -37,6 +39,7 @@ describe('RequestAccountDeletionHandler', () => {
           provide: TransactionService,
           useValue: { withTransaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx) },
         },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
       ],
     }).compile();
     handler = module.get(RequestAccountDeletionHandler);
@@ -51,7 +54,11 @@ describe('RequestAccountDeletionHandler', () => {
 
   it('closes login without copying the phone into notes or deleting clinical rows', async () => {
     tx.client.findUnique.mockResolvedValue({ userId: 'u1' });
-    tx.client.findFirst.mockResolvedValue({ id: 'c1', userId: 'u1' });
+    // lockForAuth re-reads through the store after the raw FOR UPDATE; it needs
+    // the full row shape for the anonimized write it performs next.
+    tx.client.findUnique.mockResolvedValueOnce({ userId: 'u1' }).mockResolvedValueOnce({
+      id: 'c1', userId: 'u1', deletedAt: null, isActive: true,
+    });
     tx.user.findUnique.mockResolvedValue({ id: 'u1', role: 'CLIENT' });
 
     await expect(handler.execute({ clientId: 'c1' })).resolves.toEqual({
@@ -64,15 +71,20 @@ describe('RequestAccountDeletionHandler', () => {
       data: { revokedAt: expect.any(Date) },
     });
     expect(tx.fcmToken.deleteMany).toHaveBeenCalledWith({ where: { clientId: 'c1' } });
+    // The anonymizing write goes through the store; assert the same fields.
     const clientUpdate = tx.client.update.mock.calls[0][0];
     expect(clientUpdate.where).toEqual({ id: 'c1' });
     expect(clientUpdate.data).toEqual(expect.objectContaining({
+      deletedAt: expect.any(Date),
       isActive: false,
       phone: null,
       email: null,
       nationalId: null,
-      passwordHash: null,
+      emergencyName: null,
+      emergencyPhone: null,
+      avatarUrl: null,
       pushEnabled: false,
+      passwordHash: null,
       tokenVersion: { increment: 1 },
     }));
     expect(clientUpdate.data).not.toHaveProperty('notes');
@@ -90,7 +102,9 @@ describe('RequestAccountDeletionHandler', () => {
 
   it('does not rewrite a staff user linked to the client record', async () => {
     tx.client.findUnique.mockResolvedValue({ userId: 'staff-1' });
-    tx.client.findFirst.mockResolvedValue({ id: 'c1', userId: 'staff-1' });
+    tx.client.findUnique.mockResolvedValueOnce({ userId: 'staff-1' }).mockResolvedValueOnce({
+      id: 'c1', userId: 'staff-1', deletedAt: null, isActive: true,
+    });
     tx.user.findUnique.mockResolvedValue({ id: 'staff-1', role: 'RECEPTIONIST' });
 
     await handler.execute({ clientId: 'c1' });

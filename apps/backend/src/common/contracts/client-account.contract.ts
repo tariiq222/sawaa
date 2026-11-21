@@ -200,6 +200,60 @@ export interface ClientAccountStore {
     at: Date,
   ): Promise<void>;
 
+  /**
+   * Claim an existing walk-in (guest) client row into a full password account:
+   * sets the password hash, stamps the proven channel(s), upgrades the account
+   * type and records consent — one named write, same transaction.
+   */
+  claimGuestClient(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    next: {
+      passwordHash: string;
+      emailVerified?: Date | null;
+      phoneVerified?: Date | null;
+      name?: string;
+      consentedAt: Date;
+      consentVersion: string;
+    },
+  ): Promise<ClientAuthView>;
+
+  /**
+   * Client-profile edits from the authenticated account page. Every field is
+   * named and optional; absent fields stay untouched. Callers keep ownership
+   * of the conflict-sentinel and verification policy around the call.
+   */
+  updateClientProfile(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    next: {
+      email?: string;
+      emailVerified?: Date | null;
+      phone?: string | null;
+      name?: string;
+      firstName?: string | null;
+      middleName?: string | null;
+      lastName?: string | null;
+      avatarUrl?: string | null;
+      preferredLocale?: string;
+      pushEnabled?: boolean;
+    },
+  ): Promise<void>;
+
+  /** Attach an `Employee` row to its newly created `User` login identity. */
+  linkEmployeeToUser(
+    tx: Prisma.TransactionClient,
+    employeeId: string,
+    userId: string,
+  ): Promise<void>;
+
+  /** Adopt a proven contact address onto the `Employee` row. */
+  setEmployeeContact(
+    tx: Prisma.TransactionClient,
+    employeeId: string,
+    next: { email?: string; phone?: string },
+  ): Promise<void>;
+
   recordPasswordHistory(
     tx: Prisma.TransactionClient,
     clientId: string,

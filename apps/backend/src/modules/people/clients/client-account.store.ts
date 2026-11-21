@@ -285,9 +285,101 @@ export class PgClientAccountStore implements ClientAccountStore {
         phoneVerified: null,
         pendingEmail: null,
         emailPromptResolvedAt: null,
+        nationalId: null,
+        emergencyName: null,
+        emergencyPhone: null,
+        avatarUrl: null,
+        pushEnabled: false,
         passwordHash: null,
         tokenVersion: { increment: 1 },
       },
+      select: { id: true },
+    });
+  }
+
+  async claimGuestClient(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    next: {
+      passwordHash: string;
+      emailVerified?: Date | null;
+      phoneVerified?: Date | null;
+      name?: string;
+      consentedAt: Date;
+      consentVersion: string;
+    },
+  ): Promise<ClientAuthView> {
+    const row = await tx.client.update({
+      where: { id: clientId },
+      data: {
+        passwordHash: next.passwordHash,
+        ...(next.emailVerified !== undefined ? { emailVerified: next.emailVerified } : {}),
+        ...(next.phoneVerified !== undefined ? { phoneVerified: next.phoneVerified } : {}),
+        ...(next.name ? { name: next.name } : {}),
+        accountType: 'FULL',
+        claimedAt: new Date(),
+        consentedAt: next.consentedAt,
+        consentVersion: next.consentVersion,
+      },
+      select: CLIENT_AUTH_SELECT,
+    });
+    return toView(row);
+  }
+
+  async updateClientProfile(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    next: {
+      email?: string;
+      emailVerified?: Date | null;
+      phone?: string | null;
+      name?: string;
+      firstName?: string | null;
+      middleName?: string | null;
+      lastName?: string | null;
+      avatarUrl?: string | null;
+      preferredLocale?: string;
+      pushEnabled?: boolean;
+    },
+  ): Promise<void> {
+    await tx.client.update({
+      where: { id: clientId },
+      data: {
+        ...(next.email !== undefined ? { email: next.email } : {}),
+        ...(next.emailVerified !== undefined ? { emailVerified: next.emailVerified } : {}),
+        ...(next.phone !== undefined ? { phone: next.phone } : {}),
+        ...(next.name !== undefined ? { name: next.name } : {}),
+        ...(next.firstName !== undefined ? { firstName: next.firstName } : {}),
+        ...(next.middleName !== undefined ? { middleName: next.middleName } : {}),
+        ...(next.lastName !== undefined ? { lastName: next.lastName } : {}),
+        ...(next.avatarUrl !== undefined ? { avatarUrl: next.avatarUrl } : {}),
+        ...(next.preferredLocale !== undefined ? { preferredLocale: next.preferredLocale } : {}),
+        ...(next.pushEnabled !== undefined ? { pushEnabled: next.pushEnabled } : {}),
+      },
+      select: { id: true },
+    });
+  }
+
+  async linkEmployeeToUser(
+    tx: Prisma.TransactionClient,
+    employeeId: string,
+    userId: string,
+  ): Promise<void> {
+    await tx.employee.update({
+      where: { id: employeeId },
+      data: { userId },
+      select: { id: true },
+    });
+  }
+
+  async setEmployeeContact(
+    tx: Prisma.TransactionClient,
+    employeeId: string,
+    next: { email?: string; phone?: string },
+  ): Promise<void> {
+    await tx.employee.update({
+      where: { id: employeeId },
+      data: { ...(next.email !== undefined ? { email: next.email } : {}), ...(next.phone !== undefined ? { phone: next.phone } : {}) },
       select: { id: true },
     });
   }

@@ -1,12 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { EmployeeContactStore, contactConflict } from './employee-contact.store';
 import { VerifyEmployeeContactDto } from './employee-contact.dto';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class VerifyEmployeeContactHandler {
-  constructor(private readonly store: EmployeeContactStore) {}
+  constructor(
+    private readonly store: EmployeeContactStore,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
   async execute(userId: string, input: VerifyEmployeeContactDto) {
     const result = await this.store.transaction(async tx => {
       const { user, employee } = await this.store.owner(tx, userId);
@@ -22,7 +26,7 @@ export class VerifyEmployeeContactHandler {
       const contact = challenge.channel === 'EMAIL' ? { email: challenge.identifier } : { phone: challenge.identifier };
       const verified = challenge.channel === 'EMAIL' ? { emailVerifiedAt: new Date() } : { phoneVerifiedAt: new Date() };
       await tx.user.update({ where: { id: userId }, data: { ...contact, ...verified } });
-      await tx.employee.update({ where: { id: employee.id }, data: contact });
+      await this.accounts.setEmployeeContact(tx, employee.id, contact);
       // Proofs delivered to a former contact must not authenticate the updated identity.
       await tx.passwordResetToken.deleteMany({ where: { userId } });
       await tx.emailVerificationToken.deleteMany({ where: { userId } });

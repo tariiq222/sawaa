@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/database';
 import { PasswordService } from '../../shared/password.service';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../../common/contracts/client-account.contract';
 
 export const PASSWORD_HISTORY_DEPTH = 5;
 const PASSWORD_REUSED_ERROR = 'PASSWORD_REUSED';
@@ -11,6 +12,7 @@ export class PasswordHistoryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async assertNotReused(
@@ -40,19 +42,6 @@ export class PasswordHistoryService {
     organizationId: string,
     passwordHash: string,
   ): Promise<void> {
-    await tx.passwordHistory.create({
-      data: { clientId, passwordHash },
-    });
-    const surplus = await tx.passwordHistory.findMany({
-      where: { clientId },
-      orderBy: { createdAt: 'desc' },
-      skip: PASSWORD_HISTORY_DEPTH,
-      select: { id: true },
-    });
-    if (surplus.length > 0) {
-      await tx.passwordHistory.deleteMany({
-        where: { id: { in: surplus.map((r) => r.id) } },
-      });
-    }
+    await this.accounts.recordPasswordHistory(tx, clientId, passwordHash, PASSWORD_HISTORY_DEPTH);
   }
 }

@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TransactionService } from '../../../infrastructure/database';
 import { NativeSessionLookup } from './native-session.lookup';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class NativeLogoutHandler {
   constructor(
     private readonly rlsTransaction: TransactionService,
     private readonly lookup: NativeSessionLookup,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(rawToken: string): Promise<void> {
@@ -16,12 +18,12 @@ export class NativeLogoutHandler {
 
     await this.rlsTransaction.withTransaction(async (tx) => {
       if (matched.kind === 'client') {
-        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Client" WHERE "id" = ${matched.clientId} FOR UPDATE`);
+        const locked = await this.accounts.lockForAuth(tx, matched.clientId);
         const stillActive = await tx.clientRefreshToken.findFirst({ where: { id: matched.id, revokedAt: null, expiresAt: { gt: new Date() } }, select: { id: true } });
-        if (!stillActive) return;
+        if (!locked || !stillActive) return;
         await tx.clientRefreshToken.updateMany({ where: { clientId: matched.clientId, revokedAt: null }, data: { revokedAt: new Date() } });
         await tx.fcmToken.deleteMany({ where: { clientId: matched.clientId } });
-        await tx.client.update({ where: { id: matched.clientId }, data: { tokenVersion: { increment: 1 } } });
+        await this.accounts.bumpTokenVersion(tx, matched.clientId);
         return;
       }
 
