@@ -6,10 +6,20 @@ import { OtpSessionService } from '../../otp/otp-session.service';
 import { PasswordService } from '../../shared/password.service';
 import { PasswordHistoryService } from '../shared/password-history.service';
 import { ResetPasswordHandler } from './reset-password.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../../common/contracts/client-account.contract';
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
 }));
+
+const accounts = {
+  lockForAuth: jest.fn(),
+  setPasswordHash: jest.fn(),
+  bumpTokenVersion: jest.fn(),
+  setEmailProof: jest.fn(),
+  setPhoneProof: jest.fn(),
+  clearFailedLogin: jest.fn(),
+};
 
 describe('ResetPasswordHandler', () => {
   let handler: ResetPasswordHandler;
@@ -27,11 +37,14 @@ describe('ResetPasswordHandler', () => {
     prisma.client.findFirst.mockResolvedValue(client);
     prisma.client.findUnique.mockResolvedValue(client);
     prisma.client.findMany.mockResolvedValue(client ? [client] : []);
+    accounts.lockForAuth.mockResolvedValue(client);
   }
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     prisma = {
       client: { findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]), update: jest.fn() },
+      // Client-row writes go through the people-owned store (ADR-002).
       user: { findMany: jest.fn().mockResolvedValue([]) },
       $queryRaw: jest.fn().mockResolvedValue([]),
       $transaction: jest.fn(async (cb) => await cb(prisma)),
@@ -50,6 +63,7 @@ describe('ResetPasswordHandler', () => {
         { provide: OtpSessionService, useValue: otpSession },
         { provide: PasswordService, useValue: passwords },
         { provide: PasswordHistoryService, useValue: passwordHistory },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: accounts },
       ],
     }).compile();
 
@@ -93,13 +107,15 @@ describe('ResetPasswordHandler', () => {
     setClient({ id: 'c1', passwordHash: 'old' });
     passwords.hash.mockResolvedValue('newHash');
     prisma.usedOtpSession.create.mockResolvedValue({});
-    prisma.client.update.mockResolvedValue({});
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 2 });
 
     await handler.execute({ sessionToken: 't', newPassword: 'p' });
     expect(passwordHistory.assertNotReused).toHaveBeenCalledWith('c1', expect.any(String), 'p', 'old');
     expect(passwords.hash).toHaveBeenCalledWith('p');
-    expect(prisma.client.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { passwordHash: 'newHash', emailVerified: expect.any(Date), loginAttempts: 0, lockoutUntil: null, tokenVersion: { increment: 1 } } });
+    expect(accounts.setPasswordHash).toHaveBeenCalledWith(expect.anything(), 'c1', 'newHash');
+    expect(accounts.bumpTokenVersion).toHaveBeenCalledWith(expect.anything(), 'c1');
+    expect(accounts.setEmailProof).toHaveBeenCalledWith(expect.anything(), 'c1', { email: 'a@b.com', verifiedAt: expect.any(Date) });
+    expect(accounts.clearFailedLogin).toHaveBeenCalledWith(expect.anything(), 'c1');
     expect(passwordHistory.record).toHaveBeenCalledWith(prisma, 'c1', expect.any(String), 'newHash');
     expect(prisma.clientRefreshToken.updateMany).toHaveBeenCalledWith({ where: { clientId: 'c1', revokedAt: null }, data: { revokedAt: expect.any(Date) } });
   });
@@ -134,9 +150,24 @@ describe('ResetPasswordHandler', () => {
     setClient(client);
     passwords.hash.mockResolvedValue('created-password-hash');
     prisma.usedOtpSession.create.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('duplicate jti'));
-    prisma.client.update.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
-      Object.assign(client, data, { tokenVersion: (client.tokenVersion as number) + 1 });
-      return client;
+    accounts.setPasswordHash.mockImplementation(async (_tx: unknown, id: string, hash: string) => {
+      client.passwordHash = hash;
+    });
+    accounts.bumpTokenVersion.mockImplementation(async () => {
+      client.tokenVersion = (client.tokenVersion as number) + 1;
+      return client.tokenVersion as number;
+    });
+    accounts.setEmailProof.mockImplementation(async (_tx: unknown, id: string, next: { email: string; verifiedAt: Date }) => {
+      client.email = next.email;
+      client.emailVerified = next.verifiedAt;
+    });
+    accounts.setPhoneProof.mockImplementation(async (_tx: unknown, id: string, next: { phone: string; verifiedAt: Date }) => {
+      client.phone = next.phone;
+      client.phoneVerified = next.verifiedAt;
+    });
+    accounts.clearFailedLogin.mockImplementation(async () => {
+      client.loginAttempts = 0;
+      client.lockoutUntil = null;
     });
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
 
@@ -152,7 +183,7 @@ describe('ResetPasswordHandler', () => {
     expect(passwordHistory.assertNotReused).toHaveBeenNthCalledWith(1, 'passwordless-client', expect.any(String), 'NewPassword123', null);
 
     await expect(handler.execute({ sessionToken: 'proof', newPassword: 'AnotherPassword123' })).rejects.toThrow('Session already used');
-    expect(prisma.client.update).toHaveBeenCalledTimes(1);
+    expect(accounts.setPasswordHash).toHaveBeenCalledTimes(1);
     expect(passwordHistory.record).toHaveBeenCalledTimes(1);
     expect(prisma.clientRefreshToken.updateMany).toHaveBeenCalledTimes(1);
   });
@@ -189,9 +220,8 @@ describe('ResetPasswordHandler', () => {
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 0 });
 
     await handler.execute({ sessionToken: 't', newPassword: 'p' });
-    const updateArg = prisma.client.update.mock.calls[0][0];
-    expect(updateArg.data.passwordHash).toBe('newHash');
-    expect(updateArg.data.tokenVersion).toEqual({ increment: 1 });
+    expect(accounts.setPasswordHash).toHaveBeenCalledWith(expect.anything(), 'c1', 'newHash');
+    expect(accounts.bumpTokenVersion).toHaveBeenCalledWith(expect.anything(), 'c1');
   });
 });
 
@@ -210,6 +240,7 @@ describe('ResetPasswordHandler email identity resolution', () => {
   });
 
   beforeEach(() => {
+    jest.clearAllMocks();
     users = [{ id: 'u1', email: 'Customer@Example.com', phone: '+966501234567', role: 'CLIENT',
       isSuperAdmin: false, isActive: true, emailVerifiedAt: verified }];
     clients = [{ id: 'c1', userId: 'u1', email: null, phone: '+966501234567', passwordHash: null,
@@ -235,14 +266,21 @@ describe('ResetPasswordHandler email identity resolution', () => {
       clientRefreshToken: { updateMany: async () => ({ count: 1 }) },
     };
     hashPassword = jest.fn().mockResolvedValue('new-password-hash');
+    accounts.lockForAuth.mockImplementation(async (_tx: unknown, id: string) =>
+      clients.find((row) => row.id === id) ?? null);
     handler = new ResetPasswordHandler(prisma as any, { withTransaction: (callback: any) => callback(prisma) } as any,
       { verifySession: () => ({ purpose: OtpPurpose.CLIENT_PASSWORD_RESET, channel: OtpChannel.EMAIL,
         identifier: 'customer@example.com', jti: 'email-proof', exp: Math.floor(Date.now() / 1000) + 3600 }) } as any,
       { hash: hashPassword } as any,
-      { assertNotReused: async () => undefined, record: async () => undefined } as any);
+      { assertNotReused: async () => undefined, record: async () => undefined } as any,
+      accounts as any);
   });
 
   it('uses the already verified User email without attaching or verifying a null Client email', async () => {
+    accounts.setPasswordHash.mockImplementation(async (_tx: unknown, id: string, hash: string) => {
+      const row = clients.find((c) => c.id === id);
+      if (row) row.passwordHash = hash;
+    });
     await handler.execute({ sessionToken: 'email-proof', newPassword: 'NewPassword123' });
     expect(clients[0].passwordHash).toBe('new-password-hash');
     expect(clients[0].email).toBeNull();
@@ -256,6 +294,10 @@ describe('ResetPasswordHandler email identity resolution', () => {
     clients[0].userId = null;
     clients[0].email = 'Customer@Example.com';
     clients[0].emailVerified = verified;
+    accounts.setPasswordHash.mockImplementation(async (_tx: unknown, id: string, hash: string) => {
+      const row = clients.find((c) => c.id === id);
+      if (row) row.passwordHash = hash;
+    });
     await handler.execute({ sessionToken: 'email-proof', newPassword: 'NewPassword123' });
     expect(clients[0].passwordHash).toBe('new-password-hash');
     expect(clients[0].email).toBe('Customer@Example.com');

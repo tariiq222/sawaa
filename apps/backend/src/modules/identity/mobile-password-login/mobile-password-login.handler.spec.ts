@@ -2,6 +2,7 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { hash } from 'bcryptjs';
 import { MobilePasswordLoginHandler } from './mobile-password-login.handler';
 import { ClientLoginHandler } from '../client-auth/client-login.handler';
+import { PgClientAccountStore } from '../../people/clients/client-account.store';
 import { PasswordService } from '../shared/password.service';
 
 const verified = new Date('2026-01-01');
@@ -75,7 +76,7 @@ describe('MobilePasswordLoginHandler', () => {
     };
     issueTokenPair = jest.fn().mockResolvedValue({ accessToken: 'client-access', rawRefresh: 'client-refresh', accessMaxAgeMs: 1, refreshMaxAgeMs: 2 });
     const login = new ClientLoginHandler(prisma as any, { getClient: () => redisClient } as any,
-      new PasswordService(), { issueTokenPair } as any);
+      new PasswordService(), { issueTokenPair } as any, new PgClientAccountStore());
     handler = new MobilePasswordLoginHandler(prisma as any, login,
       { getClient: () => redisClient } as any, new PasswordService(),
       { issueTokenPair: staffIssue } as any, { get: async () => twoFactorRequired } as any);

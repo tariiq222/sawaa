@@ -64,6 +64,7 @@ import { OtpSessionService } from './otp/otp-session.service';
 import { OtpSessionGuard } from './otp/otp-session.guard';
 import { NotificationChannelModule } from '../comms/notification-channel/notification-channel.module';
 import { SendEmailQueueModule } from '../comms/send-email/send-email.module';
+import { ClientAccountStoreModule } from '../people/clients/client-account.store.module';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { RegisterHandler } from './client-auth/register.handler';
 import { MobilePasswordLoginHandler } from './mobile-password-login/mobile-password-login.handler';
@@ -149,6 +150,7 @@ const handlers = [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     NotificationChannelModule,
     SendEmailQueueModule,
+    ClientAccountStoreModule,
     PlatformSettingsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

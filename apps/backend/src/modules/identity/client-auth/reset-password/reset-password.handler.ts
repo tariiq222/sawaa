@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { Client, OtpPurpose, OtpChannel, Prisma } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../../infrastructure/database';
 import { OtpSessionService } from '../../otp/otp-session.service';
@@ -8,6 +8,7 @@ import { maskIdentifier } from '../../../../common/helpers/mask-pii.helper';
 import { PasswordHistoryService } from '../shared/password-history.service';
 import { normalizeIdentifier } from '../../shared/identifier-detector';
 import { SINGLE_TENANT_CONTEXT_ID } from '../../../../common/constants';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class ResetPasswordHandler {
@@ -19,6 +20,7 @@ export class ResetPasswordHandler {
     private readonly otpSession: OtpSessionService,
     private readonly passwords: PasswordService,
     private readonly passwordHistory: PasswordHistoryService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(dto: ResetPasswordDto): Promise<void> {
@@ -64,8 +66,7 @@ export class ResetPasswordHandler {
       if (existing.userId) {
         await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "User" WHERE "id" = ${existing.userId} FOR UPDATE`);
       }
-      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Client" WHERE "id" = ${existing.id} FOR UPDATE`);
-      const current = await tx.client.findUnique({ where: { id: existing.id } });
+      const current = await this.accounts.lockForAuth(tx, existing.id);
       if (!current || !current.isActive || current.deletedAt || current.userId !== existing.userId) {
         throw new UnauthorizedException('Invalid session');
       }
@@ -92,19 +93,17 @@ export class ResetPasswordHandler {
       // Update password. Bump tokenVersion in the same update so any client
       // access token issued before the reset is immediately invalidated by
       // ClientJwtStrategy (which compares Client.tokenVersion to the JWT claim).
-      await tx.client.update({
-        where: { id: existing.id },
-        data: {
-          passwordHash,
-          // The single-use reset session proves ownership of this channel only.
-          ...(isEmail
-            ? (current.email ? { emailVerified: now } : {})
-            : { phoneVerified: now }),
-          loginAttempts: 0,
-          lockoutUntil: null,
-          tokenVersion: { increment: 1 },
-        },
-      });
+      await this.accounts.setPasswordHash(tx, existing.id, passwordHash);
+      await this.accounts.bumpTokenVersion(tx, existing.id);
+      // The single-use reset session proves ownership of this channel only.
+      if (isEmail) {
+        if (current.email) {
+          await this.accounts.setEmailProof(tx, existing.id, { email: current.email, verifiedAt: now });
+        }
+      } else {
+        await this.accounts.setPhoneProof(tx, existing.id, { phone: current.phone!, verifiedAt: now });
+      }
+      await this.accounts.clearFailedLogin(tx, existing.id);
 
       // Record new password in history (trims to HISTORY_DEPTH)
       await this.passwordHistory.record(tx, existing.id, organizationId, passwordHash);

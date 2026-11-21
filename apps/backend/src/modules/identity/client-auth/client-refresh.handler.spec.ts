@@ -2,7 +2,12 @@ import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { ClientTokenService } from '../shared/client-token.service';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
 import { ClientRefreshHandler } from './client-refresh.handler';
+
+const accounts = {
+  lockForAuth: jest.fn(),
+};
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
@@ -17,10 +22,10 @@ describe('ClientRefreshHandler', () => {
   beforeEach(async () => {
     prisma = {
       clientRefreshToken: { findMany: jest.fn(), updateMany: jest.fn() },
-      client: { findFirst: jest.fn() },
-      // The handler locks the Client row inside the rotation transaction.
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      // The handler locks the Client row via the people-owned store inside the
+      // rotation transaction.
     };
+    accounts.lockForAuth.mockReset();
     clientTokens = { issueTokenPair: jest.fn() };
     const rlsTransaction = {
       withTransaction: (callback: (tx: unknown) => unknown) => callback(prisma),
@@ -32,6 +37,7 @@ describe('ClientRefreshHandler', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionService, useValue: rlsTransaction },
         { provide: ClientTokenService, useValue: clientTokens },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: accounts },
       ],
     }).compile();
 
@@ -68,7 +74,7 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue(null);
+    accounts.lockForAuth.mockResolvedValue(null);
     await expect(handler.execute('rawToken123', 'c1')).rejects.toThrow(UnauthorizedException);
   });
 
@@ -78,7 +84,7 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue({ id: 'c1', isActive: false, deletedAt: null });
+    accounts.lockForAuth.mockResolvedValue({ id: 'c1', isActive: false, deletedAt: null });
     await expect(handler.execute('rawToken123', 'c1')).rejects.toThrow(UnauthorizedException);
   });
 
@@ -88,7 +94,7 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue({ id: 'c1', isActive: true, deletedAt: new Date() });
+    accounts.lockForAuth.mockResolvedValue({ id: 'c1', isActive: true, deletedAt: new Date() });
     await expect(handler.execute('rawToken123', 'c1')).rejects.toThrow(UnauthorizedException);
   });
 
@@ -98,7 +104,7 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 0 });
+    accounts.lockForAuth.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 0 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     const result = await handler.execute('rawToken123', 'c1');
@@ -114,7 +120,7 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 3 });
+    accounts.lockForAuth.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 3 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     await handler.execute('rawToken123', 'c1');
@@ -135,17 +141,19 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 3 });
+    accounts.lockForAuth.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 3 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     await handler.execute('rawToken123', 'c1');
 
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    // The FOR UPDATE lock lives inside the people-owned store (lockForAuth);
+    // it must still happen before the credential is consumed.
+    expect(accounts.lockForAuth).toHaveBeenCalledTimes(1);
     expect(prisma.clientRefreshToken.updateMany).toHaveBeenCalledWith({
       where: { id: 't1', revokedAt: null, expiresAt: { gt: expect.any(Date) } },
       data: { revokedAt: expect.any(Date) },
     });
-    const lockOrder = prisma.$queryRaw.mock.invocationCallOrder[0];
+    const lockOrder = accounts.lockForAuth.mock.invocationCallOrder[0];
     const consumeOrder = prisma.clientRefreshToken.updateMany.mock.invocationCallOrder[0];
     expect(lockOrder).toBeLessThan(consumeOrder);
   });
