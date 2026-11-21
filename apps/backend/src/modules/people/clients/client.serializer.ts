@@ -58,16 +58,6 @@ export function serializeClient(client: Client, options: SerializeOptions = {}):
 }
 
 
-/**
- * Client-facing view of the client's own record: a legacy email that was never
- * proven may be fake or belong to someone else, so it is not echoed back.
- * Staff surfaces keep the stored value (with its verification state).
- */
-export function withProvenEmailOnly<T extends { email: string | null; emailVerified?: Date | null }>(client: T): T {
-  // A projection without the verification state is treated as unproven.
-  return 'emailVerified' in client && client.emailVerified ? client : { ...client, email: null };
-}
-
 // Match the existing employee-client projection; keep dashboard reference and
 // account-type display fields without exposing medical, national-ID or auth data.
 export const employeeDashboardClientSelect = {
