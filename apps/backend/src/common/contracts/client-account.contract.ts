@@ -50,6 +50,12 @@ export interface NewRegisteredClient {
   phoneVerified: Date | null;
   consentedAt: Date | null;
   consentVersion: string | null;
+  /** ClientSource at creation; defaults to the schema default when omitted. */
+  source?: 'ONLINE';
+  /** Pre-proven pending email captured at sign-up (never login-grade). */
+  pendingEmail?: string | null;
+  /** First login stamp written on creation (mobile sign-up). */
+  firstLoginAt?: Date;
 }
 
 /**
@@ -155,6 +161,34 @@ export interface ClientAccountStore {
     clientId: string,
     next: { phone: string; verifiedAt: Date },
   ): Promise<void>;
+
+  /** Stamp `phoneVerified` on one client row (caller decides whether due). */
+  markPhoneVerified(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    at: Date,
+  ): Promise<void>;
+
+  /**
+   * Stamp `phoneVerified` on every live row carrying this phone number. Used
+   * by the generic OTP grant, which cannot know the single owning row.
+   */
+  markPhoneVerifiedByPhone(
+    tx: Prisma.TransactionClient,
+    phone: string,
+    at: Date,
+  ): Promise<number>;
+
+  /**
+   * Attach an existing client row to a `User` login identity and stamp the
+   * phone proof in the same named write (mobile OTP account merge).
+   */
+  linkClientToUser(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    userId: string,
+    at: Date,
+  ): Promise<ClientAuthView>;
 
   /**
    * PDPL account deletion: anonymizes identity fields and bumps `tokenVersion`

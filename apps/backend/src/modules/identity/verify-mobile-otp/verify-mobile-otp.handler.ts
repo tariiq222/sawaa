@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose, Prisma, RefreshTokenSource } from '@prisma/client';
@@ -12,6 +12,7 @@ import { PlatformSettingsService } from '../../platform/settings/platform-settin
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
 import { REVIEW_OTP_EMAIL } from '../review-otp/review-otp.policy';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 const LOCKOUT_WINDOW_MINUTES = 10;
 export type VerifyMobileOtpCommand = VerifyMobileOtpDto;
@@ -36,6 +37,7 @@ export class VerifyMobileOtpHandler {
     private readonly rlsTransaction: TransactionService,
     private readonly settings: PlatformSettingsService,
     private readonly reviewOtp: ReviewOtpHandler,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(cmd: VerifyMobileOtpCommand): Promise<VerifyMobileOtpResult> {
@@ -85,8 +87,7 @@ export class VerifyMobileOtpHandler {
           throw new ConflictException('Client identity conflict: customer link is required');
         }
         if (client) {
-          await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Client" WHERE "id" = ${client.id} FOR UPDATE`);
-          const lockedClient = await tx.client.findUnique({ where: { id: client.id } });
+          const lockedClient = await this.accounts.lockForAuth(tx, client.id);
           if (!lockedClient) throw new ConflictException('Client identity conflict: customer record disappeared');
           client = lockedClient as ClientIdentity;
           if (reviewHash) {
@@ -174,7 +175,8 @@ export class VerifyMobileOtpHandler {
         }
         if (!client) throw new ConflictException('Client identity conflict: customer record is required');
         if (channel === 'SMS' && !client.phoneVerified) {
-          client = await tx.client.update({ where: { id: client.id }, data: { phoneVerified: new Date() } }) as ClientIdentity;
+          await this.accounts.markPhoneVerified(tx, client.id, new Date());
+          client = { ...client, phoneVerified: new Date() } as ClientIdentity;
         }
         return {
           tokens: await this.toNativeTokens(await this.clientTokens.issueTokenPair({ id: client.id, email: client.email, emailVerified: client.emailVerified ?? null, tokenVersion: client.tokenVersion }, { channel: 'mobile' }, tx)),
@@ -215,15 +217,26 @@ export class VerifyMobileOtpHandler {
     return (candidates[0] as ClientIdentity | undefined) ?? null;
   }
 
-  private async ensureRegisteredClient(tx: Prisma.TransactionClient, user: { id: string; firstName?: string | null; lastName?: string | null; name: string }, phone: string, linked: ClientIdentity | null): Promise<ClientIdentity> {
-    if (linked && linked.phone && linked.phone !== phone) throw new ConflictException('Client identity conflict: linked phone differs');
+  private async ensureRegisteredClient(tx: Prisma.TransactionClient, user: { id: string; firstName?: string | null; lastName?: string | null; name: string }, phone: string, linked: ClientIdentity | null): Promise<ClientIdentity> {    if (linked && linked.phone && linked.phone !== phone) throw new ConflictException('Client identity conflict: linked phone differs');
     const existing = linked ?? await this.resolvePhoneClient(tx, phone);
     if (existing?.userId && existing.userId !== user.id) throw new ConflictException('Client identity conflict: phone belongs to another customer');
     if (existing) {
       if (existing.deletedAt || !existing.isActive) throw new ConflictException('Client identity conflict: customer is disabled');
       if (existing.userId === user.id && existing.phone === phone) return existing;
-      return tx.client.update({ where: { id: existing.id }, data: { userId: user.id, phoneVerified: new Date() } }) as Promise<ClientIdentity>;
+      return this.accounts.linkClientToUser(tx, existing.id, user.id, new Date()) as unknown as ClientIdentity;
     }
-    return tx.client.create({ data: { userId: user.id, name: user.name, firstName: user.firstName, lastName: user.lastName, phone, phoneVerified: new Date(), accountType: 'FULL', claimedAt: new Date() } }) as Promise<ClientIdentity>;
+    return this.accounts.createRegisteredClient(tx, {
+      userId: user.id,
+      email: null,
+      phone,
+      name: user.name,
+      firstName: user.firstName ?? undefined,
+      lastName: user.lastName ?? undefined,
+      passwordHash: null,
+      emailVerified: null,
+      phoneVerified: new Date(),
+      consentedAt: null,
+      consentVersion: null,
+    }) as unknown as ClientIdentity;
   }
 }

@@ -1,18 +1,20 @@
 import { CompletePhoneEntryHandler } from './complete-phone-entry.handler';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 
 describe('CompletePhoneEntryHandler', () => {
   function fixture() {
     const tx = { user: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() }, client: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'c', email: null }) }, $queryRaw: jest.fn() };
     const store = { transaction: async (cb: (tx: unknown) => Promise<unknown>) => cb(tx), lockContinuation: jest.fn().mockResolvedValue({ id: 'f', phone: '+966512345678', state: 'DETAILS_PENDING' }), consume: jest.fn().mockResolvedValue(true) };
     const tokens = { issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'a', rawRefresh: 'r' }) };
-    return { handler: new CompletePhoneEntryHandler(store as never, tokens as never), tx, store, tokens };
+    return { handler: new CompletePhoneEntryHandler(store as never, tokens as never, new PgClientAccountStore()), tx, store, tokens };
   }
   const cmd = { continuationToken: 'proof', firstName: ' First ', lastName: ' Last ', email: ' Test@EXAMPLE.TEST ', privacyAccepted: true as const };
   it('creates only Client and pendingEmail, never email or User', async () => {
     const f = fixture();
     expect(await f.handler.execute(cmd)).toEqual({ next: 'authenticated', sessionKind: 'client', emailPrompt: false, tokens: { accessToken: 'a', refreshToken: 'r' } });
     expect(f.tx.client.create.mock.calls[0][0].data).toMatchObject({ firstName: 'First', lastName: 'Last', name: 'First Last', pendingEmail: 'test@example.test', accountType: 'FULL', source: 'ONLINE' });
-    expect(f.tx.client.create.mock.calls[0][0].data).not.toHaveProperty('email');
+    // The store writes email: null explicitly — same DB value as the omitted key; the invariant is that no login-grade email is set.
+    expect(f.tx.client.create.mock.calls[0][0].data.email).toBeNull();
     expect(f.tx.user.create).not.toHaveBeenCalled();
     expect(f.tokens.issueTokenPair.mock.calls[0][2]).toBe(f.tx);
   });

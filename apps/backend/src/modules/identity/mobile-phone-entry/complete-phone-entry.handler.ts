@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { isEmail } from 'class-validator';
 import { ClientTokenService } from '../shared/client-token.service';
@@ -6,10 +6,15 @@ import { PRIVACY_POLICY_VERSION } from '../client-auth/consent.constants';
 import { detailsUnavailable, invalidFlow, translateConflict } from '../mobile-email-entry/mobile-email-errors';
 import { MobilePhoneFlowStore } from './mobile-phone-flow.store';
 import { CompletePhoneEntryDto } from './mobile-phone-entry.dto';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class CompletePhoneEntryHandler {
-  constructor(private readonly store: MobilePhoneFlowStore, private readonly tokens: ClientTokenService) {}
+  constructor(
+    private readonly store: MobilePhoneFlowStore,
+    private readonly tokens: ClientTokenService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
 
   async execute(cmd: CompletePhoneEntryDto) {
     const firstName = typeof cmd.firstName === 'string' ? cmd.firstName.trim() : '';
@@ -28,12 +33,21 @@ export class CompletePhoneEntryHandler {
       if (clientOwner || userOwner) throw detailsUnavailable();
       if (!await this.store.consume(tx, flow)) throw invalidFlow();
       const now = new Date();
-      const client = await tx.client.create({ data: {
-        name: `${firstName} ${lastName}`, firstName, lastName, phone: flow.phone,
-        phoneVerified: now, accountType: 'FULL', source: 'ONLINE', claimedAt: now,
-        consentedAt: now, consentVersion: PRIVACY_POLICY_VERSION,
-        pendingEmail: email ?? null, lastLoginAt: now,
-      } });
+      const client = await this.accounts.createRegisteredClient(tx, {
+        name: `${firstName} ${lastName}`,
+        firstName,
+        lastName,
+        phone: flow.phone,
+        passwordHash: null,
+        email: null,
+        emailVerified: null,
+        phoneVerified: now,
+        source: 'ONLINE',
+        consentedAt: now,
+        consentVersion: PRIVACY_POLICY_VERSION,
+        pendingEmail: email ?? null,
+        firstLoginAt: now,
+      });
       const pair = await this.tokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated' as const, sessionKind: 'client' as const, emailPrompt: false,
         tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh } };

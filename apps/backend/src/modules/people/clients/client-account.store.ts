@@ -73,11 +73,52 @@ export class PgClientAccountStore implements ClientAccountStore {
         passwordHash: input.passwordHash,
         emailVerified: input.emailVerified,
         phoneVerified: input.phoneVerified,
+        ...(input.source ? { source: input.source } : {}),
+        ...(input.pendingEmail !== undefined ? { pendingEmail: input.pendingEmail } : {}),
+        ...(input.firstLoginAt ? { lastLoginAt: input.firstLoginAt } : {}),
         accountType: 'FULL',
         claimedAt: new Date(),
         consentedAt: input.consentedAt,
         consentVersion: input.consentVersion,
       },
+      select: CLIENT_AUTH_SELECT,
+    });
+    return toView(row);
+  }
+
+  async markPhoneVerified(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    at: Date,
+  ): Promise<void> {
+    await tx.client.update({
+      where: { id: clientId },
+      data: { phoneVerified: at },
+      select: { id: true },
+    });
+  }
+
+  async markPhoneVerifiedByPhone(
+    tx: Prisma.TransactionClient,
+    phone: string,
+    at: Date,
+  ): Promise<number> {
+    const updated = await tx.client.updateMany({
+      where: { phone },
+      data: { phoneVerified: at },
+    });
+    return updated.count;
+  }
+
+  async linkClientToUser(
+    tx: Prisma.TransactionClient,
+    clientId: string,
+    userId: string,
+    at: Date,
+  ): Promise<ClientAuthView> {
+    const row = await tx.client.update({
+      where: { id: clientId },
+      data: { userId, phoneVerified: at },
       select: CLIENT_AUTH_SELECT,
     });
     return toView(row);

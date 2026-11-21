@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
@@ -7,6 +7,7 @@ import { VerifyOtpDto } from './verify-otp.dto';
 import { OtpSessionService } from './otp-session.service';
 import { OtpPurpose } from '@prisma/client';
 import { REVIEW_OTP_EMAIL } from '../review-otp/review-otp.policy';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 
@@ -20,6 +21,7 @@ export class VerifyOtpHandler {
     private readonly prisma: PrismaService,
     private readonly otpSession: OtpSessionService,
     private readonly cls: ClsService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(dto: VerifyOtpCommand): Promise<{ sessionToken: string }> {
@@ -91,12 +93,11 @@ export class VerifyOtpHandler {
       // mailbox the account owner never proved unlock password reset
       // (SEC-AUTH-01). Phone-first accounts still verify their number here.
       if (otpRecord.channel === 'SMS') {
-        await this.prisma.client.updateMany({
-          where: {
-            phone: dto.identifier,
-          },
-          data: { phoneVerified: new Date() },
-        });
+        await this.accounts.markPhoneVerifiedByPhone(
+          this.prisma as unknown as import('@prisma/client').Prisma.TransactionClient,
+          dto.identifier,
+          new Date(),
+        );
       }
 
       const sessionToken = await this.otpSession.signSession({

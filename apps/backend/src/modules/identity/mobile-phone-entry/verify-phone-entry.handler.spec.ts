@@ -1,22 +1,23 @@
 import { Logger } from '@nestjs/common';
 import { VerifyPhoneEntryHandler } from './verify-phone-entry.handler';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 
 describe('VerifyPhoneEntryHandler', () => {
   function fixture() {
     const client = { id: 'c', userId: null, isActive: true, email: 'legacy@example.test', emailVerified: null, emailPromptResolvedAt: null, phoneVerified: null, lastLoginAt: null, accountType: 'WALK_IN' };
-    const tx = { $queryRaw: jest.fn().mockResolvedValue([]), user: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn() }, client: { findMany: jest.fn().mockResolvedValue([client]), findFirst: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue(client) }, employee: { findFirst: jest.fn().mockResolvedValue({ id: 'e' }) }, mobilePhoneEntryFlow: { update: jest.fn() } };
+    const tx = { $queryRaw: jest.fn().mockResolvedValue([]), user: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn() }, client: { findMany: jest.fn().mockResolvedValue([client]), findFirst: jest.fn().mockResolvedValue(null), findUnique: jest.fn().mockResolvedValue(client), update: jest.fn().mockResolvedValue(client) }, employee: { findFirst: jest.fn().mockResolvedValue({ id: 'e' }) }, mobilePhoneEntryFlow: { update: jest.fn() } };
     const store = { transaction: async (cb: (tx: unknown) => Promise<unknown>) => cb(tx), lock: jest.fn().mockResolvedValue({ id: 'f', phone: '+966512345678', state: 'CODE_PENDING', createdAt: new Date() }), liveFlow: () => true, checkCode: jest.fn().mockResolvedValue(true), consume: jest.fn().mockResolvedValue(true) };
     const tokens = { issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'a', rawRefresh: 'r' }) };
     const staffTokens = { issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'staff-a', refreshToken: 'staff-r' }) };
     const settings = { get: jest.fn().mockResolvedValue(true) };
-    return { handler: new VerifyPhoneEntryHandler(store as never, tokens as never, staffTokens as never, settings as never), tx, store, tokens, staffTokens, settings, client };
+    return { handler: new VerifyPhoneEntryHandler(store as never, tokens as never, staffTokens as never, settings as never, new PgClientAccountStore()), tx, store, tokens, staffTokens, settings, client };
   }
   it('classifies only after proof and consumes before issuing client tokens', async () => {
     const f = fixture();
     expect(await f.handler.execute({ challengeId: 'f', code: '123456' })).toMatchObject({ next: 'authenticated', emailPrompt: true, sessionKind: 'client' });
     expect(f.store.checkCode.mock.invocationCallOrder[0]).toBeLessThan(f.tx.user.findMany.mock.invocationCallOrder[0]);
     expect(f.store.consume.mock.invocationCallOrder[0]).toBeLessThan(f.tokens.issueTokenPair.mock.invocationCallOrder[0]);
-    expect(f.tx.client.update.mock.calls[0][0].data).not.toHaveProperty('claimedAt');
+    expect(f.tx.client.update.mock.calls.every((call: any[]) => !('claimedAt' in call[0].data))).toBe(true);
   });
   it('authenticates an eligible staff identity through the same phone challenge', async () => {
     const f = fixture();

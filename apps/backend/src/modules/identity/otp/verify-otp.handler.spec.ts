@@ -3,6 +3,8 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { VerifyOtpHandler } from './verify-otp.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { PrismaService } from '../../../infrastructure/database';
 import { OtpSessionService } from './otp-session.service';
 import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
@@ -34,6 +36,7 @@ describe('VerifyOtpHandler', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: OtpSessionService, useValue: otpSession },
         { provide: ClsService, useValue: cls },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
       ],
     }).compile();
 
