@@ -1,6 +1,7 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TransactionService } from '../../../infrastructure/database';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 export interface RequestAccountDeletionCommand {
   clientId: string;
@@ -20,12 +21,16 @@ export interface RequestAccountDeletionResult {
  */
 @Injectable()
 export class RequestAccountDeletionHandler {
-  constructor(private readonly rlsTransaction: TransactionService) {}
+  constructor(
+    private readonly rlsTransaction: TransactionService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
+  ) {}
 
   async execute(cmd: RequestAccountDeletionCommand): Promise<RequestAccountDeletionResult> {
     await this.rlsTransaction.withTransaction(async (tx) => {
       // OTP verification locks User before Client. Match that order to avoid
-      // deadlocks if a login and closure arrive together.
+      // deadlocks if a login and closure arrive together. The Client row lock
+      // and re-read go through the people-owned store.
       const initial = await tx.client.findUnique({
         where: { id: cmd.clientId },
         select: { userId: true },
@@ -33,11 +38,10 @@ export class RequestAccountDeletionHandler {
       if (initial?.userId) {
         await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "User" WHERE "id" = ${initial.userId} FOR UPDATE`);
       }
-      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Client" WHERE "id" = ${cmd.clientId} FOR UPDATE`);
-      const client = await tx.client.findFirst({
-        where: { id: cmd.clientId, deletedAt: null, isActive: true },
-        select: { id: true, userId: true },
-      });
+      const locked = await this.accounts.lockForAuth(tx, cmd.clientId);
+      const client = locked && !locked.deletedAt && locked.isActive
+        ? { id: locked.id, userId: locked.userId }
+        : null;
       if (!client) throw new UnauthorizedException('Account is inactive');
       if (client.userId !== initial?.userId) throw new ConflictException('Account link changed');
 
@@ -47,24 +51,7 @@ export class RequestAccountDeletionHandler {
         data: { revokedAt: now },
       });
       await tx.fcmToken.deleteMany({ where: { clientId: client.id } });
-      await tx.client.update({
-        where: { id: client.id },
-        data: {
-          deletedAt: now,
-          isActive: false,
-          phone: null,
-          email: null,
-          emailVerified: null,
-          phoneVerified: null,
-          nationalId: null,
-          emergencyName: null,
-          emergencyPhone: null,
-          avatarUrl: null,
-          passwordHash: null,
-          pushEnabled: false,
-          tokenVersion: { increment: 1 },
-        },
-      });
+      await this.accounts.anonymizeForDeletion(tx, client.id, now);
 
       if (client.userId) {
         const user = await tx.user.findUnique({

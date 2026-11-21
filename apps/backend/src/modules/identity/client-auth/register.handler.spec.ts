@@ -7,6 +7,8 @@ import { OtpSessionService } from '../otp/otp-session.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { PasswordService } from '../shared/password.service';
 import { RegisterHandler } from './register.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { PRIVACY_POLICY_VERSION } from './consent.constants';
 
 function mockRequest(authHeader?: string): Partial<Request> {
@@ -38,6 +40,7 @@ describe('RegisterHandler', () => {
         { provide: PasswordService, useValue: {
           hash: jest.fn(),
         } },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
       ],
     }).compile();
 

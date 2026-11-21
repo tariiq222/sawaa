@@ -236,6 +236,12 @@ describe('PgClientAccountStore', () => {
           phoneVerified: null,
           pendingEmail: null,
           emailPromptResolvedAt: null,
+          // Full PDPL anonymization matches the closure handler's write.
+          nationalId: null,
+          emergencyName: null,
+          emergencyPhone: null,
+          avatarUrl: null,
+          pushEnabled: false,
           passwordHash: null,
           tokenVersion: { increment: 1 },
         },

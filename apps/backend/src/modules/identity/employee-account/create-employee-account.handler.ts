@@ -2,10 +2,12 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 import { PasswordService } from '../shared/password.service';
 import { assertCanAssignRole, assertCanManageUser } from '../shared/role-rank';
 import { CreateEmployeeAccountDto } from './create-employee-account.dto';
@@ -22,6 +24,7 @@ export class CreateEmployeeAccountHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: TransactionService,
     private readonly password: PasswordService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore,
   ) {}
 
   async execute(cmd: CreateEmployeeAccountCommand) {
@@ -92,10 +95,7 @@ export class CreateEmployeeAccountHandler {
         userRecord = created as typeof userRecord;
       }
 
-      await tx.employee.update({
-        where: { id: cmd.employeeId },
-        data: { userId },
-      });
+      await this.accounts.linkEmployeeToUser(tx, cmd.employeeId, userId);
 
       return userRecord;
     });

@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { CreateEmployeeAccountHandler } from './create-employee-account.handler';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { UpdateEmployeeAccountHandler } from './update-employee-account.handler';
 import { CreateEmployeeHandler } from '../../people/employees/create-employee.handler';
 import { UpdateEmployeeHandler } from '../../people/employees/update-employee.handler';
@@ -40,7 +41,7 @@ describe('employee account authorization boundaries', () => {
   it.each(targets)('blocks email-match relinking of $role / $id / $isSuperAdmin', async (target) => {
     const { db, rls } = fixture(target);
     db.employee.findFirst.mockResolvedValue({ id: 'emp', userId: null, email: 'old@test.com', isActive: true });
-    const handler = new CreateEmployeeAccountHandler(db as never, rls as never, {} as never);
+    const handler = new CreateEmployeeAccountHandler(db as never, rls as never, {} as never, new PgClientAccountStore());
     await expect(handler.execute({ employeeId: 'emp', actorUserId: 'actor', role: 'EMPLOYEE' })).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.user.update).not.toHaveBeenCalled();
     expect(db.employee.update).not.toHaveBeenCalled();
@@ -71,7 +72,7 @@ describe('employee account authorization boundaries', () => {
   it('fails closed for missing actor on account mutations', async () => {
     const { db, rls, events } = fixture();
     await expect(new UpdateEmployeeAccountHandler(db as never).execute({ employeeId: 'emp', isActive: false } as never)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(new CreateEmployeeAccountHandler(db as never, rls as never, {} as never).execute({ employeeId: 'emp', role: 'EMPLOYEE' } as never)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(new CreateEmployeeAccountHandler(db as never, rls as never, {} as never, new PgClientAccountStore()).execute({ employeeId: 'emp', role: 'EMPLOYEE' } as never)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(new CreateEmployeeHandler(db as never, rls as never, events as never, catalogCache as never).execute({ name: 'New', userId: 'target' } as never)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(new UpdateEmployeeHandler(db as never, rls as never, events as never, { execute: async (q: { reference: string }) => q.reference } as never, catalogCache as never).execute({ employeeId: 'emp', email: 'new@test.com' })).rejects.toBeInstanceOf(ForbiddenException);
   });
