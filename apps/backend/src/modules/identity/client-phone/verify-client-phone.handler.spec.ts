@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { Logger } from '@nestjs/common';
 import { VerifyClientPhoneHandler } from './verify-client-phone.handler';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 
 const NEW_PHONE = '+966512345678';
 
@@ -17,6 +18,7 @@ async function fixture(opts: { client?: Record<string, unknown>; otherClient?: b
     client: {
       findFirst: jest.fn(async () => (opts.otherClient ? { id: 'other' } : null)),
       update: jest.fn(async ({ data }: any) => ({ ...client, ...data, tokenVersion: client.tokenVersion + 1 })),
+      findUnique: jest.fn(async () => ({ ...client, tokenVersion: client.tokenVersion + 1 })),
     },
     user: {
       findFirst: jest.fn(async () => (opts.otherUser ? { id: 'staff' } : null)),
@@ -27,7 +29,7 @@ async function fixture(opts: { client?: Record<string, unknown>; otherClient?: b
   };
   const store = { transaction: async (run: any) => run(tx), owner: jest.fn(async () => client) };
   const tokens = { issueTokenPair: jest.fn(async () => ({ accessToken: 'new-access', rawRefresh: 'new-refresh' })) };
-  const handler = new VerifyClientPhoneHandler(store as never, tokens as never);
+  const handler = new VerifyClientPhoneHandler(store as never, tokens as never, new PgClientAccountStore());
   return { client, challenge, tx, tokens, handler };
 }
 
@@ -43,7 +45,9 @@ describe('VerifyClientPhoneHandler', () => {
     try {
       expect(await f.handler.execute('client-1', { challengeId: 'ch-1', code: '012345' }))
         .toEqual({ phone: NEW_PHONE, tokens: { accessToken: 'new-access', refreshToken: 'new-refresh' }, tokenPair: { accessToken: 'new-access', rawRefresh: 'new-refresh' } });
-      expect(f.tx.client.update).toHaveBeenCalledWith({ where: { id: 'client-1' }, data: { phone: NEW_PHONE, phoneVerified: expect.any(Date), tokenVersion: { increment: 1 } } });
+      // Same effect as the previous single update: proof + tokenVersion bump, two named store writes in one transaction.
+      expect(f.tx.client.update).toHaveBeenCalledWith({ where: { id: 'client-1' }, data: { phone: NEW_PHONE, phoneVerified: expect.any(Date) }, select: { id: true } });
+      expect(f.tx.client.update).toHaveBeenCalledWith({ where: { id: 'client-1' }, data: { tokenVersion: { increment: 1 } }, select: { tokenVersion: true } });
       expect(f.tx.clientRefreshToken.updateMany).toHaveBeenCalledWith({ where: { clientId: 'client-1', revokedAt: null }, data: { revokedAt: expect.any(Date) } });
       expect(f.tokens.issueTokenPair).toHaveBeenCalledWith(expect.objectContaining({ id: 'client-1', tokenVersion: 4 }), { channel: 'mobile' }, f.tx);
       expect(log).toHaveBeenCalledWith({ event: 'client_phone.changed', clientId: 'client-1' });
