@@ -31,6 +31,9 @@ import { CreateEmployeeExceptionHandler } from '../../modules/people/employees/c
 import { DeleteEmployeeExceptionHandler } from '../../modules/people/employees/delete-employee-exception.handler';
 import { ListEmployeeRatingsHandler } from '../../modules/people/employees/list-employee-ratings.handler';
 import { UploadAvatarHandler } from '../../modules/people/employees/upload-avatar/upload-avatar.handler';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { MAX_FILE_SIZE_BYTES } from '../../modules/media/files/upload-file.handler';
 import { GetEmployeeBreaksHandler } from '../../modules/people/employees/get-employee-breaks/get-employee-breaks.handler';
 import { SetEmployeeBreaksHandler } from '../../modules/people/employees/set-employee-breaks/set-employee-breaks.handler';
 import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/update-employee-service.handler';
@@ -101,6 +104,16 @@ describe('Dashboard people controllers (e2e)', () => {
 
   const buildModule = async (jwtGuardValue: any) => {
     const moduleRef: TestingModule = await Test.createTestingModule({
+      // Mirrors DashboardPeopleModule's wiring: FileInterceptor resolves
+      // MULTER_MODULE_OPTIONS from the importing module, so the size guard has
+      // to be part of the test module as well, otherwise the 413 pin below
+      // would silently stop testing anything.
+      imports: [
+        MulterModule.register({
+          storage: memoryStorage(),
+          limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 },
+        }),
+      ],
       controllers: [
         DashboardPeopleClientsController,
         DashboardPeopleEmployeesController,
@@ -822,6 +835,19 @@ describe('Dashboard people controllers (e2e)', () => {
         .post(`/dashboard/people/employees/${uuid(2)}/avatar`)
         .set('Authorization', 'Bearer fake-jwt')
         .expect(400);
+    });
+
+    // Moves with the controllers: the upload limit belongs to the module that
+    // registers the controller. Without MulterModule here the body is buffered
+    // unbounded and this request would reach the handler instead of 413.
+    it('rejects a body above MAX_FILE_SIZE_BYTES with 413 before the handler', async () => {
+      await request(app.getHttpServer())
+        .post(`/dashboard/people/employees/${uuid(2)}/avatar`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .attach('file', Buffer.alloc(MAX_FILE_SIZE_BYTES + 1024), 'huge.png')
+        .expect(413);
+
+      expect(mockUploadAvatar.execute).not.toHaveBeenCalled();
     });
   });
 

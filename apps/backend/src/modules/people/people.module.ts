@@ -1,6 +1,6 @@
 import { GetSelfProfileHandler, UpdateSelfProfileHandler } from './employees/self-profile/self-profile.handler';
 import { ChangeSelfAvatarHandler } from './employees/self-profile/self-avatar.handler';
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { DatabaseModule } from '../../infrastructure/database';
@@ -10,8 +10,6 @@ import { MediaModule } from '../media/media.module';
 import { PublicEmployeeAvatarController } from '../../api/public/employee-avatar.controller';
 import { PublicEmployeeAvatarHandler } from './employees/self-profile/public-employee-avatar.handler';
 import { MessagingModule } from '../../infrastructure/messaging.module';
-import { BookingsModule } from '../bookings/bookings.module';
-import { IdentityModule } from '../identity/identity.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { OrgConfigModule } from '../org-config/org-config.module';
 import { UploadAvatarHandler } from './employees/upload-avatar/upload-avatar.handler';
@@ -50,10 +48,8 @@ import { GetEmployeeClientHandler } from './clients/get-employee-client.handler'
 import { ResolveEmployeeIdHandler } from './employees/resolve-employee-id.handler';
 import { LogActivityHandler } from '../ops/log-activity/log-activity.handler';
 import { DashboardPeopleClientsController } from '../../api/dashboard/people-clients.controller';
-import { DashboardPeopleEmployeesController } from '../../api/dashboard/people-employees.controller';
 import { DashboardPeopleEmployeeScheduleController } from '../../api/dashboard/people-employee-schedule.controller';
 import { DashboardPeopleEmployeeServicesController } from '../../api/dashboard/people-employee-services.controller';
-import { DashboardPeopleEmployeeAccountController } from '../../api/dashboard/people-employee-account.controller';
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
 import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
 
@@ -76,13 +72,11 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule, NotificationOutboxModule],
+  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), OrgExperienceModule, OrgConfigModule, NotificationOutboxModule],
   controllers: [
     DashboardPeopleClientsController,
-    DashboardPeopleEmployeesController,
     DashboardPeopleEmployeeScheduleController,
     DashboardPeopleEmployeeServicesController,
-    DashboardPeopleEmployeeAccountController,
     PublicEmployeeAvatarController,
   ],
   providers: [...handlers, PublicEmployeeAvatarHandler, PgClientAccountStore, {
