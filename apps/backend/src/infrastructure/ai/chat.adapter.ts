@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
-import { AiProvider } from '../../modules/ai/provider-config/ai-provider-config.types';
+import { AiProvider } from './ai-provider-config.types';
 import { AiProviderClientService } from './ai-provider-client.service';
 
 export interface ChatMessage {

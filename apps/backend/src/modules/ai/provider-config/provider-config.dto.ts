@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Equals, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
-import { AiProvider, DEFAULT_OPENROUTER_MODEL } from './ai-provider-config.types';
+import { AiProvider, DEFAULT_OPENROUTER_MODEL } from '../../../infrastructure/ai/ai-provider-config.types';
 
 export class UpsertAiProviderConfigDto {
   @ApiProperty({ enum: AiProvider, description: 'AI provider to configure.', example: AiProvider.OPENROUTER }) @IsEnum(AiProvider) provider!: AiProvider;
