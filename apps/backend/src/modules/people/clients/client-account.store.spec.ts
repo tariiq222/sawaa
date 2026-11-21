@@ -236,7 +236,10 @@ describe('PgClientAccountStore', () => {
           phoneVerified: null,
           pendingEmail: null,
           emailPromptResolvedAt: null,
-          // Full PDPL anonymization matches the closure handler's write.
+          // Full PDPL anonymization. Owner-approved widening (2026-11-21):
+          // the legacy closure write did NOT clear pendingEmail and
+          // emailPromptResolvedAt; the store intentionally does, so an
+          // unverified pending address never outlives the account.
           nationalId: null,
           emergencyName: null,
           emergencyPhone: null,
