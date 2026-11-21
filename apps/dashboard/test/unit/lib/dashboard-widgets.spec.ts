@@ -5,7 +5,7 @@ const allow = (perms: string[]) => (m: string, a: string) =>
   perms.includes(`${m}:${a}`) || perms.includes(`${m}:*`) || perms.includes('*')
 
 // Subjects mirror what the BE emits via `flattenPermissions` (singular,
-// lowercased). See apps/backend/src/modules/identity/casl/flatten-permissions.ts.
+// lowercased). See apps/backend/src/common/casl/flatten-permissions.ts.
 const OWNER = allow(['*'])
 const ADMIN = allow([
   'booking:*', 'client:*', 'employee:*', 'invoice:*',

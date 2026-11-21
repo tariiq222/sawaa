@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { UserRole } from '@prisma/client';
-import { BUILT_IN } from '../casl/built-in-rules';
+import { BUILT_IN } from '../../../common/casl/built-in-rules';
 
 // Only bootstrap roles that exist in the UserRole enum AND should be editable.
 // SUPER_ADMIN: always manage:all from code, never from DB.

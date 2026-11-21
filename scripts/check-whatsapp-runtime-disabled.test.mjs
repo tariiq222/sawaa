@@ -15,12 +15,12 @@ test("guard catches runtime registration, CSRF exemption, generated contract, an
   const root = await mkdtemp(path.join(os.tmpdir(), "sawaa-whatsapp-guard-"));
   try {
     await mkdir(path.join(root, "apps/backend/src"), { recursive: true });
-    await mkdir(path.join(root, "apps/backend/src/modules/identity/casl"), { recursive: true });
+    await mkdir(path.join(root, "apps/backend/src/common/casl"), { recursive: true });
     await mkdir(path.join(root, "apps/backend/src/modules/ops/cron-tasks"), { recursive: true });
     await mkdir(path.join(root, "apps/dashboard/lib/types"), { recursive: true });
     await writeFile(path.join(root, "apps/backend/src/app.module.ts"), "imports: [WhatsappModule]");
     await writeFile(path.join(root, "apps/backend/src/main.ts"), "req.path.startsWith('/api/v1/public/whatsapp')");
-    await writeFile(path.join(root, "apps/backend/src/modules/identity/casl/built-in-rules.ts"), "subject: 'WhatsappConversation'");
+    await writeFile(path.join(root, "apps/backend/src/common/casl/built-in-rules.ts"), "subject: 'WhatsappConversation'");
     await writeFile(path.join(root, "apps/backend/src/modules/ops/cron-tasks/data-retention.cron.ts"), "this.prisma.whatsappMessage.deleteMany({})");
     await writeFile(path.join(root, "apps/dashboard/lib/types/api.generated.ts"), '"/api/v1/public/whatsapp/webhook"\nBookingSource: "ONLINE" | "WHATSAPP"');
     const result = runGuard(root);

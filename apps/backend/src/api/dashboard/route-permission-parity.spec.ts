@@ -5,8 +5,8 @@ import { MetadataScanner, Reflector } from '@nestjs/core';
 import { RequestMethod } from '@nestjs/common';
 import { PERMISSION_ACTIONS, SETTING_SPLIT_SUBJECTS } from '@sawaa/shared/constants';
 import { CHECK_PERMISSIONS_KEY } from '../../common/guards/casl.guard';
-import { CaslAbilityFactory } from '../../modules/identity/casl/casl-ability.factory';
-import { BUILT_IN } from '../../modules/identity/casl/built-in-rules';
+import { CaslAbilityFactory } from '../../common/casl/casl-ability.factory';
+import { BUILT_IN } from '../../common/casl/built-in-rules';
 
 /**
  * Setting-subject split parity net (metadata only, no HTTP, no DB).
