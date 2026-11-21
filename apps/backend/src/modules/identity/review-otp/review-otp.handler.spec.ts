@@ -10,6 +10,8 @@ import { PlatformSettingsService } from '../../platform/settings/platform-settin
 import { RequestOtpHandler } from '../otp/request-otp.handler';
 import { RequestMobileLoginOtpHandler } from '../request-mobile-login-otp/request-mobile-login-otp.handler';
 import { VerifyMobileOtpHandler } from '../verify-mobile-otp/verify-mobile-otp.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { MobileOtpPurposeDto } from '../verify-mobile-otp/verify-mobile-otp.dto';
 import { TokenService } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
@@ -87,6 +89,7 @@ describe('Synthetic review OTP through real request and verification handlers', 
       { provide: ClientTokenService, useValue: { issueTokenPair: async (identity: any) => {
         issuedClientIds.push(identity.id); return { accessToken: 'client-access', rawRefresh: 'client-refresh' };
       } } },
+      { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
     ] }).compile();
     requestLogin = module.get(RequestMobileLoginOtpHandler);
     requestOtp = module.get(RequestOtpHandler);

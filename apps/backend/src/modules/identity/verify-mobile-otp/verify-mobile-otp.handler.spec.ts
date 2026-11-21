@@ -1,4 +1,6 @@
 import { ReviewOtpHandler } from '../review-otp/review-otp.handler';
+import { CLIENT_ACCOUNT_STORE } from '../../../common/contracts/client-account.contract';
+import { PgClientAccountStore } from '../../../modules/people/clients/client-account.store';
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
@@ -59,6 +61,7 @@ describe('VerifyMobileOtpHandler', () => {
         { provide: TransactionService, useValue: rlsMock },
         { provide: ClsService, useValue: clsMock },
         { provide: PlatformSettingsService, useValue: settingsMock },
+        { provide: CLIENT_ACCOUNT_STORE, useValue: new PgClientAccountStore() },
       ],
     }).compile();
     handler = moduleRef.get(VerifyMobileOtpHandler);

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Client, Prisma, RefreshTokenSource } from '@prisma/client';
 import { TokenService } from '../shared/token.service';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
@@ -7,12 +7,14 @@ import { ClientTokenService } from '../shared/client-token.service';
 import { invalidCode, invalidFlow } from '../mobile-email-entry/mobile-email-errors';
 import { MobilePhoneFlowStore, hashContinuation, newContinuation } from './mobile-phone-flow.store';
 import { VerifyPhoneEntryDto } from './mobile-phone-entry.dto';
+import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 @Injectable()
 export class VerifyPhoneEntryHandler {
   private readonly logger = new Logger(VerifyPhoneEntryHandler.name);
   constructor(private readonly store: MobilePhoneFlowStore, private readonly tokens: ClientTokenService,
-    private readonly staffTokens: TokenService, private readonly settings: PlatformSettingsService) {}
+    private readonly staffTokens: TokenService, private readonly settings: PlatformSettingsService,
+    @Inject(CLIENT_ACCOUNT_STORE) private readonly accounts: ClientAccountStore) {}
 
   async execute(cmd: VerifyPhoneEntryDto) {
     const result = await this.store.transaction(async tx => {
@@ -64,7 +66,12 @@ export class VerifyPhoneEntryHandler {
       if (!await this.store.consume(tx, flow)) return { error: 'flow' as const };
       if (unavailable || !candidate) return { next: 'unavailable' as const };
       const firstClaim = candidate.lastLoginAt === null && candidate.accountType === 'WALK_IN';
-      const client = await tx.client.update({ where: { id: candidate.id }, data: { phoneVerified: candidate.phoneVerified ?? now, lastLoginAt: now } });
+      if (candidate.phoneVerified == null) {
+        await this.accounts.markPhoneVerified(tx, candidate.id, now);
+      }
+      await this.accounts.markLastLogin(tx, candidate.id, now);
+      const client = await this.accounts.lockForAuth(tx, candidate.id);
+      if (!client) throw new Error(`client vanished during phone-entry login: ${candidate.id}`);
       const pair = await this.tokens.issueTokenPair(client, { channel: 'mobile' }, tx);
       return { next: 'authenticated' as const, sessionKind: 'client' as const,
         tokens: { accessToken: pair.accessToken, refreshToken: pair.rawRefresh },
