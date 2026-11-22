@@ -15990,7 +15990,7 @@
                 "$ref": "#/components/schemas/DeliveryType"
               }
             ],
-            "description": "Delivery channel",
+            "description": "Delivery channel for this override",
             "example": "IN_PERSON",
             "nullable": true
           },

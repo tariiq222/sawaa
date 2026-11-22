@@ -77,9 +77,10 @@ export class ServiceAvailabilityWindowInputDto {
 
 export class BookingConfigInputDto {
   @ApiProperty({
-    // Shared OpenAPI enum schema "DeliveryType" is written by the last scanned
-    // DTO carrying enumName: 'DeliveryType'; module reordering can flip the
-    // winner (MNT-19.3). All writers must keep this exact description.
+    // The shared "DeliveryType" schema takes its description from whichever
+    // DTO carrying `enumName: 'DeliveryType'` is registered last, so module
+    // reordering can flip it (seen in MNT-19.3). This file is the last writer
+    // today; its text matches the other writers that use the neutral wording.
     description: 'Delivery channel',
     enum: DeliveryType,
     enumName: 'DeliveryType',
