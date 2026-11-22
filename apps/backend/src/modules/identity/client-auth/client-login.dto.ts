@@ -1,7 +1,7 @@
 import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SAUDI_PHONE_REGEX, SAUDI_PHONE_ERROR_AR } from '@sawaa/shared/validators/phone';
-import { NormalizePhone } from '../shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../common/phone/normalize-phone.transform';
 
 /**
  * Exactly one of `email` / `phone` must be provided. The "exactly one"

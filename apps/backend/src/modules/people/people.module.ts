@@ -11,7 +11,6 @@ import { PublicEmployeeAvatarController } from '../../api/public/employee-avatar
 import { PublicEmployeeAvatarHandler } from './employees/self-profile/public-employee-avatar.handler';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
-import { OrgConfigModule } from '../org-config/org-config.module';
 import { UploadAvatarHandler } from './employees/upload-avatar/upload-avatar.handler';
 import { CreateClientHandler } from './clients/create-client.handler';
 import { UpdateClientHandler } from './clients/update-client.handler';
@@ -51,7 +50,7 @@ import { DashboardPeopleClientsController } from '../../api/dashboard/people-cli
 import { DashboardPeopleEmployeeScheduleController } from '../../api/dashboard/people-employee-schedule.controller';
 import { DashboardPeopleEmployeeServicesController } from '../../api/dashboard/people-employee-services.controller';
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
-import { NotificationOutboxModule } from '../comms/notification-outbox/notification-outbox.module';
+import { NotificationIntentCaptureModule } from '../../common/notification-intent/notification-intent-capture.module';
 
 import { GetPublicEmployeeImageHandler } from './employees/public/get-public-employee-image.handler';
 
@@ -72,7 +71,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), OrgExperienceModule, OrgConfigModule, NotificationOutboxModule],
+  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), OrgExperienceModule, NotificationIntentCaptureModule],
   controllers: [
     DashboardPeopleClientsController,
     DashboardPeopleEmployeeScheduleController,

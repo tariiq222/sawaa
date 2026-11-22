@@ -1,11 +1,11 @@
 import { ConflictException } from '@nestjs/common';
 import { createHash } from 'crypto';
 
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService } from '../../infrastructure/database';
 import {
   CaptureNotificationIntent,
   NOTIFICATION_OUTBOX_PAYLOAD_VERSION,
-} from './notification-outbox.types';
+} from '../../modules/comms/notification-outbox/notification-outbox.types';
 import { CaptureNotificationIntentHandler } from './capture-notification-intent.handler';
 
 const canonicalize = (value: unknown): string => {

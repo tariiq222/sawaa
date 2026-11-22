@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { BullMqService } from '../src/infrastructure/queue/bull-mq.service';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
-import { NotificationOutboxConfig, NOTIFICATION_OUTBOX_QUEUE } from '../src/modules/comms/notification-outbox/notification-outbox.config';
+import { NotificationOutboxConfig, NOTIFICATION_OUTBOX_QUEUE } from '../src/common/notification-intent/notification-outbox.config';
 import { NotificationDeliveryWorker } from '../src/modules/comms/notification-outbox/notification-delivery-worker';
 import { NotificationDeliveryPublisher } from '../src/modules/comms/notification-outbox/notification-delivery-publisher';
 import { NotificationChannelSender } from '../src/modules/comms/notification-outbox/notification-channel-sender';

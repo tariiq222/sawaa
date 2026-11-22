@@ -6,7 +6,7 @@ import { PasswordService } from '../../shared/password.service';
 import { ResetPasswordDto } from './reset-password.dto';
 import { maskIdentifier } from '../../../../common/helpers/mask-pii.helper';
 import { PasswordHistoryService } from '../shared/password-history.service';
-import { normalizeIdentifier } from '../../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../../common/phone/identifier-detector';
 import { SINGLE_TENANT_CONTEXT_ID } from '../../../../common/constants';
 import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../../common/contracts/client-account.contract';
 

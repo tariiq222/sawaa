@@ -6,7 +6,7 @@ import { EventBusService } from '../../../infrastructure/events';
 
 import { EmployeeCreatedEvent } from '../events/employee-created.event';
 import { CreateEmployeeDto } from './create-employee.dto';
-import { assertCanManageEmployeeUser } from '../../identity/shared/assert-can-manage-employee-user';
+import { assertCanManageEmployeeUser } from '../../../common/auth/assert-can-manage-employee-user';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type CreateEmployeeCommand = CreateEmployeeDto & { actorUserId?: string };

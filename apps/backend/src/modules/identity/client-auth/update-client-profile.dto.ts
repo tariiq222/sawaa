@@ -2,7 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { IsEmail, IsIn, IsOptional, IsString, IsUrl, IsBoolean, Length, Matches, ValidateIf } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { SAUDI_PHONE_REGEX, SAUDI_PHONE_ERROR_AR } from '@sawaa/shared/validators/phone';
-import { NormalizePhone } from '../shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../common/phone/normalize-phone.transform';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;

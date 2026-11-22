@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
-import { ROLE_RANK, actorRankOf } from '../shared/role-rank';
+import { ROLE_RANK, actorRankOf } from '../../../common/auth/role-rank';
 
 export interface UpdateUserRoleCommand {
   actorUserId: string;

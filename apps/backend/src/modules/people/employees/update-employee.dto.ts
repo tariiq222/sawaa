@@ -2,7 +2,7 @@ import { Transform } from 'class-transformer';
 import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, IsUrl, Matches, MaxLength, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EmployeeGender, EmploymentType } from '@prisma/client';
-import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../common/phone/normalize-phone.transform';
 
 const trimLower = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;

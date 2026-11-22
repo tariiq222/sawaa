@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { isDeepStrictEqual } from 'node:util';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 import { RequestEmailEntryPhoneDto } from './mobile-email-entry.dto';
 import { MobileEmailFlowStore } from './mobile-email-flow.store';
 import { MobileEmailIdentity } from './mobile-email-identity';

@@ -27,6 +27,7 @@ import { ZoomModule } from "./modules/integrations/zoom/zoom.module";
 import { OpsModule } from "./modules/ops/ops.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { DashboardPeopleModule } from "./api/dashboard/dashboard-people.module";
+import { DashboardOrganizationSettingsModule } from "./api/dashboard/dashboard-organization-settings.module";
 import { CommsModule } from "./modules/comms/comms.module";
 import { MobileClientModule } from "./api/mobile/client/mobile-client.module";
 import { ClientApiModule } from "./api/client/client-api.module";
@@ -85,6 +86,7 @@ import { TelemetryModule } from "./infrastructure/telemetry/telemetry.module";
     OpsModule,
     DashboardModule,
     DashboardPeopleModule,
+    DashboardOrganizationSettingsModule,
     CommsModule,
     MobileClientModule,
     ClientApiModule,

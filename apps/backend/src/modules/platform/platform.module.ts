@@ -6,15 +6,12 @@ import { MessagingModule } from '../../infrastructure/messaging.module';
 import { DashboardPlatformController } from '../../api/dashboard/platform.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache/redis.service';
-import { PasswordService } from '../identity/shared/password.service';
 import { CreateProblemReportHandler } from './problem-reports/create-problem-report.handler';
 import { ListProblemReportsHandler } from './problem-reports/list-problem-reports.handler';
 import { UpdateProblemReportStatusHandler } from './problem-reports/update-problem-report-status.handler';
 import { UpsertIntegrationHandler } from './integrations/upsert-integration.handler';
 import { ListIntegrationsHandler } from './integrations/list-integrations.handler';
 import { IntegrationCredentialsService } from '../../infrastructure/integrations/integration-credentials.service';
-import { FinanceModule } from '../finance/finance.module';
-import { IdentityModule } from '../identity/identity.module';
 import { PlatformSettingsModule } from './settings/platform-settings.module';
 import { NotificationsConfigModule } from './notifications-config/notifications-config.module';
 import { SystemHealthModule } from './system-health/system-health.module';
@@ -23,8 +20,6 @@ import { SystemHealthModule } from './system-health/system-health.module';
   imports: [
     DatabaseModule,
    
-    FinanceModule,
-    IdentityModule,
    
     PlatformSettingsModule,
     NotificationsConfigModule,
@@ -45,7 +40,6 @@ import { SystemHealthModule } from './system-health/system-health.module';
   ],
   providers: [
     RedisService,
-    PasswordService,
     CreateProblemReportHandler,
     ListProblemReportsHandler,
     UpdateProblemReportStatusHandler,

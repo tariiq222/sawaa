@@ -2,7 +2,7 @@ import { SAUDI_PHONE_REGEX } from '@sawaa/shared/validators/phone';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
-import { NormalizePhone } from '../../../identity/shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../../common/phone/normalize-phone.transform';
 
 export class GuestRequestHandoffDto {
   @ApiProperty({ description: 'Guest display name for reception contact', example: 'سارة أحمد' })

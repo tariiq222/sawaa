@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
-import { normalizePublicImageUrl } from './public-image-url';
+import { normalizePublicImageUrl } from '../../../../common/media/public-image-url';
 
 export interface PublicEmployeeItem {
   id: string;

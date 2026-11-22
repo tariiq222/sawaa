@@ -8,7 +8,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { EmployeeDeactivatedEvent } from '../events/employee-deactivated.event';
 import { EmployeeReactivatedEvent } from '../events/employee-reactivated.event';
 import { UpdateEmployeeDto } from './update-employee.dto';
-import { assertCanManageEmployeeUser } from '../../identity/shared/assert-can-manage-employee-user';
+import { assertCanManageEmployeeUser } from '../../../common/auth/assert-can-manage-employee-user';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpdateEmployeeCommand = UpdateEmployeeDto & {

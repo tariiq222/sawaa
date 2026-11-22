@@ -7,7 +7,7 @@ import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { EventBusService } from '../src/infrastructure/events';
 import {
   CaptureNotificationIntentHandler,
-} from '../src/modules/comms/notification-outbox/capture-notification-intent.handler';
+} from '../src/common/notification-intent/capture-notification-intent.handler';
 import {
   CaptureReminderNotificationIntentsHandler,
 } from '../src/modules/comms/notification-outbox/capture-reminder-notification-intents.handler';
@@ -16,7 +16,7 @@ import {
 } from '../src/modules/comms/notification-outbox/materialize-notification-intent.handler';
 import {
   NotificationOutboxConfig,
-} from '../src/modules/comms/notification-outbox/notification-outbox.config';
+} from '../src/common/notification-intent/notification-outbox.config';
 import {
   NOTIFICATION_OUTBOX_CONSUMERS,
   notificationSourceKey,

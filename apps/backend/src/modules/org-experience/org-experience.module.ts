@@ -2,7 +2,6 @@ import { MediaModule } from '../media/media.module';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
-import { DashboardOrganizationSettingsController } from '../../api/dashboard/organization-settings.controller';
 import { DashboardOrganizationServicesController } from '../../api/dashboard/organization-services.controller';
 import { DashboardOrganizationIntakeFormsController } from '../../api/dashboard/organization-intake-forms.controller';
 import { DashboardOrganizationPackagesController } from '../../api/dashboard/organization-packages.controller';
@@ -41,8 +40,6 @@ import { UpdateRatingVisibilityHandler } from './ratings/update-rating-visibilit
 import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.handler';
 import { GetClientBankTransferSettingsHandler } from './org-settings/get-client-bank-transfer-settings.handler';
-import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
-import { UpsertBookingSettingsHandler } from '../bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { DashboardDiscountReasonsController } from '../../api/dashboard/discount-reasons.controller';
 import { DashboardMobileHomeCardsController } from '../../api/dashboard/mobile-home-cards.controller';
 import { CreateMobileHomeCardHandler } from './mobile-home-cards/create-mobile-home-card.handler';
@@ -120,7 +117,7 @@ const mobileHomeCardHandlers = [
 
 @Module({
   imports: [MediaModule, DatabaseModule, MessagingModule],
-  controllers: [DashboardOrganizationServicesController, DashboardOrganizationIntakeFormsController, DashboardOrganizationSettingsController, DashboardOrganizationPackagesController, DashboardDiscountReasonsController, DashboardPackageFamiliesController, DashboardMobileHomeCardsController],
+  controllers: [DashboardOrganizationServicesController, DashboardOrganizationIntakeFormsController, DashboardOrganizationPackagesController, DashboardDiscountReasonsController, DashboardPackageFamiliesController, DashboardMobileHomeCardsController],
   providers: [
     ...serviceHandlers,
     ...discountReasonHandlers,
@@ -135,7 +132,6 @@ const mobileHomeCardHandlers = [
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler, GetClientBankTransferSettingsHandler,
-    GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
   exports: [
     ...serviceHandlers,
@@ -151,7 +147,6 @@ const mobileHomeCardHandlers = [
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler, GetClientBankTransferSettingsHandler,
-    GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
 })
 export class OrgExperienceModule {}

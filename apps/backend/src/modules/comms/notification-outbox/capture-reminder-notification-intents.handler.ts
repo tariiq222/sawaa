@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../infrastructure/database';
-import { NotificationOutboxConfig } from './notification-outbox.config';
-import { CaptureNotificationIntentHandler } from './capture-notification-intent.handler';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
+import { CaptureNotificationIntentHandler } from '../../../common/notification-intent/capture-notification-intent.handler';
 import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_REMINDER_POLICY_VERSION, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, NotificationOutboxTickResult, notificationSourceKey } from './notification-outbox.types';
 
 const PAGE_SIZE = 200;

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsString, Length, MinLength } from 'class-validator';
-import { NormalizePhoneOrEmail } from '../shared/normalize-phone.transform';
+import { NormalizePhoneOrEmail } from '../../../common/phone/normalize-phone.transform';
 
 export enum MobileOtpPurposeDto {
   REGISTER = 'register',

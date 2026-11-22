@@ -2,7 +2,7 @@ import { Injectable, ConflictException } from '@nestjs/common';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 import type { RegisterMobileUserDto } from './register-mobile-user.dto';
 
 export type RegisterMobileUserCommand = RegisterMobileUserDto;

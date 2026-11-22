@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { assertCanAssignRole, assertCanManageUser } from '../shared/role-rank';
+import { assertCanAssignRole, assertCanManageUser } from '../../../common/auth/role-rank';
 import { UpdateEmployeeAccountDto } from './update-employee-account.dto';
 
 // actorUserId is injected from the authenticated principal (req.user.id), never the body.

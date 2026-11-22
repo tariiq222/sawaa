@@ -6,7 +6,7 @@ import { PrismaService, TransactionService } from '../../../infrastructure/datab
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { TokenService, TokenPair } from '../shared/token.service';
 import { ClientTokenService } from '../shared/client-token.service';
-import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
+import { detectChannel, normalizeIdentifier, AuthChannel } from '../../../common/phone/identifier-detector';
 import { MobileOtpPurposeDto, VerifyMobileOtpDto } from './verify-mobile-otp.dto';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';

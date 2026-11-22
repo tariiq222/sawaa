@@ -4,7 +4,7 @@ import { OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { TokenService } from '../shared/token.service';
-import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
+import { detectChannel, normalizeIdentifier, AuthChannel } from '../../../common/phone/identifier-detector';
 import { flattenPermissions } from '../../../common/casl/flatten-permissions';
 import { loadSystemRolePermissions } from '../shared/load-system-role-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';

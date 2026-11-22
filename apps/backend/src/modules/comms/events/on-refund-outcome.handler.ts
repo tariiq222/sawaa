@@ -4,10 +4,10 @@ import { EventBusService, type DomainEventEnvelope } from '../../../infrastructu
 import { stableEventId } from '../../../common/events';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetClientPushTargetsHandler } from '../fcm-tokens/get-client-push-targets.handler';
-import { CaptureNotificationIntentHandler } from '../notification-outbox/capture-notification-intent.handler';
+import { CaptureNotificationIntentHandler } from '../../../common/notification-intent/capture-notification-intent.handler';
 import { MaterializeNotificationIntentHandler } from '../notification-outbox/materialize-notification-intent.handler';
 import { ResolveNotificationIntentOwnershipHandler } from '../notification-outbox/resolve-notification-intent-ownership.handler';
-import { NotificationOutboxConfig } from '../notification-outbox/notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import { NOTIFICATION_OUTBOX_CONSUMERS, type RefundOutcomeClientPayload, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 import { refundOutcomeBody } from './client-cancellation-copy';
 

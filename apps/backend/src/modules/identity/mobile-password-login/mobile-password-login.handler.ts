@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { PrismaService } from '../../../infrastructure/database';
 import { ClientLoginHandler } from '../client-auth/client-login.handler';
 import { ClientLoginDto } from '../client-auth/client-login.dto';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { countClientPasswordAttempt, DUMMY_PASSWORD_HASH } from '../shared/password-login-security';

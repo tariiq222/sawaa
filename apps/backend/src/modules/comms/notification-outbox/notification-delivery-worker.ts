@@ -7,7 +7,7 @@ import {
   NOTIFICATION_OUTBOX_MAX_PROVIDER_ATTEMPTS,
   NOTIFICATION_OUTBOX_RETRY_DELAYS_MS,
   NotificationOutboxConfig,
-} from './notification-outbox.config';
+} from '../../../common/notification-intent/notification-outbox.config';
 import {
   NotificationChannelSender,
   type NotificationChannelSendResult,

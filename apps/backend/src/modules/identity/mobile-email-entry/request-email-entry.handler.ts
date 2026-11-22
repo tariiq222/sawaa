@@ -1,7 +1,7 @@
 import { MobileEmailFlow } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 import { RequestEmailEntryDto } from './mobile-email-entry.dto';
 import { EmailEntryChallengeDto } from './mobile-email-entry.response';
 import { MobileEmailFlowStore, codeHash, newCode } from './mobile-email-flow.store';

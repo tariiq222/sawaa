@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ClientAccountType, ClientBloodType, ClientGender, ClientSource } from '@prisma/client';
-import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../common/phone/normalize-phone.transform';
 
 const toUpper = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.toUpperCase() : value;

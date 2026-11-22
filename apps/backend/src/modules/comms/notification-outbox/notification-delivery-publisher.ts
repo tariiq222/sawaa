@@ -4,8 +4,8 @@ import {
   NOTIFICATION_OUTBOX_BATCH_SIZE,
   NOTIFICATION_OUTBOX_JOB,
   NOTIFICATION_OUTBOX_QUEUE,
-} from './notification-outbox.config';
-import { NotificationOutboxConfig } from './notification-outbox.config';
+} from '../../../common/notification-intent/notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import type { NotificationOutboxTickResult } from './notification-outbox.types';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';

@@ -13,7 +13,12 @@ export class EmployeeServiceOptionInputDto {
   @ApiPropertyOptional({ description: 'Employee-specific duration override in minutes (null to use service default)', example: 35, nullable: true })
   @IsOptional() @IsInt() @Min(1) durationOverride?: number | null;
 
-  @ApiPropertyOptional({ description: 'Delivery channel for this override', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON, nullable: true })
+  // The shared OpenAPI enum schema "DeliveryType" is last-writer-wins across the
+  // DTOs carrying enumName: 'DeliveryType'; module registration order decides
+  // the winner. Every writer must keep this exact description or the snapshot
+  // drifts when modules are rewired (MNT-19). The specific wording for this
+  // field lives in the field name and the surrounding DTO documentation.
+  @ApiPropertyOptional({ description: 'Delivery channel', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON, nullable: true })
   @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType | null;
 
   @ApiPropertyOptional({ description: 'Whether this option is active for the employee', example: true })

@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable 
 import { Prisma } from '@prisma/client';
 import { isEmail } from 'class-validator';
 import { TransactionService } from '../../../infrastructure/database';
-import { normalizePhone } from '../shared/identifier-detector';
+import { normalizePhone } from '../../../common/phone/identifier-detector';
 
 @Injectable()
 export class EmployeeContactStore {

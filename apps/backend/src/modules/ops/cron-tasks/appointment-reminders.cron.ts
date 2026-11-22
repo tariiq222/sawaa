@@ -6,7 +6,7 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { EventBusService } from '../../../infrastructure/events';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
-import { NotificationOutboxConfig } from '../../comms/notification-outbox/notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 
 /** Event name consumed by comms `OnBookingReminderHandler`. */
 const REMINDER_EVENT = 'ops.booking.reminder_due';
