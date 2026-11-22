@@ -1,5 +1,5 @@
 import { PrismaService } from '../../../infrastructure/database';
-import { NotificationOutboxConfig } from './notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import { MaterializeNotificationIntentHandler } from './materialize-notification-intent.handler';
 import { ReconcileNotificationIntentsHandler } from './reconcile-notification-intents.handler';
 

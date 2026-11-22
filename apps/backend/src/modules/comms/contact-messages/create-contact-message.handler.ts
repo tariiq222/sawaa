@@ -5,8 +5,8 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CreateContactMessageDto } from './create-contact-message.dto';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
-import { NotificationOutboxConfig } from '../notification-outbox/notification-outbox.config';
-import { CaptureNotificationIntentHandler } from '../notification-outbox/capture-notification-intent.handler';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
+import { CaptureNotificationIntentHandler } from '../../../common/notification-intent/capture-notification-intent.handler';
 import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 
 const STAFF_ROLES = ['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'] as const;

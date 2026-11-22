@@ -7,7 +7,7 @@ import {
 import { NotificationOutboxDeliveryStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../infrastructure/database';
-import { NOTIFICATION_OUTBOX_MAX_PROVIDER_ATTEMPTS } from './notification-outbox.config';
+import { NOTIFICATION_OUTBOX_MAX_PROVIDER_ATTEMPTS } from '../../../common/notification-intent/notification-outbox.config';
 import { NOTIFICATION_OUTBOX_OUTCOME_REASONS } from './notification-outbox.types';
 import {
   notificationEmailDefinition,

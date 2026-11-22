@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
+import { detectChannel, normalizeIdentifier, AuthChannel } from '../../../common/phone/identifier-detector';
 
 export interface LookupUserCommand {
   identifier: string;

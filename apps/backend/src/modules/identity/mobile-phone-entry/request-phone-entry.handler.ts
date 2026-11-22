@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { normalizePhone } from '../shared/identifier-detector';
+import { normalizePhone } from '../../../common/phone/identifier-detector';
 import { MobileEmailSendLimiter } from '../mobile-email-entry/mobile-email-send-limiter';
 import { MobileEmailDelivery } from '../mobile-email-entry/mobile-email-delivery';
 import { deliveryUnavailable } from '../mobile-email-entry/mobile-email-errors';

@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserGender } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
-import { assertCanManageUser } from '../shared/role-rank';
+import { assertCanManageUser } from '../../../common/auth/role-rank';
 
 export interface UpdateUserCommand {
   actorUserId: string;

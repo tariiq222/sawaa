@@ -1,7 +1,7 @@
 import { ArrayUnique, IsArray, IsEmail, IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EmployeeGender, EmploymentType } from '@prisma/client';
-import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../common/phone/normalize-phone.transform';
 
 export class CreateEmployeeDto {
   @ApiProperty({ description: 'Full display name', example: 'Dr. Khalid Al-Otaibi' })

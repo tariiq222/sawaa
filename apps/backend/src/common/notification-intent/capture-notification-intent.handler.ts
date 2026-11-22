@@ -2,8 +2,11 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { createHash } from 'crypto';
 
-import { PrismaService } from '../../../infrastructure/database';
-import { CaptureNotificationIntent } from './notification-outbox.types';
+import { PrismaService } from '../../infrastructure/database';
+import type {
+  CaptureNotificationIntentCommand,
+  NotificationIntentCapturePort,
+} from './capture.contract';
 
 function normalizeJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -27,10 +30,10 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 @Injectable()
-export class CaptureNotificationIntentHandler {
+export class CaptureNotificationIntentHandler implements NotificationIntentCapturePort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(command: CaptureNotificationIntent, tx?: Prisma.TransactionClient): Promise<string> {
+  async execute(command: CaptureNotificationIntentCommand, tx?: Prisma.TransactionClient): Promise<string> {
     const payload = normalizeJson(command.payload);
     const payloadHash = hashPayload(payload);
     const run = async (db: Prisma.TransactionClient | PrismaService): Promise<string> => {

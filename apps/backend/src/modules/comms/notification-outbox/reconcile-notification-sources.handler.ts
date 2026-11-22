@@ -4,8 +4,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../infrastructure/database';
-import { CaptureNotificationIntentHandler, hashPayload } from './capture-notification-intent.handler';
-import { NotificationOutboxConfig } from './notification-outbox.config';
+import { CaptureNotificationIntentHandler, hashPayload } from '../../../common/notification-intent/capture-notification-intent.handler';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import {
   NOTIFICATION_OUTBOX_CONSUMERS,
   NOTIFICATION_OUTBOX_PAYLOAD_VERSION,

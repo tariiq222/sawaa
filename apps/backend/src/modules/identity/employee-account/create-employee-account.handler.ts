@@ -9,7 +9,7 @@ import {
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 import { PasswordService } from '../shared/password.service';
-import { assertCanAssignRole, assertCanManageUser } from '../shared/role-rank';
+import { assertCanAssignRole, assertCanManageUser } from '../../../common/auth/role-rank';
 import { CreateEmployeeAccountDto } from './create-employee-account.dto';
 
 // actorUserId is injected from the authenticated principal (req.user.id), never the body.

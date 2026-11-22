@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import type { PublicEmployeeItem } from './list-public-employees.handler';
-import { normalizePublicImageUrl } from './public-image-url';
+import { normalizePublicImageUrl } from '../../../../common/media/public-image-url';
 
 @Injectable()
 export class GetPublicEmployeeHandler {

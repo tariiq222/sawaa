@@ -1,7 +1,7 @@
 import { IsEnum, IsNotEmpty, IsString, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
-import { NormalizePhoneOrEmail } from '../shared/normalize-phone.transform';
+import { NormalizePhoneOrEmail } from '../../../common/phone/normalize-phone.transform';
 
 export class VerifyOtpDto {
   @ApiProperty({ enum: OtpChannel, description: 'OTP delivery channel', example: 'EMAIL' })

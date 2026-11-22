@@ -1,7 +1,7 @@
 import {
   NOTIFICATION_OUTBOX_JOB,
   NOTIFICATION_OUTBOX_QUEUE,
-} from './notification-outbox.config';
+} from '../../../common/notification-intent/notification-outbox.config';
 import { NotificationDeliveryPublisher } from './notification-delivery-publisher';
 
 describe('NotificationDeliveryPublisher', () => {

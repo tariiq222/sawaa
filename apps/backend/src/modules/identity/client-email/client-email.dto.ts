@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 
 export class RequestClientEmailDto {
   @ApiProperty({ description: 'New email to prove ownership of with a six-digit code', example: 'person@example.test' })

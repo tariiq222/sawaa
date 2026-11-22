@@ -2,7 +2,7 @@ import {
   NOTIFICATION_OUTBOX_BACKLOG_WARNING_MS,
   NOTIFICATION_OUTBOX_JOB,
   NOTIFICATION_OUTBOX_QUEUE,
-} from './notification-outbox.config';
+} from '../../../common/notification-intent/notification-outbox.config';
 import { NotificationOutboxLifecycle } from './notification-outbox.lifecycle';
 
 const tick = () => ({ execute: jest.fn().mockResolvedValue({ examined: 0, changed: 0, failed: 0 }) });

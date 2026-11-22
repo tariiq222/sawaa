@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/database";
-import { assertCanManageUser } from "../shared/role-rank";
+import { assertCanManageUser } from "../../../common/auth/role-rank";
 
 export interface DeleteUserCommand {
 	actorUserId: string;

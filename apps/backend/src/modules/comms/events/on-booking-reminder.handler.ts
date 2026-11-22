@@ -5,10 +5,10 @@ import { SendNotificationHandler } from '../send-notification/send-notification.
 import { GetClientPushTargetsHandler } from '../fcm-tokens/get-client-push-targets.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { BUSINESS_TZ } from '../../../common/timezone';
-import { CaptureNotificationIntentHandler } from '../notification-outbox/capture-notification-intent.handler';
+import { CaptureNotificationIntentHandler } from '../../../common/notification-intent/capture-notification-intent.handler';
 import { MaterializeNotificationIntentHandler } from '../notification-outbox/materialize-notification-intent.handler';
 import { ResolveNotificationIntentOwnershipHandler } from '../notification-outbox/resolve-notification-intent-ownership.handler';
-import { NotificationOutboxConfig } from '../notification-outbox/notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, NOTIFICATION_OUTBOX_REMINDER_POLICY_VERSION, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 
 interface BookingReminderPayload {

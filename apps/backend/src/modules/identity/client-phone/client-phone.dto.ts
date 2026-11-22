@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsString, IsUUID, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { normalizePhone } from '../shared/identifier-detector';
+import { normalizePhone } from '../../../common/phone/identifier-detector';
 
 export const SAUDI_MOBILE = /^\+9665\d{8}$/;
 

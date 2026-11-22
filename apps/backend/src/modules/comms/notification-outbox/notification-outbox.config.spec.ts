@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 
-import { NotificationOutboxConfig } from './notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 
 describe('NotificationOutboxConfig', () => {
   it('keeps capture and delivery disabled when controls are absent', () => {

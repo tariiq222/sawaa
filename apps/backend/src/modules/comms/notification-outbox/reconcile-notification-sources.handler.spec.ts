@@ -1,6 +1,6 @@
 import { PrismaService } from '../../../infrastructure/database';
-import { NotificationOutboxConfig } from './notification-outbox.config';
-import { CaptureNotificationIntentHandler } from './capture-notification-intent.handler';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
+import { CaptureNotificationIntentHandler } from '../../../common/notification-intent/capture-notification-intent.handler';
 import { ReconcileNotificationSourcesHandler } from './reconcile-notification-sources.handler';
 
 const envelope = (eventId: string, payload: Record<string, unknown>, version = 1) => ({

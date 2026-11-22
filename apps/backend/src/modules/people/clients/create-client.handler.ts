@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, Optional } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
@@ -6,9 +6,15 @@ import { ClientEnrolledEvent } from '../events/client-enrolled.event';
 import { CreateClientDto } from './create-client.dto';
 import { serializeClient } from './client.serializer';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
-import { NotificationOutboxConfig } from '../../comms/notification-outbox/notification-outbox.config';
-import { CaptureNotificationIntentHandler } from '../../comms/notification-outbox/capture-notification-intent.handler';
-import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, notificationSourceKey } from '../../comms/notification-outbox/notification-outbox.types';
+import {
+  CLIENT_ENROLLED_CONSUMERS,
+  NOTIFICATION_CAPTURE_POLICY,
+  NOTIFICATION_INTENT_CAPTURE,
+  NOTIFICATION_INTENT_PAYLOAD_VERSION,
+  type NotificationCapturePolicy,
+  type NotificationIntentCapturePort,
+  notificationSourceKey,
+} from '../../../common/notification-intent/capture.contract';
 
 export type CreateClientCommand = CreateClientDto;
 
@@ -22,8 +28,8 @@ export class CreateClientHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
-    @Optional() private readonly capture?: CaptureNotificationIntentHandler,
-    @Optional() private readonly outboxConfig?: NotificationOutboxConfig,
+    @Optional() @Inject(NOTIFICATION_INTENT_CAPTURE) private readonly capture?: NotificationIntentCapturePort,
+    @Optional() @Inject(NOTIFICATION_CAPTURE_POLICY) private readonly outboxConfig?: NotificationCapturePolicy,
   ) {}
 
   async execute(dto: CreateClientCommand) {
@@ -50,15 +56,15 @@ export class CreateClientHandler {
     if ('isExisting' in result && result.isExisting) return result;
     await this.capture!.execute({
       sourceKey: notificationSourceKey.clientEnrolled(result.id),
-      consumerKey: NOTIFICATION_OUTBOX_CONSUMERS.CLIENT_ENROLLED_CLIENT,
-      payloadVersion: NOTIFICATION_OUTBOX_PAYLOAD_VERSION,
+      consumerKey: CLIENT_ENROLLED_CONSUMERS.CLIENT,
+      payloadVersion: NOTIFICATION_INTENT_PAYLOAD_VERSION,
       occurredAt,
       payload: { kind: 'client-enrolled-client', clientId: result.id, name: result.name, phone: result.phone ?? undefined, email: result.email ?? undefined },
     }, tx);
     await this.capture!.execute({
       sourceKey: notificationSourceKey.clientEnrolled(result.id),
-      consumerKey: NOTIFICATION_OUTBOX_CONSUMERS.CLIENT_ENROLLED_STAFF,
-      payloadVersion: NOTIFICATION_OUTBOX_PAYLOAD_VERSION,
+      consumerKey: CLIENT_ENROLLED_CONSUMERS.STAFF,
+      payloadVersion: NOTIFICATION_INTENT_PAYLOAD_VERSION,
       occurredAt,
       payload: { kind: 'client-enrolled-staff', clientId: result.id, name: result.name },
     }, tx);

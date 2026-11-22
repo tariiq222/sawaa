@@ -5,7 +5,7 @@ import {
   targetRankOf,
   assertCanAssignRole,
   assertCanManageUser,
-} from './role-rank';
+} from '../../../common/auth/role-rank';
 
 /**
  * Privilege-escalation gate shared by every role-mutation path

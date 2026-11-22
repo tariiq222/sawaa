@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { NotificationOutboxConfig } from './notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import {
   NOTIFICATION_OUTBOX_OUTCOME_REASONS,
   type NotificationOutboxTickResult,

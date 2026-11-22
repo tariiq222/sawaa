@@ -1,7 +1,7 @@
 import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 import { UserRole, UserGender } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NormalizePhone } from '../shared/normalize-phone.transform';
+import { NormalizePhone } from '../../../common/phone/normalize-phone.transform';
 
 export class CreateUserDto {
   @ApiProperty({ description: 'User email address', example: 'user@example.com' })

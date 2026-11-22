@@ -13,7 +13,7 @@ import {
   NOTIFICATION_OUTBOX_BACKLOG_WARNING_MS,
   NOTIFICATION_OUTBOX_RECONCILE_INTERVAL_MS,
   NotificationOutboxConfig,
-} from './notification-outbox.config';
+} from '../../../common/notification-intent/notification-outbox.config';
 import { ReconcileNotificationDeliveriesHandler } from './reconcile-notification-deliveries.handler';
 import { ReconcileNotificationIntentsHandler } from './reconcile-notification-intents.handler';
 import { ReconcileNotificationSourcesHandler } from './reconcile-notification-sources.handler';

@@ -6,10 +6,10 @@ import { EventBusService, type DomainEventEnvelope } from '../../../infrastructu
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
 import { formatBookingRef } from './booking-ref.util';
-import { CaptureNotificationIntentHandler } from '../notification-outbox/capture-notification-intent.handler';
+import { CaptureNotificationIntentHandler } from '../../../common/notification-intent/capture-notification-intent.handler';
 import { MaterializeNotificationIntentHandler } from '../notification-outbox/materialize-notification-intent.handler';
 import { ResolveNotificationIntentOwnershipHandler } from '../notification-outbox/resolve-notification-intent-ownership.handler';
-import { NotificationOutboxConfig } from '../notification-outbox/notification-outbox.config';
+import { NotificationOutboxConfig } from '../../../common/notification-intent/notification-outbox.config';
 import { NOTIFICATION_OUTBOX_CONSUMERS, NOTIFICATION_OUTBOX_PAYLOAD_VERSION, notificationSourceKey } from '../notification-outbox/notification-outbox.types';
 
 interface BookingCancelledPayload {

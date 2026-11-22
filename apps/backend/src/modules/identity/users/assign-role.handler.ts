@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { actorRankOf, targetRankOf } from '../shared/role-rank';
+import { actorRankOf, targetRankOf } from '../../../common/auth/role-rank';
 
 export interface AssignRoleCommand {
   // actorUserId comes from the authenticated principal (req.user.id), never the body.

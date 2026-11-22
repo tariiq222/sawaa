@@ -2,7 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
-import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
+import { detectChannel, normalizeIdentifier, AuthChannel } from '../../../common/phone/identifier-detector';
 import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';

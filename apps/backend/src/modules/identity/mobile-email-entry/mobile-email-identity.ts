@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Client, Prisma, User } from '@prisma/client';
 import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 import { isMobileStaffEligible } from '../shared/mobile-staff-eligibility';
 
 type AuthUser = Prisma.UserGetPayload<{ include: { customRole: { include: { permissions: true } } } }>;

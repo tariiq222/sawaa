@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { Equals, IsEmail, IsOptional, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 
 export class RequestEmailEntryDto {
   @ApiProperty({ description: 'Email to prove ownership of', example: 'person@example.test' })

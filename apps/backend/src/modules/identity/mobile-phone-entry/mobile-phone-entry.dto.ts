@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { Equals, IsEmail, IsString, IsUUID, Length, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { normalizeIdentifier } from '../shared/identifier-detector';
+import { normalizeIdentifier } from '../../../common/phone/identifier-detector';
 
 export class RequestPhoneEntryDto {
   @ApiProperty({ description: 'Saudi mobile phone to prove ownership of', example: '+966512345678', pattern: '^\\+9665\\d{8}$' })

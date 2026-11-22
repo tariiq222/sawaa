@@ -11,7 +11,7 @@ import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { PrismaService, TransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
-import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
+import { detectChannel, normalizeIdentifier, AuthChannel } from '../../../common/phone/identifier-detector';
 import {
   dashboardOtpFailedKey,
   MAX_FAILED_VERIFY_ATTEMPTS,

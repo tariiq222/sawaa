@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateClientProfileDto } from './update-client-profile.dto';
 import { GetMeHandler, type ClientProfile } from './get-me.handler';
-import { normalizePhone } from '../shared/identifier-detector';
+import { normalizePhone } from '../../../common/phone/identifier-detector';
 import { CLIENT_ACCOUNT_STORE, type ClientAccountStore } from '../../../common/contracts/client-account.contract';
 
 /**
