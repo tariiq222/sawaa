@@ -1,6 +1,6 @@
 import type { NativePackagePurchaseInitResponse } from '@sawaa/shared/types';
 import { InitNativePaymentHandler } from '../../native-payments/init-native-payment/init-native-payment.handler';
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -24,7 +24,6 @@ import { resolveVatRate } from "../../create-invoice/create-invoice.handler";
 import { computeVat } from "../../money.helper";
 import { DEFAULT_ORG_ID } from "../../../../common/constants";
 import { PackageLedgerService } from '../../../bookings/package-ledger/package-ledger.service';
-import { InitPackagePurchaseDto } from "./init-package-purchase.dto";
 import {
   createPackageCreditSnapshot,
   parsePackageCreditSnapshot,
@@ -46,34 +45,23 @@ import {
 import { isNonPayableInvoiceStatus } from "../../invoice-payment-state.helper";
 import { buildPackageOfferSnapshot } from "../package-offer-snapshot";
 import { parsePackageOfferSnapshot } from "../package-offer-snapshot";
+import {
+  assertHostedInvoiceMatches,
+  buildPackagePurchaseCallbackUrl,
+  isPaidCheckoutStatus,
+  isTerminalFailedCheckoutStatus,
+  selfPurchaseFingerprint,
+} from './init-package-purchase.pure';
 
-export type InitPackagePurchaseCommand = InitPackagePurchaseDto & {
-  /** Authenticated client id (set by the controller from the client session). */
-  clientId: string;
-};
+import type {
+  InitPackagePurchaseCommand,
+  InitPackagePurchaseResult,
+} from './init-package-purchase.types';
 
-export interface InitPackagePurchaseResult {
-  purchaseId: string;
-  invoiceId: string;
-  paymentId: string;
-  redirectUrl: string;
-}
+export type { InitPackagePurchaseCommand, InitPackagePurchaseResult };
+// Re-exported for the existing specs that import it from this module.
+export { selfPurchaseFingerprint } from './init-package-purchase.pure';
 
-export function selfPurchaseFingerprint(
-  cmd: InitPackagePurchaseCommand,
-): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        source: "self-purchase",
-        clientId: cmd.clientId,
-        packageId: cmd.packageId,
-        branchId: cmd.branchId,
-        ...(cmd.packageFamilyId ? { packageFamilyId: cmd.packageFamilyId } : {}),
-      }),
-    )
-    .digest("hex");
-}
 
 /**
  * Self-purchase of a SessionPackage by an authenticated CLIENT (website/mobile),
@@ -718,9 +706,7 @@ export class InitPackagePurchaseHandler {
   }
 
   private buildCallbackUrl(purchaseId: string, invoiceId: string): string {
-    const baseUrl =
-      process.env["PUBLIC_WEBSITE_URL"] || "http://localhost:3000";
-    return `${baseUrl}/packages/payment-callback?purchaseId=${purchaseId}&invoiceId=${invoiceId}`;
+    return buildPackagePurchaseCallbackUrl(purchaseId, invoiceId);
   }
 
   private async findHostedInvoice(paymentId: string, gatewayRef: string | null) {
@@ -758,28 +744,14 @@ export class InitPackagePurchaseHandler {
     amountHalalas: number,
     currency: string,
   ): void {
-    if (
-      Math.round(checkout.amount) !== amountHalalas ||
-      checkout.currency.toUpperCase() !== currency.toUpperCase()
-    ) {
-      throw new ConflictException(
-        "Hosted invoice does not match the package payment attempt",
-      );
-    }
+    assertHostedInvoiceMatches(checkout, amountHalalas, currency);
   }
 
   private isPaidCheckoutStatus(status: string): boolean {
-    return ["paid", "completed"].includes(status.toLowerCase());
+    return isPaidCheckoutStatus(status);
   }
 
   private isTerminalFailedCheckoutStatus(status: string): boolean {
-    return [
-      "expired",
-      "failed",
-      "canceled",
-      "cancelled",
-      "voided",
-      "refunded",
-    ].includes(status.toLowerCase());
+    return isTerminalFailedCheckoutStatus(status);
   }
 }
