@@ -13,7 +13,11 @@ export class EmployeeServiceOptionInputDto {
   @ApiPropertyOptional({ description: 'Employee-specific duration override in minutes (null to use service default)', example: 35, nullable: true })
   @IsOptional() @IsInt() @Min(1) durationOverride?: number | null;
 
-  @ApiPropertyOptional({ description: 'Delivery channel for this override', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON, nullable: true })
+  // The shared `DeliveryType` schema takes its description from whichever DTO
+  // carrying `enumName: 'DeliveryType'` is registered last, so the text here
+  // must match the other writers: a distinct string makes the snapshot depend
+  // on module registration order (it drifted between local and CI in MNT-19).
+  @ApiPropertyOptional({ description: 'Delivery channel', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON, nullable: true })
   @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType | null;
 
   @ApiPropertyOptional({ description: 'Whether this option is active for the employee', example: true })
