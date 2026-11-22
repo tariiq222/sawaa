@@ -13,6 +13,8 @@ import { useSawaaColors } from '@/theme/sawaa/useSawaaColors';
 import { useTheme } from '@/theme/ThemeProvider';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import type { DirState } from '@/hooks/useDir';
+import { STATUS_LABEL_MAP } from '@/lib/status-helpers';
+import type { BookingStatus } from '@/types/booking-enums';
 import type { PortalBookingRow } from '@/services/client/portal';
 
 interface UpNextCardProps {
@@ -72,7 +74,12 @@ export function UpNextCard({ loading, booking, dir, f600, f700, now }: UpNextCar
   const delivery = isOnline ? t('home.online') : deliveryType === 'in_person' ? t('home.inPerson') : '';
   const detail = [serviceName, employeeName ? t('home.withTherapist', { name: employeeName }) : '', delivery].filter(Boolean).join(' · ');
   const status = booking.status?.toLowerCase();
-  const statusLabel = status === 'pending' ? t('appointments.pending') : status === 'confirmed' || status === 'deposit_paid' ? t('appointments.confirmed') : '';
+  // Read the shared label map instead of an inline chain: this line used to
+  // render deposit_paid as "Confirmed", losing the fact that only the deposit
+  // had been paid.
+  const statusLabel = status
+    ? t(STATUS_LABEL_MAP[status as BookingStatus] ?? '')
+    : '';
   const pillLabel = live ? t('home.liveNow') : statusLabel;
   const durationMins = booking.service?.duration
     ?? (endIso ? Math.max(1, Math.round((new Date(endIso).getTime() - new Date(iso).getTime()) / 60_000)) : 60);

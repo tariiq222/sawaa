@@ -7,8 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./auth": "./src/modules/auth.js",
-    "./types": "./src/types/index.js"
+    "./auth": "./src/modules/auth.ts",
+    "./types": "./src/types/index.ts"
   },
   "dependencies": {
     "@sawaa/shared": "workspace:*"

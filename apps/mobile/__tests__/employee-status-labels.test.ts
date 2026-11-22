@@ -1,23 +1,13 @@
 import { getStatusLabel, STATUS_LABEL_MAP } from '../lib/status-helpers';
-import { BookingStatus } from '../types/booking-enums';
+import { BOOKING_STATUSES } from '../types/booking-enums';
 
 describe('getStatusLabel', () => {
-  it('maps all defined BookingStatus values correctly', () => {
-    const statuses: BookingStatus[] = [
-      'pending',
-      'confirmed',
-      'completed',
-      'cancelled',
-      'no_show',
-      'expired',
-      'pending_group_fill',
-      'awaiting_payment',
-      'cancel_requested',
-    ];
-
-    statuses.forEach((status) => {
+  it('maps every wire status to its own label key', () => {
+    // Reads BOOKING_STATUSES instead of a hand-written list: the old copy here
+    // had nine entries and silently skipped deposit_paid.
+    for (const status of BOOKING_STATUSES) {
       expect(getStatusLabel(status)).toBe(STATUS_LABEL_MAP[status]);
-    });
+    }
   });
 
   it('maps cancelled to appointments.cancelledStatus', () => {
