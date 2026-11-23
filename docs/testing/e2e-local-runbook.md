@@ -41,7 +41,7 @@ SW-P01 يختبر عقد Native API مع المزود الحقيقي: دخول �
 
 إذا انقطع التشغيل بعد POST، يستعلم الاختبار عن المحاولة نفسها؛ لا يرسل ثانية إلا إذا أكد الباك غيابها لدى المزود. محاولة initiated تُستكمل عبر GET ورابط التحقق نفسه. المحاولات الفاشلة/المغلقة تحتاج قاعدة تشغيل جديدة. رابط عودة SDK تعالجه طبقة المتصفح محليًا كما يعترضه SDK؛ حالة الدفع لا تُضبط أو تُحاكى وتُقرأ من Moyasar بواسطة الباك.
 
-هذا لا يختبر واجهة SDK داخل التطبيق، أو checkout الموقع المستضاف، أو وصول webhook إلى الباك المحلي، أو Apple Pay. لا تخلط هذه الأدلة.
+هذا لا يختبر واجهة SDK داخل التطبيق أو Apple Pay. checkout الموقع المستضاف ووصول webhook إلى الباك المحلي يغطيهما SW-P03 في قسم المرحلة الرابعة. لا تخلط هذه الأدلة.
 
 ## تطبيق iOS
 
@@ -63,7 +63,7 @@ SW-M01 يعيد تثبيت التطبيق ويمسح Keychain على المحا�
 
 ## الأدلة والإيقاف
 
-اقرأ report.json والتخطيات والأخطاء، وقارن إيصالات `web-receipt.json` و`mobile-receipt.json` و`payment-receipt.json` بالسيناريو. لا تكتفِ برمز خروج صفر أو رسالة UI. ملفات البيئة خاصة وليست مرفقات مراجعة.
+اقرأ report.json والتخطيات والأخطاء، وقارن إيصالات `web-receipt.json` و`mobile-receipt.json` و`payment-receipt.json` و`hosted-receipt.json` و`hosted-payment-receipt.json` بالسيناريو. لا تكتفِ برمز خروج صفر أو رسالة UI. ملفات البيئة خاصة وليست مرفقات مراجعة.
 
 أوقف stack بـ Ctrl-C بعد انتهاء الاختبارات؛ يوقف عملياته وCompose project الخاص به، ويحتفظ بالـvolumes والأدلة. wrapper التطبيق يوقف Metro الذي أنشأه ويزيل attestation تلقائيًا. لا حذف تلقائي لبيانات أو volumes أو أجهزة المستخدم، ولا commit أو نشر ضمن هذه الأوامر.
 
@@ -130,3 +130,32 @@ node e2e/local/with-env.mjs <runDir> node e2e/local/verify-package.mjs cancelled
 
 These verification scripts assert real persisted state; they do not drive the UI.
 Retain the native interaction recording as separate evidence.
+
+## المرحلة الرابعة: دفع الموقع عبر checkout Moyasar المستضاف
+
+SW-P03 اختبار متصفح اختياري لا يعمل في CI. يدخل كعميل اصطناعي باسم `hosted`، يحجز من الموقع، يختار «الدفع الإلكتروني»، فيُحوَّل إلى checkout Moyasar المستضاف في Sandbox، ويدفع بالبطاقة التجريبية الرسمية الخالية من تحدٍّ 3DS، ثم يعود إلى `/booking/payment-callback` وبعدها `/booking/confirm`.
+
+### التجهيز والتشغيل
+
+تحتاج `cloudflared` في PATH لأن نفق webhook يستخدمه. أنشئ ملف مفاتيح Sandbox بصلاحية 600 كما في قسم Moyasar Sandbox، واحذفه بعد الإعداد. ابدأ stack جديدًا وأبقِه مفتوحًا.
+
+```bash
+pnpm e2e:local:stack
+node e2e/local/with-env.mjs <runDir> node e2e/local/sandbox.mjs <private-test-keys.json>
+node e2e/local/with-env.mjs <runDir> node e2e/local/webhook.mjs
+node e2e/local/with-env.mjs <runDir> pnpm exec e2e run --config e2e.local-hosted.config.ts --target website --tag payment-hosted --output .e2e/phase4-hosted
+```
+
+أبقِ أمر `webhook.mjs` مفتوحًا حتى يطبع `READY` قبل تشغيل الاختبار. يسجل اشتراك webhook في Sandbox على مسار عشوائي عبر نفق HTTPS، ويتحقق من السر المشترك، ويمرر فقط أحداث الدفعات التي تخص عملاء الحزمة، ولا يحفظ الأجسام الخام. يطابق الحدث على معرّف الدفعة أو معرّف فاتورة Moyasar، وأحداث checkout المستضاف تحمل `invoice_id`. بعد الاختبار أوقف عملية `with-env.mjs` التي تشغله بـ Ctrl-C أو SIGINT/SIGTERM. لا تقتل `webhook.mjs` بـ `pkill -f webhook.mjs` لأن قتل العملية الابنة مباشرة يتجاوز التنظيف ويترك اشتراك Sandbox مسجلًا مع `deleted: false`. تأكد بعد الإيقاف أن `webhook-receipt.json` يحمل `deleted: true`.
+
+### ما يثبته وما لا يثبته
+
+يثبت مسار الدفع كاملًا في المتصفح مع المزود الحقيقي: التحويل إلى checkout المستضاف، الدفع بالبطاقة التجريبية، العودة إلى الموقع، والتسوية عبر webhook حقيقي يصل إلى الباك المحلي. يتحقق من دفعة COMPLETED واحدة وفاتورة PAID وحجز CONFIRMED بمبلغ 30000 هللة وSAR، ومن غياب دفعة مكررة. يكتب الاختبار `hosted-payment-receipt.json` في runDir بالمعرفات والحالات والمبلغ و`cardSubmitted` وزمن التسوية وعدد مرات التسليم والمضيفين المسموحين والمستخدمين والمحجوبين، دون مفاتيح أو بيانات بطاقة أو `gatewayRef` أو روابط دفع. أما `hosted-receipt.json` فإيصال الحجز المنفصل الذي يكتبه `verifyBooking('hosted')`.
+
+السماح الشبكي مقصور على `127.0.0.1:55200` و`127.0.0.1:55205` و`checkout.moyasar.com` و`api.moyasar.com` و`cdn.jsdelivr.net` (نموذج البطاقة في checkout يعتمد عليه)، عبر `browser.route`. كل أصل آخر يُقطع ويُسجَّل اسمه فقط. يقبل Sandbox رابط العودة `http://127.0.0.1:55205`، وتعود 3DS غير التفاعلية وحدها. التسوية الملحوظة بعد إرسال البطاقة بثوانٍ قليلة (3 إلى 4 تقريبًا)، وحد الانتظار 90 ثانية.
+
+ظهور تحدٍّ 3DS تفاعلي فشل صريح، وعدم وصول webhook خلال 90 ثانية فشل موثق في الإيصال. لا يوجد reconcile عند الطلب لهذا المسار؛ مهمة cron تسوي المدفوعات المتأخرة بعد 30 دقيقة فقط، فلا تعتمد عليها داخل الاختبار.
+
+الاستئناف يعمل على stack واحد. بلا حجز يبدأ الاختبار من جديد. إذا كان الحجز CONFIRMED يتحقق فقط دون دفع. إذا كان AWAITING_PAYMENT و`cardSubmitted: false` يستأنف بزر «ادفع الآن» في الحجز. إذا كان `cardSubmitted: true` فلا يرسل بطاقة ثانية وينتظر حتى 90 ثانية ثم يفشل. وجود أكثر من حجز للعميل `hosted` يفشل. مهلة الاختبار 300 ثانية. كل إرسال بطاقة يستهلك العميل `hosted`، فابدأ stack جديدًا لمحاولة دفع جديدة.
+
+لا يثبت Apple Pay، ولا واجهة SDK داخل التطبيق، ولا نجاح 3DS التفاعلي، ولا reconcile عند الطلب. هذه أدلة منفصلة لا تخلطها به.
