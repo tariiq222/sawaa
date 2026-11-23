@@ -42,9 +42,13 @@ const server = createServer(async (req, res) => {
     const raw = Buffer.concat(chunks).toString('utf8');
     const body = JSON.parse(raw);
     if (typeof body.secret_token !== 'string' || !equal(body.secret_token, webhookSecret)) { res.writeHead(401).end(); return; }
-    const paymentId = body.data?.id;
-    if (typeof paymentId !== 'string') { res.writeHead(400).end(); return; }
-    const payment = await db.payment.findFirst({ where: { gatewayRef: paymentId }, include: { invoice: true } });
+    // Native payments store the Moyasar payment id; website hosted checkout stores the
+    // hosted invoice id, which the backend reads from data.invoice_id or invoice_id.
+    const paymentId = typeof body.data?.id === 'string' ? body.data.id : null;
+    const candidates = [...new Set([body.data?.id, body.data?.invoice_id, body.invoice_id]
+      .filter(value => typeof value === 'string' && value.length > 0))];
+    if (!candidates.length) { res.writeHead(400).end(); return; }
+    const payment = await db.payment.findFirst({ where: { gatewayRef: { in: candidates } }, include: { invoice: true } });
     // Sandbox webhook subscriptions cover the account. Discard unrelated events
     // without persisting bodies; only this fixture's clients may reach our API.
     if (!payment || !Object.values(f.clients).some(c => c.id === payment.invoice.clientId)) { res.writeHead(200).end(); return; }
