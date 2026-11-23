@@ -30,9 +30,10 @@ export async function verifyBooking(kind, status = 'CONFIRMED') {
     assert.equal(Number(b.price), f.priceHalalas);
     assert.equal(b.currency, 'SAR');
     assert.equal(b.status, status);
-    assert.equal(b.payAtClinic, !['payment', 'apple'].includes(kind));
+    const online = ['payment', 'apple', 'hosted'].includes(kind);
+    assert.equal(b.payAtClinic, !online);
     const invoices = await prisma.invoice.findMany({ where: { bookingId: b.id }, include: { payments: true } });
-    if (!['payment', 'apple'].includes(kind)) {
+    if (!online) {
       assert.equal(b.expiresAt, null);
       assert.equal(invoices.length, 0, 'Pay-at-clinic creation must not invent a paid invoice');
     } else {
@@ -82,5 +83,42 @@ export async function verifyNativePayment({ paymentId, invoiceId, bookingId, sta
     assert.equal(payment.currency, 'SAR');
     if (status) assert.equal(payment.status, status);
     return { paymentId: payment.id, invoiceId: invoice.id, bookingId: invoice.bookingId, status: payment.status };
+  } finally { await prisma.$disconnect(); }
+}
+
+/**
+ * Prove a website hosted-checkout attempt only through the isolated local database.
+ * The hosted gateway reference is checked but never returned or written anywhere.
+ * @param {{ bookingId: string; invoiceId: string; status?: 'PENDING' | 'COMPLETED' }} expected
+ */
+export async function verifyHostedPayment({ bookingId, invoiceId, status }) {
+  assert.ok([bookingId, invoiceId].every(id => typeof id === 'string' && id.trim().length > 0),
+    'Hosted checkout identifiers are required');
+  const f = fixture();
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, bookingId, clientId: f.clients.hosted.id },
+      select: { id: true, bookingId: true, clientId: true, status: true,
+        payments: { select: { id: true, gatewayRef: true, status: true, amount: true, currency: true } } },
+    });
+    assert.ok(invoice, 'Hosted checkout must belong to the isolated hosted client and booking');
+    assert.equal(invoice.clientId, f.clients.hosted.id);
+    assert.equal(invoice.bookingId, bookingId);
+    const booking = await prisma.booking.findFirst({
+      where: { id: bookingId, clientId: f.clients.hosted.id }, select: { status: true },
+    });
+    assert.ok(booking, 'Hosted checkout booking must belong to the isolated hosted client');
+    assert.equal(invoice.payments.length, 1, 'Hosted checkout must have exactly one payment attempt');
+    const payment = invoice.payments[0];
+    assert.equal(Number(payment.amount), f.priceHalalas);
+    assert.equal(payment.currency, 'SAR');
+    assert.ok(typeof payment.gatewayRef === 'string' && payment.gatewayRef.trim().length > 0,
+      'Hosted checkout must store a gateway reference');
+    assert.notEqual(payment.gatewayRef, payment.id, 'Hosted attempt must not be a native reservation');
+    if (status) assert.equal(payment.status, status);
+    return { bookingId: invoice.bookingId, invoiceId: invoice.id, paymentId: payment.id,
+      paymentStatus: payment.status, invoiceStatus: invoice.status, bookingStatus: booking.status,
+      amountHalalas: Number(payment.amount), currency: payment.currency };
   } finally { await prisma.$disconnect(); }
 }
