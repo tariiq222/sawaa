@@ -12,15 +12,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { useLocale } from "@/components/locale-provider"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Settings02Icon,
-  Tick01Icon,
-  UserCheck01Icon,
-  Cancel01Icon,
-  CheckmarkCircle01Icon,
-  EyeIcon,
-  ArrowTurnBackwardIcon,
-} from "@hugeicons/core-free-icons"
+import { Settings02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@sawaa/ui"
 import {
   DropdownMenu,
@@ -34,58 +26,26 @@ import { useBookingMutations } from "@/hooks/use-bookings"
 import { useAuth } from "@/components/providers/auth-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import { sarToHalalas } from "@/lib/money"
-import type { Booking, CancellationReason, RefundDecision, RefundType } from "@/lib/types/booking"
+import type {
+  Booking,
+  CancellationReason,
+  RefundDecision,
+  RefundType,
+} from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
 import { RestoreNoShowDialog } from "./restore-no-show-dialog"
 import { CollectAction, canCollectBooking, useLatestBookingRef } from "./booking-collect-action"
+import {
+  getActionMeta,
+  getStatusLabels,
+  statusActions,
+  type BookingAction,
+} from "./booking-action-maps"
 
 interface BookingActionsProps {
   booking: Booking
   onAction: () => void
 }
-
-/* ── Transition map: status → available actions ──
- * Mirrors the backend booking-state-machine. Never advertise an action it
- * rejects: holds (awaiting_payment / pending_group_fill) are cancellable and
- * confirmed by recording the payment, but CONFIRM is PENDING-only and they are
- * not reschedulable. Deposit bookings support attendance with a balance due.
- */
-const statusActions = {
-  pending: ["confirm", "cancel"] as const,
-  pending_group_fill: ["cancel"] as const,
-  awaiting_payment: ["cancel"] as const,
-  deposit_paid: ["checkin", "complete", "noshow", "cancel"] as const,
-  confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
-  cancel_requested: ["approve_cancel", "reject_cancel"] as const,
-  completed: [] as const,
-  cancelled: [] as const,
-  no_show: ["restore_noshow"] as const,
-  expired: [] as const,
-}
-
-const getActionMeta = (t: (k: string) => string) => ({
-  confirm:        { label: t("bookings.actions.action.confirm"),       icon: Tick01Icon,            variant: "default" },
-  checkin:        { label: t("bookings.actions.action.checkin"),       icon: UserCheck01Icon,       variant: "outline" },
-  complete:       { label: t("bookings.actions.action.complete"),      icon: CheckmarkCircle01Icon, variant: "default" },
-  noshow:         { label: t("bookings.actions.action.noshow"),        icon: EyeIcon,               variant: "destructive" },
-  cancel:         { label: t("bookings.actions.action.cancel"),        icon: Cancel01Icon,          variant: "destructive" },
-  approve_cancel: { label: t("bookings.actions.action.approveCancel"), icon: Tick01Icon,            variant: "default" },
-  reject_cancel:  { label: t("bookings.actions.action.rejectCancel"),  icon: Cancel01Icon,          variant: "outline" },
-  restore_noshow: { label: t("bookings.actions.action.restoreNoShow"), icon: ArrowTurnBackwardIcon, variant: "outline" },
-})
-
-const getStatusLabels = (t: (k: string) => string): Record<string, string> => ({
-  pending:              t("bookings.actions.status.pending"),
-  pending_group_fill:   t("bookings.actions.status.pending_group_fill"),
-  awaiting_payment:     t("bookings.actions.status.awaiting_payment"),
-  confirmed:            t("bookings.actions.status.confirmed"),
-  deposit_paid:         t("bookings.actions.status.deposit_paid"),
-  completed:            t("bookings.actions.status.completed"),
-  cancelled:            t("bookings.actions.status.cancelled"),
-  cancel_requested:     t("bookings.actions.status.cancel_requested"),
-  no_show:              t("bookings.actions.status.no_show"),
-  expired:              t("bookings.actions.status.expired"),
-})
 
 export function BookingActions({ booking, onAction }: BookingActionsProps) {
   const { t } = useLocale()
@@ -150,6 +110,9 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
   }
 
   const { status } = booking
+  // Runtime defence: a status the backend adds later must degrade to "no
+  // actions" rather than throw on `actions.length`. Completeness is enforced by
+  // the `Record<BookingStatus, …>` type in booking-action-maps.ts.
   const actions = statusActions[status] ?? []
 
   // "Owes money" predicate — co-located in booking-collect-action.tsx so the
@@ -160,7 +123,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
   // booking inside the post-complete `.then()` (onAction() refreshes first).
   const bookingRef = useLatestBookingRef(booking)
 
-  const handleAction = (action: string) => {
+  const handleAction = (action: BookingAction) => {
     switch (action) {
       case "confirm":
         run(() => confirmMut.mutateAsync(booking.id), t("bookings.actions.toast.confirmed"))
@@ -197,6 +160,12 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
         // toast + onAction() behaviour for the success path).
         setRestoreDialogOpen(true)
         break
+      default: {
+        // Exhaustiveness guard: adding an action to `BookingAction` without a
+        // branch here is a type error rather than a click that does nothing.
+        const unhandled: never = action
+        void unhandled
+      }
     }
   }
 

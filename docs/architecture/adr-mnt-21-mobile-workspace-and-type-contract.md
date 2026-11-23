@@ -145,7 +145,7 @@
    - `rg -n "export type BookingStatus" apps/mobile` → **صفر** تعريف محلي.
    - `rg -n "export type BookingStatus" packages/api-client/src` → مطابقة واحدة (المصدر الوحيد).
    - الجوال يحتوي فقط `export type { BookingStatus } from '@sawaa/api-client'`.
-   - اللوحة: تعريفها إما مشتق من اللقطة أو استثناء موثّق في م4 (لا يُترك صامتًا).
+   - اللوحة: **مُنجز فعلًا في م4 (21.5)** — `apps/dashboard/lib/types/booking.ts` تُعيد تصدير `BookingStatus` و`BOOKING_STATUSES` من `@sawaa/api-client` بدل تعريف محلي، فلا نسخة ثالثة للقائمة.
 3. **AC-3 — تكافؤ القيم**
    - `pnpm --filter @sawaa/api-client test -- src/types/booking.test.ts` ناجح.
    - اختبار جوال يقارن تعداد مفاتيح `STATUS_LABEL_MAP` بقيم `BOOKING_STATUSES` (يفشل عند إضافة/حذف قيمة).
@@ -320,11 +320,17 @@ bash scripts/apple-release/build-ios.sh   # يتطلب متغيرات البيئ
 |---|---|---|
 | **م0** — إصلاح `exports` | **منجز** | `packages/api-client/package.json` صار يشير إلى `./src/modules/auth.ts` و`./src/types/index.ts` بدل ملفَي `.js` غير الموجودين (F-19) |
 | **م0** — قرار استهلاك Metro (مصدر أم `dist`) | **مفتوح** | لا `build` script في الحزمة؛ الخطوة المسماة «Build shared packages» لا تبنيها؛ لا مستهلك `dist` اليوم |
+| **م4 — 21.5** — نوع اللوحة | **منجز (إعادة تصدير من `api-client` + حراس الخرائط)** | `BookingStatus` و`BOOKING_STATUSES` في اللوحة صارا **إعادة تصدير** من `@sawaa/api-client`، وهي الحزمة التي تشتقّهما من اللقطة الملتزمة نفسها وتحرس التكافؤ في `src/types/booking.test.ts`. بدلًا من نسخة محلية ثالثة للقائمة، أصبح للمصطلح مصدر واحد واللوحة تستهلكه. وأُغلقت ثلاث خرائط كانت بلا حارس نوع: `statusActions` و`getStatusLabels` و`getActionMeta` (نُقلت إلى `booking-action-maps.ts` بعد أن رفعت الخرائط المقيسة الملف فوق سقفه 350 سطرًا؛ صار 319) و`STATUS_COLORS` في `booking-timeline.tsx` التي كانت **تنقص `deposit_paid`** فيسقط شريط الحالة إلى الرمادي الافتراضي |
+| **أثر جانبي يجب معرفته** | — | ربط `BookingStatus` بلقطة `api-client` يعني أن `pnpm --filter dashboard run openapi:generate` **وحده** لم يعد يحرّك نوع حالة الحجز؛ التحديث المطلوب هو `pnpm openapi:sync` من الجذر لأنه يولّد الثلاثة معًا. حارس التكافؤ المتبقي في CI هو `pnpm --filter @sawaa/api-client test` (سطر «Package tests» في `merge-gate.yml`)، وليس اختبار اللوحة |
 | **م1** — workspace واحد | **محجوب** | ينتظر قرار المالك في `react` (19.2.0 مقابل 19.2.4) و`minimatch` (`^10` مقابل `11.0.9`)، وقد طلب الـADR قياسهما على iOS |
 | **AC-3** — تكافؤ القيم | **منجز** | خمسة حراس في `apps/mobile/__tests__/booking-status-parity.test.ts`، كل واحد مُتحقَّق بإفشاله عمدًا |
 | **AC-5** — البوابات | **جزئي** | كل بوابات الجوال واللوحات والموقع والأمان خضراء، لكن بند «إزالة افتراض `.pnpm`» مفتوح: `__tests__/metro-image-size-compat.test.js` ما زال يقرأ `node_modules/.pnpm` وينجح فقط لأن التثبيت ما زال `isolated` |
 | **AC-1، AC-2، AC-4، AC-6، AC-7** | **مفتوحة** | كلها تعتمد على م1؛ وAC-6 مؤجل إلى `develop` بقرار ت3 |
 | م2–م6 | لم تبدأ | تتبع م1 |
+
+**خلل مرئي ثانٍ من نفس الفئة، في اللوحة هذه المرة** (اكتُشف أثناء إغلاق خرائط 21.5):
+
+`apps/dashboard/components/features/bookings/booking-timeline.tsx` كانت خريطة `STATUS_COLORS` فيه `Record<string, string>` تنقص `deposit_paid`. فشريط الحالة في الخط الزمني للحجز كان يسقط إلى الرمادي الافتراضي بدل لون العربون، بلا أي خطأ نوع يلتقطه. صارت `Record<BookingStatus, string>` مع إضافة اللون، فأي حالة جديدة تصبح خطأ ترجمة لا لونًا صامتًا.
 
 **خللان مرئيان أُصلحا أثناء بناء الحراس** (ليسا من نطاق الـADR، لكنهما من نفس الفئة):
 

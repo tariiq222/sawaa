@@ -1,4 +1,4 @@
-// EXCEPTION: 315 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19; size +9 added 2026-08-26 for clinic-local tab date helpers (todayClinicYmd / clinicWeekRange / clinicMonthRange).
+// EXCEPTION: 330 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19; size +9 added 2026-08-26 for clinic-local tab date helpers (todayClinicYmd / clinicWeekRange / clinicMonthRange).
 "use client"
 
 import { useSearchParams } from "next/navigation"
@@ -24,6 +24,7 @@ import { showApiError } from "@/lib/mutation-helpers"
 import { useBookingsExport } from "@/hooks/use-bookings-export"
 import { clinicMonthRange, clinicWeekRange, todayClinicYmd } from "@/lib/utils"
 import type { Booking, BookingStatus, CancellationReason } from "@/lib/types/booking"
+import { BOOKING_STATUSES } from "@sawaa/api-client/types"
 
 interface BookingsTabContentProps {
   onRowClick: (b: Booking, tab?: "details" | "reschedule" | "invoice") => void
@@ -35,7 +36,10 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
   const statusParam = searchParams?.get("status") ?? null
-  const statuses: BookingStatus[] = ["pending", "awaiting_payment", "pending_group_fill", "deposit_paid", "confirmed", "completed", "cancelled", "cancel_requested", "no_show", "expired"]
+  // Membership check for the `?status=` deep link. The dropdown below still
+  // orders its own options for display; this only decides whether the URL value
+  // is a real status or falls back to "all".
+  const statuses = BOOKING_STATUSES
   const initialStatus = statuses.includes(statusParam as BookingStatus) ? statusParam as BookingStatus : "all"
   const initialAll = searchParams?.get("tab") === "all"
 

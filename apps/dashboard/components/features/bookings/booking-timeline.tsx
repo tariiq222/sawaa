@@ -9,8 +9,8 @@ import { queryKeys } from "@/lib/query-keys"
 import { fetchBookingTimeline, type BookingTimelineEntry } from "@/lib/api/bookings"
 import { formatDatePattern } from "@/lib/date"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
-import { statusTranslationKeys } from "@/components/features/status-badge"
 import type { BookingStatus } from "@/lib/types/booking"
+import { statusTranslationKeys } from "@/components/features/status-badge"
 
 /** Backend returns the Prisma enum (UPPERCASE); the UI keys are lowercase. */
 function statusKey(raw: string): string {
@@ -18,10 +18,11 @@ function statusKey(raw: string): string {
   return statusTranslationKeys[lower as BookingStatus] ?? `bookings.status.${lower}`
 }
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Record<BookingStatus, string> = {
   pending:              "bg-warning/10 text-warning border-warning/20",
   pending_group_fill:   "bg-warning/10 text-warning border-warning/20",
   awaiting_payment:     "bg-warning/10 text-warning border-warning/20",
+  deposit_paid:         "bg-accent/10 text-accent border-accent/20",
   confirmed:            "bg-success/10 text-success border-success/20",
   completed:            "bg-success/10 text-success border-success/20",
   cancelled:            "bg-error/10 text-error border-error/20",
@@ -118,7 +119,7 @@ export function BookingTimeline({ bookingId }: BookingTimelineProps) {
 function StatusChip({ raw, t }: { raw: string; t: (k: string) => string }) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[raw.toLowerCase()] ?? "bg-muted text-muted-foreground border-border"}`}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[raw.toLowerCase() as BookingStatus] ?? "bg-muted text-muted-foreground border-border"}`}
     >
       {t(statusKey(raw))}
     </span>
