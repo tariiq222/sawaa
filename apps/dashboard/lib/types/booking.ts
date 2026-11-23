@@ -15,17 +15,22 @@ import type { components } from "@/lib/types/api.generated"
 type Schemas = components["schemas"]
 
 /* ─── Enums (wire vocabulary for responses) ─── */
-export type BookingStatus =
-  | "pending"
-  | "pending_group_fill"
-  | "awaiting_payment"
-  | "deposit_paid"
-  | "confirmed"
-  | "completed"
-  | "cancelled"
-  | "no_show"
-  | "expired"
-  | "cancel_requested"
+/**
+ * Booking status vocabulary comes from `@sawaa/api-client`, which derives it
+ * from the same committed OpenAPI snapshot this package generates from. Until
+ * MNT-21 item 21.5 this file carried a hand-written 10-value union, and the
+ * snapshot was the source of truth in name only.
+ *
+ * Re-exported here so the dashboard's existing `@/lib/types/booking` imports
+ * keep working unchanged, and so this file stays the single place where the
+ * wire vocabulary is declared for the dashboard.
+ */
+export { BOOKING_STATUSES } from "@sawaa/api-client/types"
+export type { BookingStatus } from "@sawaa/api-client/types"
+
+// Local binding for the uses inside this file (a re-export is not in scope).
+import type { BookingStatus } from "@sawaa/api-client/types"
+
 export type RefundType = "full" | "partial" | "none"
 export type CancelledBy = "client" | "employee" | "admin" | "system"
 /** UI/request vocabulary (create payload, filters). Wire rows say `in_person`. */
