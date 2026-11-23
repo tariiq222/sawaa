@@ -678,7 +678,7 @@ export const dictionary = {
     'legal.privacy.cookies.title':
       "ملفات الارتباط والقياس",
     'legal.privacy.cookies.body':
-      "يستخدم الموقع ملفات الارتباط والتخزين المحلي اللازمين لتشغيل الجلسة وحفظ اللغة والمظهر والاختيارات. تحميل القياس الاختياري مثل Plausible مشروط بوجود اختيار موافقة مسجل؛ ولا تُستخدم بيانات الجلسات الإرشادية لقياس زيارات الموقع. لإزالة اختيار سابق وإيقاف تحميل القياس، يمكنك حذف بيانات هذا الموقع من إعدادات المتصفح، أو التواصل معنا لطلب المساعدة. قد يؤدي حذف بيانات الموقع أيضًا إلى تسجيل خروجك وإعادة ضبط تفضيلاتك.",
+      "يستخدم الموقع ملفات الارتباط والتخزين المحلي اللازمين لتشغيل الجلسة وحفظ اللغة والمظهر والاختيارات. يحتاج قياس زيارات الموقع إلى موافقتك. عند تفعيل Google Analytics وموافقتك، نرسل إلى Google عنوان صفحة التعريف ومعرّفًا عشوائيًا مؤقتًا لجلسة التصفح. صفحات الحجز والحساب والاختبارات خارج نطاق هذا القياس. لإزالة اختيار سابق وإيقاف تحميل القياس، يمكنك حذف بيانات هذا الموقع من إعدادات المتصفح، أو التواصل معنا لطلب المساعدة. قد يؤدي حذف بيانات الموقع أيضًا إلى تسجيل خروجك وإعادة ضبط تفضيلاتك.",
     'legal.privacy.minors.title':
       "القاصرون وبيانات الغير",
     'legal.privacy.minors.body':
@@ -710,6 +710,10 @@ export const dictionary = {
       'يستخدم هذا الموقع ملفات تعريف الارتباط اللازمة لتشغيله. بموافقتك نستخدم أيضاً ملفات تعريف ارتباط تحليلية لقياس أداء الموقع. يمكنك تعديل تفضيلاتك في أي وقت من أسفل الصفحة.',
     'consent.details':
       'ملفات تعريف الارتباط الأساسية لا يمكن تعطيلها (ضرورية للجلسة). التحليلية تساعدنا على فهم استخدام الزوار (مثل Plausible، بدون ملفات تعريف ارتباط، دون مشاركة بيانات مع أطراف ثالثة).',
+    'consent.googleAnalytics':
+      'يستخدم الموقع التخزين اللازم لتشغيله. بموافقتك، نستخدم Google Analytics لقياس زيارات صفحات التعريف العامة.',
+    'consent.googleAnalyticsDetails':
+      'نرسل إلى Google عنوان صفحة التعريف ومعرّفًا عشوائيًا مؤقتًا لجلسة التصفح. يشمل القياس صفحات التعريف العامة، ويمكنك إيقافه بحذف بيانات الموقع من إعدادات المتصفح.',
     'consent.showDetails': 'اعرف أكثر',
     'consent.hideDetails': 'إخفاء التفاصيل',
     'consent.acceptAll': 'اقبل الكل',
@@ -1475,7 +1479,7 @@ export const dictionary = {
     'legal.privacy.cookies.title':
       "Cookies and measurement",
     'legal.privacy.cookies.body':
-      "The website uses cookies and local storage necessary for sessions, language, appearance and choices. Loading optional measurement such as Plausible requires a recorded consent choice. Counseling session data is not used to measure website visits. To remove a previous choice and stop measurement from loading, you can clear this site’s data in your browser settings or contact us for assistance. Clearing site data may also sign you out and reset your preferences.",
+      "The website uses cookies and local storage necessary for sessions, language, appearance and choices. Measuring site visits requires your consent. When Google Analytics is enabled and you consent, we send Google the public information page URL and a temporary random browsing session identifier. Booking, account, and assessment pages are excluded from this measurement. To remove a previous choice and stop measurement from loading, you can clear this site’s data in your browser settings or contact us for assistance. Clearing site data may also sign you out and reset your preferences.",
     'legal.privacy.minors.title':
       "Minors and other people’s data",
     'legal.privacy.minors.body':
@@ -1489,6 +1493,10 @@ export const dictionary = {
       'This site uses cookies that are necessary for it to operate. With your consent we also use analytics cookies to measure site performance. You can change your preferences at any time from the bottom of the page.',
     'consent.details':
       'Essential cookies cannot be disabled (required for the session). Analytics helps us understand how visitors use the site (e.g. Plausible, no cookies, no data sharing with third parties).',
+    'consent.googleAnalytics':
+      'This site uses storage needed to operate. With your consent, we use Google Analytics to measure visits to public information pages.',
+    'consent.googleAnalyticsDetails':
+      'We send Google the public information page URL and a temporary random browsing session identifier. You can stop measurement by clearing this site’s data in your browser settings.',
     'consent.showDetails': 'Learn more',
     'consent.hideDetails': 'Hide details',
     'consent.acceptAll': 'Accept all',

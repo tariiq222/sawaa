@@ -196,6 +196,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: "5105"
       INTERNAL_API_URL: http://backend:5100/api/v1
+      GA4_WEB_STREAMS: ${GA4_WEB_STREAMS:-}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
       # Keep the V8 heap well under mem_limit so a heap leak fails as a clean
       # OOM restart, and limit glibc malloc arenas (sharp/libvips threads

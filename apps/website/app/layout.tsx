@@ -6,6 +6,8 @@ import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import { ThemeProvider } from '@/features/theme/theme-provider';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
+import { GoogleAnalytics } from '@/components/analytics/google-analytics';
+import { getGoogleAnalyticsStreams } from '@/lib/analytics/google-streams';
 import { AiChatWidget } from '@/features/chat/ai-chat-widget';
 import { getApiOrigin } from '@/lib/api-base';
 import './globals.css';
@@ -146,7 +148,7 @@ export default async function RootLayout({
             <LocaleProvider locale={locale}>
               <BrandingProvider branding={branding}>
                 {children}
-                <AnalyticsLoader />
+                {getGoogleAnalyticsStreams().length ? <GoogleAnalytics /> : <AnalyticsLoader />}
                 {process.env.NEXT_PUBLIC_WEB_CHAT_ENABLED === 'true' && <AiChatWidget />}
               </BrandingProvider>
             </LocaleProvider>

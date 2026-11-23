@@ -18,6 +18,7 @@ interface ConsentState {
   //              only features that depend on user permission)
   decision: ConsentValue;
   decidedAt: string; // ISO timestamp
+  googleAnalytics?: boolean;
 }
 
 function readConsent(): ConsentState | null {
@@ -33,11 +34,12 @@ function readConsent(): ConsentState | null {
   }
 }
 
-function writeConsent(decision: ConsentValue): void {
+function writeConsent(decision: ConsentValue, googleAnalytics = false): void {
   if (typeof window === 'undefined') return;
   const value: ConsentState = {
     decision,
     decidedAt: new Date().toISOString(),
+    ...(googleAnalytics && { googleAnalytics }),
   };
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
@@ -69,7 +71,7 @@ export function hasAnalyticsConsent(): boolean {
  * the user makes a decision. The decision persists in localStorage
  * (no cookie), so the banner doesn't add a third-party cookie.
  */
-export function CookieConsentBanner() {
+export function CookieConsentBanner({ includeGoogleAnalytics = false }: { includeGoogleAnalytics?: boolean }) {
   const t = useT();
   const locale = useLocale();
   const dir = localeDir(locale);
@@ -85,18 +87,21 @@ export function CookieConsentBanner() {
   });
 
   useEffect(() => {
-    if (readConsent() === null) {
+    const consent = readConsent();
+    const needsConsent = !consent
+      || (includeGoogleAnalytics && consent.decision === 'all' && !consent.googleAnalytics);
+    if (needsConsent) {
       // Defer to next tick so the banner doesn't pop in before paint
       // (also avoids a hydration flash on first load).
       const id = window.setTimeout(() => setOpen(true), 200);
       return () => window.clearTimeout(id);
     }
-  }, []);
+  }, [includeGoogleAnalytics]);
 
   if (!open) return null;
 
   const handleAccept = () => {
-    writeConsent('all');
+    writeConsent('all', includeGoogleAnalytics);
     setOpen(false);
   };
   const handleEssential = () => {
@@ -122,7 +127,8 @@ export function CookieConsentBanner() {
         [dir === 'rtl' ? 'top' : 'bottom']: 0,
         left: 0,
         right: 0,
-        zIndex: 50,
+        // The fixed navigation sits at 1000 on desktop.
+        zIndex: 1100,
         background: 'rgba(15, 23, 42, 0.97)',
         color: '#f8fafc',
         padding: '20px 24px',
@@ -143,10 +149,10 @@ export function CookieConsentBanner() {
       >
         <div style={{ flex: '1 1 320px', minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>
-            {t('consent.body' as MessageKey)}
+            {t(includeGoogleAnalytics ? 'consent.googleAnalytics' : 'consent.body')}
             {showDetails && (
               <span style={{ display: 'block', marginTop: 8, fontSize: 13, opacity: 0.85 }}>
-                {t('consent.details' as MessageKey)}
+                {t(includeGoogleAnalytics ? 'consent.googleAnalyticsDetails' : 'consent.details')}
               </span>
             )}
           </p>
