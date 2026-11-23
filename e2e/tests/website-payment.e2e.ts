@@ -53,8 +53,19 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
   let blocked = new Set<string>();
   let used = new Set<string>();
   let networkReady = false;
-  // A host that was only ever reached with a rejected scheme never appears in `used`.
-  const persistNetwork = () => saveReceipt({ blockedHosts: [...blocked].filter(host => !used.has(host)).sort(), allowedHosts: [...allowed].sort(), usedHosts: [...used].sort() });
+  // Blocked entries keep their scheme, so a host rejected over one scheme stays visible even
+  // when the same host was used over another scheme. Host-only entries from an older receipt
+  // are compared by host.
+  const persistNetwork = () => saveReceipt({
+    blockedHosts: [...blocked].filter(entry => {
+      const sep = entry.indexOf('://');
+      if (sep === -1) return !used.has(entry);
+      const url = new URL(entry);
+      return !(used.has(url.host) && permits(url));
+    }).sort(),
+    allowedHosts: [...allowed].sort(),
+    usedHosts: [...used].sort(),
+  });
 
   const readReceipt = (): HostedReceipt => (existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, 'utf8')) : {});
   const saveReceipt = (patch: HostedReceipt): HostedReceipt => {
@@ -127,13 +138,18 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
     blocked = new Set<string>(before.blockedHosts ?? []);
     used = new Set<string>(before.usedHosts ?? []);
     await browser.route(/.*/, async route => {
-      let host = '';
-      try {
-        const url = new URL(route.request.url);
-        if (url.protocol === 'http:' || url.protocol === 'https:') host = url.host;
-        if (host && permits(url)) { used.add(host); await route.continue(); return; }
-      } catch { /* unparsable requests are blocked below */ }
-      if (host) blocked.add(host);
+      // Parsing stays guarded: an unparsable URL is blocked like any other request.
+      let url: URL | null = null;
+      try { url = new URL(route.request.url); } catch { /* unparsable requests are blocked below */ }
+      const host = url && (url.protocol === 'http:' || url.protocol === 'https:') ? url.host : '';
+      // The decision and continue() sit outside the try, so a continue error is neither
+      // swallowed nor mistaken for a parse failure that would abort the same request.
+      if (url && host && permits(url)) {
+        used.add(host);
+        await route.continue();
+        return;
+      }
+      if (url && host) blocked.add(`${url.protocol}//${host}`);
       await route.abort();
     });
     networkReady = true;
@@ -320,8 +336,10 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
         try { frames.push(new URL(frame.src, location.href).host); } catch { frames.push('?'); }
       });
       const count = (selector: string) => document.querySelectorAll(selector).length;
+      // Buttons keep their label; anchor text can carry a provider reference, so anchors keep only their role.
       const buttons = Array.from(document.querySelectorAll('button, [role="button"], a')).map(el => ({
-        role: el.getAttribute('role') ?? el.tagName.toLowerCase(), label: (el.textContent ?? '').trim().slice(0, 60),
+        role: el.getAttribute('role') ?? el.tagName.toLowerCase(),
+        label: el.tagName === 'A' ? '' : (el.textContent ?? '').trim().slice(0, 60),
       }));
       return { host: location.host, frames, fields: { input: count('input'), select: count('select'), textarea: count('textarea') }, buttons };
     });
