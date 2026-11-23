@@ -64,3 +64,34 @@ describe('live bookings', () => {
     expect(isPortalBookingLive(legacy, Date.parse('2026-10-09T14:00:00Z'))).toBe(false);
   });
 });
+
+describe('nextPortalBooking status filter (documents an implicit contract)', () => {
+  // The home "up next" card only ever receives these three statuses. Any other
+  // status is filtered out here, so widening this list is what makes a new pill
+  // reachable on the client home screen. If that ever changes on purpose, this
+  // test is the reminder that UpNextCard's label coverage now applies.
+  const allowed = ['pending', 'confirmed', 'deposit_paid'];
+  const excluded = [
+    'pending_group_fill',
+    'awaiting_payment',
+    'completed',
+    'cancelled',
+    'cancel_requested',
+    'no_show',
+    'expired',
+  ];
+
+  it('passes the active statuses through', () => {
+    for (const status of allowed) {
+      const item = row({ id: status, status: status.toUpperCase() });
+      expect(nextPortalBooking([item], Date.parse('2026-10-09T12:00:00Z'))?.id).toBe(status);
+    }
+  });
+
+  it('filters out every other status', () => {
+    for (const status of excluded) {
+      const item = row({ id: status, status: status.toUpperCase() });
+      expect(nextPortalBooking([item], Date.parse('2026-10-09T12:00:00Z'))).toBeNull();
+    }
+  });
+});

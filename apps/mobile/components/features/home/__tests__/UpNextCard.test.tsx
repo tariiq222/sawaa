@@ -78,3 +78,17 @@ it('shows the status pill and no join button before the session starts', () => {
   expect(screen.getByText('appointments.pending')).toBeTruthy();
   expect(screen.queryByText(/^join:/)).toBeNull();
 });
+
+it('labels a deposit-paid booking as such instead of plain confirmed', () => {
+  // Regression: the inline ternary read `status === 'confirmed' || status ===
+  // 'deposit_paid' ? 'appointments.confirmed'`, so a booking with only the
+  // deposit paid showed the same pill as a fully confirmed one.
+  const screen = render(<UpNextCard loading={false} booking={liveRow({ status: 'deposit_paid' })} now={Date.parse('2026-10-09T10:00:00Z')} dir={dir} f600="System" f700="System" />);
+  expect(screen.getByText('appointments.depositPaid')).toBeTruthy();
+  expect(screen.queryByText('appointments.confirmed')).toBeNull();
+});
+
+it('labels a confirmed booking as confirmed', () => {
+  const screen = render(<UpNextCard loading={false} booking={liveRow({ status: 'confirmed' })} now={Date.parse('2026-10-09T10:00:00Z')} dir={dir} f600="System" f700="System" />);
+  expect(screen.getByText('appointments.confirmed')).toBeTruthy();
+});

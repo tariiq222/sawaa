@@ -31,6 +31,10 @@
  *     NO_SHOW             no_show
  *     EXPIRED             expired
  *     CANCEL_REQUESTED    cancel_requested
+ *     DEPOSIT_PAID        deposit_paid
+ *
+ * The table and the union below are guarded against the committed OpenAPI
+ * snapshot by `__tests__/booking-status-parity.test.ts`; update both together.
  */
 export type BookingType = 'individual' | 'walk_in' | 'group';
 
@@ -91,14 +95,36 @@ export function hasZoomMeetingAccess(input: {
   );
 }
 
+/**
+ * The wire statuses, in one runtime list.
+ *
+ * `BookingStatus` is a type and disappears at runtime, so any code that needs
+ * to validate or enumerate statuses must read this array. It is kept next to
+ * the union so both change together, and the parity test in
+ * `__tests__/booking-status-parity.test.ts` asserts this list matches the
+ * committed OpenAPI snapshot. Do not write another status list by hand.
+ */
+export const BOOKING_STATUSES = [
+  'pending',
+  'pending_group_fill',
+  'awaiting_payment',
+  'confirmed',
+  'cancelled',
+  'completed',
+  'no_show',
+  'expired',
+  'cancel_requested',
+  'deposit_paid',
+] as const satisfies readonly BookingStatus[];
+
 export type BookingStatus =
   | 'pending'
   | 'pending_group_fill'
   | 'awaiting_payment'
-  | 'deposit_paid'
   | 'confirmed'
-  | 'completed'
   | 'cancelled'
-  | 'cancel_requested'
+  | 'completed'
   | 'no_show'
-  | 'expired';
+  | 'expired'
+  | 'cancel_requested'
+  | 'deposit_paid';

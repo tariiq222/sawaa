@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { Building2, Video } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { STATUS_LABEL_MAP } from '@/lib/status-helpers';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -39,14 +40,9 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
   const palette = useSawaaColors();
   const color = typeColors(palette)[booking.type];
 
-  const statusLabels: Record<string, string> = {
-    pending: t('appointments.pending'),
-    confirmed: t('appointments.confirmed'),
-    deposit_paid: t('appointments.depositPaid'),
-    completed: t('appointments.completed'),
-    cancelled: t('appointments.cancelledStatus'),
-    cancel_requested: t('appointments.pendingCancellation'),
-  };
+  const statusLabels: Record<string, string> = Object.fromEntries(
+    Object.entries(STATUS_LABEL_MAP).map(([status, key]) => [status, t(key)]),
+  );
 
   const practName = `${booking.employee.user.firstName} ${booking.employee.user.lastName}`;
   const date = new Date(booking.date);

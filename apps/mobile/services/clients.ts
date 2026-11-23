@@ -1,4 +1,5 @@
 import api from './api';
+import { BOOKING_STATUSES } from '@/types/booking-enums';
 import type {
   BookingStatus,
   BookingType,
@@ -54,12 +55,8 @@ export interface EmployeeClientVisit {
 
 const BOOKING_TYPES: BookingType[] = ['individual', 'walk_in', 'group'];
 const DELIVERY_TYPES: DeliveryType[] = ['in_person', 'online'];
-const BOOKING_STATUSES: BookingStatus[] = [
-  'pending', 'pending_group_fill', 'awaiting_payment', 'confirmed',
-  'completed', 'cancelled', 'cancel_requested', 'no_show', 'expired',
-];
 
-function normalizeEnum<T extends string>(value: string, allowed: T[], fallback: T): T {
+function normalizeEnum<T extends string>(value: string, allowed: readonly T[], fallback: T): T {
   const normalized = value.toLowerCase() as T;
   return allowed.includes(normalized) ? normalized : fallback;
 }
