@@ -14,8 +14,16 @@ const { PrismaPg } = require('@prisma/adapter-pg');
 // Exact hosts only; no wildcards. Everything else is aborted and recorded (host only).
 const LOCAL_HOSTS = ['127.0.0.1:55200', '127.0.0.1:55205'];
 // checkout.moyasar.com loads its card-form SDK from cdn.jsdelivr.net; analytics, fonts and tag managers stay blocked.
+// Provider and CDN hosts are only allowed over https; the local stack stays plain http.
 const MOYASAR_HOSTS = ['checkout.moyasar.com', 'api.moyasar.com', 'cdn.jsdelivr.net'];
+const permits = (url: URL): boolean => url.protocol === 'https:'
+  ? MOYASAR_HOSTS.includes(url.host)
+  : url.protocol === 'http:' && LOCAL_HOSTS.includes(url.host);
 const SETTLE_TIMEOUT_MS = 90_000;
+// e2e/local/webhook.mjs binds a plain HTTP server to 127.0.0.1:55207 that answers 404
+// on every request except its random POST path.
+const RELAY_PROBE_URL = 'http://127.0.0.1:55207/';
+const RELAY_PROBE_TIMEOUT_MS = 5_000;
 const sleep = (ms: number) => new Promise<void>(ok => setTimeout(ok, ms));
 
 type HostedReceipt = {
@@ -45,7 +53,8 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
   let blocked = new Set<string>();
   let used = new Set<string>();
   let networkReady = false;
-  const persistNetwork = () => saveReceipt({ blockedHosts: [...blocked].filter(host => !allowed.has(host)).sort(), allowedHosts: [...allowed].sort(), usedHosts: [...used].sort() });
+  // A host that was only ever reached with a rejected scheme never appears in `used`.
+  const persistNetwork = () => saveReceipt({ blockedHosts: [...blocked].filter(host => !used.has(host)).sort(), allowedHosts: [...allowed].sort(), usedHosts: [...used].sort() });
 
   const readReceipt = (): HostedReceipt => (existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, 'utf8')) : {});
   const saveReceipt = (patch: HostedReceipt): HostedReceipt => {
@@ -76,6 +85,15 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
     assert.ok(hosted?.id && hosted.phone, 'Reserved synthetic hosted client is required');
     assert.ok(hosted.email?.endsWith('@example.test'), 'Reserved synthetic hosted client must use the reserved domain');
     assert.ok(f.appointments.hosted, 'Hosted appointment is required');
+    // The receipt survives a relay killed without cleanup, so it cannot prove liveness.
+    // Probe the relay's local server before any booking or provider side effect.
+    let relayProbe: number | null = null;
+    try {
+      const probed = await fetch(RELAY_PROBE_URL, { signal: AbortSignal.timeout(RELAY_PROBE_TIMEOUT_MS) });
+      await probed.arrayBuffer();
+      relayProbe = probed.status;
+    } catch { relayProbe = null; /* refused or timed out */ }
+    assert.equal(relayProbe, 404, 'Webhook relay is not running; restart e2e/local/webhook.mjs');
     const relay = webhookReceipt();
     assert.ok(typeof relay.registeredId === 'string' && relay.registeredId.length > 0 && relay.deleted === false,
       'Webhook relay must be running with its Sandbox registration (run e2e/local/webhook.mjs first)');
@@ -113,8 +131,8 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
       try {
         const url = new URL(route.request.url);
         if (url.protocol === 'http:' || url.protocol === 'https:') host = url.host;
+        if (host && permits(url)) { used.add(host); await route.continue(); return; }
       } catch { /* unparsable requests are blocked below */ }
-      if (host && allowed.has(host)) { used.add(host); await route.continue(); return; }
       if (host) blocked.add(host);
       await route.abort();
     });
@@ -294,20 +312,18 @@ test('SW-P03 website books a SERVICES clinic and pays by card on Moyasar Sandbox
     throw error;
   }
 
-  // Describes the current page by structure only (no values, no query or hash) for failures.
+  // Describes the current page by structure only: no page text, values, path, query or hash.
   async function dumpPageShape(name: string): Promise<void> {
     const shape = await browser.evaluate(() => {
       const frames: string[] = [];
       document.querySelectorAll('iframe').forEach(frame => {
         try { frames.push(new URL(frame.src, location.href).host); } catch { frames.push('?'); }
       });
-      const inputs = Array.from(document.querySelectorAll('input, select, textarea')).map(el => ({
-        tag: el.tagName.toLowerCase(), type: el.getAttribute('type'), name: el.getAttribute('name'),
-        id: el.getAttribute('id'), placeholder: el.getAttribute('placeholder'),
+      const count = (selector: string) => document.querySelectorAll(selector).length;
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"], a')).map(el => ({
+        role: el.getAttribute('role') ?? el.tagName.toLowerCase(), label: (el.textContent ?? '').trim().slice(0, 60),
       }));
-      const buttons = Array.from(document.querySelectorAll('button, [role="button"], a')).map(el => (el.textContent ?? '').trim().slice(0, 60));
-      return { host: location.host, path: location.pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, ':id'), title: document.title, frames, inputs, buttons,
-        text: (document.body?.innerText ?? '').replace(/\s+/g, ' ').slice(0, 400) };
+      return { host: location.host, frames, fields: { input: count('input'), select: count('select'), textarea: count('textarea') }, buttons };
     });
     writeFileSync(resolve(runDir, name), JSON.stringify(shape, null, 2), { mode: 0o600 });
   }
