@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { publicFetch, PublicFetchError } from '@/lib/public-fetch';
+import { reconcileBookingPayment } from '@/features/booking/booking.api';
+import { paidPhase, shouldReconcile } from '@/features/booking/reconcile-policy';
 import { useT } from '@/features/locale/locale-provider';
 import { SawaaLayout } from '@/themes/sawaa/layout/layout';
 
@@ -48,8 +50,17 @@ function ConfirmContent() {
   // when verification is pending or transiently unable to verify.
   const [retryNonce, setRetryNonce] = useState(0);
 
+  // Reconcile calls made for the current booking; caps calls per page visit even
+  // when "check again" restarts the polling effect.
+  const reconcileCalls = useRef(0);
+  const reconcileBookingRef = useRef(bookingId);
+
   useEffect(() => {
     if (!bookingId) return;
+    if (reconcileBookingRef.current !== bookingId) {
+      reconcileBookingRef.current = bookingId;
+      reconcileCalls.current = 0;
+    }
 
     let cancelled = false;
     let timerId: ReturnType<typeof setTimeout> | null = null;
@@ -86,6 +97,27 @@ function ConfirmContent() {
 
         // Still pending according to the API — retry up to maxAttempts
         attempts++;
+
+        // Late webhook? On scheduled attempts ask the backend to reconcile with the
+        // gateway and use its answer directly. Any failure means "no new information".
+        if (shouldReconcile(attempts, true, reconcileCalls.current)) {
+          reconcileCalls.current++;
+          try {
+            const reconciled = await reconcileBookingPayment(
+              bookingId!,
+              activeAbortController.signal,
+            );
+            if (cancelled) return;
+            const paid = paidPhase(reconciled);
+            if (paid) {
+              setState({ phase: paid, bookingId: bookingId! });
+              return;
+            }
+          } catch {
+            if (cancelled) return;
+          }
+        }
+
         if (attempts >= maxAttempts) {
           setState({ phase: 'pending', bookingId: bookingId! });
           return;

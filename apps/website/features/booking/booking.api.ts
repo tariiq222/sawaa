@@ -157,6 +157,30 @@ export async function initPayment(invoiceId: string): Promise<{ paymentId: strin
   return unwrap<{ paymentId: string; redirectUrl: string }>(json);
 }
 
+export interface ReconcileBookingPaymentResult {
+  bookingId: string;
+  status: string;
+  paymentStatus: string;
+  reconciled: boolean;
+  checkedAt: string;
+}
+
+/**
+ * Ask the backend to re-check the gateway for a booking whose webhook is late.
+ * Authenticated via the client session cookie. Callers must treat any failure
+ * (401/404/429/network) as "no new information".
+ */
+export async function reconcileBookingPayment(
+  bookingId: string,
+  signal?: AbortSignal,
+): Promise<ReconcileBookingPaymentResult> {
+  const json = await publicFetch<unknown>(
+    `/client/payments/bookings/${encodeURIComponent(bookingId)}/reconcile`,
+    { method: 'POST', credentials: 'include', signal },
+  );
+  return unwrap<ReconcileBookingPaymentResult>(json);
+}
+
 /**
  * Which collection paths the backend can actually accept right now.
  *
