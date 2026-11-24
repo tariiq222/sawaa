@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ClientRoute } from '../../common/auth/client-route.decorator';
 import { CLIENT_PAGE_SCHEMA, toClientPage } from './client-page';
 import { projectClientPayment } from './client-payment.projection';
@@ -33,6 +33,8 @@ import { GetNativePaymentConfigHandler } from '../../modules/finance/native-paym
 import { InitNativePaymentHandler } from '../../modules/finance/native-payments/init-native-payment/init-native-payment.handler';
 import { NativePaymentCapabilitiesDto, NativePaymentInitResponseDto, NativePaymentReconcileResponseDto } from '../../modules/finance/native-payments/native-payment.dto';
 import { ReconcileNativePaymentHandler } from '../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
+import { ReconcileHostedPaymentResponseDto } from '../../modules/finance/payments/client/reconcile-hosted-payment/reconcile-hosted-payment.dto';
+import { ReconcileHostedPaymentHandler } from '../../modules/finance/payments/client/reconcile-hosted-payment/reconcile-hosted-payment.handler';
 import { InitClientPaymentDto } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
 import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { GetClientBankTransferSettingsHandler } from '../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
@@ -51,6 +53,7 @@ export class ClientPaymentsController {
     private readonly nativeConfig: GetNativePaymentConfigHandler,
     private readonly nativeInit: InitNativePaymentHandler,
     private readonly nativeReconcile: ReconcileNativePaymentHandler,
+    private readonly hostedReconcile: ReconcileHostedPaymentHandler,
     private readonly bankTransferUpload: BankTransferUploadHandler,
     private readonly getClientBankTransferSettings: GetClientBankTransferSettingsHandler,
   ) {}
@@ -121,6 +124,20 @@ export class ClientPaymentsController {
       throw new BadRequestException('Reconciliation accepts no payment data');
     }
     return this.nativeReconcile.execute({ clientId: session.id, paymentId });
+  }
+
+  @ClientThrottle('reconcile')
+  @Post('bookings/:bookingId/reconcile')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reconcile an owned booking\'s hosted-checkout card payment with Moyasar' })
+  @ApiParam({ name: 'bookingId', description: 'Owned booking UUID', format: 'uuid' })
+  @ApiOkResponse({ type: ReconcileHostedPaymentResponseDto })
+  @ApiNotFoundResponse({ description: 'Booking not found or not owned by the client' })
+  reconcileHostedPayment(
+    @ClientSession() session: ClientSession,
+    @Param('bookingId', ParseUUIDPipe) bookingId: string,
+  ): Promise<ReconcileHostedPaymentResponseDto> {
+    return this.hostedReconcile.execute({ clientId: session.id, bookingId });
   }
 
   @ClientThrottle('money')

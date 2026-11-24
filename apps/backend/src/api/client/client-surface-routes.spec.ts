@@ -40,6 +40,7 @@ const TARGET: string[] = [
   'GET /client/payments/native/config',
   'POST /client/payments/native/init',
   'POST /client/payments/native/:paymentId/reconcile',
+  'POST /client/payments/bookings/:bookingId/reconcile',
   'POST /client/payments/bank-transfer',
   'GET /client/payments/bank-transfer/settings',
   // packages, package purchases, programs, refunds

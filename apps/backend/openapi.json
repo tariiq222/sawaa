@@ -35987,6 +35987,45 @@
         ],
         "type": "object"
       },
+      "ReconcileHostedPaymentResponseDto": {
+        "properties": {
+          "bookingId": {
+            "description": "Owned booking UUID that was checked",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          },
+          "checkedAt": {
+            "description": "When this check ran (ISO 8601)",
+            "example": "2026-11-24T10:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "paymentStatus": {
+            "description": "Status of the booking's latest payment, or NONE when it has no payment",
+            "example": "PENDING",
+            "type": "string"
+          },
+          "reconciled": {
+            "description": "True only when this call settled the hosted payment from the Moyasar state",
+            "example": false,
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Current booking status (same semantics as the public booking status endpoint)",
+            "example": "AWAITING_PAYMENT",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "status",
+          "paymentStatus",
+          "reconciled",
+          "checkedAt"
+        ],
+        "type": "object"
+      },
       "RecordLateSessionDto": {
         "properties": {
           "amountHalalas": {
@@ -46359,6 +46398,87 @@
           }
         ],
         "summary": "Get client-visible bank transfer settings and accounts",
+        "tags": [
+          "Client / Payments"
+        ]
+      }
+    },
+    "/api/v1/client/payments/bookings/{bookingId}/reconcile": {
+      "post": {
+        "operationId": "ClientPaymentsController_reconcileHostedPayment_v1",
+        "parameters": [
+          {
+            "description": "Owned booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileHostedPaymentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Booking not found or not owned by the client"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reconcile an owned booking's hosted-checkout card payment with Moyasar",
         "tags": [
           "Client / Payments"
         ]

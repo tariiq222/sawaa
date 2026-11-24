@@ -15,6 +15,7 @@ import {
   getPublicAvailability,
   createBooking,
   initPayment,
+  reconcileBookingPayment,
   getPublicPaymentMethods,
   getPractitionerBookingOptions,
   createGuestBooking,
@@ -228,6 +229,37 @@ describe('booking.api', () => {
         new Response(JSON.stringify({ message: 'Invoice not found' }), { status: 404 }),
       );
       await expect(initPayment('missing')).rejects.toMatchObject({ status: 404 });
+    });
+  });
+
+  describe('reconcileBookingPayment', () => {
+    it('POSTs bodyless to /client/payments/bookings/:id/reconcile with credentials and CSRF', async () => {
+      queueCsrfBootstrap();
+      const payload = {
+        bookingId: 'bk 1',
+        status: 'CONFIRMED',
+        paymentStatus: 'COMPLETED',
+        reconciled: true,
+        checkedAt: '2026-11-24T10:00:00.000Z',
+      };
+      fetchMock.mockResolvedValueOnce(jsonResponse(payload));
+      const result = await reconcileBookingPayment('bk 1');
+      expect(result).toEqual(payload);
+      const [url, init] = fetchMock.mock.calls[1];
+      expect(url).toBe('http://api.local/api/v1/client/payments/bookings/bk%201/reconcile');
+      expect(init.method).toBe('POST');
+      expect(init.credentials).toBe('include');
+      expect(init.body).toBeUndefined();
+      expect(init.headers.get('X-CSRF-Token')).toBe(CSRF_TOKEN);
+    });
+
+    it.each([401, 404, 429])('propagates %i as PublicFetchError', async (status) => {
+      queueCsrfBootstrap();
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({}), { status }));
+      await expect(reconcileBookingPayment('bk1')).rejects.toMatchObject({
+        name: 'PublicFetchError',
+        status,
+      });
     });
   });
 

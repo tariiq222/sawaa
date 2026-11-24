@@ -8,10 +8,11 @@ describe('ClientThrottle', () => {
       money: { ttl: 60_000, limit: 5 },
       payment: { ttl: 60_000, limit: 3 },
       chat: { ttl: 60_000, limit: 15 },
+      reconcile: { ttl: 60_000, limit: 6 },
     });
   });
 
-  it.each(['read', 'write', 'money', 'payment', 'chat'] as ClientThrottleProfile[])(
+  it.each(['read', 'write', 'money', 'payment', 'chat', 'reconcile'] as ClientThrottleProfile[])(
     'sets throttler metadata for the %s profile',
     (profile) => {
       class Sample {

@@ -32,6 +32,7 @@ import { RefundPaymentHandler } from './refund-payment/refund-payment.handler';
 import { ManualRefundPaymentHandler } from './refund-payment/manual-refund-payment.handler';
 import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { InitClientPaymentHandler } from './payments/client/init-client-payment/init-client-payment.handler';
+import { ReconcileHostedPaymentHandler } from './payments/client/reconcile-hosted-payment/reconcile-hosted-payment.handler';
 import { GetPublicPaymentMethodsHandler } from './payments/public/get-public-payment-methods/get-public-payment-methods.handler';
 import { RequestRefundHandler } from './refund-payment/request-refund.handler';
 import { CreatePackagePurchaseHandler } from './package-purchases/create-package-purchase/create-package-purchase.handler';
@@ -80,6 +81,7 @@ export const financeHandlers = [
   ManualRefundPaymentHandler,
   VerifyPaymentHandler,
   InitClientPaymentHandler,
+  ReconcileHostedPaymentHandler,
   GetPublicPaymentMethodsHandler,
   RequestRefundHandler,
   ApproveRefundHandler,

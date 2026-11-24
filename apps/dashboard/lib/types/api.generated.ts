@@ -744,6 +744,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/payments/bookings/{bookingId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reconcile an owned booking's hosted-checkout card payment with Moyasar */
+        post: operations["ClientPaymentsController_reconcileHostedPayment_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/payments/init": {
         parameters: {
             query?: never;
@@ -7382,7 +7399,7 @@ export interface components {
             /** @description Service custom availability windows scoped to this delivery channel */
             availabilityWindows?: components["schemas"]["ServiceAvailabilityWindowInputDto"][];
             /**
-             * @description Delivery channel for this service
+             * @description Delivery channel
              * @example IN_PERSON
              */
             deliveryType: components["schemas"]["DeliveryType"];
@@ -17065,7 +17082,7 @@ export interface components {
         };
         EmployeeServiceOptionInputDto: {
             /**
-             * @description Delivery channel for this override
+             * @description Delivery channel
              * @example IN_PERSON
              */
             deliveryType?: components["schemas"]["DeliveryType"] | null;
@@ -30095,6 +30112,35 @@ export interface components {
              */
             nameEn: string | null;
         };
+        ReconcileHostedPaymentResponseDto: {
+            /**
+             * Format: uuid
+             * @description Owned booking UUID that was checked
+             * @example 11111111-1111-4111-8111-111111111111
+             */
+            bookingId: string;
+            /**
+             * Format: date-time
+             * @description When this check ran (ISO 8601)
+             * @example 2026-11-24T10:00:00.000Z
+             */
+            checkedAt: string;
+            /**
+             * @description Status of the booking's latest payment, or NONE when it has no payment
+             * @example PENDING
+             */
+            paymentStatus: string;
+            /**
+             * @description True only when this call settled the hosted payment from the Moyasar state
+             * @example false
+             */
+            reconciled: boolean;
+            /**
+             * @description Current booking status (same semantics as the public booking status endpoint)
+             * @example AWAITING_PAYMENT
+             */
+            status: string;
+        };
         RecordLateSessionDto: {
             /**
              * @description Actual net amount in integer halalas
@@ -37207,6 +37253,71 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ClientPaymentsController_reconcileHostedPayment_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Owned booking UUID */
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileHostedPaymentResponseDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found or not owned by the client */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

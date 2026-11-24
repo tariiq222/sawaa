@@ -9,18 +9,27 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
+// Status polls and reconcile POSTs go through the same publicFetch; route them to
+// separate mocks so the status-call sequences below stay independent of reconcile.
+const { statusMock, reconcileMock } = vi.hoisted(() => ({
+  statusMock: vi.fn(),
+  reconcileMock: vi.fn(),
+}));
+
 vi.mock('@/lib/public-fetch', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/public-fetch')>();
   return {
     ...actual,
-    publicFetch: vi.fn(),
+    publicFetch: vi.fn((url: string, init?: RequestInit) =>
+      url.includes('/reconcile') ? reconcileMock(url, init) : statusMock(url, init),
+    ),
   };
 });
 
 import BookingConfirmPage from './page';
-import { publicFetch, PublicFetchError } from '@/lib/public-fetch';
+import { PublicFetchError } from '@/lib/public-fetch';
 
-const publicFetchMock = publicFetch as ReturnType<typeof vi.fn>;
+const publicFetchMock = statusMock;
 
 function renderPage() {
   return render(
@@ -35,6 +44,10 @@ describe('/booking/confirm page', () => {
     vi.useRealTimers();
     searchParams = new URLSearchParams();
     publicFetchMock.mockReset();
+    reconcileMock.mockReset();
+    reconcileMock.mockResolvedValue({
+      bookingId: 'bk_42', status: 'PENDING', paymentStatus: 'PENDING', reconciled: false, checkedAt: 'now',
+    });
   });
 
   afterEach(() => {
@@ -293,6 +306,133 @@ describe('/booking/confirm page', () => {
     });
 
     expect(publicFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  describe('on-demand reconcile', () => {
+    const pending = { bookingId: 'bk_42', status: 'PENDING', paymentStatus: 'PENDING' };
+
+    async function tick(times: number) {
+      for (let i = 0; i < times; i++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000);
+        });
+      }
+    }
+
+    it('fires exactly on poll attempts 3 and 8 while pending, never more', async () => {
+      vi.useFakeTimers();
+      publicFetchMock.mockResolvedValue(pending);
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      renderPage();
+
+      await tick(1); // 2 status reads
+      expect(reconcileMock).toHaveBeenCalledTimes(0);
+      await tick(1); // 3rd read -> reconcile
+      expect(publicFetchMock).toHaveBeenCalledTimes(3);
+      expect(reconcileMock).toHaveBeenCalledTimes(1);
+      expect(reconcileMock.mock.calls[0][0]).toBe('/client/payments/bookings/bk_42/reconcile');
+      await tick(4); // reads 4-7
+      expect(reconcileMock).toHaveBeenCalledTimes(1);
+      await tick(1); // 8th read -> reconcile
+      expect(publicFetchMock).toHaveBeenCalledTimes(8);
+      expect(reconcileMock).toHaveBeenCalledTimes(2);
+      await tick(3);
+      expect(reconcileMock).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('heading', { name: /جارٍ معالجة الدفع/i })).toBeTruthy();
+    });
+
+    it('flips to success in the same cycle when reconcile reports paid', async () => {
+      vi.useFakeTimers();
+      publicFetchMock.mockResolvedValue(pending);
+      reconcileMock.mockResolvedValue({
+        bookingId: 'bk_42', status: 'CONFIRMED', paymentStatus: 'COMPLETED', reconciled: true, checkedAt: 'now',
+      });
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      renderPage();
+
+      await tick(2);
+      expect(publicFetchMock).toHaveBeenCalledTimes(3);
+      expect(screen.getByRole('heading', { name: /تم تأكيد موعدك/i })).toBeTruthy();
+      await tick(3);
+      expect(publicFetchMock).toHaveBeenCalledTimes(3);
+      expect(reconcileMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('swallows reconcile failures (401/404/429/network) and keeps polling', async () => {
+      vi.useFakeTimers();
+      publicFetchMock.mockResolvedValue(pending);
+      reconcileMock
+        .mockRejectedValueOnce(new PublicFetchError(429, {}))
+        .mockRejectedValueOnce(new Error('network'));
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      renderPage();
+
+      await tick(9);
+      expect(reconcileMock).toHaveBeenCalledTimes(2);
+      expect(publicFetchMock).toHaveBeenCalledTimes(10);
+      expect(screen.getByRole('heading', { name: /جارٍ معالجة الدفع/i })).toBeTruthy();
+    });
+
+    it('never reconciles once a terminal state was observed', async () => {
+      vi.useFakeTimers();
+      publicFetchMock
+        .mockResolvedValueOnce(pending)
+        .mockResolvedValueOnce(pending)
+        .mockResolvedValueOnce({ bookingId: 'bk_42', status: 'CONFIRMED', paymentStatus: 'COMPLETED' });
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      renderPage();
+
+      await tick(10);
+      expect(reconcileMock).not.toHaveBeenCalled();
+      expect(screen.getByRole('heading', { name: /تم تأكيد موعدك/i })).toBeTruthy();
+    });
+
+    it('never reconciles on failed or erroring polls', async () => {
+      vi.useFakeTimers();
+      publicFetchMock.mockRejectedValue(new Error('down'));
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      renderPage();
+
+      await tick(10);
+      expect(reconcileMock).not.toHaveBeenCalled();
+    });
+
+    it('does not apply a late reconcile answer or keep polling after unmount', async () => {
+      vi.useFakeTimers();
+      publicFetchMock.mockResolvedValue(pending);
+      let resolveReconcile!: (v: unknown) => void;
+      reconcileMock.mockImplementation(
+        () => new Promise((resolve) => { resolveReconcile = resolve; }),
+      );
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      const { unmount } = renderPage();
+
+      await tick(2);
+      expect(reconcileMock).toHaveBeenCalledTimes(1);
+      unmount();
+      await act(async () => {
+        // A not-paid answer arriving after unmount must not schedule another poll.
+        resolveReconcile({ bookingId: 'bk_42', status: 'PENDING', paymentStatus: 'PENDING' });
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(publicFetchMock).toHaveBeenCalledTimes(3);
+      expect(reconcileMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('caps reconcile at 2 calls per visit even after "check again"', async () => {
+      vi.useFakeTimers();
+      publicFetchMock.mockResolvedValue(pending);
+      searchParams = new URLSearchParams({ bookingId: 'bk_42' });
+      renderPage();
+
+      await tick(9);
+      expect(reconcileMock).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /تحقق من الحالة مرة أخرى/i }));
+      });
+      await tick(9);
+      expect(reconcileMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('unmount aborts in-flight publicFetch via AbortController signal', () => {

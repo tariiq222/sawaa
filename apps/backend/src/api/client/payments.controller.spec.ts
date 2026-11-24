@@ -9,10 +9,13 @@ import { GetNativePaymentConfigHandler } from '../../modules/finance/native-paym
 import { InitNativePaymentHandler } from '../../modules/finance/native-payments/init-native-payment/init-native-payment.handler';
 import { ReconcileNativePaymentHandler } from '../../modules/finance/native-payments/reconcile-native-payment/reconcile-native-payment.handler';
 import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
+import { ReconcileHostedPaymentHandler } from '../../modules/finance/payments/client/reconcile-hosted-payment/reconcile-hosted-payment.handler';
+import { CLIENT_THROTTLE_PROFILES } from '../../common/throttle/client-throttle';
 import { GetClientBankTransferSettingsHandler } from '../../modules/org-experience/org-settings/get-client-bank-transfer-settings.handler';
 
 const INVOICE_ID = '11111111-1111-4111-8111-111111111111';
 const PAYMENT_ID = '22222222-2222-4222-8222-222222222222';
+const BOOKING_ID = '33333333-3333-4333-8333-333333333333';
 
 describe('ClientPaymentsController', () => {
   let app: INestApplication;
@@ -22,6 +25,7 @@ describe('ClientPaymentsController', () => {
   const nativeConfig = { execute: jest.fn() };
   const nativeInit = { execute: jest.fn() };
   const nativeReconcile = { execute: jest.fn() };
+  const hostedReconcile = { execute: jest.fn() };
   const bankTransfer = { execute: jest.fn() };
   const bankSettings = { execute: jest.fn() };
 
@@ -34,6 +38,7 @@ describe('ClientPaymentsController', () => {
         { provide: GetNativePaymentConfigHandler, useValue: nativeConfig },
         { provide: InitNativePaymentHandler, useValue: nativeInit },
         { provide: ReconcileNativePaymentHandler, useValue: nativeReconcile },
+        { provide: ReconcileHostedPaymentHandler, useValue: hostedReconcile },
         { provide: BankTransferUploadHandler, useValue: bankTransfer },
         { provide: GetClientBankTransferSettingsHandler, useValue: bankSettings },
       ],
@@ -108,6 +113,25 @@ describe('ClientPaymentsController', () => {
   it('POST /native/:id/reconcile rejects a non-empty body', async () => {
     await request(app.getHttpServer()).post(`/client/payments/native/${PAYMENT_ID}/reconcile`).send({ status: 'paid' }).expect(400);
     expect(nativeReconcile.execute).not.toHaveBeenCalled();
+  });
+
+  it('POST /bookings/:id/reconcile binds the session client and returns the handler result', async () => {
+    const body = { bookingId: BOOKING_ID, status: 'AWAITING_PAYMENT', paymentStatus: 'PENDING', reconciled: false, checkedAt: 't' };
+    hostedReconcile.execute.mockResolvedValue(body);
+    const res = await request(app.getHttpServer()).post(`/client/payments/bookings/${BOOKING_ID}/reconcile`).expect(200);
+    expect(res.body).toEqual(body);
+    expect(hostedReconcile.execute).toHaveBeenCalledWith({ clientId: 'client-1', bookingId: BOOKING_ID });
+  });
+
+  it('POST /bookings/:id/reconcile rejects a non-UUID id before the handler', async () => {
+    await request(app.getHttpServer()).post('/client/payments/bookings/not-a-uuid/reconcile').expect(400);
+    expect(hostedReconcile.execute).not.toHaveBeenCalled();
+  });
+
+  it('POST /bookings/:id/reconcile uses the reconcile throttle profile', () => {
+    const handler = ClientPaymentsController.prototype.reconcileHostedPayment;
+    expect(Reflect.getMetadata('THROTTLER:TTLdefault', handler)).toBe(CLIENT_THROTTLE_PROFILES.reconcile.ttl);
+    expect(Reflect.getMetadata('THROTTLER:LIMITdefault', handler)).toBe(CLIENT_THROTTLE_PROFILES.reconcile.limit);
   });
 
   it('POST /bank-transfer requires a receipt file', async () => {
