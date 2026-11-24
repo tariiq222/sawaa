@@ -14,7 +14,11 @@ import {
   type MoyasarCheckoutInvoiceStatus,
   type MoyasarPaymentStatus,
 } from '../../../src/modules/finance/moyasar-api/moyasar-api.client';
-import { ReconcileHostedPaymentHandler } from '../../../src/modules/finance/payments/client/reconcile-hosted-payment/reconcile-hosted-payment.handler';
+import { RedisService } from '../../../src/infrastructure/cache/redis.service';
+import {
+  hostedReconcileCooldownKey,
+  ReconcileHostedPaymentHandler,
+} from '../../../src/modules/finance/payments/client/reconcile-hosted-payment/reconcile-hosted-payment.handler';
 
 /**
  * On-demand hosted-checkout reconcile (POST /client/payments/bookings/:id/reconcile)
@@ -30,6 +34,31 @@ const describeRealE2e = process.env.REAL_E2E_DATABASE_URL ? describe : describe.
 const WEBHOOK_SECRET = 'real-e2e-hosted-reconcile-secret';
 const TOTAL_HALALAS = 23000;
 const OLD_MS = 60_000;
+
+function installInMemoryRedis(client: ReturnType<RedisService['getClient']>) {
+  const store = new Map<string, number>(); // key -> expiry epoch ms (Infinity when none)
+  const alive = (key: string) => {
+    const expiresAt = store.get(key);
+    if (expiresAt === undefined) return false;
+    if (expiresAt <= Date.now()) {
+      store.delete(key);
+      return false;
+    }
+    return true;
+  };
+  jest.spyOn(client, 'set').mockImplementation((async (key: string, _value: unknown, ...args: unknown[]) => {
+    const nx = args.includes('NX');
+    const px = args.indexOf('PX');
+    if (nx && alive(key)) return null;
+    store.set(key, px >= 0 ? Date.now() + Number(args[px + 1]) : Infinity);
+    return 'OK';
+  }) as never);
+  jest.spyOn(client, 'del').mockImplementation((async (...keys: string[]) =>
+    keys.reduce((n, key) => n + Number(alive(key) && store.delete(key)), 0)) as never);
+  // The ioredis mock has no `exists`; add it.
+  (client as unknown as { exists: unknown }).exists = async (...keys: string[]) =>
+    keys.filter((key) => alive(key)).length;
+}
 
 describeRealE2e('Client hosted-checkout reconcile (real e2e)', () => {
   jest.setTimeout(120_000);
@@ -86,9 +115,11 @@ describeRealE2e('Client hosted-checkout reconcile (real e2e)', () => {
     app = moduleFixture.createNestApplication({ rawBody: true });
     configureHttpContract(app, 'production');
     await app.listen(0, '127.0.0.1');
+    // setup-e2e.ts mocks ioredis (set always 'OK'); give the cooldown real SET NX PX / DEL / EXISTS semantics.
+    handler = app.get(ReconcileHostedPaymentHandler);
+    installInMemoryRedis(redisClient());
     prisma = app.get(PrismaService);
     jwt = app.get(JwtService);
-    handler = app.get(ReconcileHostedPaymentHandler);
     await prisma.$queryRaw`SELECT 1`;
 
     previousPaymentConfig = await prisma.organizationPaymentConfig.findUnique({
@@ -261,6 +292,10 @@ describeRealE2e('Client hosted-checkout reconcile (real e2e)', () => {
     ]);
     return JSON.parse(JSON.stringify({ payment, invoice, booking, events }));
   }
+  // The Redis client the handler actually uses (several modules provide a RedisService).
+  const redisClient = () => (handler as unknown as { redis: RedisService }).redis.getClient();
+  const clearCooldown = (s: { paymentId: string }) =>
+    redisClient().del(hostedReconcileCooldownKey(s.paymentId));
   const providerCalls = () => moyasar.getCheckoutInvoice.mock.calls.length + moyasar.getPaymentStatus.mock.calls.length;
 
   it('(a) HTTP: settles a paid hosted invoice — payment COMPLETED, invoice PAID, one completion event', async () => {
@@ -395,11 +430,13 @@ describeRealE2e('Client hosted-checkout reconcile (real e2e)', () => {
     const before = await snapshot(s);
 
     moyasar.getCheckoutInvoice.mockRejectedValueOnce(new ServiceUnavailableException('moyasar 503'));
+    await clearCooldown(s);
     const checkoutDown = await reconcileHttp(clientA.token, s.bookingId);
     expect(checkoutDown.status).toBe(200);
     expect(checkoutDown.body).toMatchObject({ reconciled: false, paymentStatus: 'PENDING' });
     expect(await snapshot(s)).toEqual(before);
 
+    await clearCooldown(s);
     moyasar.getPaymentStatus.mockRejectedValueOnce(new Error('moyasar timeout'));
     const paymentLookupDown = await reconcileHttp(clientA.token, s.bookingId);
     expect(paymentLookupDown.status).toBe(200);
@@ -408,6 +445,7 @@ describeRealE2e('Client hosted-checkout reconcile (real e2e)', () => {
 
     // The provider was genuinely asked both times, and recovery works afterwards.
     expect(moyasar.getCheckoutInvoice).toHaveBeenCalledTimes(2);
+    await clearCooldown(s);
     const recovered = await handler.execute({ clientId: clientA.id, bookingId: s.bookingId });
     expect(recovered).toMatchObject({ reconciled: true, paymentStatus: 'COMPLETED' });
   });
@@ -422,6 +460,54 @@ describeRealE2e('Client hosted-checkout reconcile (real e2e)', () => {
     expect(outcome).toMatchObject({ reconciled: false, paymentStatus: 'PENDING' });
     expect(providerCalls()).toBe(0);
     expect(await snapshot(s)).toEqual(before);
+  });
+
+  it('(h) two reconciles on one payment inside the cooldown ask the provider once; the second returns current state', async () => {
+    const s = await seedHosted();
+    provider(s, 'initiated', null); // nothing terminal yet, so the payment stays PENDING
+
+    const first = await handler.execute({ clientId: clientA.id, bookingId: s.bookingId });
+    expect(first).toMatchObject({ reconciled: false, paymentStatus: 'PENDING' });
+    expect(moyasar.getCheckoutInvoice).toHaveBeenCalledTimes(1);
+
+    provider(s, 'paid', 'paid'); // would settle, but the cooldown must keep the provider unasked
+    const before = await snapshot(s);
+    const second = await reconcileHttp(clientA.token, s.bookingId);
+
+    expect(second.status).toBe(200);
+    expect(second.body).toMatchObject({ reconciled: false, paymentStatus: 'PENDING' });
+    expect(providerCalls()).toBe(1);
+    expect(await snapshot(s)).toEqual(before);
+
+    await clearCooldown(s); // simulates the window elapsing
+    const third = await handler.execute({ clientId: clientA.id, bookingId: s.bookingId });
+    expect(third).toMatchObject({ reconciled: true, paymentStatus: 'COMPLETED' });
+  });
+
+  it('(i) the cooldown is per payment: another payment is not blocked by it', async () => {
+    const one = await seedHosted();
+    const two = await seedHosted();
+    provider(one, 'initiated', null);
+    provider(two, 'paid', 'paid');
+    await handler.execute({ clientId: clientA.id, bookingId: one.bookingId });
+    const outcome = await handler.execute({ clientId: clientA.id, bookingId: two.bookingId });
+    expect(outcome).toMatchObject({ reconciled: true, paymentStatus: 'COMPLETED' });
+  });
+
+  it('(j) Redis failure fails closed: no provider call, DB unchanged, no lock left behind', async () => {
+    const s = await seedHosted();
+    provider(s, 'paid', 'paid');
+    const before = await snapshot(s);
+    const client = redisClient();
+    // Direct handler call: an HTTP request would let other Redis users consume the one-shot rejection.
+    (client.set as jest.Mock).mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    const res = await handler.execute({ clientId: clientA.id, bookingId: s.bookingId });
+    expect(res).toMatchObject({ reconciled: false, paymentStatus: 'PENDING' });
+    expect(providerCalls()).toBe(0);
+    expect(await snapshot(s)).toEqual(before);
+    expect(await client.exists(hostedReconcileCooldownKey(s.paymentId))).toBe(0);
+    // Redis back: the same payment settles on the next call.
+    expect(await handler.execute({ clientId: clientA.id, bookingId: s.bookingId })).toMatchObject({ reconciled: true });
   });
 
   it('(g) a dead hosted invoice with only a failed attempt fails the payment once; an open one stays PENDING', async () => {

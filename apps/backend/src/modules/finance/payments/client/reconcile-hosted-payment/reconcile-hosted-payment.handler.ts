@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../infrastructure/database';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
+import { RedisService } from '../../../../../infrastructure/cache/redis.service';
 import {
   MoyasarApiClient,
   MoyasarCheckoutInvoiceStatus,
@@ -13,6 +14,16 @@ import type { ReconcileHostedPaymentResponseDto } from './reconcile-hosted-payme
 
 /** A payment younger than this is left to the webhook; protects the provider from poll bursts. */
 export const HOSTED_RECONCILE_MIN_AGE_MS = 8_000;
+
+/**
+ * Per-payment cooldown between provider lookups. Must stay well below the
+ * website confirm page's reconcile polls (~15 s apart) so a legitimate retry is not skipped.
+ */
+export const HOSTED_RECONCILE_COOLDOWN_MS = 10_000;
+
+const REDIS_TIMEOUT_MS = 1_000;
+
+export const hostedReconcileCooldownKey = (paymentId: string): string => `finance:hosted-reconcile:${paymentId}`;
 
 const TERMINAL_BOOKING_STATUSES = new Set<BookingStatus>([
   BookingStatus.CANCELLED,
@@ -45,6 +56,7 @@ export class ReconcileHostedPaymentHandler {
     private readonly prisma: PrismaService,
     private readonly moyasar: MoyasarApiClient,
     private readonly settlement: MoyasarPaymentSettlementHandler,
+    private readonly redis: RedisService,
   ) {}
 
   async execute(cmd: { clientId: string; bookingId: string }): Promise<ReconcileHostedPaymentResponseDto> {
@@ -77,7 +89,9 @@ export class ReconcileHostedPaymentHandler {
       payment.gatewayRef !== payment.id &&
       Date.now() - payment.updatedAt.getTime() > HOSTED_RECONCILE_MIN_AGE_MS &&
       !TERMINAL_BOOKING_STATUSES.has(booking.status) &&
-      !isNonPayableInvoiceStatus(payment.invoice.status)
+      !isNonPayableInvoiceStatus(payment.invoice.status) &&
+      // Taken last, so an ineligible payment never consumes the cooldown.
+      (await this.acquireCooldown(payment.id))
     ) {
       reconciled = await this.settleFromProvider(booking.id, payment.id, payment.invoiceId, payment.gatewayRef);
     }
@@ -90,6 +104,29 @@ export class ReconcileHostedPaymentHandler {
       reconciled,
       checkedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * One provider lookup per payment per window, whatever the caller's IP (the IP
+   * throttle alone lets a client rotate addresses). Fails closed: without Redis
+   * the provider is not called and the webhook/cron settle as before.
+   */
+  private async acquireCooldown(paymentId: string): Promise<boolean> {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      const set = this.redis.getClient().set(hostedReconcileCooldownKey(paymentId), '1', 'PX', HOSTED_RECONCILE_COOLDOWN_MS, 'NX');
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('redis timeout')), REDIS_TIMEOUT_MS);
+      });
+      return (await Promise.race([set, timeout])) === 'OK';
+    } catch (error) {
+      this.logger.warn(
+        `Hosted reconcile cooldown unavailable for payment ${paymentId}: ${error instanceof Error ? error.name : 'UnknownError'}`,
+      );
+      return false;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /** Never throws: any provider or settlement failure leaves the DB state untouched. */

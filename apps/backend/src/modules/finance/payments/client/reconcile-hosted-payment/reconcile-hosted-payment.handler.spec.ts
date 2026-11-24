@@ -1,6 +1,7 @@
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { buildBooking, buildPayment, createPrismaMock } from '../../../../../../test/factories';
 import {
+  HOSTED_RECONCILE_COOLDOWN_MS,
   HOSTED_RECONCILE_MIN_AGE_MS,
   ReconcileHostedPaymentHandler,
 } from './reconcile-hosted-payment.handler';
@@ -75,8 +76,15 @@ describe('ReconcileHostedPaymentHandler', () => {
         return { requiresReview: false };
       }),
     };
-    const handler = new ReconcileHostedPaymentHandler(prisma as never, moyasar as never, settlement as never);
-    return { handler, prisma, moyasar, settlement, state };
+    const redisSet = jest.fn().mockResolvedValue('OK');
+    const redis = { getClient: () => ({ set: redisSet }) };
+    const handler = new ReconcileHostedPaymentHandler(
+      prisma as never,
+      moyasar as never,
+      settlement as never,
+      redis as never,
+    );
+    return { handler, prisma, moyasar, settlement, state, redisSet };
   };
 
   const run = (h: ReconcileHostedPaymentHandler) => h.execute({ clientId: 'client-1', bookingId: BOOKING_ID });
@@ -96,6 +104,68 @@ describe('ReconcileHostedPaymentHandler', () => {
     });
     expect(cmd).not.toHaveProperty('requiredPaymentId');
     expect(res).toMatchObject({ bookingId: BOOKING_ID, paymentStatus: 'COMPLETED', reconciled: true, checkedAt: NOW.toISOString() });
+  });
+
+  describe('per-payment cooldown', () => {
+    it('pins the cooldown window to 10 seconds', () => {
+      expect(HOSTED_RECONCILE_COOLDOWN_MS).toBe(10_000);
+    });
+
+    it('acquires the lock with SET NX PX on a payment-scoped key, then calls the provider', async () => {
+      const { handler, moyasar, redisSet } = setup();
+      await run(handler);
+      expect(redisSet).toHaveBeenCalledTimes(1);
+      expect(redisSet).toHaveBeenCalledWith(`finance:hosted-reconcile:${PAYMENT_ID}`, '1', 'PX', 10_000, 'NX');
+      expect(moyasar.getCheckoutInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the provider and returns the DB state when the lock already exists', async () => {
+      const { handler, moyasar, settlement, redisSet } = setup();
+      redisSet.mockResolvedValue(null);
+      const res = await run(handler);
+      expect(moyasar.getCheckoutInvoice).not.toHaveBeenCalled();
+      expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+      expect(settlement.execute).not.toHaveBeenCalled();
+      expect(res).toMatchObject({ bookingId: BOOKING_ID, paymentStatus: 'PENDING', reconciled: false });
+    });
+
+    it('a second call inside the window makes no second provider call', async () => {
+      const { handler, moyasar, redisSet } = setup();
+      redisSet.mockResolvedValueOnce('OK').mockResolvedValue(null);
+      await run(handler);
+      await run(handler);
+      expect(moyasar.getCheckoutInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails closed when Redis throws: no provider call, no throw', async () => {
+      const { handler, moyasar, settlement, redisSet } = setup();
+      redisSet.mockRejectedValue(new Error('ECONNREFUSED'));
+      await expect(run(handler)).resolves.toMatchObject({ paymentStatus: 'PENDING', reconciled: false });
+      expect(moyasar.getCheckoutInvoice).not.toHaveBeenCalled();
+      expect(settlement.execute).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when Redis never answers', async () => {
+      const { handler, moyasar, redisSet } = setup();
+      redisSet.mockReturnValue(new Promise(() => undefined));
+      const pending = run(handler);
+      await jest.advanceTimersByTimeAsync(1_500);
+      await expect(pending).resolves.toMatchObject({ reconciled: false });
+      expect(moyasar.getCheckoutInvoice).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['young payment', { updatedAt: YOUNG }],
+      ['terminal payment', { paymentStatus: 'COMPLETED' }],
+      ['terminal booking', { bookingStatus: 'CANCELLED' }],
+      ['non-payable invoice', { invoiceStatus: 'VOID' }],
+      ['no hosted invoice yet', { gatewayRef: null }],
+      ['no card payment', { hasPayment: false }],
+    ])('an ineligible payment (%s) does not consume the cooldown', async (_name, over) => {
+      const { handler, redisSet } = setup(over);
+      await run(handler);
+      expect(redisSet).not.toHaveBeenCalled();
+    });
   });
 
   it('makes no provider call when the payment is younger than the minimum age', async () => {
