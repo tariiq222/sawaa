@@ -11,6 +11,7 @@ import { Throttle } from '@nestjs/throttler';
  * - payment: Moyasar invoice payment init (3/min, the stricter limit the mobile
  *   routes already had; limits card-testing abuse).
  * - chat: guest/client chat sends (15/min); each send may call the AI provider.
+ * - reconcile: on-demand provider reconcile polling (6/min); each call may hit Moyasar.
  */
 export const CLIENT_THROTTLE_PROFILES = {
   read: { ttl: 60_000, limit: 120 },
@@ -18,6 +19,7 @@ export const CLIENT_THROTTLE_PROFILES = {
   money: { ttl: 60_000, limit: 5 },
   payment: { ttl: 60_000, limit: 3 },
   chat: { ttl: 60_000, limit: 15 },
+  reconcile: { ttl: 60_000, limit: 6 },
 } as const;
 
 export type ClientThrottleProfile = keyof typeof CLIENT_THROTTLE_PROFILES;
